@@ -1,0 +1,3 @@
+[build]
+  command   = "pip install -r requirements.txt && python scripts/build_blog.py && python .claude/skills/payment-page-builder/scripts/render_html.py"
+  publish   = "output"

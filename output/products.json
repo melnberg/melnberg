@@ -1,0 +1,113 @@
+{
+  "products": [
+    {
+      "id": "short-consult",
+      "filename": "짧은상담",
+      "name": "짧은상담",
+      "price": 33000,
+      "price_display": "33,000원",
+      "hook": "고민 하나, 30분 안에 정리.",
+      "sub_hook": "길게 풀어놓을 시간 없이 핵심만 짚고 싶을 때. 방향이 잡히면 됨.",
+      "details": [
+        "30분 집중 상담",
+        "오픈채팅 비공개 채팅방에서 진행",
+        "결제 후 24시간 내 일정 조율"
+      ],
+      "process": [
+        "아래 폼 작성 (이름·연락처 입력)",
+        "카카오페이 또는 네이버페이로 결제",
+        "오픈채팅으로 일정 조율",
+        "상담 진행"
+      ],
+      "google_form_url": "GOOGLE_FORM_URL_짧은상담",
+      "kakaopay_link": "KAKAOPAY_LINK_짧은상담",
+      "naverpay_link": "NAVERPAY_LINK_짧은상담",
+      "post_payment_text": "결제 확인 후 아래 오픈채팅으로 일정 조율 요청 주세요. 24시간 내 답변드림.",
+      "openchat_link": "OPENCHAT_LINK_PLACEHOLDER",
+      "openchat_label": "오픈채팅으로 일정 조율",
+      "meta_desc": "짧은상담 33,000원 — 30분 집중 상담. 멜른버그."
+    },
+    {
+      "id": "mid-consult",
+      "filename": "중간상담",
+      "name": "중간상담",
+      "price": 99000,
+      "price_display": "99,000원",
+      "hook": "제대로 들여다봐야 할 상황이 있음.",
+      "sub_hook": "복잡하게 얽힌 문제, 30분으로는 짧음. 사전 질문지로 준비하고 깊이 다룸.",
+      "details": [
+        "60~90분 심층 상담",
+        "사전 질문지 작성 후 진행 (결제 후 SMS 발송)",
+        "오픈채팅 비공개 채팅방에서 진행"
+      ],
+      "process": [
+        "아래 폼 작성 (이름·연락처 입력)",
+        "카카오페이 또는 네이버페이로 결제",
+        "SMS로 사전 질문지 링크 수신",
+        "질문지 작성 후 일정 조율",
+        "상담 진행"
+      ],
+      "google_form_url": "GOOGLE_FORM_URL_중간상담",
+      "kakaopay_link": "KAKAOPAY_LINK_중간상담",
+      "naverpay_link": "NAVERPAY_LINK_중간상담",
+      "post_payment_text": "결제 확인 후 사전 질문지 링크를 SMS로 발송드림. 질문지 작성 후 오픈채팅으로 일정 조율 요청 주세요.",
+      "openchat_link": "OPENCHAT_LINK_PLACEHOLDER",
+      "openchat_label": "오픈채팅으로 일정 조율",
+      "meta_desc": "중간상담 99,000원 — 60~90분 심층 상담, 사전 질문지 포함. 멜른버그."
+    },
+    {
+      "id": "new-membership",
+      "filename": "신규가입",
+      "name": "멜른버그 2분기 신규가입",
+      "price": 109000,
+      "price_display": "109,000원",
+      "hook": "멜른버그 2분기(4–6월) 신규가입.",
+      "sub_hook": "처음 합류하시는 분을 위한 안내. 결제 후 영업일 기준 1일 내 카페 등업 처리함.",
+      "details": [
+        "2026년 4월 ~ 6월 이용권",
+        "네이버 카페 등업 처리 (영업일 1일 내)",
+        "가입 안내 SMS 발송"
+      ],
+      "process": [
+        "아래 폼 작성 (이름·연락처 입력)",
+        "카카오페이 또는 네이버페이로 결제",
+        "카페 등업 처리 후 SMS 안내 수신",
+        "카페 이용 시작"
+      ],
+      "google_form_url": "GOOGLE_FORM_URL_신규가입",
+      "kakaopay_link": "KAKAOPAY_LINK_신규가입",
+      "naverpay_link": "NAVERPAY_LINK_신규가입",
+      "post_payment_text": "결제 확인 후 영업일 기준 1일 내 카페 등업 처리 및 가입 안내 SMS를 발송드림. 카페 ID 관련 문의는 오픈채팅으로.",
+      "openchat_link": "OPENCHAT_LINK_PLACEHOLDER",
+      "openchat_label": "오픈채팅으로 문의",
+      "meta_desc": "멜른버그 2분기 신규가입 109,000원 — 2026년 4~6월 이용권, 카페 등업 포함."
+    },
+    {
+      "id": "renewal",
+      "filename": "갱신",
+      "name": "멜른버그 2분기 갱신",
+      "price": 99000,
+      "price_display": "99,000원",
+      "hook": "멜른버그 2분기(4–6월) 갱신.",
+      "sub_hook": "1분기 이용 중이신 분은 여기서 갱신. 이용 중단 없이 연속으로.",
+      "details": [
+        "2026년 4월 ~ 6월 이용 연장",
+        "이용 중단 없는 연속 이용",
+        "갱신 완료 SMS 발송"
+      ],
+      "process": [
+        "아래 폼 작성 (이름·연락처 입력)",
+        "카카오페이 또는 네이버페이로 결제",
+        "갱신 완료 SMS 수신",
+        "이용 연속"
+      ],
+      "google_form_url": "GOOGLE_FORM_URL_갱신",
+      "kakaopay_link": "KAKAOPAY_LINK_갱신",
+      "naverpay_link": "NAVERPAY_LINK_갱신",
+      "post_payment_text": "결제 확인 후 갱신 완료 SMS를 발송드림. 이용 중단 없이 연속 이용 가능. 문의는 오픈채팅으로.",
+      "openchat_link": "OPENCHAT_LINK_PLACEHOLDER",
+      "openchat_label": "오픈채팅으로 문의",
+      "meta_desc": "멜른버그 2분기 갱신 99,000원 — 2026년 4~6월 이용 연장, 중단 없는 연속 이용."
+    }
+  ]
+}

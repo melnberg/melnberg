@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="중간상담 99,000원 — 60~90분 심층 상담, 사전 질문지 포함. 멜른버그.">
+  <title>중간상담 — 멜른버그</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #1B2D4F;
+      --navy-dark: #0E1B2E;
+      --yellow:    #F7C94B;
+      --text:      #111111;
+      --muted:     #777777;
+      --border:    #D8D8D8;
+      --bg:        #F5F5F0;
+      --white:     #FFFFFF;
+      --kakao:     #FEE500;
+      --kakao-text:#191919;
+      --naver:     #03C75A;
+      --naver-text:#FFFFFF;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+                   'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════════════════════════
+       유틸리티 바 (최상단 얇은 줄)
+    ════════════════════════ */
+    .util-bar {
+      background: var(--navy-dark);
+      color: rgba(255,255,255,0.6);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 6px 0;
+      text-align: right;
+    }
+
+    .util-bar .inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .util-bar a {
+      color: rgba(255,255,255,0.55);
+      text-decoration: none;
+      margin-left: 16px;
+    }
+
+    .util-bar a:hover { color: var(--white); }
+
+    /* ════════════════════════
+       마스트헤드 (로고)
+    ════════════════════════ */
+    .masthead {
+      background: var(--white);
+      border-bottom: 3px solid var(--navy);
+      padding: 20px 0 18px;
+      text-align: center;
+    }
+
+    .masthead-logo {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 52px;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    /* ════════════════════════
+       내비게이션 바
+    ════════════════════════ */
+    .nav-bar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-bar .inner {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .nav-bar .inner::-webkit-scrollbar { display: none; }
+
+    .nav-link {
+      flex-shrink: 0;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      text-decoration: none;
+      padding: 12px 16px;
+      border-bottom: 2px solid transparent;
+      transition: border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--navy);
+      border-bottom-color: var(--navy);
+    }
+
+    /* ════════════════════════
+       티커 바
+    ════════════════════════ */
+    .ticker-wrap {
+      background: var(--navy);
+      overflow: hidden;
+      padding: 8px 0;
+      position: relative;
+    }
+
+    .ticker-track {
+      display: flex;
+      width: max-content;
+      animation: ticker-scroll 28s linear infinite;
+    }
+
+    .ticker-track:hover { animation-play-state: paused; }
+
+    @keyframes ticker-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 32px;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.75);
+      letter-spacing: 0.03em;
+    }
+
+    .ticker-item .t-name {
+      color: var(--white);
+      font-weight: 700;
+    }
+
+    .ticker-item .t-price {
+      color: var(--yellow);
+      font-weight: 700;
+    }
+
+    .ticker-sep {
+      color: rgba(255,255,255,0.2);
+      padding: 0 4px;
+    }
+
+    /* ════════════════════════
+       공통 inner
+    ════════════════════════ */
+    .inner {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+
+    /* ════════════════════════
+       히어로 (신문 헤드라인 스타일)
+    ════════════════════════ */
+    .hero {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 0 48px;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 48px;
+      align-items: start;
+    }
+
+    .hero-kicker {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .hero-headline {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--navy);
+      margin-bottom: 18px;
+      word-break: keep-all;
+    }
+
+    .hero-subhead {
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 28px;
+      word-break: keep-all;
+    }
+
+    .hero-price-block {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .hero-price {
+      font-family: Georgia, serif;
+      font-size: 44px;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.03em;
+    }
+
+    .hero-price-label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* 오른쪽 사이드바 카드 */
+    .hero-aside {
+      border: 1px solid var(--border);
+      padding: 24px;
+    }
+
+    .aside-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+
+    .aside-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .aside-list li {
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      color: var(--text);
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .aside-list li:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .aside-num {
+      font-family: Georgia, serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--yellow);
+      line-height: 1;
+      flex-shrink: 0;
+      min-width: 24px;
+    }
+
+    /* ════════════════════════
+       섹션 공통
+    ════════════════════════ */
+    .section {
+      padding: 56px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section.bg-paper { background: var(--bg); }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin-bottom: 32px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--navy);
+    }
+
+    .section-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+    }
+
+    .section-rule {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ════════════════════════
+       포함 내용
+    ════════════════════════ */
+    .detail-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0;
+    }
+
+    .detail-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 20px 16px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      word-break: keep-all;
+    }
+
+    .d-check {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      background: var(--yellow);
+      border-radius: 2px;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .d-check::after {
+      content: '';
+      width: 5px;
+      height: 8px;
+      border: 1.5px solid var(--navy);
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    /* ════════════════════════
+       진행 방법
+    ════════════════════════ */
+    .process-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 32px;
+    }
+
+    .process-list li {
+      border-top: 3px solid var(--navy);
+      padding-top: 16px;
+    }
+
+    .p-num {
+      font-family: Georgia, serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--yellow);
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .p-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.6;
+      word-break: keep-all;
+    }
+
+    /* ════════════════════════
+       결제 (폼 + 버튼)
+    ════════════════════════ */
+    .payment-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 48px;
+      align-items: start;
+    }
+
+    .step-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .step-title {
+      font-family: Georgia, serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 14px;
+    }
+
+    .form-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    .custom-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-field label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .form-field input {
+      border: 1px solid var(--border);
+      border-bottom: 2px solid var(--navy);
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.15s;
+      border-radius: 0;
+      -webkit-appearance: none;
+    }
+
+    .form-field input:focus { border-bottom-color: var(--yellow); }
+
+    .btn-submit {
+      background: var(--navy);
+      color: var(--white);
+      border: none;
+      padding: 14px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-top: 4px;
+      align-self: flex-start;
+    }
+
+    .btn-submit:hover { background: var(--navy-dark); }
+
+    .form-success {
+      display: none;
+      background: var(--navy);
+      color: var(--white);
+      padding: 16px 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .form-success.visible { display: block; }
+
+    /* 결제 사이드 */
+    .payment-side {
+      border: 1px solid var(--border);
+    }
+
+    .payment-side-head {
+      background: var(--navy);
+      color: var(--white);
+      padding: 14px 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .payment-side-body {
+      padding: 20px;
+    }
+
+    .payment-amount {
+      font-family: Georgia, serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .payment-block {
+      transition: opacity 0.3s;
+    }
+
+    .payment-block.locked {
+      opacity: 0.3;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .payment-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-pay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-kakao { background: var(--kakao); color: var(--kakao-text); }
+    .btn-naver { background: var(--naver); color: var(--naver-text); }
+
+    .payment-lock-msg {
+      display: none;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .payment-block.locked .payment-lock-msg { display: block; }
+
+    .payment-note {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 14px;
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    /* ════════════════════════
+       결제 완료 후 안내
+    ════════════════════════ */
+    .post-wrap {
+      border: 1px solid var(--yellow);
+      background: #FFFEF5;
+    }
+
+    .post-head {
+      background: var(--yellow);
+      padding: 12px 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--navy);
+    }
+
+    .post-body {
+      padding: 24px 20px;
+    }
+
+    .post-body p {
+      font-size: 15px;
+      line-height: 1.8;
+      word-break: keep-all;
+    }
+
+    .btn-openchat {
+      display: inline-block;
+      margin-top: 18px;
+      background: var(--navy);
+      color: var(--white);
+      padding: 12px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      letter-spacing: 0.03em;
+    }
+
+    /* ════════════════════════
+       푸터
+    ════════════════════════ */
+    .footer {
+      background: var(--navy-dark);
+      color: rgba(255,255,255,0.45);
+      padding: 32px 0;
+      font-size: 12px;
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    /* ════════════════════════
+       반응형
+    ════════════════════════ */
+    @media (max-width: 780px) {
+      .inner { padding: 0 20px; }
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-aside { display: none; }
+      .hero-headline { font-size: 32px; }
+      .hero-price { font-size: 32px; }
+      .masthead-logo { font-size: 36px; }
+      .payment-layout { grid-template-columns: 1fr; }
+      .process-list { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .process-list { grid-template-columns: 1fr; }
+      .detail-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 유틸리티 바 -->
+  <div class="util-bar">
+    <div class="inner">
+      <span>멜른버그 공식 결제 페이지</span>
+      <div>
+        <a href="#">짧은상담</a>
+        <a href="#">중간상담</a>
+        <a href="#">신규가입</a>
+        <a href="#">갱신</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 마스트헤드 -->
+  <div class="masthead">
+    <a class="masthead-logo" href="#">멜른버그</a>
+  </div>
+
+  <!-- 내비게이션 -->
+  <nav class="nav-bar">
+    <div class="inner">
+      <a class="nav-link active" href="#">포함 내용</a>
+      <a class="nav-link" href="#">진행 방법</a>
+      <a class="nav-link" href="#">결제</a>
+      <a class="nav-link" href="#">결제 후 안내</a>
+    </div>
+  </nav>
+
+  <!-- 티커 바 -->
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="ticker">
+      <div class="ticker-item">
+        <span class="t-name">짧은상담</span>
+        <span class="t-price">33,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <div class="ticker-item">
+        <span class="t-name">중간상담</span>
+        <span class="t-price">99,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <div class="ticker-item">
+        <span class="t-name">2분기 신규가입</span>
+        <span class="t-price">109,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <div class="ticker-item">
+        <span class="t-name">2분기 갱신</span>
+        <span class="t-price">99,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <!-- 무한 루프용 복제 -->
+      <div class="ticker-item">
+        <span class="t-name">짧은상담</span>
+        <span class="t-price">33,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <div class="ticker-item">
+        <span class="t-name">중간상담</span>
+        <span class="t-price">99,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <div class="ticker-item">
+        <span class="t-name">2분기 신규가입</span>
+        <span class="t-price">109,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+      <div class="ticker-item">
+        <span class="t-name">2분기 갱신</span>
+        <span class="t-price">99,000원</span>
+        <span class="ticker-sep">|</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 히어로 -->
+  <section class="hero">
+    <div class="inner">
+      <div class="hero-inner">
+        <div>
+          <p class="hero-kicker">멜른버그 &nbsp;·&nbsp; 결제 페이지</p>
+          <h1 class="hero-headline">중간상담</h1>
+          <p class="hero-subhead">제대로 들여다봐야 할 상황이 있음.<br>복잡하게 얽힌 문제, 30분으로는 짧음. 사전 질문지로 준비하고 깊이 다룸.</p>
+          <div class="hero-price-block">
+            <span class="hero-price">99,000원</span>
+          </div>
+        </div>
+        <aside class="hero-aside">
+          <div class="aside-label">진행 방법</div>
+          <ul class="aside-list">
+            <li><span class="aside-num">01</span><span>아래 폼 작성 (이름·연락처 입력)</span></li>
+        <li><span class="aside-num">02</span><span>카카오페이 또는 네이버페이로 결제</span></li>
+        <li><span class="aside-num">03</span><span>SMS로 사전 질문지 링크 수신</span></li>
+        <li><span class="aside-num">04</span><span>질문지 작성 후 일정 조율</span></li>
+        <li><span class="aside-num">05</span><span>상담 진행</span></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 포함 내용 -->
+  <section class="section">
+    <div class="inner">
+      <div class="section-header">
+        <h2 class="section-title">포함 내용</h2>
+        <div class="section-rule"></div>
+      </div>
+      <ul class="detail-list">
+        <li><div class="d-check"></div><span>60~90분 심층 상담</span></li>
+        <li><div class="d-check"></div><span>사전 질문지 작성 후 진행 (결제 후 SMS 발송)</span></li>
+        <li><div class="d-check"></div><span>오픈채팅 비공개 채팅방에서 진행</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 진행 방법 -->
+  <section class="section bg-paper">
+    <div class="inner">
+      <div class="section-header">
+        <h2 class="section-title">진행 방법</h2>
+        <div class="section-rule"></div>
+      </div>
+      <ol class="process-list">
+        <li><div class="p-num">01</div><div class="p-text">아래 폼 작성 (이름·연락처 입력)</div></li>
+        <li><div class="p-num">02</div><div class="p-text">카카오페이 또는 네이버페이로 결제</div></li>
+        <li><div class="p-num">03</div><div class="p-text">SMS로 사전 질문지 링크 수신</div></li>
+        <li><div class="p-num">04</div><div class="p-text">질문지 작성 후 일정 조율</div></li>
+        <li><div class="p-num">05</div><div class="p-text">상담 진행</div></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 결제 -->
+  <section class="section">
+    <div class="inner">
+      <div class="section-header">
+        <h2 class="section-title">결제</h2>
+        <div class="section-rule"></div>
+      </div>
+      <div class="payment-layout">
+
+        <!-- 1단계: 폼 -->
+        <div>
+          <p class="step-label">Step 01</p>
+          <p class="step-title">정보 입력</p>
+          <p class="form-desc">
+            이름과 연락처를 입력하고 제출해주세요.<br>
+            제출 완료 후 결제 버튼이 활성화됩니다.
+          </p>
+          <form class="custom-form" id="info-form" novalidate>
+            <div class="form-field">
+              <label for="input-name">이름</label>
+              <input type="text" id="input-name" name="name" placeholder="홍길동" required>
+            </div>
+            <div class="form-field">
+              <label for="input-phone">연락처</label>
+              <input type="tel" id="input-phone" name="phone" placeholder="010-0000-0000" required>
+            </div>
+            <button type="submit" class="btn-submit">제출하기 →</button>
+          </form>
+          <div class="form-success" id="form-success">
+            정보가 접수됐습니다. 아래에서 결제를 진행해주세요.
+          </div>
+        </div>
+
+        <!-- 2단계: 결제 -->
+        <div>
+          <p class="step-label">Step 02</p>
+          <p class="step-title">결제 수단 선택</p>
+          <div class="payment-side">
+            <div class="payment-side-head">결제 정보</div>
+            <div class="payment-side-body">
+              <div class="payment-amount">99,000원</div>
+              <div class="payment-block locked" id="payment-section">
+                <div class="payment-buttons">
+                  <a href="KAKAOPAY_LINK_중간상담" class="btn-pay btn-kakao" target="_blank" rel="noopener">
+                    카카오페이로 결제
+                  </a>
+                  <a href="NAVERPAY_LINK_중간상담" class="btn-pay btn-naver" target="_blank" rel="noopener">
+                    네이버페이로 결제
+                  </a>
+                </div>
+                <p class="payment-lock-msg">폼 제출 후 활성화됩니다.</p>
+              </div>
+              <p class="payment-note">
+                취소·환불 문의는 오픈채팅으로 해주세요.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 결제 완료 후 안내 -->
+  <section class="section">
+    <div class="inner">
+      <div class="section-header">
+        <h2 class="section-title">결제 완료 후 안내</h2>
+        <div class="section-rule"></div>
+      </div>
+      <div class="post-wrap">
+        <div class="post-head">After Payment</div>
+        <div class="post-body">
+          <p>결제 확인 후 사전 질문지 링크를 SMS로 발송드림. 질문지 작성 후 오픈채팅으로 일정 조율 요청 주세요.</p>
+          
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 푸터 -->
+  <footer class="footer">
+    <div class="inner">© 멜른버그</div>
+  </footer>
+
+  <script>
+    (function () {
+      var form    = document.getElementById('info-form');
+      var success = document.getElementById('form-success');
+      var payEl   = document.getElementById('payment-section');
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name  = document.getElementById('input-name').value.trim();
+        var phone = document.getElementById('input-phone').value.trim();
+        if (!name || !phone) return;
+
+        // 구글 시트 전송 (Apps Script 엔드포인트 설정 후 활성화)
+        var endpoint = 'FORM_ENDPOINT_PLACEHOLDER';
+        if (endpoint && !endpoint.startsWith('FORM_ENDPOINT')) {
+          fetch(endpoint, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, phone: phone, product: '중간상담', ts: new Date().toISOString() })
+          });
+        }
+
+        form.style.display = 'none';
+        success.classList.add('visible');
+        payEl.classList.remove('locked');
+      });
+    })();
+  </script>
+
+</body>
+</html>
