@@ -34,11 +34,27 @@ MASTHEAD = """
 NAV_BAR = """
   <nav class="nav-bar">
     <div class="inner">
-      <a class="nav-link" href="index.html">홈</a>
-      <a class="nav-link active" href="blog.html">블로그</a>
-      <a class="nav-link" href="짧은상담.html">짧은상담</a>
-      <a class="nav-link" href="중간상담.html">중간상담</a>
-      <a class="nav-link" href="신규가입.html">멤버십</a>
+      <div class="nav-item"><a class="nav-link" href="index.html">홈</a></div>
+      <div class="nav-item"><a class="nav-link active" href="blog.html">블로그</a></div>
+      <div class="nav-item">
+        <a class="nav-link" href="짧은상담.html">짧은상담</a>
+        <div class="nav-dropdown">
+          <a class="dropdown-item" href="짧은상담.html"><span class="di-label">30분 집중 상담</span><span class="di-price">33,000원</span></a>
+        </div>
+      </div>
+      <div class="nav-item">
+        <a class="nav-link" href="중간상담.html">중간상담</a>
+        <div class="nav-dropdown">
+          <a class="dropdown-item" href="중간상담.html"><span class="di-label">60~90분 심층 상담</span><span class="di-price">99,000원</span></a>
+        </div>
+      </div>
+      <div class="nav-item">
+        <a class="nav-link" href="신규가입.html">멤버십</a>
+        <div class="nav-dropdown">
+          <a class="dropdown-item" href="신규가입.html"><span class="di-label">신규가입</span><span class="di-price">109,000원</span></a>
+          <a class="dropdown-item" href="갱신.html"><span class="di-label">갱신</span><span class="di-price">99,000원</span></a>
+        </div>
+      </div>
     </div>
   </nav>"""
 
@@ -152,10 +168,17 @@ def render_blog_html(posts: list[dict]) -> str:
     .masthead {{ background: var(--white); border-bottom: 3px solid var(--navy); padding: 20px 0 18px; text-align: center; }}
     .masthead-logo {{ font-family: Georgia, serif; font-size: 52px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; }}
     .nav-bar {{ background: var(--white); border-bottom: 1px solid var(--border); }}
-    .nav-bar .inner {{ display: flex; overflow-x: auto; scrollbar-width: none; }}
-    .nav-bar .inner::-webkit-scrollbar {{ display: none; }}
-    .nav-link {{ flex-shrink: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--text); text-decoration: none; padding: 12px 16px; border-bottom: 2px solid transparent; white-space: nowrap; }}
+    .nav-bar .inner {{ display: flex; align-items: stretch; }}
+    .nav-item {{ position: relative; flex-shrink: 0; }}
+    .nav-link {{ display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--text); text-decoration: none; padding: 12px 16px; border-bottom: 2px solid transparent; white-space: nowrap; }}
     .nav-link:hover, .nav-link.active {{ color: var(--navy); border-bottom-color: var(--navy); }}
+    .nav-dropdown {{ display: none; position: absolute; top: 100%; left: 0; background: var(--white); border: 1px solid var(--border); border-top: 2px solid var(--navy); min-width: 200px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }}
+    .nav-item:hover .nav-dropdown {{ display: block; }}
+    .dropdown-item {{ display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; text-decoration: none; color: var(--text); font-size: 12px; border-bottom: 1px solid var(--border); gap: 20px; }}
+    .dropdown-item:last-child {{ border-bottom: none; }}
+    .dropdown-item:hover {{ background: #F5F5F0; }}
+    .di-label {{ font-weight: 600; }}
+    .di-price {{ color: var(--navy); font-weight: 700; white-space: nowrap; }}
     .ticker-wrap {{ background: var(--navy); overflow: hidden; padding: 8px 0; }}
     .ticker-track {{ display: flex; width: max-content; animation: ticker-scroll 28s linear infinite; }}
     @keyframes ticker-scroll {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
@@ -231,10 +254,17 @@ def render_post_html(post: dict) -> str:
     .masthead {{ background: var(--white); border-bottom: 3px solid var(--navy); padding: 20px 0 18px; text-align: center; }}
     .masthead-logo {{ font-family: Georgia, serif; font-size: 52px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; }}
     .nav-bar {{ background: var(--white); border-bottom: 1px solid var(--border); }}
-    .nav-bar .inner {{ display: flex; overflow-x: auto; scrollbar-width: none; }}
-    .nav-bar .inner::-webkit-scrollbar {{ display: none; }}
-    .nav-link {{ flex-shrink: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--text); text-decoration: none; padding: 12px 16px; border-bottom: 2px solid transparent; white-space: nowrap; }}
+    .nav-bar .inner {{ display: flex; align-items: stretch; }}
+    .nav-item {{ position: relative; flex-shrink: 0; }}
+    .nav-link {{ display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--text); text-decoration: none; padding: 12px 16px; border-bottom: 2px solid transparent; white-space: nowrap; }}
     .nav-link:hover, .nav-link.active {{ color: var(--navy); border-bottom-color: var(--navy); }}
+    .nav-dropdown {{ display: none; position: absolute; top: 100%; left: 0; background: var(--white); border: 1px solid var(--border); border-top: 2px solid var(--navy); min-width: 200px; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }}
+    .nav-item:hover .nav-dropdown {{ display: block; }}
+    .dropdown-item {{ display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; text-decoration: none; color: var(--text); font-size: 12px; border-bottom: 1px solid var(--border); gap: 20px; }}
+    .dropdown-item:last-child {{ border-bottom: none; }}
+    .dropdown-item:hover {{ background: #F5F5F0; }}
+    .di-label {{ font-weight: 600; }}
+    .di-price {{ color: var(--navy); font-weight: 700; white-space: nowrap; }}
     .ticker-wrap {{ background: var(--navy); overflow: hidden; padding: 8px 0; }}
     .ticker-track {{ display: flex; width: max-content; animation: ticker-scroll 28s linear infinite; }}
     @keyframes ticker-scroll {{ from {{ transform: translateX(0); }} to {{ transform: translateX(-50%); }} }}
