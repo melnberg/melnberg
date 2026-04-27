@@ -19,9 +19,9 @@ OUTPUT_DIR  = BASE_DIR / "output"
 SIDEBAR_CSS = """
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --navy: #1B2D4F; --navy-dark: #0E1B2E;
-      --navy-soft: rgba(27, 45, 79, 0.06);
-      --yellow: #F7C94B;
+      --navy: #002060; --navy-dark: #0070C0;
+      --navy-soft: rgba(0, 32, 96, 0.06);
+      --yellow: #00B0F0;
       --text: #111111; --muted: #777777;
       --border: #E5E7EB; --bg: #F5F5F0; --white: #FFFFFF;
       --sidebar-w: 260px;
