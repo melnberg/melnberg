@@ -27,7 +27,7 @@ SIDEBAR_CSS = """
       --sidebar-w: 260px;
     }
     html { scroll-behavior: smooth; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: var(--white); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--white); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
     a { color: inherit; }
 
     .layout { display: flex; min-height: 100vh; }
@@ -336,6 +336,7 @@ def render_blog_html(posts: list[dict]) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="멜른버그 블로그">
   <title>블로그 — 멜른버그</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>{SIDEBAR_CSS}{BLOG_PAGE_CSS}</style>
 </head>
 <body>
@@ -375,6 +376,7 @@ def render_post_html(post: dict) -> str:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{post['title']} — 멜른버그</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>{SIDEBAR_CSS}{POST_PAGE_CSS}</style>
 </head>
 <body>
