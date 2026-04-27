@@ -12,7 +12,6 @@ BASE_DIR    = Path(__file__).resolve().parent.parent
 POSTS_DIR   = BASE_DIR / "posts"
 OUTPUT_DIR  = BASE_DIR / "output"
 
-
 # ──────────────────────────────────────────────
 # 사이드바 (모든 페이지 공통)
 # data-current 값으로 active 메뉴 결정
@@ -35,7 +34,7 @@ SIDEBAR_CSS = """
 
     .sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--white); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; z-index: 50; }
     .sidebar-brand { padding: 24px 24px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
-    .sidebar-logo { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .sidebar-logo { font-size: 26px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; display: flex; align-items: center; gap: 6px; }
     .sidebar-logo .star { color: var(--yellow); font-size: 18px; line-height: 1; }
     .sidebar-search { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy); }
     .sidebar-cta-wrap { padding: 18px 20px 14px; }
@@ -48,7 +47,7 @@ SIDEBAR_CSS = """
     .s-item.active { background: var(--navy-soft); color: var(--navy); font-weight: 700; border-left-color: var(--navy); }
     .s-item.active::after { content: '›'; position: absolute; right: 22px; font-size: 18px; line-height: 1; color: var(--navy); }
     .s-icon { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-    .s-price { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; font-family: Georgia, serif; }
+    .s-price { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; }
     .s-item.active .s-price { color: var(--navy); }
     .sidebar-bottom { border-top: 1px solid var(--border); padding: 18px 24px 14px; }
     .contact-block { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; }
@@ -88,7 +87,6 @@ SIDEBAR_CSS = """
       .inner { padding: 0 20px; }
     }
 """
-
 
 def sidebar_html(current: str) -> str:
     return f"""
@@ -166,7 +164,6 @@ def sidebar_html(current: str) -> str:
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 """
 
-
 MAIN_TOP_TEMPLATE = """
       <div class="main-top">
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="메뉴 열기">
@@ -180,7 +177,6 @@ MAIN_TOP_TEMPLATE = """
         <div class="main-top-meta">{meta}</div>
       </div>
 """
-
 
 SIDEBAR_JS = """
     (function () {
@@ -209,7 +205,6 @@ SIDEBAR_JS = """
     })();
 """
 
-
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
     if not m:
@@ -222,7 +217,6 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             k, _, v = line.partition(":")
             fm[k.strip()] = v.strip()
     return fm, body
-
 
 def load_posts() -> list[dict]:
     posts = []
@@ -240,14 +234,12 @@ def load_posts() -> list[dict]:
         })
     return posts
 
-
 def format_date(s: str) -> str:
     try:
         y, mo, d = s.split("-")
         return f"{y}년 {int(mo)}월 {int(d)}일"
     except Exception:
         return s
-
 
 def render_card(post: dict, featured: bool = False) -> str:
     tag    = post["tag"]
@@ -274,11 +266,10 @@ def render_card(post: dict, featured: bool = False) -> str:
   <p class="post-meta">{date}</p>
 </a>"""
 
-
 BLOG_PAGE_CSS = """
     .blog-hero { padding: 56px 0 40px; border-bottom: 1px solid var(--border); }
     .section-header { display: flex; align-items: baseline; gap: 14px; padding-bottom: 12px; border-bottom: 2px solid var(--navy); }
-    .blog-hero-title { font-family: Georgia, serif; font-size: 32px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
+    .blog-hero-title { font-size: 32px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
     .section-rule { flex: 1; height: 1px; background: var(--border); }
     .posts-section { padding: 48px 0; }
     .posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
@@ -286,7 +277,7 @@ BLOG_PAGE_CSS = """
     .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
     .post-card:hover .post-title { color: var(--navy); text-decoration: underline; }
     .post-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .post-title { font-family: Georgia, serif; font-size: 18px; font-weight: 700; line-height: 1.3; color: var(--text); margin-bottom: 10px; word-break: keep-all; }
+    .post-title { font-size: 18px; font-weight: 700; line-height: 1.3; color: var(--text); margin-bottom: 10px; word-break: keep-all; }
     .post-excerpt { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .post-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
     .post-card.featured { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 0 0 32px 0; border-right: none; }
@@ -305,16 +296,15 @@ BLOG_PAGE_CSS = """
     }
 """
 
-
 POST_PAGE_CSS = """
     .post-header { padding: 56px 0 32px; border-bottom: 1px solid var(--border); }
     .post-header-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
-    .post-header-title { font-family: Georgia, serif; font-size: 40px; font-weight: 700; color: var(--navy); line-height: 1.2; margin-bottom: 16px; word-break: keep-all; }
+    .post-header-title { font-size: 40px; font-weight: 700; color: var(--navy); line-height: 1.2; margin-bottom: 16px; word-break: keep-all; }
     .post-header-meta { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
     .post-body { max-width: 680px; padding: 48px 0 80px; }
     .post-body p { margin-bottom: 1.5em; font-size: 17px; line-height: 1.8; }
-    .post-body h2 { font-family: Georgia, serif; font-size: 26px; font-weight: 700; color: var(--navy); margin: 2em 0 0.8em; }
-    .post-body h3 { font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: var(--navy); margin: 1.8em 0 0.6em; }
+    .post-body h2 { font-size: 26px; font-weight: 700; color: var(--navy); margin: 2em 0 0.8em; }
+    .post-body h3 { font-size: 20px; font-weight: 700; color: var(--navy); margin: 1.8em 0 0.6em; }
     .post-body ul, .post-body ol { margin: 0 0 1.5em 1.5em; font-size: 17px; line-height: 1.8; }
     .post-body blockquote { border-left: 3px solid var(--navy); padding-left: 20px; margin: 1.5em 0; color: var(--muted); font-style: italic; }
     .back-link { display: inline-block; font-size: 12px; font-weight: 700; color: var(--navy); text-decoration: none; letter-spacing: 0.04em; border-bottom: 1px solid var(--navy); margin-top: 8px; }
@@ -323,7 +313,6 @@ POST_PAGE_CSS = """
       .post-body p { font-size: 16px; }
     }
 """
-
 
 def render_blog_html(posts: list[dict]) -> str:
     if not posts:
@@ -372,7 +361,6 @@ def render_blog_html(posts: list[dict]) -> str:
 </body>
 </html>"""
 
-
 def render_post_html(post: dict) -> str:
     date = format_date(post["date"])
     sidebar = sidebar_html("blog")
@@ -416,7 +404,6 @@ def render_post_html(post: dict) -> str:
 </body>
 </html>"""
 
-
 def main():
     OUTPUT_DIR.mkdir(exist_ok=True)
     posts = load_posts()
@@ -431,7 +418,6 @@ def main():
         print(f"OK {out.name}")
 
     print(f"\n완료: {len(posts)}개 포스트")
-
 
 if __name__ == "__main__":
     main()
