@@ -64,6 +64,7 @@ def render_product(template: str, p: dict) -> str:
         p.get("openchat_label", "오픈채팅 바로가기"),
     )
     replacements = {
+        "__FILENAME__":           p["filename"],
         "__PRODUCT_NAME__":       p["name"],
         "__PRICE_DISPLAY__":      p["price_display"],
         "__HOOK__":               p["hook"],
