@@ -7,379 +7,104 @@
   <title>블로그 — 멜른버그</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --navy:      #1B2D4F;
-      --navy-dark: #0E1B2E;
+      --navy: #1B2D4F; --navy-dark: #0E1B2E;
       --navy-soft: rgba(27, 45, 79, 0.06);
-      --yellow:    #F7C94B;
-      --text:      #111111;
-      --muted:     #777777;
-      --border:    #E5E7EB;
-      --bg:        #F5F5F0;
-      --white:     #FFFFFF;
+      --yellow: #F7C94B;
+      --text: #111111; --muted: #777777;
+      --border: #E5E7EB; --bg: #F5F5F0; --white: #FFFFFF;
       --sidebar-w: 260px;
     }
-
     html { scroll-behavior: smooth; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-                   'Noto Sans KR', 'Malgun Gothic', sans-serif;
-      background: var(--white);
-      color: var(--text);
-      line-height: 1.6;
-      -webkit-font-smoothing: antialiased;
-    }
-
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: var(--white); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
     a { color: inherit; }
 
     .layout { display: flex; min-height: 100vh; }
 
-    /* 사이드바 */
-    .sidebar {
-      width: var(--sidebar-w);
-      flex-shrink: 0;
-      background: var(--white);
-      border-right: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      z-index: 50;
-    }
-
-    .sidebar-brand {
-      padding: 24px 24px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .sidebar-logo {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 26px;
-      font-weight: 700;
-      color: var(--navy);
-      letter-spacing: -0.02em;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
+    .sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--white); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; z-index: 50; }
+    .sidebar-brand { padding: 24px 24px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .sidebar-logo { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; display: flex; align-items: center; gap: 6px; }
     .sidebar-logo .star { color: var(--yellow); font-size: 18px; line-height: 1; }
-
-    .sidebar-search {
-      width: 32px; height: 32px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: var(--white);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      color: var(--navy);
-    }
-
+    .sidebar-search { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy); }
     .sidebar-cta-wrap { padding: 18px 20px 14px; }
-
-    .sidebar-cta {
-      display: flex; align-items: center; justify-content: center;
-      width: 100%;
-      background: var(--navy);
-      color: var(--white);
-      border: none;
-      padding: 14px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-decoration: none;
-      cursor: pointer;
-      font-family: inherit;
-      transition: background 0.15s;
-    }
-
+    .sidebar-cta { display: flex; align-items: center; justify-content: center; width: 100%; background: var(--navy); color: var(--white); border: none; padding: 14px 16px; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-decoration: none; cursor: pointer; font-family: inherit; transition: background 0.15s; }
     .sidebar-cta:hover { background: var(--navy-dark); }
-
-    .sidebar-nav {
-      flex: 1;
-      padding: 4px 0 16px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .s-section-label {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--muted);
-      padding: 14px 24px 6px;
-    }
-
-    .s-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 13px 24px;
-      font-size: 14px; font-weight: 500;
-      color: var(--text);
-      text-decoration: none;
-      position: relative;
-      border-left: 3px solid transparent;
-      transition: background 0.15s, color 0.15s;
-    }
-
+    .sidebar-nav { flex: 1; padding: 4px 0 16px; display: flex; flex-direction: column; }
+    .s-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding: 14px 24px 6px; }
+    .s-item { display: flex; align-items: center; gap: 12px; padding: 13px 24px; font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; position: relative; border-left: 3px solid transparent; transition: background 0.15s, color 0.15s; }
     .s-item:hover { background: var(--navy-soft); }
-
-    .s-item.active {
-      background: var(--navy-soft);
-      color: var(--navy);
-      font-weight: 700;
-      border-left-color: var(--navy);
-    }
-
-    .s-item.active::after {
-      content: '›';
-      position: absolute; right: 22px;
-      font-size: 18px; line-height: 1;
-      color: var(--navy);
-    }
-
-    .s-icon {
-      width: 18px; height: 18px;
-      flex-shrink: 0;
-      stroke: currentColor; fill: none;
-      stroke-width: 1.6;
-      stroke-linecap: round; stroke-linejoin: round;
-    }
-
-    .s-price {
-      margin-left: auto;
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 600;
-      font-family: Georgia, serif;
-    }
-
+    .s-item.active { background: var(--navy-soft); color: var(--navy); font-weight: 700; border-left-color: var(--navy); }
+    .s-item.active::after { content: '›'; position: absolute; right: 22px; font-size: 18px; line-height: 1; color: var(--navy); }
+    .s-icon { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .s-price { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; font-family: Georgia, serif; }
     .s-item.active .s-price { color: var(--navy); }
-
-    .sidebar-bottom {
-      border-top: 1px solid var(--border);
-      padding: 18px 24px 14px;
-    }
-
-    .contact-block {
-      display: flex; align-items: flex-start; gap: 12px;
-      padding-bottom: 14px;
-    }
-
-    .contact-icon {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: var(--navy-soft);
-      color: var(--navy);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .contact-icon svg {
-      width: 18px; height: 18px;
-      stroke: currentColor; fill: none;
-      stroke-width: 1.8;
-      stroke-linecap: round; stroke-linejoin: round;
-    }
-
+    .sidebar-bottom { border-top: 1px solid var(--border); padding: 18px 24px 14px; }
+    .contact-block { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; }
+    .contact-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--navy-soft); color: var(--navy); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .contact-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .contact-text { flex: 1; }
     .contact-label { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 2px; }
-    .contact-main {
-      font-size: 16px; font-weight: 700;
-      color: var(--navy); letter-spacing: -0.01em;
-      text-decoration: none; display: block;
-    }
+    .contact-main { font-size: 16px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; text-decoration: none; display: block; }
     .contact-hours { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-
-    .sidebar-foot-links {
-      display: flex; gap: 0;
-      border-top: 1px solid var(--border);
-      padding-top: 14px;
-    }
-    .sidebar-foot-links a {
-      flex: 1; text-align: center;
-      font-size: 11px; color: var(--muted);
-      text-decoration: none; padding: 4px 0;
-    }
+    .sidebar-foot-links { display: flex; gap: 0; border-top: 1px solid var(--border); padding-top: 14px; }
+    .sidebar-foot-links a { flex: 1; text-align: center; font-size: 11px; color: var(--muted); text-decoration: none; padding: 4px 0; }
     .sidebar-foot-links a + a { border-left: 1px solid var(--border); }
     .sidebar-foot-links a:hover { color: var(--navy); }
 
-    /* 메인 */
-    .main {
-      flex: 1; min-width: 0;
-      display: flex; flex-direction: column;
-    }
-
-    .main-top {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 40px;
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 24px;
-    }
-
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .main-top { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .breadcrumb { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
     .breadcrumb strong { color: var(--navy); font-weight: 700; }
+    .main-top-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+    .menu-toggle { display: none; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--white); cursor: pointer; align-items: center; justify-content: center; color: var(--navy); }
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; }
 
-    .main-top-meta {
-      font-size: 11px; color: var(--muted);
-      letter-spacing: 0.06em; text-transform: uppercase;
-    }
+    .inner { max-width: 920px; margin: 0 auto; padding: 0 40px; width: 100%; }
 
-    .menu-toggle {
-      display: none;
-      width: 36px; height: 36px;
-      border: 1px solid var(--border);
-      background: var(--white);
-      cursor: pointer;
-      align-items: center; justify-content: center;
-      color: var(--navy);
-    }
-
-    .sidebar-backdrop {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.4);
-      z-index: 40;
-    }
-
-    .inner {
-      max-width: 920px;
-      margin: 0 auto;
-      padding: 0 40px;
-      width: 100%;
-    }
-
-    /* 블로그 헤더 */
-    .blog-hero {
-      padding: 56px 0 40px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .section-header {
-      display: flex; align-items: baseline; gap: 14px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--navy);
-    }
-
-    .blog-hero-title {
-      font-family: Georgia, serif;
-      font-size: 32px; font-weight: 700;
-      color: var(--navy);
-      letter-spacing: -0.01em;
-    }
-
-    .section-rule { flex: 1; height: 1px; background: var(--border); }
-
-    .posts-section { padding: 48px 0; }
-
-    .posts-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0;
-    }
-
-    .post-card {
-      padding: 24px 24px 24px 0;
-      border-bottom: 1px solid var(--border);
-      border-right: 1px solid var(--border);
-      text-decoration: none;
-      color: inherit;
-      display: block;
-    }
-
-    .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
-    .post-card:hover .post-title { color: var(--navy); text-decoration: underline; }
-
-    .post-tag {
-      font-size: 10px; font-weight: 700;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .post-title {
-      font-family: Georgia, serif;
-      font-size: 18px; font-weight: 700;
-      line-height: 1.3;
-      color: var(--text);
-      margin-bottom: 10px;
-      word-break: keep-all;
-    }
-
-    .post-excerpt {
-      font-size: 13px; color: var(--muted);
-      line-height: 1.65;
-      margin-bottom: 14px;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .post-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
-
-    .post-card.featured {
-      grid-column: 1 / -1;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      padding: 0 0 32px 0;
-      border-right: none;
-    }
-
-    .post-card.featured .post-content {
-      display: flex; flex-direction: column; justify-content: center;
-    }
-
-    .post-card.featured .post-title { font-size: 28px; margin-bottom: 14px; }
-    .post-card.featured .post-excerpt { font-size: 15px; -webkit-line-clamp: 4; }
-
-    .footer {
-      background: var(--navy-dark);
-      color: rgba(255,255,255,0.45);
-      padding: 28px 0;
-      font-size: 12px;
-      text-align: center;
-      letter-spacing: 0.04em;
-    }
-
-    /* 반응형 */
-    @media (max-width: 980px) {
-      .posts-grid { grid-template-columns: 1fr; }
-      .post-card, .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
-      .post-card.featured { grid-template-columns: 1fr; }
-    }
+    .footer { background: var(--navy-dark); color: rgba(255,255,255,0.45); padding: 28px 0; font-size: 12px; text-align: center; letter-spacing: 0.04em; }
 
     @media (max-width: 780px) {
       :root { --sidebar-w: 280px; }
-      .sidebar {
-        position: fixed; left: 0; top: 0;
-        transform: translateX(-100%);
-        transition: transform 0.25s ease;
-        box-shadow: 4px 0 16px rgba(0,0,0,0.08);
-      }
+      .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 4px 0 16px rgba(0,0,0,0.08); }
       .sidebar.open { transform: translateX(0); }
       .sidebar-backdrop.open { display: block; }
       .menu-toggle { display: flex; }
       .main-top { padding: 12px 20px; }
       .inner { padding: 0 20px; }
+    }
+
+    .blog-hero { padding: 56px 0 40px; border-bottom: 1px solid var(--border); }
+    .section-header { display: flex; align-items: baseline; gap: 14px; padding-bottom: 12px; border-bottom: 2px solid var(--navy); }
+    .blog-hero-title { font-family: Georgia, serif; font-size: 32px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
+    .section-rule { flex: 1; height: 1px; background: var(--border); }
+    .posts-section { padding: 48px 0; }
+    .posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+    .post-card { padding: 24px 24px 24px 0; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-decoration: none; color: inherit; display: block; }
+    .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
+    .post-card:hover .post-title { color: var(--navy); text-decoration: underline; }
+    .post-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .post-title { font-family: Georgia, serif; font-size: 18px; font-weight: 700; line-height: 1.3; color: var(--text); margin-bottom: 10px; word-break: keep-all; }
+    .post-excerpt { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .post-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+    .post-card.featured { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 0 0 32px 0; border-right: none; }
+    .post-card.featured .post-content { display: flex; flex-direction: column; justify-content: center; }
+    .post-card.featured .post-title { font-size: 28px; margin-bottom: 14px; }
+    .post-card.featured .post-excerpt { font-size: 15px; -webkit-line-clamp: 4; }
+    .state-msg { text-align: center; padding: 80px 0; color: var(--muted); font-size: 15px; }
+    @media (max-width: 980px) {
+      .posts-grid { grid-template-columns: 1fr; }
+      .post-card, .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
+      .post-card.featured { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 780px) {
       .blog-hero { padding: 36px 0 28px; }
       .blog-hero-title { font-size: 24px; }
     }
-  </style>
+</style>
 </head>
 <body>
-
   <div class="layout">
 
-    <!-- 사이드바 -->
     <aside class="sidebar" id="sidebar" data-current="blog">
       <div class="sidebar-brand">
         <a href="index.html" class="sidebar-logo">
@@ -453,8 +178,8 @@
 
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-    <!-- 메인 -->
     <main class="main">
+
       <div class="main-top">
         <button class="menu-toggle" id="menu-toggle" type="button" aria-label="메뉴 열기">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -463,9 +188,7 @@
             <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
-        <div class="breadcrumb">
-          멜른버그 &nbsp;›&nbsp; <strong>블로그</strong>
-        </div>
+        <div class="breadcrumb">멜른버그 &nbsp;›&nbsp; <strong>블로그</strong></div>
         <div class="main-top-meta">Blog</div>
       </div>
 
@@ -477,28 +200,19 @@
           </div>
         </div>
       </section>
-
       <section class="posts-section">
-        <div class="inner">
-          <div class="posts-grid">
-            <a class="post-card featured" href="post-2026-04-21-첫번째글.html">
-              <div class="post-content">
-                <p class="post-tag">멜른버그</p>
-                <h2 class="post-title">멜른버그를 시작하며</h2>
-                <p class="post-excerpt">왜 시작하는지, 뭘 하는지에 대한 첫 번째 글.</p>
-                <p class="post-meta">2026년 4월 21일</p>
-              </div>
-            </a>
-          </div>
-        </div>
+        <div class="inner"><div class="posts-grid"><a class="post-card featured" href="post-2026-04-21-첫번째글.html">
+  <div class="post-content">
+    <p class="post-tag">멜른버그</p>
+    <h2 class="post-title">멜른버그를 시작하며</h2>
+    <p class='post-excerpt'>왜 시작하는지, 뭘 하는지에 대한 첫 번째 글.</p>
+    <p class="post-meta">2026년 4월 21일</p>
+  </div>
+</a></div></div>
       </section>
-
-      <footer class="footer">
-        <div class="inner">© 멜른버그</div>
-      </footer>
+      <footer class="footer"><div class="inner">© 멜른버그</div></footer>
     </main>
   </div>
-
   <script>
     (function () {
       var sidebar = document.getElementById('sidebar');
@@ -524,7 +238,6 @@
         });
       });
     })();
-  </script>
-
+</script>
 </body>
 </html>
