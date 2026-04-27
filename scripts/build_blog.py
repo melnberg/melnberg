@@ -66,6 +66,8 @@ SIDEBAR_CSS = """
     .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .main-top { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .breadcrumb { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+    .breadcrumb a { color: inherit; text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--navy); }
     .breadcrumb strong { color: var(--navy); font-weight: 700; }
     .main-top-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
     .menu-toggle { display: none; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--white); cursor: pointer; align-items: center; justify-content: center; color: var(--navy); }
@@ -333,7 +335,7 @@ def render_blog_html(posts: list[dict]) -> str:
 
     sidebar = sidebar_html("blog")
     main_top = MAIN_TOP_TEMPLATE.format(
-        breadcrumb='멜른버그 &nbsp;›&nbsp; <strong>블로그</strong>',
+        breadcrumb='<a href="index.html">멜른버그</a> &nbsp;›&nbsp; <strong>블로그</strong>',
         meta="Blog",
     )
 
@@ -374,7 +376,7 @@ def render_post_html(post: dict) -> str:
     date = format_date(post["date"])
     sidebar = sidebar_html("blog")
     main_top = MAIN_TOP_TEMPLATE.format(
-        breadcrumb=f'멜른버그 &nbsp;›&nbsp; <a href="blog.html" style="color:inherit;text-decoration:none;">블로그</a> &nbsp;›&nbsp; <strong>{post["title"]}</strong>',
+        breadcrumb=f'<a href="index.html">멜른버그</a> &nbsp;›&nbsp; <a href="blog.html">블로그</a> &nbsp;›&nbsp; <strong>{post["title"]}</strong>',
         meta="Blog Post",
     )
 

@@ -307,6 +307,14 @@
       letter-spacing: 0.04em;
     }
 
+    .breadcrumb a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .breadcrumb a:hover { color: var(--navy); }
+
     .breadcrumb strong {
       color: var(--navy);
       font-weight: 700;
@@ -908,7 +916,7 @@
           </svg>
         </button>
         <div class="breadcrumb">
-          멜른버그 &nbsp;›&nbsp; 결제 &nbsp;›&nbsp; <strong>멜른버그 2분기 갱신</strong>
+          <a href="index.html">멜른버그</a> &nbsp;›&nbsp; <strong>멜른버그 2분기 갱신</strong>
         </div>
         <div class="main-top-meta">공식 결제 페이지</div>
       </div>

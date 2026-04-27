@@ -54,6 +54,8 @@
     .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .main-top { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .breadcrumb { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+    .breadcrumb a { color: inherit; text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--navy); }
     .breadcrumb strong { color: var(--navy); font-weight: 700; }
     .main-top-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
     .menu-toggle { display: none; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--white); cursor: pointer; align-items: center; justify-content: center; color: var(--navy); }
@@ -188,7 +190,7 @@
             <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
-        <div class="breadcrumb">멜른버그 &nbsp;›&nbsp; <strong>블로그</strong></div>
+        <div class="breadcrumb"><a href="index.html">멜른버그</a> &nbsp;›&nbsp; <strong>블로그</strong></div>
         <div class="main-top-meta">Blog</div>
       </div>
 
