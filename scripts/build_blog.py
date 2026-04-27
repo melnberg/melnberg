@@ -82,7 +82,7 @@ SIDEBAR_CSS = """
     .footer-links { display: flex; gap: 18px; }
     .footer-links a { color: var(--muted); text-decoration: none; font-size: 12px; }
     .footer-links a:hover { color: var(--text); }
-    .footer-biz { margin-bottom: 14px; } .footer-biz p { margin: 0; }
+    .footer-biz { margin-bottom: 14px; font-size: 10px; color: #BFBFBF; line-height: 1.6; } .footer-biz p { margin: 0; }
     .footer-cs { margin-bottom: 18px; } .footer-cs p { margin: 0; }
     .footer-cs-label { font-weight: 600; color: var(--text); }
     .footer-copy { font-size: 11px; color: var(--muted); opacity: 0.7; }
@@ -376,8 +376,7 @@ def render_blog_html(posts: list[dict]) -> str:
             </div>
           </div>
           <div class="footer-biz">
-            <p>안세 | 대표 임은종 | 사업자등록번호 763-20-02086 | 통신판매업 2023-용인기흥-4231</p>
-            <p>서울특별시 성동구 상원12길 30, 307호</p>
+            <p>안세 | 대표 임은종 | 사업자등록번호 763-20-02086 | 통신판매업 2023-용인기흥-4231 | 서울특별시 성동구 상원12길 30, 307호</p>
           </div>
           <div class="footer-cs">
             <p class="footer-cs-label">고객센터</p>
@@ -440,8 +439,7 @@ def render_post_html(post: dict) -> str:
             </div>
           </div>
           <div class="footer-biz">
-            <p>안세 | 대표 임은종 | 사업자등록번호 763-20-02086 | 통신판매업 2023-용인기흥-4231</p>
-            <p>서울특별시 성동구 상원12길 30, 307호</p>
+            <p>안세 | 대표 임은종 | 사업자등록번호 763-20-02086 | 통신판매업 2023-용인기흥-4231 | 서울특별시 성동구 상원12길 30, 307호</p>
           </div>
           <div class="footer-cs">
             <p class="footer-cs-label">고객센터</p>
