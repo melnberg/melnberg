@@ -17,8 +17,18 @@ export type Post = {
 
 export type PostMeta = Omit<Post, 'contentHtml'>;
 
+function toDateString(v: unknown): string {
+  if (v instanceof Date) {
+    const y = v.getFullYear();
+    const m = String(v.getMonth() + 1).padStart(2, '0');
+    const d = String(v.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return v ? String(v) : '';
+}
+
 function formatDate(s: string): string {
-  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
   if (!m) return s;
   return `${m[1]}년 ${parseInt(m[2], 10)}월 ${parseInt(m[3], 10)}일`;
 }
@@ -33,7 +43,7 @@ export function listPosts(): PostMeta[] {
     return {
       slug,
       title: data.title ?? slug,
-      date: data.date ?? '',
+      date: toDateString(data.date),
       tag: data.tag ?? '멜른버그',
       excerpt: data.excerpt ?? '',
     };
