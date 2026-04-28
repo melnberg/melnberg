@@ -1,6 +1,6 @@
 {
-    "buildCommand": "pip install -r requirements.txt && python scripts/build_blog.py && python .claude/skills/payment-page-builder/scripts/render_html.py",
-    "outputDirectory": "output",
-    "installCommand": "echo Skipping default install (Python deps installed in buildCommand)",
-    "framework": null
+      "buildCommand": "pip install -r requirements.txt && python scripts/build_blog.py && python .claude/skills/payment-page-builder/scripts/render_html.py",
+      "outputDirectory": "output",
+      "installCommand": "echo skip",
+      "framework": null
 }
