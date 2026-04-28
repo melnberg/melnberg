@@ -45,7 +45,7 @@ export default function SignupForm() {
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
 
       {msg && (
-        <div className={`text-sm px-4 py-3 ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
+        <div className={`text-sm px-4 py-3 break-keep leading-relaxed ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
           {msg.text}
         </div>
       )}

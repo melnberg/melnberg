@@ -47,7 +47,7 @@ function Inner() {
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} required />
 
       {msg && (
-        <div className={`text-sm px-4 py-3 ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
+        <div className={`text-sm px-4 py-3 break-keep leading-relaxed ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
           {msg.text}
         </div>
       )}
