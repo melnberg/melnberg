@@ -38,7 +38,7 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">블로그 글 수정</h1>
           <p className="text-sm text-muted mb-8">내용을 수정하고 저장하세요.</p>
           <PostForm
-            initial={{ id: post.id, title: post.title, content: post.content }}
+            initial={{ id: post.id, title: post.title, content: post.content, is_paid_only: post.is_paid_only }}
             category="blog"
             redirectBase="/blog"
           />

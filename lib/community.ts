@@ -8,6 +8,7 @@ export type CommunityPost = {
   title: string;
   content: string;
   category: PostCategory;
+  is_paid_only: boolean;
   created_at: string;
   updated_at: string;
   author: { display_name: string | null } | null;
@@ -30,7 +31,7 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
+    .select('id, author_id, title, content, category, is_paid_only, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
     .eq('category', category)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -51,7 +52,7 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
   const supabase = await createClient();
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, created_at, updated_at, author:profiles!author_id(display_name)')
+    .select('id, author_id, title, content, category, is_paid_only, created_at, updated_at, author:profiles!author_id(display_name)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
@@ -69,6 +70,40 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
     .eq('id', user.id)
     .maybeSingle();
   return Boolean(data?.is_admin);
+}
+
+export type CurrentUserAccess = {
+  user_id: string | null;
+  is_admin: boolean;
+  tier: 'free' | 'paid';
+  tier_expires_at: string | null;
+};
+
+export async function getCurrentUserAccess(): Promise<CurrentUserAccess> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { user_id: null, is_admin: false, tier: 'free', tier_expires_at: null };
+  }
+  const { data } = await supabase
+    .from('profiles')
+    .select('is_admin, tier, tier_expires_at')
+    .eq('id', user.id)
+    .maybeSingle();
+  const tier = (data?.tier === 'paid' ? 'paid' : 'free') as 'free' | 'paid';
+  const expires = data?.tier_expires_at as string | null | undefined;
+  // 만료 지났으면 free로 취급 (DB cron으로 정리되기 전 안전망)
+  const effectiveTier = tier === 'paid' && expires && new Date(expires) < new Date() ? 'free' : tier;
+  return {
+    user_id: user.id,
+    is_admin: Boolean(data?.is_admin),
+    tier: effectiveTier,
+    tier_expires_at: expires ?? null,
+  };
+}
+
+export function canViewPaidContent(access: CurrentUserAccess): boolean {
+  return access.is_admin || access.tier === 'paid';
 }
 
 export async function listComments(postId: number): Promise<CommunityComment[]> {

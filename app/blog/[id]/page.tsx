@@ -5,7 +5,14 @@ import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
 import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
-import { getPost, listComments, formatRelativeKo, isCurrentUserAdmin } from '@/lib/community';
+import {
+  getPost,
+  listComments,
+  formatRelativeKo,
+  isCurrentUserAdmin,
+  getCurrentUserAccess,
+  canViewPaidContent,
+} from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -25,16 +32,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
   const numId = Number(id);
   if (!Number.isFinite(numId)) notFound();
 
-  const [post, comments, isAdmin] = await Promise.all([
+  const [post, comments, isAdmin, access] = await Promise.all([
     getPost(numId, 'blog'),
     listComments(numId),
     isCurrentUserAdmin(),
+    getCurrentUserAccess(),
   ]);
   if (!post) notFound();
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthor = user?.id === post.author_id;
+  const locked = post.is_paid_only && !canViewPaidContent(access);
 
   let currentUserName: string | null = null;
   if (user) {
@@ -64,7 +73,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
       <article className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
           <header className="pb-6 mb-6 border-b border-border">
-            <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
+            <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">
+              {post.is_paid_only && (
+                <span className="inline-block bg-cyan/15 text-navy text-[12px] font-bold px-2 py-0.5 mr-2 align-middle tracking-wide">
+                  정회원
+                </span>
+              )}
+              {post.title}
+            </h1>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
               <span className="font-bold text-navy">{post.author?.display_name ?? '익명'}</span>
               <span>·</span>
@@ -84,16 +100,24 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
             </div>
           </header>
 
-          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
-            {post.content}
-          </div>
+          {locked ? (
+            <div className="text-[13px] text-muted text-center py-16 mb-12 border-y border-border">
+              정회원 전용임.
+            </div>
+          ) : (
+            <>
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
+                {post.content}
+              </div>
 
-          <CommentSection
-            postId={post.id}
-            comments={comments}
-            currentUserId={user?.id ?? null}
-            currentUserName={currentUserName}
-          />
+              <CommentSection
+                postId={post.id}
+                comments={comments}
+                currentUserId={user?.id ?? null}
+                currentUserName={currentUserName}
+              />
+            </>
+          )}
 
           <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
             <Link href="/blog" className="text-[13px] font-bold text-navy no-underline hover:underline">

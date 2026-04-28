@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 type Props = {
-  initial?: { id: number; title: string; content: string };
+  initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
   category?: 'community' | 'blog';
   redirectBase?: string; // '/community' 또는 '/blog'
 };
@@ -15,6 +15,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const supabase = createClient();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [content, setContent] = useState(initial?.content ?? '');
+  const [isPaidOnly, setIsPaidOnly] = useState(initial?.is_paid_only ?? false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -38,7 +39,12 @@ export default function PostForm({ initial, category = 'community', redirectBase
     if (initial) {
       const { error } = await supabase
         .from('posts')
-        .update({ title: title.trim(), content: content.trim(), updated_at: new Date().toISOString() })
+        .update({
+          title: title.trim(),
+          content: content.trim(),
+          is_paid_only: category === 'blog' ? isPaidOnly : false,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', initial.id);
       setLoading(false);
       if (error) {
@@ -50,7 +56,13 @@ export default function PostForm({ initial, category = 'community', redirectBase
     } else {
       const { data, error } = await supabase
         .from('posts')
-        .insert({ author_id: user.id, title: title.trim(), content: content.trim(), category })
+        .insert({
+          author_id: user.id,
+          title: title.trim(),
+          content: content.trim(),
+          category,
+          is_paid_only: category === 'blog' ? isPaidOnly : false,
+        })
         .select('id')
         .single();
       setLoading(false);
@@ -90,6 +102,21 @@ export default function PostForm({ initial, category = 'community', redirectBase
           className="border border-border border-b-2 border-b-navy px-3.5 py-3 text-[15px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
         />
       </div>
+
+      {category === 'blog' && (
+        <label className="flex items-center gap-2.5 text-[13px] text-text cursor-pointer select-none py-1">
+          <input
+            type="checkbox"
+            checked={isPaidOnly}
+            onChange={(e) => setIsPaidOnly(e.target.checked)}
+            className="w-4 h-4 accent-navy cursor-pointer"
+          />
+          <span>
+            <span className="font-bold text-navy">정회원 전용</span>
+            <span className="text-muted ml-2">— 멤버십 결제한 회원만 본문 열람 가능</span>
+          </span>
+        </label>
+      )}
 
       {err && (
         <div className="text-sm px-4 py-3 break-keep leading-relaxed bg-red-50 text-red-700 border border-red-200">
