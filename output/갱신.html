@@ -84,10 +84,16 @@
       gap: 6px;
     }
 
-    .sidebar-logo .star {
-      color: var(--yellow);
-      font-size: 18px;
-      line-height: 1;
+    .sidebar-logo .logo-mark {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+    .sidebar-logo .logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.02em;
     }
 
     .sidebar-search {
@@ -865,7 +871,8 @@
     <aside class="sidebar" id="sidebar" data-current="갱신">
       <div class="sidebar-brand">
         <a href="index.html" class="sidebar-logo">
-          <span class="star">✦</span>멜른버그
+          <img src="logo.svg" alt="멜른버그" class="logo-mark">
+          <span class="logo-text">멜른버그</span>
         </a>
         <button class="sidebar-search" type="button" aria-label="검색">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

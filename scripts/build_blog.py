@@ -35,7 +35,7 @@ SIDEBAR_CSS = """
     .sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--white); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; z-index: 50; }
     .sidebar-brand { padding: 24px 24px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
     .sidebar-logo { font-size: 26px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; display: flex; align-items: center; gap: 6px; }
-    .sidebar-logo .star { color: var(--yellow); font-size: 18px; line-height: 1; }
+    .sidebar-logo .logo-mark { width: 36px; height: 36px; flex-shrink: 0; } .sidebar-logo .logo-text { font-size: 17px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
     .sidebar-search { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy); }
     .sidebar-cta-wrap { padding: 18px 20px 14px; }
     .sidebar-cta { display: flex; align-items: center; justify-content: center; width: 100%; background: var(--navy); color: var(--white); border: none; padding: 14px 16px; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-decoration: none; cursor: pointer; font-family: inherit; transition: background 0.15s; }
@@ -103,7 +103,8 @@ def sidebar_html(current: str) -> str:
     <aside class="sidebar" id="sidebar" data-current="{current}">
       <div class="sidebar-brand">
         <a href="index.html" class="sidebar-logo">
-          <span class="star">✦</span>멜른버그
+          <img src="logo.svg" alt="멜른버그" class="logo-mark">
+          <span class="logo-text">멜른버그</span>
         </a>
         <button class="sidebar-search" type="button" aria-label="검색">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

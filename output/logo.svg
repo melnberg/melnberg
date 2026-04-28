@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="멜른버그 로고">
+  <circle cx="100" cy="100" r="100" fill="#002060"/>
+  <g font-family="'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" fill="#FFFFFF">
+    <text x="92" y="118" text-anchor="middle" font-size="60" font-weight="800" letter-spacing="-3">mlbg</text>
+    <circle cx="150" cy="108" r="9" fill="#00C851"/>
+    <text x="100" y="160" text-anchor="middle" font-size="28" font-weight="600" letter-spacing="0">seoul</text>
+  </g>
+</svg>
