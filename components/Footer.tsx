@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-border pt-9 pb-7 text-xs text-muted leading-relaxed">
+    <footer className="mt-auto bg-white border-t border-border pt-9 pb-7 text-xs text-muted leading-relaxed">
       <div className="max-w-content mx-auto px-10">
         <div className="flex justify-between items-center mb-5 pb-5 border-b border-border">
           <span className="text-[13px] font-bold text-text tracking-tight">멜른버그</span>
