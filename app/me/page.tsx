@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
@@ -5,6 +6,7 @@ import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
 import NicknameEditor from '@/components/NicknameEditor';
 import { createClient } from '@/lib/supabase/server';
+import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
 
 export const metadata = { title: '마이페이지 — 멜른버그' };
 
@@ -16,10 +18,9 @@ export default async function MePage() {
 
   if (!user) redirect('/login?next=/me');
 
-  // profiles 테이블의 display_name이 정식 출처 (커뮤니티 글에 보이는 이름)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('display_name, tier, tier_expires_at, is_admin')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -28,6 +29,13 @@ export default async function MePage() {
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split('@')[0] ??
     '회원';
+
+  const tier = (profile?.tier ?? 'free') as 'free' | 'paid';
+  const expiresAt = profile?.tier_expires_at ?? null;
+  const isActive = isActivePaid({ tier, tier_expires_at: expiresAt });
+  const tierBadge = isActive ? '정회원' : tierLabelKo(tier);
+
+  const payments = await listOwnPayments();
 
   return (
     <Layout>
@@ -45,11 +53,52 @@ export default async function MePage() {
             </div>
             <Row label="이메일" value={user.email ?? '-'} />
             <Row label="가입일" value={user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'} />
-            <Row label="회원 등급" value="무료회원" badge />
+            <Row label="회원 등급" value={tierBadge} badge tone={isActive ? 'cyan' : 'muted'} />
+            {isActive && (
+              <Row label="만료일" value={formatExpiry(expiresAt)} />
+            )}
           </div>
 
-          <div className="mt-6 flex justify-end">
-            <LogoutButton />
+          {/* 결제 내역 */}
+          <div className="mt-10">
+            <h2 className="text-[15px] font-bold text-navy mb-3">결제 내역</h2>
+            {payments.length === 0 ? (
+              <p className="text-[13px] text-muted py-6 px-5 border border-border text-center">
+                결제 내역이 없습니다.
+              </p>
+            ) : (
+              <ul className="border border-border">
+                {payments.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border last:border-b-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-bold text-text">{p.product_name}</div>
+                      <div className="text-[11px] text-muted mt-0.5">
+                        {new Date(p.paid_at).toLocaleString('ko-KR')}
+                        {p.tier_period_label && ` · ${p.tier_period_label}`}
+                        {p.pg_provider && ` · ${p.pg_provider}`}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-[13px] font-bold tabular-nums">{p.amount.toLocaleString('ko-KR')}원</div>
+                      <div className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 ${p.status === 'paid' ? 'text-cyan' : 'text-muted'}`}>
+                        {p.status === 'paid' ? '결제완료' : p.status === 'refunded' ? '환불' : '취소'}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="mt-10 flex items-center justify-between">
+            {profile?.is_admin && (
+              <Link href="/admin" className="text-[13px] font-bold text-navy no-underline hover:underline">
+                어드민 페이지 →
+              </Link>
+            )}
+            <div className="ml-auto">
+              <LogoutButton />
+            </div>
           </div>
         </div>
       </section>
@@ -59,12 +108,18 @@ export default async function MePage() {
   );
 }
 
-function Row({ label, value, badge }: { label: string; value: string; badge?: boolean }) {
+function Row({ label, value, badge, tone }: { label: string; value: string; badge?: boolean; tone?: 'cyan' | 'muted' }) {
   return (
     <div className="flex items-center justify-between px-5 py-4 border-b border-border last:border-b-0">
       <span className="text-[12px] font-bold tracking-widest uppercase text-muted">{label}</span>
       {badge ? (
-        <span className="text-[11px] font-bold tracking-wider uppercase bg-navy-soft text-navy px-3 py-1">{value}</span>
+        <span
+          className={`text-[11px] font-bold tracking-wider uppercase px-3 py-1 ${
+            tone === 'cyan' ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy'
+          }`}
+        >
+          {value}
+        </span>
       ) : (
         <span className="text-[14px] text-text">{value}</span>
       )}
