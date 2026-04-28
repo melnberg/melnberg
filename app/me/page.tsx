@@ -39,7 +39,10 @@ export default async function MePage() {
           <p className="text-sm text-muted mb-8">계정 정보를 확인합니다.</p>
 
           <div className="border border-border">
-            <Row label="이름" value={displayName ?? '-'} />
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
+              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">닉네임</span>
+              <NicknameEditor initial={displayName} />
+            </div>
             <Row label="이메일" value={user.email ?? '-'} />
             <Row label="가입일" value={user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'} />
             <Row label="회원 등급" value="무료회원" badge />
