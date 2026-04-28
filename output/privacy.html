@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="멜른버그 블로그">
-  <title>블로그 — 멜른버그</title>
+  <meta name="description" content="멜른버그 개인정보처리방침">
+  <title>개인정보처리방침 — 멜른버그</title>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,39 +87,33 @@
       .inner { padding: 0 20px; }
     }
 
-    .blog-hero { padding: 56px 0 40px; border-bottom: 1px solid var(--border); }
-    .section-header { display: flex; align-items: baseline; gap: 14px; padding-bottom: 12px; border-bottom: 2px solid var(--navy); }
-    .blog-hero-title { font-size: 32px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
-    .section-rule { flex: 1; height: 1px; background: var(--border); }
-    .posts-section { padding: 48px 0; }
-    .posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-    .post-card { padding: 24px 24px 24px 0; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); text-decoration: none; color: inherit; display: block; }
-    .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
-    .post-card:hover .post-title { color: var(--navy); text-decoration: underline; }
-    .post-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .post-title { font-size: 18px; font-weight: 700; line-height: 1.3; color: var(--text); margin-bottom: 10px; word-break: keep-all; }
-    .post-excerpt { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .post-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
-    .post-card.featured { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding: 0 0 32px 0; border-right: none; }
-    .post-card.featured .post-content { display: flex; flex-direction: column; justify-content: center; }
-    .post-card.featured .post-title { font-size: 28px; margin-bottom: 14px; }
-    .post-card.featured .post-excerpt { font-size: 15px; -webkit-line-clamp: 4; }
-    .state-msg { text-align: center; padding: 80px 0; color: var(--muted); font-size: 15px; }
-    @media (max-width: 980px) {
-      .posts-grid { grid-template-columns: 1fr; }
-      .post-card, .post-card:nth-child(3n+2) { border-right: none; padding-right: 0; }
-      .post-card.featured { grid-template-columns: 1fr; }
-    }
+    /* 약관·정책 페이지 공통 */
+    .terms-page { padding: 56px 0 80px; }
+    .terms-page .inner { max-width: 760px; }
+    .terms-title { font-size: 28px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; margin-bottom: 8px; }
+    .terms-meta { font-size: 12px; color: var(--muted); margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid var(--navy); }
+    .terms-section { margin-bottom: 32px; }
+    .terms-section h2 { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+    .terms-section p { font-size: 14px; color: var(--text); line-height: 1.85; margin-bottom: 8px; word-break: keep-all; }
+    .terms-section ul { margin: 8px 0 12px 22px; list-style-type: disc; }
+    .terms-section ul li { font-size: 14px; line-height: 1.85; margin-bottom: 4px; word-break: keep-all; }
+    .terms-section ol { margin: 8px 0 12px 22px; }
+    .terms-section ol li { font-size: 14px; line-height: 1.85; margin-bottom: 4px; word-break: keep-all; }
+    .terms-effective { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+
     @media (max-width: 780px) {
-      .blog-hero { padding: 36px 0 28px; }
-      .blog-hero-title { font-size: 24px; }
+      .terms-page { padding: 36px 0 60px; }
+      .terms-title { font-size: 22px; }
+      .terms-section h2 { font-size: 15px; }
+      .terms-section p, .terms-section ul li, .terms-section ol li { font-size: 13px; }
     }
-</style>
+  </style>
 </head>
 <body>
+
   <div class="layout">
 
-    <aside class="sidebar" id="sidebar" data-current="blog">
+    <aside class="sidebar" id="sidebar" data-current="privacy">
       <div class="sidebar-brand">
         <a href="index.html" class="sidebar-logo">
           <span class="star">✦</span>멜른버그
@@ -202,28 +196,79 @@
             <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
-        <div class="breadcrumb"><a href="index.html">멜른버그</a> &nbsp;›&nbsp; <a href="blog.html"><strong>블로그</strong></a></div>
-        <div class="main-top-meta">Blog</div>
+        <div class="breadcrumb"><a href="index.html">멜른버그</a> &nbsp;›&nbsp; <a href="privacy.html"><strong>개인정보처리방침</strong></a></div>
+        <div class="main-top-meta">Privacy</div>
       </div>
 
-      <section class="blog-hero">
+      <section class="terms-page">
         <div class="inner">
-          <div class="section-header">
-            <h1 class="blog-hero-title">블로그</h1>
-            <div class="section-rule"></div>
+          <h1 class="terms-title">개인정보처리방침</h1>
+          <p class="terms-meta">시행일: 2026년 4월 1일</p>
+
+          <div class="terms-section">
+            <h2>1. 수집하는 개인정보</h2>
+            <p>멜른버그(Melnberg)는 네이버 로그인을 통해 다음 정보를 수집합니다.</p>
+            <ul>
+              <li>이름/닉네임 (네이버 프로필)</li>
+              <li>이메일 (선택, 네이버 계정에 등록된 경우)</li>
+              <li>네이버 고유 식별자 (ID)</li>
+            </ul>
+            <p>유료 상담·강의 결제 시 결제 정보는 PG사를 통해 처리되며, 멜른버그는 카드번호·계좌번호 등 결제 정보를 직접 저장하지 않습니다.</p>
           </div>
+
+          <div class="terms-section">
+            <h2>2. 개인정보의 이용 목적</h2>
+            <ul>
+              <li>서비스 회원 관리 및 본인 확인</li>
+              <li>부동산 콘텐츠 제공 및 상담 응대</li>
+              <li>강의·세미나 신청 및 운영</li>
+              <li>서비스 개선을 위한 통계 분석</li>
+              <li>고객 문의 및 피드백 응대</li>
+            </ul>
+          </div>
+
+          <div class="terms-section">
+            <h2>3. 개인정보의 보유 및 이용 기간</h2>
+            <p>회원 탈퇴 시까지 보유하며, 탈퇴 후 즉시 파기합니다. 단, 관계 법령에 의해 보존이 필요한 경우(전자상거래법상 결제·계약 기록 5년 등) 해당 기간 동안 보관합니다.</p>
+          </div>
+
+          <div class="terms-section">
+            <h2>4. 개인정보의 제3자 제공</h2>
+            <p>멜른버그는 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 다만, 법률에 의한 요청이 있는 경우는 예외로 합니다.</p>
+          </div>
+
+          <div class="terms-section">
+            <h2>5. 상담 및 문의 데이터</h2>
+            <ul>
+              <li>이용자가 제출한 상담 내용 및 첨부 자료(매물 정보, 자산 현황 등)는 해당 상담 응대 목적으로만 사용됩니다.</li>
+              <li>AI 모델 학습에 활용되지 않습니다.</li>
+              <li>이용자 동의 없이 외부에 공유되지 않으며, 익명 처리된 사례로 콘텐츠에 인용할 경우 사전 동의를 받습니다.</li>
+            </ul>
+          </div>
+
+          <div class="terms-section">
+            <h2>6. 개인정보의 안전성 확보 조치</h2>
+            <ul>
+              <li>데이터 전송 시 SSL/TLS 암호화 적용</li>
+              <li>접근 권한 제한 및 관리</li>
+              <li>보안 헤더 적용 (HSTS, CSP 등)</li>
+            </ul>
+          </div>
+
+          <div class="terms-section">
+            <h2>7. 이용자의 권리</h2>
+            <p>이용자는 언제든지 자신의 개인정보에 대해 열람, 수정, 삭제를 요청할 수 있으며, 회원 탈퇴를 통해 개인정보 처리를 중단할 수 있습니다.</p>
+          </div>
+
+          <div class="terms-section">
+            <h2>8. 개인정보 보호 책임자</h2>
+            <p>개인정보 관련 문의는 멜른버그 카페 또는 블로그(하멜른 돈벌시간) 피드백 채널을 통해 접수할 수 있습니다.</p>
+          </div>
+
+          <p class="terms-effective"><strong>부칙</strong> — 이 개인정보처리방침은 2026년 4월 1일부터 시행합니다.</p>
         </div>
       </section>
-      <section class="posts-section">
-        <div class="inner"><div class="posts-grid"><a class="post-card featured" href="post-2026-04-21-첫번째글.html">
-  <div class="post-content">
-    <p class="post-tag">멜른버그</p>
-    <h2 class="post-title">멜른버그를 시작하며</h2>
-    <p class='post-excerpt'>왜 시작하는지, 뭘 하는지에 대한 첫 번째 글.</p>
-    <p class="post-meta">2026년 4월 21일</p>
-  </div>
-</a></div></div>
-      </section>
+
       <footer class="footer">
         <div class="inner">
           <div class="footer-top">
@@ -246,15 +291,8 @@
       </footer>
     </main>
   </div>
-  <script>
-    (function () {
-      var sidebar = document.getElementById('sidebar');
-      var current = sidebar.getAttribute('data-current');
-      sidebar.querySelectorAll('.s-item[data-product]').forEach(function (a) {
-        if (a.getAttribute('data-product') === current) a.classList.add('active');
-      });
-    })();
 
+  <script>
     (function () {
       var toggle   = document.getElementById('menu-toggle');
       var sidebar  = document.getElementById('sidebar');
@@ -271,6 +309,7 @@
         });
       });
     })();
-</script>
+  </script>
+
 </body>
 </html>

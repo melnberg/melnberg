@@ -372,7 +372,7 @@ def render_blog_html(posts: list[dict]) -> str:
             <div class="footer-links">
               <a href="blog.html">블로그</a>
               <a href="terms.html">이용약관</a>
-              <a href="#">개인정보처리방침</a>
+              <a href="privacy.html">개인정보처리방침</a>
             </div>
           </div>
           <div class="footer-biz">
@@ -435,7 +435,7 @@ def render_post_html(post: dict) -> str:
             <div class="footer-links">
               <a href="blog.html">블로그</a>
               <a href="terms.html">이용약관</a>
-              <a href="#">개인정보처리방침</a>
+              <a href="privacy.html">개인정보처리방침</a>
             </div>
           </div>
           <div class="footer-biz">
