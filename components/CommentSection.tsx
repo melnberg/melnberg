@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
 
@@ -11,6 +11,25 @@ type Props = {
   currentUserId: string | null;
   currentUserName?: string | null;
 };
+
+type CommentNode = CommunityComment & { replies: CommunityComment[] };
+
+function buildTree(comments: CommunityComment[]): CommentNode[] {
+  const map = new Map<number, CommentNode>();
+  const top: CommentNode[] = [];
+  comments.forEach((c) => map.set(c.id, { ...c, replies: [] }));
+  comments.forEach((c) => {
+    const node = map.get(c.id)!;
+    if (c.parent_id) {
+      const parent = map.get(c.parent_id);
+      if (parent) parent.replies.push(node);
+      else top.push(node); // 부모가 삭제된 고아 댓글
+    } else {
+      top.push(node);
+    }
+  });
+  return top;
+}
 
 function formatRelativeKo(iso: string): string {
   const d = new Date(iso);
@@ -30,19 +49,21 @@ export default function CommentSection({ postId, comments, currentUserId, curren
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const tree = useMemo(() => buildTree(list), [list]);
+  const totalCount = list.length;
+
+  async function handleSubmitTop(e: React.FormEvent) {
     e.preventDefault();
-    if (loading || !content.trim()) return;
+    if (loading || !content.trim() || !currentUserId) return;
     setErr(null);
     setLoading(true);
-
     const { data, error } = await supabase
       .from('comments')
-      .insert({ post_id: postId, author_id: currentUserId!, content: content.trim() })
-      .select('id, post_id, author_id, content, created_at, author:profiles!author_id(display_name)')
+      .insert({ post_id: postId, author_id: currentUserId, content: content.trim(), parent_id: null })
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name)')
       .single();
-
     setLoading(false);
     if (error || !data) {
       setErr(error?.message ?? '저장 실패');
@@ -50,6 +71,22 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     }
     setList([...list, data as unknown as CommunityComment]);
     setContent('');
+    router.refresh();
+  }
+
+  async function handleSubmitReply(parentId: number, replyContent: string) {
+    if (!currentUserId) return;
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({ post_id: postId, author_id: currentUserId, content: replyContent.trim(), parent_id: parentId })
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name)')
+      .single();
+    if (error || !data) {
+      alert(error?.message ?? '저장 실패');
+      return;
+    }
+    setList([...list, data as unknown as CommunityComment]);
+    setReplyingTo(null);
     router.refresh();
   }
 
@@ -67,32 +104,50 @@ export default function CommentSection({ postId, comments, currentUserId, curren
   return (
     <div>
       <h2 className="text-[14px] font-bold text-navy mb-2 pb-2 border-b-2 border-navy">
-        댓글 <span className="text-muted font-semibold">{list.length}</span>
+        댓글 <span className="text-muted font-semibold">{totalCount}</span>
       </h2>
 
-      {list.length === 0 ? (
+      {tree.length === 0 ? (
         <p className="text-muted text-sm py-4 text-center">첫 댓글을 남겨주세요.</p>
       ) : (
         <ul className="mb-3">
-          {list.map((c) => (
-            <li key={c.id} className="py-2.5 border-b border-border last:border-b-0">
-              <div className="flex items-start justify-between gap-3 mb-1">
-                <div className="flex items-center gap-2 text-[12px]">
-                  <span className="font-bold text-navy">{c.author?.display_name ?? '익명'}</span>
-                  <span className="text-muted">·</span>
-                  <span className="text-muted">{formatRelativeKo(c.created_at)}</span>
+          {tree.map((c) => (
+            <li key={c.id} className="border-b border-border last:border-b-0">
+              <CommentRow
+                comment={c}
+                currentUserId={currentUserId}
+                onReply={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
+                onDelete={() => handleDelete(c.id)}
+                showReplyButton={Boolean(currentUserId)}
+              />
+
+              {/* 답글 목록 */}
+              {c.replies.length > 0 && (
+                <ul className="pl-6 border-l-2 border-border ml-2 my-1">
+                  {c.replies.map((r) => (
+                    <li key={r.id} className="border-b border-border last:border-b-0 py-2.5">
+                      <CommentRow
+                        comment={r}
+                        currentUserId={currentUserId}
+                        onDelete={() => handleDelete(r.id)}
+                        showReplyButton={false}
+                        compact
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* 답글 입력 폼 */}
+              {replyingTo === c.id && currentUserId && (
+                <div className="pl-6 ml-2 my-2 border-l-2 border-cyan">
+                  <ReplyForm
+                    currentUserName={currentUserName ?? '회원'}
+                    onCancel={() => setReplyingTo(null)}
+                    onSubmit={(text) => handleSubmitReply(c.id, text)}
+                  />
                 </div>
-                {currentUserId === c.author_id && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(c.id)}
-                    className="text-[11px] text-muted hover:text-red-600 cursor-pointer bg-transparent border-none p-0"
-                  >
-                    삭제
-                  </button>
-                )}
-              </div>
-              <p className="text-[13px] leading-relaxed break-keep whitespace-pre-wrap">{c.content}</p>
+              )}
             </li>
           ))}
         </ul>
@@ -100,7 +155,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
 
       {currentUserId ? (
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmitTop}
           className="mt-3 border border-border focus-within:border-navy transition-colors"
         >
           <div className="px-4 pt-3 text-[13px] font-bold text-text">{currentUserName}</div>
@@ -133,5 +188,106 @@ export default function CommentSection({ postId, comments, currentUserId, curren
         </p>
       )}
     </div>
+  );
+}
+
+function CommentRow({
+  comment,
+  currentUserId,
+  onReply,
+  onDelete,
+  showReplyButton,
+  compact,
+}: {
+  comment: CommunityComment;
+  currentUserId: string | null;
+  onReply?: () => void;
+  onDelete: () => void;
+  showReplyButton: boolean;
+  compact?: boolean;
+}) {
+  const isMine = currentUserId === comment.author_id;
+  return (
+    <div className={compact ? '' : 'py-2.5'}>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2 text-[12px]">
+          <span className="font-bold text-navy">{comment.author?.display_name ?? '익명'}</span>
+          <span className="text-muted">·</span>
+          <span className="text-muted">{formatRelativeKo(comment.created_at)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {showReplyButton && onReply && (
+            <button
+              type="button"
+              onClick={onReply}
+              className="text-[11px] text-muted hover:text-navy cursor-pointer bg-transparent border-none p-0"
+            >
+              답글
+            </button>
+          )}
+          {isMine && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-[11px] text-muted hover:text-red-600 cursor-pointer bg-transparent border-none p-0"
+            >
+              삭제
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="text-[13px] leading-relaxed break-keep whitespace-pre-wrap">{comment.content}</p>
+    </div>
+  );
+}
+
+function ReplyForm({
+  currentUserName,
+  onCancel,
+  onSubmit,
+}: {
+  currentUserName: string;
+  onCancel: () => void;
+  onSubmit: (text: string) => Promise<void>;
+}) {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handle(e: React.FormEvent) {
+    e.preventDefault();
+    if (loading || !text.trim()) return;
+    setLoading(true);
+    await onSubmit(text);
+    setLoading(false);
+  }
+
+  return (
+    <form onSubmit={handle} className="border border-border focus-within:border-navy transition-colors">
+      <div className="px-3 pt-2.5 text-[12px] font-bold text-text">{currentUserName}</div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="답글을 남겨보세요"
+        rows={2}
+        autoFocus
+        className="block w-full px-3 pt-0.5 pb-2 text-[13px] outline-none rounded-none resize-none leading-relaxed border-none focus:ring-0 placeholder:text-muted"
+      />
+      <div className="flex items-center justify-end gap-3 px-3 py-1.5 border-t border-border">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-[12px] text-muted hover:text-text cursor-pointer bg-transparent border-none p-0"
+        >
+          취소
+        </button>
+        <button
+          type="submit"
+          disabled={loading || !text.trim()}
+          className="text-[12px] font-bold text-navy hover:text-navy-dark cursor-pointer disabled:text-muted disabled:cursor-not-allowed bg-transparent border-none p-0"
+        >
+          {loading ? '등록 중...' : '등록'}
+        </button>
+      </div>
+    </form>
   );
 }

@@ -20,6 +20,7 @@ export type CommunityComment = {
   id: number;
   post_id: number;
   author_id: string;
+  parent_id: number | null;
   content: string;
   created_at: string;
   author: { display_name: string | null } | null;
@@ -74,7 +75,7 @@ export async function listComments(postId: number): Promise<CommunityComment[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('comments')
-    .select('id, post_id, author_id, content, created_at, author:profiles!author_id(display_name)')
+    .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
   if (error) {
