@@ -28,10 +28,10 @@ export default function Sidebar({ current, user }: Props) {
         className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[260px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
         <div className="px-6 py-5 flex items-center justify-between border-b border-border">
-          <Link href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
+          <a href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
             <img src="/logo.svg" alt="멜른버그" className="w-9 h-9 flex-shrink-0" />
             <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
-          </Link>
+          </a>
           <button
             type="button"
             aria-label="검색"
