@@ -1,0 +1,79 @@
+import { notFound } from 'next/navigation';
+import Layout from '@/components/Layout';
+import MainTop from '@/components/MainTop';
+import Footer from '@/components/Footer';
+import CommentSection from '@/components/CommentSection';
+import PostActions from '@/components/PostActions';
+import { getPost, listComments, formatRelativeKo } from '@/lib/community';
+import { createClient } from '@/lib/supabase/server';
+
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const post = await getPost(Number(id));
+  if (!post) return {};
+  return {
+    title: `${post.title} — 멜른버그`,
+    description: post.content.slice(0, 140),
+  };
+}
+
+export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const numId = Number(id);
+  if (!Number.isFinite(numId)) notFound();
+
+  const [post, comments] = await Promise.all([getPost(numId), listComments(numId)]);
+  if (!post) notFound();
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAuthor = user?.id === post.author_id;
+
+  return (
+    <Layout current="community">
+      <MainTop
+        crumbs={[
+          { href: '/', label: '멜른버그' },
+          { href: '/community', label: '커뮤니티' },
+          { label: post.title, bold: true },
+        ]}
+        meta="Post"
+      />
+
+      <article className="py-12">
+        <div className="max-w-[760px] mx-auto px-6">
+          {/* 헤더 */}
+          <header className="pb-6 mb-6 border-b border-border">
+            <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-[12px] text-muted">
+                <span className="font-bold text-navy">{post.author?.display_name ?? '익명'}</span>
+                <span>·</span>
+                <span>{formatRelativeKo(post.created_at)}</span>
+                {post.updated_at !== post.created_at && (
+                  <>
+                    <span>·</span>
+                    <span>수정됨</span>
+                  </>
+                )}
+              </div>
+              {isAuthor && <PostActions postId={post.id} />}
+            </div>
+          </header>
+
+          {/* 본문 */}
+          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
+            {post.content}
+          </div>
+
+          {/* 댓글 */}
+          <CommentSection postId={post.id} comments={comments} currentUserId={user?.id ?? null} />
+        </div>
+      </article>
+
+      <Footer />
+    </Layout>
+  );
+}
