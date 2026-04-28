@@ -1,0 +1,157 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { products } from '@/lib/products';
+
+type Props = { current?: string };
+
+const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
+const memberships = products.filter((p) => p.id === 'new-membership' || p.id === 'renewal');
+
+export default function Sidebar({ current }: Props) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const close = () => setOpen(false);
+    if (open && window.innerWidth <= 780) {
+      window.addEventListener('resize', close);
+      return () => window.removeEventListener('resize', close);
+    }
+  }, [open]);
+
+  return (
+    <>
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[260px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
+      >
+        <div className="px-6 py-5 flex items-center justify-between border-b border-border">
+          <Link href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
+            <img src="/logo.svg" alt="멜른버그" className="w-9 h-9 flex-shrink-0" />
+            <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
+          </Link>
+          <button
+            type="button"
+            aria-label="검색"
+            className="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center text-navy"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx={11} cy={11} r={7} />
+              <line x1={21} y1={21} x2={16.65} y2={16.65} />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-5 pt-4 pb-3">
+          <Link
+            href="/짧은상담"
+            className="flex items-center justify-center w-full bg-navy text-white py-3.5 px-4 text-sm font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
+            onClick={() => setOpen(false)}
+          >
+            상담 신청 →
+          </Link>
+        </div>
+
+        <nav className="flex-1 py-1 pb-4 flex flex-col">
+          <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
+          <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} />
+
+          <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">상담</div>
+          {consults.map((p) => (
+            <SItem
+              key={p.id}
+              href={`/${p.filename}`}
+              label={p.name}
+              price={p.price.toLocaleString('en-US')}
+              active={current === p.filename}
+              icon={p.id === 'short-consult' ? <ChatShortIcon /> : <ChatLongIcon />}
+              onClick={() => setOpen(false)}
+            />
+          ))}
+
+          <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">멤버십</div>
+          {memberships.map((p) => (
+            <SItem
+              key={p.id}
+              href={`/${p.filename}`}
+              label={p.id === 'new-membership' ? '2분기 신규가입' : '2분기 갱신'}
+              price={p.price.toLocaleString('en-US')}
+              active={current === p.filename}
+              icon={p.id === 'new-membership' ? <StarIcon /> : <RenewIcon />}
+              onClick={() => setOpen(false)}
+            />
+          ))}
+        </nav>
+
+        <div className="border-t border-border px-6 pt-4 pb-3">
+          <div className="flex items-start gap-3 pb-3">
+            <div className="w-9 h-9 rounded-full bg-navy-soft text-navy flex items-center justify-center flex-shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="text-[11px] text-muted tracking-wide mb-0.5">상담문의</div>
+              <span className="block text-base font-bold text-navy tracking-tight">오픈채팅</span>
+              <div className="text-[10px] text-muted mt-1 leading-relaxed">
+                결제 후 비공개 채팅방 안내
+                <br />
+                응답: 24시간 이내
+              </div>
+            </div>
+          </div>
+          <div className="flex border-t border-border pt-3">
+            <Link href="/" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy">홈</Link>
+            <Link href="/blog" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy border-l border-border">블로그</Link>
+          </div>
+        </div>
+      </aside>
+
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      <button
+        type="button"
+        aria-label="메뉴 열기"
+        onClick={() => setOpen(true)}
+        className="lg:hidden fixed top-3 left-3 z-30 w-9 h-9 border border-border bg-white text-navy flex items-center justify-center"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <line x1={3} y1={6} x2={21} y2={6} />
+          <line x1={3} y1={12} x2={21} y2={12} />
+          <line x1={3} y1={18} x2={21} y2={18} />
+        </svg>
+      </button>
+    </>
+  );
+}
+
+function SItem({ href, label, price, active, icon, onClick }: { href: string; label: string; price?: string; active?: boolean; icon: React.ReactNode; onClick?: () => void }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-6 py-3 text-sm no-underline relative border-l-[3px] transition-colors ${active ? 'bg-navy-soft text-navy font-bold border-navy' : 'text-text font-medium border-transparent hover:bg-navy-soft'}`}
+    >
+      {icon}
+      <span>{label}</span>
+      {price && <span className={`ml-auto text-[11px] font-semibold ${active ? 'text-navy' : 'text-muted'}`}>{price}</span>}
+      {active && <span className="absolute right-5 text-lg leading-none text-navy">›</span>}
+    </Link>
+  );
+}
+
+const iconCls = 'w-[18px] h-[18px] flex-shrink-0';
+const iconProps = { fill: 'none' as const, stroke: 'currentColor' as const, strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, viewBox: '0 0 24 24', className: iconCls };
+
+const HomeIcon = () => <svg {...iconProps}><path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" /></svg>;
+const BlogIcon = () => <svg {...iconProps}><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z" /><path d="M4 4v12a4 4 0 0 0 4 4" /></svg>;
+const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
+const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>;
+const StarIcon = () => <svg {...iconProps}><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>;
+const RenewIcon = () => <svg {...iconProps}><path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" /></svg>;

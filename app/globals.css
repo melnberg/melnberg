@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-white text-text font-sans antialiased;
+    line-height: 1.6;
+  }
+  a { color: inherit; }
+}
+
+/* 약관·정책 페이지의 ol/li 기본 스타일 */
+.terms-section ol {
+  list-style: decimal;
+  margin: 0.5rem 0 0.75rem 1.4rem;
+}
+.terms-section ol[type="a"] {
+  list-style: lower-alpha;
+  margin-top: 0.25rem;
+  margin-left: 1.2rem;
+}
+.terms-section ol li,
+.terms-section ul li {
+  font-size: 14px;
+  line-height: 1.85;
+  margin-bottom: 4px;
+  word-break: keep-all;
+}
+.terms-section ul {
+  list-style: disc;
+  margin: 0.5rem 0 0.75rem 1.4rem;
+}
+.terms-section p {
+  font-size: 14px;
+  line-height: 1.85;
+  margin-bottom: 8px;
+  word-break: keep-all;
+}
+
+/* 블로그 포스트 본문 */
+.prose-content p {
+  margin-bottom: 1.5em;
+}
+.prose-content h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #002060;
+  margin: 2em 0 0.8em;
+}
+.prose-content h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #002060;
+  margin: 1.8em 0 0.6em;
+}
+.prose-content ul, .prose-content ol {
+  margin: 0 0 1.5em 1.5em;
+}
+.prose-content ul { list-style: disc; }
+.prose-content ol { list-style: decimal; }
+.prose-content blockquote {
+  border-left: 3px solid #002060;
+  padding-left: 20px;
+  margin: 1.5em 0;
+  color: #777;
+  font-style: italic;
+}
+.prose-content a {
+  color: #002060;
+  text-decoration: underline;
+}
+
+/* line-clamp utility (Tailwind plugin alternative) */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
