@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-export default function PostActions({ postId }: { postId: number }) {
+export default function PostActions({ postId, basePath = '/community' }: { postId: number; basePath?: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [deleting, setDeleting] = useState(false);
@@ -20,14 +20,14 @@ export default function PostActions({ postId }: { postId: number }) {
       alert(error.message);
       return;
     }
-    router.push('/community');
+    router.push(basePath);
     router.refresh();
   }
 
   return (
     <span className="inline-flex items-center gap-2 text-[12px]">
       <Link
-        href={`/community/${postId}/edit`}
+        href={`${basePath}/${postId}/edit`}
         className="font-semibold text-muted no-underline hover:text-navy"
       >
         수정

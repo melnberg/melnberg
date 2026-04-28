@@ -2,58 +2,93 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
-import { listPosts, formatDate } from '@/lib/posts';
+import { listPosts, formatBoardTime, isCurrentUserAdmin } from '@/lib/community';
 
 export const metadata = {
   title: '블로그 — 멜른버그',
   description: '멜른버그 블로그',
 };
 
-export default function BlogPage() {
-  const posts = listPosts();
-  const [first, ...rest] = posts;
+export const dynamic = 'force-dynamic';
+
+export default async function BlogPage() {
+  const [posts, isAdmin] = await Promise.all([listPosts('blog'), isCurrentUserAdmin()]);
 
   return (
     <Layout current="blog">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/blog', label: '블로그', bold: true }]} meta="Blog" />
 
-      <section className="pt-14 pb-10 border-b border-border">
+      <section className="pt-14 pb-6 border-b border-border">
         <div className="max-w-content mx-auto px-10">
-          <div className="flex items-baseline gap-3.5 pb-3 border-b-2 border-navy">
+          <div className="flex items-center justify-between gap-4 pb-3 border-b-2 border-navy">
             <h1 className="text-[32px] font-bold text-navy tracking-tight">블로그</h1>
-            <div className="flex-1 h-px bg-border" />
+            {isAdmin && (
+              <Link
+                href="/blog/new"
+                className="bg-navy text-white px-5 py-2.5 text-[13px] font-bold tracking-wider no-underline hover:bg-navy-dark"
+              >
+                글쓰기 →
+              </Link>
+            )}
           </div>
         </div>
       </section>
 
-      <section className="py-12">
+      <section className="py-6">
         <div className="max-w-content mx-auto px-10">
           {posts.length === 0 ? (
-            <p className="text-center py-20 text-muted text-[15px]">아직 게시된 글이 없습니다.</p>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3">
-              {first && (
-                <Link href={`/blog/${first.slug}`} className="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-10 pb-8 no-underline text-text border-b border-border">
-                  <div className="flex flex-col justify-center">
-                    <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-2">{first.tag}</p>
-                    <h2 className="text-[28px] font-bold leading-tight mb-3.5 break-keep hover:text-navy hover:underline">{first.title}</h2>
-                    {first.excerpt && <p className="text-[15px] text-muted leading-relaxed mb-3 line-clamp-4">{first.excerpt}</p>}
-                    <p className="text-[11px] text-muted tracking-wide">{formatDate(first.date)}</p>
-                  </div>
+            <div className="text-center py-20">
+              <p className="text-muted text-[15px] mb-6">아직 게시된 글이 없습니다.</p>
+              {isAdmin && (
+                <Link href="/blog/new" className="inline-block bg-navy text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-navy-dark">
+                  첫 글 쓰기 →
                 </Link>
               )}
-              {rest.map((p, i) => (
-                <Link
-                  key={p.slug}
-                  href={`/blog/${p.slug}`}
-                  className={`block py-6 pr-6 no-underline text-text border-b border-border ${(i + 1) % 3 === 2 ? 'lg:border-r-0 lg:pr-0' : 'lg:border-r border-border'}`}
-                >
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-2">{p.tag}</p>
-                  <h3 className="text-lg font-bold leading-tight mb-2.5 break-keep hover:text-navy hover:underline">{p.title}</h3>
-                  {p.excerpt && <p className="text-[13px] text-muted leading-relaxed mb-3.5 line-clamp-3">{p.excerpt}</p>}
-                  <p className="text-[11px] text-muted tracking-wide">{formatDate(p.date)}</p>
-                </Link>
-              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse">
+                <thead>
+                  <tr className="bg-bg/60 border-y border-navy text-muted">
+                    <th className="py-2.5 px-2 font-semibold text-center w-16">번호</th>
+                    <th className="py-2.5 px-3 font-semibold text-left">제목</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-28">작성자</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-24">작성일</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-14">추천</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-14">조회</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {posts.map((p) => (
+                    <tr key={p.id} className="border-b border-border hover:bg-bg/40 transition-colors">
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">{p.id}</td>
+                      <td className="py-2.5 px-3 min-w-0">
+                        <Link
+                          href={`/blog/${p.id}`}
+                          className="text-text no-underline hover:text-navy hover:underline truncate inline-block max-w-full align-middle"
+                        >
+                          {p.title}
+                          {p.comment_count && p.comment_count > 0 ? (
+                            <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
+                          ) : null}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-navy font-semibold truncate">
+                        {p.author?.display_name ?? '익명'}
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {formatBoardTime(p.created_at)}
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {p.like_count ?? 0}
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {p.view_count ?? 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/client';
 
 type Props = {
   initial?: { id: number; title: string; content: string };
+  category?: 'community' | 'blog';
+  redirectBase?: string; // '/community' 또는 '/blog'
 };
 
-export default function PostForm({ initial }: Props) {
+export default function PostForm({ initial, category = 'community', redirectBase = '/community' }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -43,12 +45,12 @@ export default function PostForm({ initial }: Props) {
         setErr(error.message);
         return;
       }
-      router.push(`/community/${initial.id}`);
+      router.push(`${redirectBase}/${initial.id}`);
       router.refresh();
     } else {
       const { data, error } = await supabase
         .from('posts')
-        .insert({ author_id: user.id, title: title.trim(), content: content.trim() })
+        .insert({ author_id: user.id, title: title.trim(), content: content.trim(), category })
         .select('id')
         .single();
       setLoading(false);
@@ -56,7 +58,7 @@ export default function PostForm({ initial }: Props) {
         setErr(error?.message ?? '저장 실패');
         return;
       }
-      router.push(`/community/${data.id}`);
+      router.push(`${redirectBase}/${data.id}`);
       router.refresh();
     }
   }

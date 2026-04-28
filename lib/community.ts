@@ -1,10 +1,13 @@
 import { createClient } from './supabase/server';
 
+export type PostCategory = 'community' | 'blog';
+
 export type CommunityPost = {
   id: number;
   author_id: string;
   title: string;
   content: string;
+  category: PostCategory;
   created_at: string;
   updated_at: string;
   author: { display_name: string | null } | null;
@@ -22,11 +25,12 @@ export type CommunityComment = {
   author: { display_name: string | null } | null;
 };
 
-export async function listPosts(limit = 50): Promise<CommunityPost[]> {
+export async function listPosts(category: PostCategory = 'community', limit = 50): Promise<CommunityPost[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
+    .select('id, author_id, title, content, category, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
+    .eq('category', category)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) {
@@ -42,15 +46,28 @@ export async function listPosts(limit = 50): Promise<CommunityPost[]> {
   });
 }
 
-export async function getPost(id: number): Promise<CommunityPost | null> {
+export async function getPost(id: number, category?: PostCategory): Promise<CommunityPost | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, created_at, updated_at, author:profiles!author_id(display_name)')
-    .eq('id', id)
-    .maybeSingle();
+    .select('id, author_id, title, content, category, created_at, updated_at, author:profiles!author_id(display_name)')
+    .eq('id', id);
+  if (category) q = q.eq('category', category);
+  const { data, error } = await q.maybeSingle();
   if (error || !data) return null;
   return data as unknown as CommunityPost;
+}
+
+export async function isCurrentUserAdmin(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+  return Boolean(data?.is_admin);
 }
 
 export async function listComments(postId: number): Promise<CommunityComment[]> {
