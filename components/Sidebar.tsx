@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 
-type Props = { current?: string };
+export type SidebarUser = { name: string; email: string };
+
+type Props = { current?: string; user?: SidebarUser | null };
 
 const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
 const memberships = products.filter((p) => p.id === 'new-membership' || p.id === 'renewal');
 
-export default function Sidebar({ current }: Props) {
+export default function Sidebar({ current, user }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -42,7 +44,42 @@ export default function Sidebar({ current }: Props) {
           </button>
         </div>
 
-        <div className="px-5 pt-4 pb-3">
+        <div className="px-5 pt-4 pb-2">
+          {user ? (
+            <Link
+              href="/me"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 border border-border no-underline hover:border-navy transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                {(user.name[0] ?? '').toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-bold text-text truncate">{user.name}</div>
+                <div className="text-[11px] text-muted">마이페이지 →</div>
+              </div>
+            </Link>
+          ) : (
+            <div className="flex gap-2">
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className="flex-1 flex items-center justify-center bg-white border border-border text-text py-2.5 px-3 text-[12px] font-bold tracking-wide no-underline hover:border-navy hover:text-navy transition-colors"
+              >
+                로그인
+              </Link>
+              <Link
+                href="/signup"
+                onClick={() => setOpen(false)}
+                className="flex-1 flex items-center justify-center bg-navy text-white py-2.5 px-3 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
+              >
+                회원가입
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 pt-2 pb-3">
           <Link
             href="/짧은상담"
             className="flex items-center justify-center w-full bg-navy text-white py-3.5 px-4 text-sm font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
