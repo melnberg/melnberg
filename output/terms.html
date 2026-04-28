@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="멜른버그 카페 이용약관">
+  <title>이용약관 — 멜른버그</title>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #002060; --navy-dark: #0070C0;
+      --navy-soft: rgba(0, 32, 96, 0.06);
+      --yellow: #00B0F0;
+      --text: #111111; --muted: #777777;
+      --border: #E5E7EB; --bg: #F5F5F0; --white: #FFFFFF;
+      --sidebar-w: 260px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; background: var(--white); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar { width: var(--sidebar-w); flex-shrink: 0; background: var(--white); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; z-index: 50; }
+    .sidebar-brand { padding: 24px 24px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .sidebar-logo { font-size: 26px; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .sidebar-logo .star { color: var(--yellow); font-size: 18px; line-height: 1; }
+    .sidebar-search { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy); }
+    .sidebar-cta-wrap { padding: 18px 20px 14px; }
+    .sidebar-cta { display: flex; align-items: center; justify-content: center; width: 100%; background: var(--navy); color: var(--white); border: none; padding: 14px 16px; font-size: 14px; font-weight: 700; letter-spacing: 0.04em; text-decoration: none; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .sidebar-cta:hover { background: var(--navy-dark); }
+    .sidebar-nav { flex: 1; padding: 4px 0 16px; display: flex; flex-direction: column; }
+    .s-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding: 14px 24px 6px; }
+    .s-item { display: flex; align-items: center; gap: 12px; padding: 13px 24px; font-size: 14px; font-weight: 500; color: var(--text); text-decoration: none; position: relative; border-left: 3px solid transparent; transition: background 0.15s, color 0.15s; }
+    .s-item:hover { background: var(--navy-soft); }
+    .s-item.active { background: var(--navy-soft); color: var(--navy); font-weight: 700; border-left-color: var(--navy); }
+    .s-item.active::after { content: '›'; position: absolute; right: 22px; font-size: 18px; line-height: 1; color: var(--navy); }
+    .s-icon { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .s-price { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; }
+    .s-item.active .s-price { color: var(--navy); }
+    .sidebar-bottom { border-top: 1px solid var(--border); padding: 18px 24px 14px; }
+    .contact-block { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 14px; }
+    .contact-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--navy-soft); color: var(--navy); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .contact-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .contact-text { flex: 1; }
+    .contact-label { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; margin-bottom: 2px; }
+    .contact-main { font-size: 16px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; text-decoration: none; display: block; }
+    .contact-hours { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+    .sidebar-foot-links { display: flex; gap: 0; border-top: 1px solid var(--border); padding-top: 14px; }
+    .sidebar-foot-links a { flex: 1; text-align: center; font-size: 11px; color: var(--muted); text-decoration: none; padding: 4px 0; }
+    .sidebar-foot-links a + a { border-left: 1px solid var(--border); }
+    .sidebar-foot-links a:hover { color: var(--navy); }
+
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .main-top { background: var(--white); border-bottom: 1px solid var(--border); padding: 14px 40px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .breadcrumb { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+    .breadcrumb a { color: inherit; text-decoration: none; transition: color 0.15s; }
+    .breadcrumb a:hover { color: var(--navy); }
+    .breadcrumb a:hover strong { text-decoration: underline; }
+    .breadcrumb strong { color: var(--navy); font-weight: 700; }
+    .main-top-meta { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+    .menu-toggle { display: none; width: 36px; height: 36px; border: 1px solid var(--border); background: var(--white); cursor: pointer; align-items: center; justify-content: center; color: var(--navy); }
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; }
+
+    .inner { max-width: 920px; margin: 0 auto; padding: 0 40px; width: 100%; }
+
+    .footer { background: var(--white); border-top: 1px solid var(--border); padding: 36px 0 28px; font-size: 12px; color: var(--muted); text-align: left; letter-spacing: 0; line-height: 1.7; }
+    .footer .inner { max-width: 920px; margin: 0 auto; padding: 0 40px; }
+    .footer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .footer-logo { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+    .footer-links { display: flex; gap: 18px; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 12px; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-biz { margin-bottom: 14px; font-size: 10px; color: #BFBFBF; line-height: 1.6; } .footer-biz p { margin: 0; }
+    .footer-cs { margin-bottom: 18px; } .footer-cs p { margin: 0; }
+    .footer-cs-label { font-weight: 600; color: var(--text); }
+    .footer-copy { font-size: 11px; color: var(--muted); opacity: 0.7; }
+
+    @media (max-width: 780px) {
+      :root { --sidebar-w: 280px; }
+      .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 4px 0 16px rgba(0,0,0,0.08); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-backdrop.open { display: block; }
+      .menu-toggle { display: flex; }
+      .main-top { padding: 12px 20px; }
+      .inner { padding: 0 20px; }
+    }
+
+    /* 약관 페이지 전용 */
+    .terms-page { padding: 56px 0 80px; }
+    .terms-page .inner { max-width: 760px; }
+    .terms-title { font-size: 28px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; margin-bottom: 8px; }
+    .terms-meta { font-size: 12px; color: var(--muted); margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid var(--navy); }
+
+    .terms-section { margin-bottom: 32px; }
+    .terms-section h2 { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+    .terms-section h3 { font-size: 14px; font-weight: 700; color: var(--text); margin: 16px 0 6px; }
+    .terms-section p { font-size: 14px; color: var(--text); line-height: 1.85; margin-bottom: 8px; word-break: keep-all; }
+    .terms-section ol { margin: 6px 0 12px 22px; }
+    .terms-section ol li { font-size: 14px; line-height: 1.85; margin-bottom: 4px; word-break: keep-all; }
+    .terms-section ol ol { list-style-type: lower-alpha; margin-top: 4px; margin-left: 18px; }
+    .terms-section ol ol li { font-size: 13px; color: var(--text); }
+    .terms-section ul { margin: 6px 0 12px 22px; list-style-type: disc; }
+    .terms-section ul li { font-size: 14px; line-height: 1.85; margin-bottom: 4px; word-break: keep-all; }
+    .terms-section em { font-style: normal; color: var(--navy); font-weight: 600; }
+
+    .terms-effective { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+
+    @media (max-width: 780px) {
+      .terms-page { padding: 36px 0 60px; }
+      .terms-title { font-size: 22px; }
+      .terms-section h2 { font-size: 15px; }
+      .terms-section p, .terms-section ol li, .terms-section ul li { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="layout">
+
+    <aside class="sidebar" id="sidebar" data-current="terms">
+      <div class="sidebar-brand">
+        <a href="index.html" class="sidebar-logo">
+          <span class="star">✦</span>멜른버그
+        </a>
+        <button class="sidebar-search" type="button" aria-label="검색">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="sidebar-cta-wrap">
+        <a href="짧은상담.html" class="sidebar-cta">상담 신청 →</a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="s-section-label">메뉴</div>
+        <a href="index.html" class="s-item" data-product="index">
+          <svg class="s-icon" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/></svg>
+          <span>홈</span>
+        </a>
+        <a href="blog.html" class="s-item" data-product="blog">
+          <svg class="s-icon" viewBox="0 0 24 24"><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z"/><path d="M4 4v12a4 4 0 0 0 4 4"/></svg>
+          <span>블로그</span>
+        </a>
+
+        <div class="s-section-label">상담</div>
+        <a href="짧은상담.html" class="s-item" data-product="짧은상담">
+          <svg class="s-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>짧은상담</span>
+          <span class="s-price">33,000</span>
+        </a>
+        <a href="중간상담.html" class="s-item" data-product="중간상담">
+          <svg class="s-icon" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
+          <span>중간상담</span>
+          <span class="s-price">99,000</span>
+        </a>
+
+        <div class="s-section-label">멤버십</div>
+        <a href="신규가입.html" class="s-item" data-product="신규가입">
+          <svg class="s-icon" viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/></svg>
+          <span>2분기 신규가입</span>
+          <span class="s-price">109,000</span>
+        </a>
+        <a href="갱신.html" class="s-item" data-product="갱신">
+          <svg class="s-icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          <span>2분기 갱신</span>
+          <span class="s-price">99,000</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="contact-block">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="contact-text">
+            <div class="contact-label">상담문의</div>
+            <span class="contact-main">오픈채팅</span>
+            <div class="contact-hours">결제 후 비공개 채팅방 안내<br>응답: 24시간 이내</div>
+          </div>
+        </div>
+        <div class="sidebar-foot-links">
+          <a href="index.html">홈</a>
+          <a href="blog.html">블로그</a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <main class="main">
+
+      <div class="main-top">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="메뉴 열기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="breadcrumb"><a href="index.html">멜른버그</a> &nbsp;›&nbsp; <a href="terms.html"><strong>이용약관</strong></a></div>
+        <div class="main-top-meta">Terms</div>
+      </div>
+
+      <section class="terms-page">
+        <div class="inner">
+          <h1 class="terms-title">멜른버그 카페 이용약관</h1>
+          <p class="terms-meta">시행일: 2026년 4월 1일</p>
+
+          <div class="terms-section">
+            <h2>제1조 (목적)</h2>
+            <p>이 약관은 멜른버그(이하 "운영자")가 제공하는 네이버 카페 "멜른버그"(이하 "카페") 및 이와 연계된 유료 콘텐츠·컨설팅·강의자료 등(이하 통틀어 "서비스")의 이용과 관련하여 운영자와 이용자 간의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+          </div>
+
+          <div class="terms-section">
+            <h2>제2조 (정의)</h2>
+            <p>이 약관에서 사용하는 용어의 정의는 다음과 같습니다.</p>
+            <ol>
+              <li>"카페"란 운영자가 네이버 카페 플랫폼을 통해 운영하는 "멜른버그" 카페를 말합니다.</li>
+              <li>"이용자"란 카페에 가입하여 이 약관에 동의하고 서비스를 이용하는 자를 말합니다.</li>
+              <li>"무료회원"이란 카페에 가입하였으나 유료 등업을 하지 않은 이용자를 말합니다.</li>
+              <li>"정회원"이란 분기 단위 유료 등업 결제를 통해 해당 분기의 카페 콘텐츠 열람 권한을 부여받은 이용자를 말합니다.</li>
+              <li>"분기"란 다음 각 기간을 말합니다.
+                <ol>
+                  <li>1분기: 매년 1월 1일부터 3월 31일까지</li>
+                  <li>2분기: 매년 4월 1일부터 6월 30일까지</li>
+                  <li>3분기: 매년 7월 1일부터 9월 30일까지</li>
+                  <li>4분기: 매년 10월 1일부터 12월 31일까지</li>
+                </ol>
+              </li>
+              <li>"열람 게시일"이란 각 분기 콘텐츠가 정회원에게 처음 공개되는 날로, 매 분기 첫날(1월 1일, 4월 1일, 7월 1일, 10월 1일)을 말합니다.</li>
+              <li>"유료 콘텐츠"란 카페 내 정회원에게만 공개되는 게시글·자료, 별도 결제로 제공되는 Q&amp;A 컨설팅, 강의자료(PDF) 등을 말합니다.</li>
+              <li>"Q&amp;A 컨설팅"이란 이용자가 별도 결제 후 운영자에게 부동산 관련 질문을 하고 답변을 제공받는 유료 서비스를 말합니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제3조 (약관의 효력 및 변경)</h2>
+            <ol>
+              <li>이 약관은 카페 게시판 또는 결제 페이지에 게시함으로써 효력이 발생합니다.</li>
+              <li>운영자는 관련 법령을 위반하지 않는 범위에서 이 약관을 변경할 수 있습니다.</li>
+              <li>약관이 변경되는 경우 운영자는 변경 내용과 시행일을 시행일로부터 7일 전(이용자에게 불리하거나 중대한 변경의 경우 30일 전)에 카페 공지사항을 통해 공지합니다.</li>
+              <li>이용자가 변경된 약관 시행일 이후에도 서비스를 계속 이용하는 경우 변경된 약관에 동의한 것으로 봅니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제4조 (회원 등급 및 분기제 운영)</h2>
+            <ol>
+              <li>이용자는 네이버 카페 가입 절차를 통해 무료회원으로 가입할 수 있습니다.</li>
+              <li>무료회원은 카페의 유료 콘텐츠를 열람할 수 없으며, 운영자가 별도로 공개한 일부 게시판만 이용할 수 있습니다.</li>
+              <li>정회원 등업은 분기 단위 유료 결제를 통해 이루어지며, 결제한 해당 분기에 한정하여 정회원 자격이 부여됩니다.</li>
+              <li>정회원은 본인이 결제한 분기에 게시된 콘텐츠만 열람할 수 있으며, 결제하지 않은 분기(이전 분기 또는 이후 분기)의 콘텐츠는 열람할 수 없습니다.</li>
+              <li>이용자가 분기 시작일(매 분기 첫날) 이후 분기 중간에 결제하는 경우에도 결제 금액은 분기 정가 전액이 부과되며, 일할 계산되지 않습니다.</li>
+              <li>정회원 자격은 자동 갱신되지 않습니다. 다음 분기 콘텐츠를 열람하기 위해서는 해당 분기에 대해 별도로 재결제하여야 합니다.</li>
+              <li>이전 분기의 콘텐츠는 다음 분기 결제로 소급하여 열람할 수 없습니다. 즉, 분기가 종료된 콘텐츠는 그 분기에 결제한 정회원만 해당 분기 동안 열람할 수 있으며, 추후 어떠한 결제로도 다시 열람할 수 없습니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제5조 (서비스의 내용)</h2>
+            <p>운영자가 제공하는 서비스는 다음과 같습니다.</p>
+            <ol>
+              <li>정회원 전용 카페 콘텐츠 열람(부동산 분석 게시글, 시장 분석 자료, 멤버 전용 자료실 등)</li>
+              <li>Q&amp;A 컨설팅 서비스(3만 3천원 / 9만 9천원 두 티어, 별도 결제)</li>
+              <li>강의자료(PDF) 판매(개별 결제)</li>
+              <li>그 외 운영자가 카페를 통해 공지하는 부가 서비스</li>
+            </ol>
+            <p>운영자는 서비스의 내용·구성·가격을 변경할 수 있으며, 변경 시 카페 공지사항을 통해 사전 안내합니다. 단, 이미 결제가 완료된 이용자에 대해서는 결제 시점의 조건이 유지됩니다.</p>
+          </div>
+
+          <div class="terms-section">
+            <h2>제6조 (요금 및 결제)</h2>
+            <ol>
+              <li>정회원 등업 요금, Q&amp;A 컨설팅 요금, 강의자료 판매 가격은 카페 공지 또는 결제 페이지에 게시된 금액을 따릅니다.</li>
+              <li>결제는 운영자가 지정한 결제 수단(계좌이체, 카드결제 등)을 통해 이루어집니다.</li>
+              <li>이용자는 결제 시 정확한 정보를 입력하여야 하며, 잘못된 정보 입력으로 발생한 문제에 대해 운영자는 책임지지 않습니다.</li>
+              <li>이용자가 분기 도중에 결제하는 경우, 해당 분기 종료일까지 잔여 기간만 콘텐츠 열람이 가능하나 결제 금액은 분기 정가 전액이 부과됨을 이용자는 결제 전에 인지하고 동의한 것으로 봅니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제7조 (환불 정책)</h2>
+
+            <h3>정회원 등업 환불</h3>
+            <ol>
+              <li>정회원 등업 결제는 다음의 환불 가능 시한 내에 환불을 요청한 경우에 한하여 전액 환불됩니다.</li>
+              <li><em>환불 가능 시한</em>: 이용자가 결제한 분기의 "열람 게시일" 18시(매 분기 첫날인 1월 1일·4월 1일·7월 1일·10월 1일 18시)</li>
+              <li>위 환불 가능 시한이 경과한 이후에는 해당 분기 콘텐츠 열람 여부와 관계없이 환불이 불가합니다.</li>
+            </ol>
+
+            <h3>환불 가능 시한 적용 예시</h3>
+            <ol>
+              <li>이용자가 2026년 2월 15일에 2026년 1분기 정회원 등업을 결제한 경우, 2026년 1분기의 열람 게시일은 이미 경과(2026년 1월 1일 18시)하였으므로 환불이 불가합니다.</li>
+              <li>이용자가 2026년 2월 15일에 2026년 2분기 정회원 등업을 미리 결제한 경우, 2026년 4월 1일 18시 이전까지는 환불이 가능하며, 2026년 4월 1일 18시 이후에는 환불이 불가합니다.</li>
+              <li>이용자가 분기 첫날 이후(예: 5월 15일에 2분기) 결제한 경우, 결제 시점이 이미 해당 분기의 열람 게시일을 경과한 것이므로 환불이 불가합니다.</li>
+            </ol>
+
+            <h3>Q&amp;A 컨설팅 환불</h3>
+            <ol>
+              <li>운영자가 답변을 제공하기 전까지는 전액 환불이 가능합니다.</li>
+              <li>운영자가 답변을 제공한 이후에는 환불이 불가합니다.</li>
+            </ol>
+
+            <h3>강의자료(PDF) 환불</h3>
+            <ol>
+              <li>PDF 파일이 이용자에게 전송되거나 다운로드 링크가 발송된 시점부터 환불이 불가합니다.</li>
+              <li>이는 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 제2항 제5호에 따른 디지털콘텐츠의 환불 제한에 근거합니다.</li>
+            </ol>
+
+            <h3>운영자 귀책사유로 인한 환불</h3>
+            <ol>
+              <li>서비스 장애로 인해 24시간 이상 이용이 불가능한 경우, 해당 기간만큼 정회원 자격을 연장하거나 일할 계산하여 환불합니다.</li>
+              <li>운영자의 귀책사유로 약속한 서비스가 제공되지 않은 경우, 미제공 부분에 대해 환불합니다.</li>
+            </ol>
+
+            <h3>환불 신청</h3>
+            <ol>
+              <li>환불 신청은 카페 쪽지 또는 운영자가 안내한 고객센터(이메일·전화)를 통해 접수할 수 있습니다.</li>
+              <li>환불은 신청 접수 후 영업일 기준 7일 이내에 처리됩니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제8조 (이용자의 의무)</h2>
+            <p>이용자는 다음 행위를 하여서는 안 됩니다.</p>
+            <ol>
+              <li>타인의 정보를 도용하거나 허위 정보로 가입·결제하는 행위</li>
+              <li>운영자 또는 다른 이용자를 비방·모욕하거나 명예를 훼손하는 행위</li>
+              <li>카페 내 게시물에 광고·홍보·스팸·정치적 선전을 게시하는 행위</li>
+              <li>운영자의 사전 동의 없이 카페 또는 서비스를 영리 목적으로 이용하는 행위</li>
+              <li>관련 법령, 이 약관, 카페 운영 규정에 위반되는 행위</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제9조 (콘텐츠 외부 유출 금지)</h2>
+            <ol>
+              <li>이용자는 정회원 전용 콘텐츠, Q&amp;A 컨설팅 답변, 강의자료(PDF) 등 운영자가 제공하는 모든 유료 콘텐츠를 운영자의 사전 서면 동의 없이 외부에 공유·복제·배포·게시·재가공·판매하여서는 안 됩니다.</li>
+              <li>본 조에서 "외부 유출"이라 함은 다음 행위를 포함하나 이에 한정되지 않습니다.
+                <ol>
+                  <li>콘텐츠를 캡처·녹화·다운로드하여 카페 외부 채널(블로그, SNS, 메신저, 외부 커뮤니티, 이메일 등)에 게시·전송하는 행위</li>
+                  <li>콘텐츠의 내용을 요약·발췌·재구성하여 외부에 공개하는 행위</li>
+                  <li>정회원이 아닌 자에게 본인의 카페 계정을 양도·대여하거나 콘텐츠를 보여주는 행위</li>
+                  <li>강의자료(PDF)를 인쇄·복사하여 제3자에게 제공하는 행위</li>
+                </ol>
+              </li>
+              <li>이용자가 본 조를 위반한 경우 운영자는 다음 조치를 취할 수 있습니다.
+                <ol>
+                  <li>정회원 자격 즉시 박탈 및 카페 강제 탈퇴 처리</li>
+                  <li>기 결제 금액 환불 불가</li>
+                  <li>위반으로 인해 운영자에게 발생한 모든 손해(콘텐츠 가치 손실, 매출 감소, 법적 대응 비용, 신뢰도 손상 등)에 대한 손해배상 청구</li>
+                  <li>저작권법 및 관련 법령에 따른 민·형사상 법적 조치</li>
+                </ol>
+              </li>
+              <li>운영자가 제공하는 모든 콘텐츠에 대한 저작권은 운영자에게 있으며, 이용자는 본인의 개인적 학습·참고 용도로만 이를 이용할 수 있습니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제10조 (서비스 정보의 성격 및 면책)</h2>
+            <ol>
+              <li>운영자가 카페·Q&amp;A 컨설팅·강의자료 등을 통해 제공하는 모든 부동산 관련 정보(시세 분석, 시장 전망, 입지 분석, 매수·매도 의견, 투자 전략 등)는 정보 제공을 목적으로 하는 일반적 견해이며, 다음 각 호에 해당하지 않습니다.
+                <ol>
+                  <li>「자본시장과 금융투자업에 관한 법률」상 투자자문 또는 투자권유</li>
+                  <li>「공인중개사법」상 중개행위 또는 중개대상물 확인·설명</li>
+                  <li>「변호사법」상 법률자문</li>
+                  <li>「세무사법」상 세무자문</li>
+                  <li>「공인회계사법」상 회계자문</li>
+                </ol>
+              </li>
+              <li>운영자는 제공된 정보의 정확성·완전성·시의성을 보증하지 않습니다. 부동산 시장 상황, 정책 변화, 법령 개정 등에 따라 정보의 유효성은 변동될 수 있습니다.</li>
+              <li>이용자는 운영자가 제공한 정보를 참고 자료로만 이용하여야 하며, 실제 부동산 매수·매도·임대차·투자 결정은 이용자 본인의 독립적 판단과 책임 하에 이루어져야 합니다.</li>
+              <li>이용자가 운영자가 제공한 정보에 기초하여 행한 의사결정 및 그 결과(투자 손실, 거래 분쟁, 세무 문제 등)에 대해 운영자는 일체 책임지지 않습니다.</li>
+              <li>이용자는 부동산 거래·투자·세무 등 중요한 의사결정 전에 반드시 공인중개사·변호사·세무사 등 해당 분야의 자격을 가진 전문가의 자문을 별도로 받아야 합니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제11조 (서비스 중단)</h2>
+            <ol>
+              <li>운영자는 다음의 경우 서비스 제공을 일시적으로 중단할 수 있습니다.
+                <ol>
+                  <li>시스템 점검, 보수, 교체가 필요한 경우</li>
+                  <li>정전, 통신 장애, 천재지변 등 불가항력의 사유가 발생한 경우</li>
+                  <li>네이버 카페 플랫폼의 장애·정책 변경으로 정상 운영이 불가능한 경우</li>
+                  <li>그 외 운영자가 부득이하다고 판단하는 경우</li>
+                </ol>
+              </li>
+              <li>서비스 중단이 24시간 이상 지속되는 경우 운영자는 제7조에 따라 정회원 자격을 연장하거나 일할 환불합니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제12조 (이용자 자격의 상실)</h2>
+            <ol>
+              <li>운영자는 이용자가 다음 각 호에 해당하는 경우 사전 통보 없이 정회원 자격을 박탈하거나 카페에서 강제 탈퇴 조치할 수 있습니다.
+                <ol>
+                  <li>제8조(이용자의 의무) 또는 제9조(콘텐츠 외부 유출 금지)를 위반한 경우</li>
+                  <li>타인의 정보를 도용한 사실이 확인된 경우</li>
+                  <li>운영자 또는 다른 이용자에게 중대한 피해를 입힌 경우</li>
+                  <li>관련 법령을 위반한 경우</li>
+                </ol>
+              </li>
+              <li>자격 상실로 인해 정회원 기간이 단축된 경우, 기 결제 금액은 환불되지 않습니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제13조 (개인정보 보호)</h2>
+            <ol>
+              <li>운영자는 이용자의 개인정보를 관련 법령에 따라 보호합니다.</li>
+              <li>개인정보의 수집·이용·보관·파기에 관한 사항은 별도의 「개인정보처리방침」에서 정합니다.</li>
+              <li>개인정보처리방침은 카페 공지사항 또는 운영자가 안내한 페이지를 통해 확인할 수 있습니다.</li>
+            </ol>
+          </div>
+
+          <div class="terms-section">
+            <h2>제14조 (분쟁 해결 및 관할)</h2>
+            <ol>
+              <li>운영자와 이용자 간 분쟁이 발생한 경우, 양 당사자는 신의성실의 원칙에 따라 우선 협의를 통해 해결하도록 노력합니다.</li>
+              <li>협의로 해결되지 않은 분쟁의 경우, 「전자상거래 등에서의 소비자보호에 관한 법률」, 「약관의 규제에 관한 법률」 등 관련 법령에 따라 처리됩니다.</li>
+              <li>이 약관과 관련된 소송의 관할 법원은 운영자의 주소지 관할 법원으로 합니다.</li>
+            </ol>
+          </div>
+
+          <p class="terms-effective"><strong>부칙</strong> — 이 약관은 2026년 4월 1일부터 시행합니다.</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="inner">
+          <div class="footer-top">
+            <span class="footer-logo">멜른버그</span>
+            <div class="footer-links">
+              <a href="blog.html">블로그</a>
+              <a href="terms.html">이용약관</a>
+              <a href="#">개인정보처리방침</a>
+            </div>
+          </div>
+          <div class="footer-biz">
+            <p>안세 | 대표 임은종 | 사업자등록번호 763-20-02086 | 통신판매업 2023-용인기흥-4231 | 서울특별시 성동구 상원12길 30, 307호</p>
+          </div>
+          <div class="footer-cs">
+            <p class="footer-cs-label">고객센터</p>
+            <p>0507-1437-9196 | 운영시간 10:00–18:00 (주말/공휴일 휴무)</p>
+          </div>
+          <p class="footer-copy">© 2026 melnberg. All rights reserved.</p>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var toggle   = document.getElementById('menu-toggle');
+      var sidebar  = document.getElementById('sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+      function close() { sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
+      toggle.addEventListener('click', function () {
+        sidebar.classList.toggle('open');
+        backdrop.classList.toggle('open');
+      });
+      backdrop.addEventListener('click', close);
+      sidebar.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          if (window.innerWidth <= 780) close();
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>
