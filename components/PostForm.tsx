@@ -15,7 +15,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const supabase = createClient();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [content, setContent] = useState(initial?.content ?? '');
-  const [isPaidOnly, setIsPaidOnly] = useState(initial?.is_paid_only ?? false);
+  const [isPaidOnly, setIsPaidOnly] = useState(initial?.is_paid_only ?? (category === 'blog'));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
