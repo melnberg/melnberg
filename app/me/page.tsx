@@ -3,9 +3,12 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
+import NicknameEditor from '@/components/NicknameEditor';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = { title: '마이페이지 — 멜른버그' };
+
+export const dynamic = 'force-dynamic';
 
 export default async function MePage() {
   const supabase = await createClient();
@@ -13,7 +16,18 @@ export default async function MePage() {
 
   if (!user) redirect('/login?next=/me');
 
-  const displayName = (user.user_metadata?.display_name as string | undefined) ?? user.email;
+  // profiles 테이블의 display_name이 정식 출처 (커뮤니티 글에 보이는 이름)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const displayName =
+    profile?.display_name ??
+    (user.user_metadata?.display_name as string | undefined) ??
+    user.email?.split('@')[0] ??
+    '회원';
 
   return (
     <Layout>

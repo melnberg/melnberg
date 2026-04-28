@@ -65,17 +65,17 @@ export default function CommentSection({ postId, comments, currentUserId }: Prop
 
   return (
     <div>
-      <h2 className="text-base font-bold text-navy mb-4 pb-3 border-b-2 border-navy">
+      <h2 className="text-[14px] font-bold text-navy mb-2 pb-2 border-b-2 border-navy">
         댓글 <span className="text-muted font-semibold">{list.length}</span>
       </h2>
 
       {list.length === 0 ? (
-        <p className="text-muted text-sm py-8 text-center">첫 댓글을 남겨주세요.</p>
+        <p className="text-muted text-sm py-4 text-center">첫 댓글을 남겨주세요.</p>
       ) : (
-        <ul className="mb-6">
+        <ul className="mb-3">
           {list.map((c) => (
-            <li key={c.id} className="py-4 border-b border-border last:border-b-0">
-              <div className="flex items-start justify-between gap-3 mb-1.5">
+            <li key={c.id} className="py-2.5 border-b border-border last:border-b-0">
+              <div className="flex items-start justify-between gap-3 mb-1">
                 <div className="flex items-center gap-2 text-[12px]">
                   <span className="font-bold text-navy">{c.author?.display_name ?? '익명'}</span>
                   <span className="text-muted">·</span>
@@ -85,40 +85,40 @@ export default function CommentSection({ postId, comments, currentUserId }: Prop
                   <button
                     type="button"
                     onClick={() => handleDelete(c.id)}
-                    className="text-[11px] text-muted hover:text-red-600 cursor-pointer"
+                    className="text-[11px] text-muted hover:text-red-600 cursor-pointer bg-transparent border-none p-0"
                   >
                     삭제
                   </button>
                 )}
               </div>
-              <p className="text-sm leading-relaxed break-keep whitespace-pre-wrap">{c.content}</p>
+              <p className="text-[13px] leading-relaxed break-keep whitespace-pre-wrap">{c.content}</p>
             </li>
           ))}
         </ul>
       )}
 
       {currentUserId ? (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-6 pt-6 border-t border-border">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2 mt-3 pt-3 border-t border-border">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="댓글을 입력하세요"
-            rows={3}
-            className="border border-border border-b-2 border-b-navy px-3.5 py-2.5 text-[14px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
+            rows={2}
+            className="border border-border border-b-2 border-b-navy px-3 py-2 text-[14px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
           />
           {err && <div className="text-xs text-red-700">{err}</div>}
           <div className="flex justify-end">
             <button
               type="submit"
               disabled={loading || !content.trim()}
-              className="bg-navy text-white border-none px-5 py-2.5 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-navy text-white border-none px-4 py-2 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '게시 중...' : '댓글 게시'}
             </button>
           </div>
         </form>
       ) : (
-        <p className="text-sm text-muted text-center mt-6 pt-6 border-t border-border">
+        <p className="text-sm text-muted text-center mt-3 pt-3 border-t border-border">
           댓글을 작성하려면{' '}
           <a href={`/login?next=/community/${postId}`} className="text-navy font-semibold underline">로그인</a>이 필요합니다.
         </p>

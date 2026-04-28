@@ -47,19 +47,22 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           {/* 헤더 */}
           <header className="pb-6 mb-6 border-b border-border">
             <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 text-[12px] text-muted">
-                <span className="font-bold text-navy">{post.author?.display_name ?? '익명'}</span>
-                <span>·</span>
-                <span>{formatRelativeKo(post.created_at)}</span>
-                {post.updated_at !== post.created_at && (
-                  <>
-                    <span>·</span>
-                    <span>수정됨</span>
-                  </>
-                )}
-              </div>
-              {isAuthor && <PostActions postId={post.id} />}
+            <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
+              <span className="font-bold text-navy">{post.author?.display_name ?? '익명'}</span>
+              <span>·</span>
+              <span>{formatRelativeKo(post.created_at)}</span>
+              {post.updated_at !== post.created_at && (
+                <>
+                  <span>·</span>
+                  <span>수정됨</span>
+                </>
+              )}
+              {isAuthor && (
+                <>
+                  <span>·</span>
+                  <PostActions postId={post.id} />
+                </>
+              )}
             </div>
           </header>
 

@@ -25,10 +25,10 @@ export default function PostActions({ postId }: { postId: number }) {
   }
 
   return (
-    <div className="flex gap-2">
+    <span className="inline-flex items-center gap-2 text-[12px]">
       <Link
         href={`/community/${postId}/edit`}
-        className="text-[12px] font-semibold text-muted no-underline hover:text-navy"
+        className="font-semibold text-muted no-underline hover:text-navy"
       >
         수정
       </Link>
@@ -37,10 +37,10 @@ export default function PostActions({ postId }: { postId: number }) {
         type="button"
         onClick={handleDelete}
         disabled={deleting}
-        className="text-[12px] font-semibold text-muted hover:text-red-600 cursor-pointer disabled:opacity-50"
+        className="font-semibold text-muted hover:text-red-600 cursor-pointer disabled:opacity-50 bg-transparent border-none p-0"
       >
         {deleting ? '삭제 중...' : '삭제'}
       </button>
-    </div>
+    </span>
   );
 }

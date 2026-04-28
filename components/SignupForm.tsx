@@ -40,7 +40,7 @@ export default function SignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <Field label="이름" id="name" value={name} onChange={setName} placeholder="홍길동" required />
+      <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
       <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
 
@@ -67,10 +67,10 @@ export default function SignupForm() {
 }
 
 function Field({
-  label, id, value, onChange, type = 'text', placeholder, required, minLength,
+  label, id, value, onChange, type = 'text', placeholder, required, minLength, maxLength,
 }: {
   label: string; id: string; value: string; onChange: (v: string) => void;
-  type?: string; placeholder?: string; required?: boolean; minLength?: number;
+  type?: string; placeholder?: string; required?: boolean; minLength?: number; maxLength?: number;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -83,6 +83,7 @@ function Field({
         placeholder={placeholder}
         required={required}
         minLength={minLength}
+        maxLength={maxLength}
         className="border border-border border-b-2 border-b-navy px-3.5 py-3 text-[15px] outline-none focus:border-b-cyan rounded-none"
       />
     </div>
