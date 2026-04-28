@@ -9,6 +9,7 @@ type Props = {
   postId: number;
   comments: CommunityComment[];
   currentUserId: string | null;
+  currentUserName?: string | null;
 };
 
 function formatRelativeKo(iso: string): string {
@@ -22,7 +23,7 @@ function formatRelativeKo(iso: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function CommentSection({ postId, comments, currentUserId }: Props) {
+export default function CommentSection({ postId, comments, currentUserId, currentUserName }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [list, setList] = useState(comments);
@@ -98,22 +99,30 @@ export default function CommentSection({ postId, comments, currentUserId }: Prop
       )}
 
       {currentUserId ? (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2 mt-3 pt-3 border-t border-border">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-3 border border-border focus-within:border-navy transition-colors"
+        >
+          <div className="px-4 pt-3 text-[13px] font-bold text-text">{currentUserName}</div>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="댓글을 입력하세요"
+            placeholder="댓글을 남겨보세요"
             rows={2}
-            className="border border-border border-b-2 border-b-navy px-3 py-2 text-[14px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
+            className="block w-full px-4 pt-1 pb-2 text-[14px] outline-none rounded-none resize-none leading-relaxed border-none focus:ring-0 placeholder:text-muted"
           />
-          {err && <div className="text-xs text-red-700">{err}</div>}
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between px-4 py-2 border-t border-border">
+            {err ? (
+              <span className="text-xs text-red-700">{err}</span>
+            ) : (
+              <span className="text-xs text-muted">{content.length}자</span>
+            )}
             <button
               type="submit"
               disabled={loading || !content.trim()}
-              className="bg-navy text-white border-none px-4 py-2 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-[13px] font-bold text-navy hover:text-navy-dark cursor-pointer disabled:text-muted disabled:cursor-not-allowed bg-transparent border-none p-0"
             >
-              {loading ? '게시 중...' : '댓글 게시'}
+              {loading ? '등록 중...' : '등록'}
             </button>
           </div>
         </form>

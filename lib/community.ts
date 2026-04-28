@@ -8,6 +8,9 @@ export type CommunityPost = {
   created_at: string;
   updated_at: string;
   author: { display_name: string | null } | null;
+  comment_count?: number;
+  view_count?: number;
+  like_count?: number;
 };
 
 export type CommunityComment = {
@@ -23,14 +26,20 @@ export async function listPosts(limit = 50): Promise<CommunityPost[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, created_at, updated_at, author:profiles!author_id(display_name)')
+    .select('id, author_id, title, content, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) {
     console.error('listPosts error', error);
     return [];
   }
-  return (data ?? []) as unknown as CommunityPost[];
+  return (data ?? []).map((p: Record<string, unknown>) => {
+    const commentsArr = p.comments as Array<{ count: number }> | undefined;
+    const commentCount = commentsArr?.[0]?.count ?? 0;
+    const { comments, ...rest } = p;
+    void comments;
+    return { ...rest, comment_count: commentCount } as CommunityPost;
+  });
 }
 
 export async function getPost(id: number): Promise<CommunityPost | null> {
@@ -67,4 +76,17 @@ export function formatRelativeKo(iso: string): string {
   if (sec < 86400) return `${Math.floor(sec / 3600)}시간 전`;
   if (sec < 604800) return `${Math.floor(sec / 86400)}일 전`;
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// SLRClub 스타일: 오늘이면 HH:MM:SS, 아니면 YYYY.MM.DD
+export function formatBoardTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (sameDay) return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
 }

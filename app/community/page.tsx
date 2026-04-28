@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
-import { listPosts, formatRelativeKo } from '@/lib/community';
+import { listPosts, formatBoardTime } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = {
@@ -37,7 +37,7 @@ export default async function CommunityPage() {
         </div>
       </section>
 
-      <section className="py-8">
+      <section className="py-6">
         <div className="max-w-content mx-auto px-10">
           {posts.length === 0 ? (
             <div className="text-center py-20">
@@ -53,23 +53,50 @@ export default async function CommunityPage() {
               )}
             </div>
           ) : (
-            <ul className="border-t border-border">
-              {posts.map((p) => (
-                <li key={p.id} className="border-b border-border">
-                  <Link href={`/community/${p.id}`} className="flex items-start gap-4 px-2 py-5 no-underline hover:bg-bg/50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <h2 className="text-base font-bold text-text mb-1 break-keep line-clamp-2">{p.title}</h2>
-                      <p className="text-[13px] text-muted leading-relaxed line-clamp-2 break-keep">{p.content}</p>
-                      <div className="flex items-center gap-3 mt-2 text-[11px] text-muted tracking-wide">
-                        <span className="font-semibold text-navy">{p.author?.display_name ?? '익명'}</span>
-                        <span>·</span>
-                        <span>{formatRelativeKo(p.created_at)}</span>
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px] border-collapse">
+                <thead>
+                  <tr className="bg-bg/60 border-y border-navy text-muted">
+                    <th className="py-2.5 px-2 font-semibold text-center w-16">번호</th>
+                    <th className="py-2.5 px-3 font-semibold text-left">제목</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-28">작성자</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-24">작성일</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-14">추천</th>
+                    <th className="py-2.5 px-2 font-semibold text-center w-14">조회</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {posts.map((p) => (
+                    <tr key={p.id} className="border-b border-border hover:bg-bg/40 transition-colors">
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">{p.id}</td>
+                      <td className="py-2.5 px-3 min-w-0">
+                        <Link
+                          href={`/community/${p.id}`}
+                          className="text-text no-underline hover:text-navy hover:underline truncate inline-block max-w-full align-middle"
+                        >
+                          {p.title}
+                          {p.comment_count && p.comment_count > 0 ? (
+                            <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
+                          ) : null}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-navy font-semibold truncate">
+                        {p.author?.display_name ?? '익명'}
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {formatBoardTime(p.created_at)}
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {p.like_count ?? 0}
+                      </td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {p.view_count ?? 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>

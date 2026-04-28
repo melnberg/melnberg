@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
@@ -30,6 +31,20 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthor = user?.id === post.author_id;
+
+  let currentUserName: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
+    currentUserName =
+      profile?.display_name ??
+      (user.user_metadata?.display_name as string | undefined) ??
+      user.email?.split('@')[0] ??
+      '회원';
+  }
 
   return (
     <Layout current="community">
@@ -72,7 +87,30 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           </div>
 
           {/* 댓글 */}
-          <CommentSection postId={post.id} comments={comments} currentUserId={user?.id ?? null} />
+          <CommentSection
+            postId={post.id}
+            comments={comments}
+            currentUserId={user?.id ?? null}
+            currentUserName={currentUserName}
+          />
+
+          {/* 목록으로 */}
+          <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
+            <Link
+              href="/community"
+              className="text-[13px] font-bold text-navy no-underline hover:underline"
+            >
+              ← 목록으로
+            </Link>
+            {user && (
+              <Link
+                href="/community/new"
+                className="bg-navy text-white px-4 py-2 text-[12px] font-bold tracking-wider no-underline hover:bg-navy-dark"
+              >
+                글쓰기 →
+              </Link>
+            )}
+          </div>
         </div>
       </article>
 
