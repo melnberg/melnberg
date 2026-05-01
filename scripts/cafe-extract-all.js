@@ -18,6 +18,7 @@
 
 (async function extractAllCafePosts() {
   const CAFE_URL = 'hkmarket';
+  const FALLBACK_CLUB_ID = 30851305;  // 멜른버그 카페 클럽 ID (API 실패 시 사용)
   const PAGE_SIZE = 50;
   const COMMENT_PAGE_SIZE = 100;
   const DELAY_LIST = 300;
@@ -47,16 +48,31 @@
   // ─── 1) 카페 클럽 ID
   let clubId = checkpoint?.clubId;
   if (!clubId) {
+    // 1차: API
     try {
       const res = await fetch(`https://apis.naver.com/cafe-web/cafe2/CafeGateInfo.json?cafeUrl=${CAFE_URL}`, { credentials: 'include' });
       const j = await res.json();
-      clubId = j.message?.result?.cafeInfoView?.cafeId;
-      if (!clubId) throw new Error('클럽 ID 못 찾음');
-      console.log(`✅ 클럽 ID: ${clubId}`);
+      clubId =
+        j.message?.result?.cafeInfoView?.cafeId ||
+        j.message?.result?.cafeInfoView?.clubid ||
+        j.result?.cafeInfoView?.cafeId ||
+        j.cafeId ||
+        j.message?.result?.cafeId ||
+        null;
     } catch (e) {
-      console.error('❌ 카페 정보 fetch 실패. 로그인 상태 확인.', e);
-      return;
+      console.warn('카페 API 실패, 다른 경로 시도:', e.message);
     }
+    // 2차: 페이지 내 전역
+    if (!clubId) {
+      clubId = window.g_sClubId || window.gsClubId || window.GLOBAL_CLUB_ID || null;
+      if (clubId) console.log('▶ window 전역에서 클럽 ID 찾음');
+    }
+    // 3차: 하드코딩 fallback
+    if (!clubId) {
+      clubId = FALLBACK_CLUB_ID;
+      console.log('▶ 하드코딩된 클럽 ID 사용');
+    }
+    console.log(`✅ 클럽 ID: ${clubId}`);
   } else {
     console.log(`▶ 체크포인트 클럽 ID: ${clubId}`);
   }
