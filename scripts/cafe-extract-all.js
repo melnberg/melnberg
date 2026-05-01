@@ -1,5 +1,5 @@
 /**
- * 멜른버그 카페 전체 글 + 댓글 추출 스크립트
+ * 멜른버그 카페 전체 글 + 댓글 추출 스크립트 (v2)
  *
  * 사용법:
  *  1. https://cafe.naver.com/hkmarket 접속 후 매니저 계정으로 로그인
@@ -10,169 +10,118 @@
  * 중단해도 OK: localStorage에 진행 상황 저장됨 → 다시 실행 시 이어서 진행
  * 처음부터 다시 받으려면: localStorage.removeItem('cafeExtractCheckpoint')
  *
- * 댓글 처리 로직:
- *  - 일반 글: 본문 + 댓글들을 하나로 합쳐서 1개 글로 저장
- *  - Q&A 글 (댓글 100개 초과): 본문 + 각 최상위 댓글 스레드를 별도 가상 글로 분리
- *    → 댓글 1개당 임베딩 1세트, 검색 정확도 ↑
+ * 엔드포인트:
+ *  - 글 목록: cafe-boardlist-api/v1/cafes/{cafeId}/menus/{menuId}/articles
+ *  - 글 상세: cafe-articleapi/v2.1/cafes/{cafeId}/articles/{articleId}
+ *  - 댓글:   cafe-articleapi/v2/cafes/{cafeId}/articles/{articleId}/comments
  */
 
 (async function extractAllCafePosts() {
   const CAFE_URL = 'hkmarket';
-  const FALLBACK_CLUB_ID = 30851305;  // 멜른버그 카페 클럽 ID (API 실패 시 사용)
-  const PAGE_SIZE = 50;
+  const FALLBACK_CLUB_ID = 30851305;
+  const PAGE_SIZE = 50;          // 글 목록 페이지당 (네이버 기본 15, 50까지 시도해보고 줄이기)
   const COMMENT_PAGE_SIZE = 100;
   const DELAY_LIST = 300;
   const DELAY_DETAIL = 400;
   const DELAY_COMMENT = 250;
   const CHECKPOINT_KEY = 'cafeExtractCheckpoint';
-  const QA_THRESHOLD = 100;       // 댓글 N개 초과 글은 Q&A로 분할 처리
-  const QA_MIN_CONTENT_LEN = 5;   // Q&A 가상글 최소 글자 (스팸 1글자 댓글 제외)
+  const QA_THRESHOLD = 100;
+  const QA_MIN_CONTENT_LEN = 5;
 
   console.log('🚀 멜른버그 카페 전체 글 + 댓글 추출 시작');
-  console.log(`   Q&A 분할 임계값: 댓글 ${QA_THRESHOLD}개 초과 시`);
 
-  // ─── 체크포인트 로드
-  let checkpoint = (() => {
-    try {
-      const raw = localStorage.getItem(CHECKPOINT_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-  })();
-
+  // ─── 체크포인트
+  let checkpoint = loadCheckpoint();
+  function loadCheckpoint() {
+    try { return JSON.parse(localStorage.getItem(CHECKPOINT_KEY) || 'null'); } catch { return null; }
+  }
   function saveCheckpoint(data) {
     try { localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(data)); } catch (e) {
-      console.warn('체크포인트 저장 실패 (용량 한도 초과 가능):', e.message);
+      console.warn('체크포인트 저장 실패 (용량 한계 가능):', e.message);
     }
   }
 
-  // ─── 1) 카페 클럽 ID
-  let clubId = checkpoint?.clubId;
-  if (!clubId) {
-    // 1차: API
-    try {
-      const res = await fetch(`https://apis.naver.com/cafe-web/cafe2/CafeGateInfo.json?cafeUrl=${CAFE_URL}`, { credentials: 'include' });
-      const j = await res.json();
-      clubId =
-        j.message?.result?.cafeInfoView?.cafeId ||
-        j.message?.result?.cafeInfoView?.clubid ||
-        j.result?.cafeInfoView?.cafeId ||
-        j.cafeId ||
-        j.message?.result?.cafeId ||
-        null;
-    } catch (e) {
-      console.warn('카페 API 실패, 다른 경로 시도:', e.message);
-    }
-    // 2차: 페이지 내 전역
-    if (!clubId) {
-      clubId = window.g_sClubId || window.gsClubId || window.GLOBAL_CLUB_ID || null;
-      if (clubId) console.log('▶ window 전역에서 클럽 ID 찾음');
-    }
-    // 3차: 하드코딩 fallback
-    if (!clubId) {
-      clubId = FALLBACK_CLUB_ID;
-      console.log('▶ 하드코딩된 클럽 ID 사용');
-    }
-    console.log(`✅ 클럽 ID: ${clubId}`);
-  } else {
-    console.log(`▶ 체크포인트 클럽 ID: ${clubId}`);
-  }
+  // ─── 1) 클럽 ID
+  let clubId = checkpoint?.clubId || window.g_sClubId || FALLBACK_CLUB_ID;
+  console.log(`✅ 클럽 ID: ${clubId}`);
 
-  // ─── 2) 글 목록 전체 수집 — 작동하는 엔드포인트 자동 탐색
-  let articleIndex = checkpoint?.articleIndex || null;
-
-  if (!articleIndex) {
-    // 먼저 작동하는 엔드포인트 패턴 찾기
-    const endpointTemplates = [
-      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v3/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}`,
-      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v3/cafes/${cId}/menus/0/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
-      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
-      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${cId}/menus/0/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
-      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
-      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}&query=&sortBy=date`,
-    ];
-
-    let workingTemplate = null;
-    console.log('🔍 작동하는 글 목록 API 탐색 중...');
-    for (const tpl of endpointTemplates) {
-      const testUrl = tpl(clubId, 1);
-      try {
-        const r = await fetch(testUrl, { credentials: 'include' });
-        if (!r.ok) {
-          console.log(`   ✗ ${r.status}: ${testUrl}`);
-          continue;
-        }
-        const j = await r.json();
-        const list =
-          j.message?.result?.articleList ||
-          j.message?.result?.articles ||
-          j.result?.articleList ||
-          j.result?.articles ||
-          j.articleList ||
-          j.articles ||
-          [];
-        if (Array.isArray(list) && list.length > 0) {
-          workingTemplate = tpl;
-          console.log(`   ✓ 작동 확인: ${testUrl} (1페이지 ${list.length}건)`);
-          break;
-        }
-        console.log(`   ✗ 빈 응답: ${testUrl}`);
-      } catch (e) {
-        console.log(`   ✗ 에러: ${testUrl} — ${e.message}`);
-      }
-    }
-
-    if (!workingTemplate) {
-      console.error('❌ 작동하는 글 목록 API를 찾지 못함.');
-      console.error('   카페 페이지에서 F12 → Network 탭 → 게시판 클릭 → apis.naver.com 호출 URL 찾아서 알려주세요.');
+  // ─── 2) 메뉴 목록 가져오기
+  let menus = checkpoint?.menus;
+  if (!menus) {
+    menus = await fetchMenuList(clubId);
+    if (!menus || menus.length === 0) {
+      console.error('❌ 메뉴 목록을 가져오지 못함.');
+      console.error('   카페 좌측 사이드바에서 게시판들 우클릭 → URL 복사로 menuId들을 직접 알려주세요.');
       return;
     }
+    console.log(`✅ 메뉴 ${menus.length}개 발견:`);
+    menus.forEach((m) => console.log(`   - menuId=${m.menuId} | ${m.menuName} (${m.menuType || '-'})`));
+  } else {
+    console.log(`▶ 체크포인트 메뉴 ${menus.length}개`);
+  }
 
-    console.log('📋 글 목록 수집 시작...');
-    const collected = [];
-    let page = 1;
-    while (true) {
-      try {
-        const url = workingTemplate(clubId, page);
-        const r = await fetch(url, { credentials: 'include' });
-        const j = await r.json();
-        const list =
-          j.message?.result?.articleList ||
-          j.message?.result?.articles ||
-          j.result?.articleList ||
-          j.result?.articles ||
-          j.articleList ||
-          j.articles ||
-          [];
-        if (list.length === 0) break;
-        for (const art of list) {
-          collected.push({
-            articleId: art.articleId || art.id,
-            title: art.subject || art.title,
-            menuId: art.menuId,
-            menuName: art.menuName,
-            writeDateTimestamp: art.writeDateTimestamp || art.writeDate,
-            commentCount: art.commentCount || art.commentsCount || 0,
-          });
+  // ─── 3) 글 목록 전체 수집 (메뉴 순회)
+  let articleIndex = checkpoint?.articleIndex;
+  if (!articleIndex) {
+    console.log('📋 메뉴별 글 목록 수집 시작...');
+    const all = [];
+    for (const menu of menus) {
+      let page = 1;
+      let total = 0;
+      while (true) {
+        const url = `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${clubId}/menus/${menu.menuId}/articles?page=${page}&pageSize=${PAGE_SIZE}&sortBy=TIME&viewType=L`;
+        try {
+          const r = await fetch(url, { credentials: 'include' });
+          if (!r.ok) {
+            console.warn(`   ⚠ menu=${menu.menuId} page=${page} HTTP ${r.status}`);
+            break;
+          }
+          const j = await r.json();
+          const list = extractList(j);
+          if (!list || list.length === 0) break;
+          for (const art of list) {
+            all.push({
+              articleId: art.articleId || art.id,
+              title: art.subject || art.title || '(제목 없음)',
+              menuId: menu.menuId,
+              menuName: menu.menuName,
+              writeDateTimestamp: art.writeDateTimestamp || art.writeDate || null,
+              commentCount: art.commentCount || art.commentsCount || 0,
+            });
+          }
+          total += list.length;
+          if (list.length < PAGE_SIZE) break;
+          page++;
+          await sleep(DELAY_LIST);
+        } catch (e) {
+          console.warn(`   ⚠ menu=${menu.menuId} page=${page} 에러:`, e.message);
+          break;
         }
-        if (page % 5 === 0 || list.length < PAGE_SIZE) {
-          console.log(`   목록 페이지 ${page} (누적 ${collected.length}건)`);
-        }
-        if (list.length < PAGE_SIZE) break;
-        page++;
-        await sleep(DELAY_LIST);
-      } catch (e) {
-        console.error(`목록 페이지 ${page} 실패, 5초 후 재시도...`, e);
-        await sleep(5000);
       }
+      console.log(`   [${menu.menuName}] ${total}건`);
     }
-    console.log(`✅ 글 목록 ${collected.length}건 수집 완료`);
-    articleIndex = collected;
-    saveCheckpoint({ clubId, articleIndex, posts: [], cursor: 0 });
+
+    // 중복 제거 (전체글 메뉴와 일반 메뉴가 겹칠 수 있음)
+    const seen = new Set();
+    articleIndex = [];
+    for (const a of all) {
+      const key = String(a.articleId);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      articleIndex.push(a);
+    }
+    console.log(`✅ 총 ${articleIndex.length}건 (중복 제거 후)`);
+    saveCheckpoint({ clubId, menus, articleIndex, posts: [], cursor: 0 });
   } else {
     console.log(`▶ 체크포인트 글 목록 ${articleIndex.length}건`);
   }
 
-  // ─── 3) 각 글의 본문 + 댓글 fetch
+  if (articleIndex.length === 0) {
+    console.error('❌ 수집된 글이 0건. 체크포인트 비우고 다시 시도해주세요: localStorage.removeItem("cafeExtractCheckpoint")');
+    return;
+  }
+
+  // ─── 4) 글 상세 + 댓글
   const posts = checkpoint?.posts || [];
   let cursor = checkpoint?.cursor || 0;
   console.log(`📄 본문·댓글 추출 ${cursor} / ${articleIndex.length}부터 시작`);
@@ -180,100 +129,146 @@
   for (let i = cursor; i < articleIndex.length; i++) {
     const meta = articleIndex[i];
     try {
-      const dRes = await fetch(
-        `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${clubId}/articles/${meta.articleId}`,
-        { credentials: 'include' }
-      );
-      const dJson = await dRes.json();
-      const article = dJson.message?.result?.article || dJson.result?.article || {};
+      const article = await fetchArticleDetail(clubId, meta.articleId);
       const contentText = (article.contentText || htmlToText(article.contentHtml || '')).trim();
-
-      const comments = meta.commentCount > 0
-        ? await fetchAllComments(clubId, meta.articleId)
-        : [];
-
+      const comments = meta.commentCount > 0 ? await fetchAllComments(clubId, meta.articleId) : [];
       const isQA = comments.length > QA_THRESHOLD;
 
       if (!isQA) {
-        // 일반 글: 본문 + 댓글 통합
         const combined = composeContent(contentText, comments);
         if (combined && combined.length > 10) {
-          posts.push({
-            title: meta.title || '(제목 없음)',
-            content: combined,
-            external_id: String(meta.articleId),
-            external_url: `https://cafe.naver.com/${CAFE_URL}/${meta.articleId}`,
-            posted_at: meta.writeDateTimestamp ? new Date(meta.writeDateTimestamp).toISOString() : null,
-          });
+          posts.push(makePost(meta, meta.title, combined, String(meta.articleId)));
         }
       } else {
-        // Q&A 글: 본문은 1개 + 각 최상위 댓글 스레드를 별도 가상 글로
         if (contentText && contentText.length > 10) {
-          posts.push({
-            title: `${meta.title} (안내)`,
-            content: contentText,
-            external_id: `${meta.articleId}_main`,
-            external_url: `https://cafe.naver.com/${CAFE_URL}/${meta.articleId}`,
-            posted_at: meta.writeDateTimestamp ? new Date(meta.writeDateTimestamp).toISOString() : null,
-          });
+          posts.push(makePost(meta, `${meta.title} (안내)`, contentText, `${meta.articleId}_main`));
         }
-
         const threads = groupCommentsToThreads(comments);
-        for (const thread of threads) {
-          const root = thread.root;
-          if (!root.content || root.content.trim().length < QA_MIN_CONTENT_LEN) continue;
-          const threadContent = composeQAThread(root, thread.replies);
-          const titleSnippet = root.content.replace(/\s+/g, ' ').trim().slice(0, 40);
-          posts.push({
-            title: `[${meta.title}] ${titleSnippet}${root.content.length > 40 ? '…' : ''}`,
-            content: threadContent,
-            external_id: `${meta.articleId}_c${root.commentId}`,
-            external_url: `https://cafe.naver.com/${CAFE_URL}/${meta.articleId}`,
-            posted_at: root.writeDate || (meta.writeDateTimestamp ? new Date(meta.writeDateTimestamp).toISOString() : null),
-          });
+        for (const t of threads) {
+          if (!t.root.content || t.root.content.length < QA_MIN_CONTENT_LEN) continue;
+          const titleSnippet = t.root.content.replace(/\s+/g, ' ').trim().slice(0, 40);
+          posts.push(makePost(
+            meta,
+            `[${meta.title}] ${titleSnippet}${t.root.content.length > 40 ? '…' : ''}`,
+            composeQAThread(t.root, t.replies),
+            `${meta.articleId}_c${t.root.commentId}`,
+          ));
         }
-        console.log(`   Q&A 분할: 본문 + ${threads.length}개 스레드 → 가상글로 저장`);
+        console.log(`   Q&A 분할: ${threads.length}개 스레드`);
       }
 
       if ((i + 1) % 10 === 0 || i === articleIndex.length - 1) {
-        console.log(`   [${i + 1}/${articleIndex.length}] ${meta.title?.slice(0, 30) ?? ''} (댓글 ${comments.length}${isQA ? ', Q&A 분할' : ''})`);
-        saveCheckpoint({ clubId, articleIndex, posts, cursor: i + 1 });
+        console.log(`   [${i + 1}/${articleIndex.length}] ${(meta.title || '').slice(0, 30)} (댓글 ${comments.length}${isQA ? ', Q&A' : ''})`);
+        saveCheckpoint({ clubId, menus, articleIndex, posts, cursor: i + 1 });
       }
-
       await sleep(DELAY_DETAIL);
     } catch (e) {
-      console.error(`   ❌ [${i + 1}] ${meta.title} 실패, 5초 후 다음:`, e.message);
-      saveCheckpoint({ clubId, articleIndex, posts, cursor: i + 1 });
-      await sleep(5000);
+      console.error(`   ❌ [${i + 1}] ${meta.title} 실패:`, e.message);
+      saveCheckpoint({ clubId, menus, articleIndex, posts, cursor: i + 1 });
+      await sleep(3000);
     }
   }
 
-  // ─── 4) JSON 다운로드
-  const validPosts = posts.filter((p) => p.content && p.content.length > 10);
+  // ─── 5) JSON 다운로드
+  const valid = posts.filter((p) => p.content && p.content.length > 10);
   const exportData = {
     cafeUrl: CAFE_URL,
     clubId,
     extractedAt: new Date().toISOString(),
-    totalPosts: validPosts.length,
-    posts: validPosts,
+    totalPosts: valid.length,
+    posts: valid,
   };
-
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `melnberg_cafe_full_${new Date().toISOString().slice(0, 10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  console.log(`🎉 완료! 총 ${validPosts.length}개 가상글 — JSON 다운로드됨.`);
-  console.log('💾 window.__cafeExportData 로도 접근 가능.');
+  download(`melnberg_cafe_full_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(exportData, null, 2));
+  console.log(`🎉 완료! 유효 ${valid.length} / 시도 ${posts.length}건`);
   window.__cafeExportData = exportData;
-  console.log('🧹 다시 처음부터 받으려면: localStorage.removeItem("cafeExtractCheckpoint")');
+  console.log('💡 다시 처음부터: localStorage.removeItem("cafeExtractCheckpoint")');
 
-  // ─── 헬퍼
+  // ─── helpers
+  function makePost(meta, title, content, externalId) {
+    return {
+      title,
+      content,
+      external_id: externalId,
+      external_url: `https://cafe.naver.com/${CAFE_URL}/${meta.articleId}`,
+      posted_at: meta.writeDateTimestamp ? new Date(meta.writeDateTimestamp).toISOString() : null,
+    };
+  }
+
+  function extractList(j) {
+    return (
+      j?.message?.result?.articleList ||
+      j?.message?.result?.articles ||
+      j?.result?.articleList ||
+      j?.result?.articles ||
+      j?.articleList ||
+      j?.articles ||
+      []
+    );
+  }
+
+  async function fetchMenuList(clubId) {
+    const candidates = [
+      `https://apis.naver.com/cafe-web/cafe2/SideMenuList.json?clubid=${clubId}`,
+      `https://apis.naver.com/cafe-web/cafe2/CafeGateMenuList.json?cafeUrl=${CAFE_URL}`,
+      `https://apis.naver.com/cafe-web/cafe-mobile-channel-api/v1/cafes/${clubId}/menus`,
+      `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${clubId}/menus`,
+      `https://apis.naver.com/cafe-web/cafe2/MenuList.json?clubid=${clubId}`,
+    ];
+    for (const url of candidates) {
+      try {
+        const r = await fetch(url, { credentials: 'include' });
+        if (!r.ok) {
+          console.log(`   ✗ menu API ${r.status}: ${url}`);
+          continue;
+        }
+        const j = await r.json();
+        const list =
+          j?.message?.result?.menus ||
+          j?.message?.result?.cafeMenuList ||
+          j?.result?.menus ||
+          j?.result?.cafeMenuList ||
+          j?.menus ||
+          [];
+        const filtered = list
+          .filter((m) => m.menuType !== 'L' && m.menuType !== 'F') // 라인·폴더 제외
+          .filter((m) => m.menuId && (m.menuName || m.name))
+          .map((m) => ({
+            menuId: m.menuId,
+            menuName: m.menuName || m.name,
+            menuType: m.menuType,
+          }));
+        if (filtered.length > 0) {
+          console.log(`   ✓ menu API: ${url} (${filtered.length}개)`);
+          return filtered;
+        }
+        console.log(`   ✗ 빈 응답: ${url}`);
+      } catch (e) {
+        console.log(`   ✗ ${url} → ${e.message}`);
+      }
+    }
+    return null;
+  }
+
+  async function fetchArticleDetail(clubId, articleId) {
+    const urls = [
+      `https://apis.naver.com/cafe-web/cafe-articleapi/v3/cafes/${clubId}/articles/${articleId}`,
+      `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${clubId}/articles/${articleId}`,
+      `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${clubId}/articles/${articleId}`,
+    ];
+    let lastErr;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { credentials: 'include' });
+        if (!r.ok) { lastErr = `${r.status}`; continue; }
+        const j = await r.json();
+        const a = j?.message?.result?.article || j?.result?.article || j?.article || null;
+        if (a) return a;
+        lastErr = '빈 응답';
+      } catch (e) { lastErr = e.message; }
+    }
+    throw new Error(`상세 fetch 실패: ${lastErr}`);
+  }
+
   async function fetchAllComments(clubId, articleId) {
     const all = [];
     const seen = new Set();
@@ -322,29 +317,20 @@
   function groupCommentsToThreads(comments) {
     const byId = new Map();
     for (const c of comments) byId.set(c.commentId, c);
-
-    const threads = [];
-    const repliesOf = new Map(); // rootId → [replies]
-
+    const repliesOf = new Map();
     for (const c of comments) {
       if (c.isReply && c.refCommentId) {
-        // 답글 — 가장 가까운 최상위 부모 찾아서 매달기
-        let cur = c;
         let parent = byId.get(c.refCommentId);
         let safety = 10;
-        while (parent && parent.isReply && safety-- > 0) {
-          parent = byId.get(parent.refCommentId);
-        }
+        while (parent && parent.isReply && safety-- > 0) parent = byId.get(parent.refCommentId);
         const rootId = parent?.commentId ?? c.refCommentId;
         if (!repliesOf.has(rootId)) repliesOf.set(rootId, []);
         repliesOf.get(rootId).push(c);
       }
     }
-
+    const threads = [];
     for (const c of comments) {
-      if (!c.isReply) {
-        threads.push({ root: c, replies: repliesOf.get(c.commentId) ?? [] });
-      }
+      if (!c.isReply) threads.push({ root: c, replies: repliesOf.get(c.commentId) ?? [] });
     }
     return threads;
   }
@@ -354,9 +340,7 @@
     if (root.writer) lines.push(`(질문자: ${root.writer})`);
     if (replies.length > 0) {
       lines.push('');
-      for (const r of replies) {
-        lines.push(`A. ${r.content}${r.writer ? ` — ${r.writer}` : ''}`);
-      }
+      for (const r of replies) lines.push(`A. ${r.content}${r.writer ? ` — ${r.writer}` : ''}`);
     }
     return lines.join('\n');
   }
@@ -382,7 +366,17 @@
     return (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
   }
 
-  function sleep(ms) {
-    return new Promise((r) => setTimeout(r, ms));
+  function download(filename, content) {
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
+
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 })();
