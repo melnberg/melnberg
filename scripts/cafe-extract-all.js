@@ -77,28 +77,81 @@
     console.log(`▶ 체크포인트 클럽 ID: ${clubId}`);
   }
 
-  // ─── 2) 글 목록 전체 수집
+  // ─── 2) 글 목록 전체 수집 — 작동하는 엔드포인트 자동 탐색
   let articleIndex = checkpoint?.articleIndex || null;
 
   if (!articleIndex) {
-    console.log('📋 글 목록 수집 중 (전체 페이지)...');
+    // 먼저 작동하는 엔드포인트 패턴 찾기
+    const endpointTemplates = [
+      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v3/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}`,
+      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v3/cafes/${cId}/menus/0/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
+      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
+      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${cId}/menus/0/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
+      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}&sortBy=TIME`,
+      (cId, p) => `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${cId}/articles?page=${p}&perPage=${PAGE_SIZE}&query=&sortBy=date`,
+    ];
+
+    let workingTemplate = null;
+    console.log('🔍 작동하는 글 목록 API 탐색 중...');
+    for (const tpl of endpointTemplates) {
+      const testUrl = tpl(clubId, 1);
+      try {
+        const r = await fetch(testUrl, { credentials: 'include' });
+        if (!r.ok) {
+          console.log(`   ✗ ${r.status}: ${testUrl}`);
+          continue;
+        }
+        const j = await r.json();
+        const list =
+          j.message?.result?.articleList ||
+          j.message?.result?.articles ||
+          j.result?.articleList ||
+          j.result?.articles ||
+          j.articleList ||
+          j.articles ||
+          [];
+        if (Array.isArray(list) && list.length > 0) {
+          workingTemplate = tpl;
+          console.log(`   ✓ 작동 확인: ${testUrl} (1페이지 ${list.length}건)`);
+          break;
+        }
+        console.log(`   ✗ 빈 응답: ${testUrl}`);
+      } catch (e) {
+        console.log(`   ✗ 에러: ${testUrl} — ${e.message}`);
+      }
+    }
+
+    if (!workingTemplate) {
+      console.error('❌ 작동하는 글 목록 API를 찾지 못함.');
+      console.error('   카페 페이지에서 F12 → Network 탭 → 게시판 클릭 → apis.naver.com 호출 URL 찾아서 알려주세요.');
+      return;
+    }
+
+    console.log('📋 글 목록 수집 시작...');
     const collected = [];
     let page = 1;
     while (true) {
       try {
-        const url = `https://apis.naver.com/cafe-web/cafe-articleapi/v2.1/cafes/${clubId}/articles?page=${page}&perPage=${PAGE_SIZE}&query=&sortBy=date`;
+        const url = workingTemplate(clubId, page);
         const r = await fetch(url, { credentials: 'include' });
         const j = await r.json();
-        const list = j.message?.result?.articleList || [];
+        const list =
+          j.message?.result?.articleList ||
+          j.message?.result?.articles ||
+          j.result?.articleList ||
+          j.result?.articles ||
+          j.articleList ||
+          j.articles ||
+          [];
         if (list.length === 0) break;
         for (const art of list) {
           collected.push({
-            articleId: art.articleId,
-            title: art.subject,
+            articleId: art.articleId || art.id,
+            title: art.subject || art.title,
             menuId: art.menuId,
             menuName: art.menuName,
-            writeDateTimestamp: art.writeDateTimestamp,
-            commentCount: art.commentCount || 0,
+            writeDateTimestamp: art.writeDateTimestamp || art.writeDate,
+            commentCount: art.commentCount || art.commentsCount || 0,
           });
         }
         if (page % 5 === 0 || list.length < PAGE_SIZE) {
