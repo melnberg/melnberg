@@ -45,17 +45,46 @@
   let clubId = checkpoint?.clubId || window.g_sClubId || FALLBACK_CLUB_ID;
   console.log(`✅ 클럽 ID: ${clubId}`);
 
-  // ─── 2) 메뉴 목록 가져오기
+  // ─── 2) 메뉴 ID 자동 발견 (1~MAX 순회, 글이 있는 메뉴만 수집)
+  // Naver의 menu list API는 CORS로 차단됨. 대신 articles API를 menuId마다 호출해서
+  // 글이 1건 이상 있으면 유효한 메뉴로 판단.
+  const MAX_MENU_ID = 60;
   let menus = checkpoint?.menus;
   if (!menus) {
-    menus = await fetchMenuList(clubId);
-    if (!menus || menus.length === 0) {
-      console.error('❌ 메뉴 목록을 가져오지 못함.');
-      console.error('   카페 좌측 사이드바에서 게시판들 우클릭 → URL 복사로 menuId들을 직접 알려주세요.');
+    console.log(`🔍 menuId 1~${MAX_MENU_ID} 자동 탐색 중...`);
+    menus = [];
+    let consecutiveMisses = 0;
+    for (let mid = 1; mid <= MAX_MENU_ID; mid++) {
+      const url = `https://apis.naver.com/cafe-web/cafe-boardlist-api/v1/cafes/${clubId}/menus/${mid}/articles?page=1&pageSize=1&sortBy=TIME&viewType=L`;
+      try {
+        const r = await fetch(url, { credentials: 'include' });
+        if (!r.ok) {
+          consecutiveMisses++;
+          if (consecutiveMisses >= 10 && mid > 20) break;
+          continue;
+        }
+        const j = await r.json();
+        const list = extractList(j);
+        if (Array.isArray(list) && list.length > 0) {
+          const sample = list[0];
+          const menuName = sample.menuName || sample.boardName || `menuId=${mid}`;
+          menus.push({ menuId: mid, menuName });
+          console.log(`   ✓ menuId=${mid} | ${menuName}`);
+          consecutiveMisses = 0;
+        } else {
+          consecutiveMisses++;
+        }
+        await sleep(150);
+      } catch (e) {
+        consecutiveMisses++;
+      }
+    }
+
+    if (menus.length === 0) {
+      console.error('❌ 유효한 메뉴를 1개도 찾지 못함.');
       return;
     }
-    console.log(`✅ 메뉴 ${menus.length}개 발견:`);
-    menus.forEach((m) => console.log(`   - menuId=${m.menuId} | ${m.menuName} (${m.menuType || '-'})`));
+    console.log(`✅ 메뉴 ${menus.length}개 발견`);
   } else {
     console.log(`▶ 체크포인트 메뉴 ${menus.length}개`);
   }
