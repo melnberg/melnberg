@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 
 type Source = { id: number; title: string; url: string | null };
 
-export default function AiChat() {
+type Props = {
+  title?: string;
+  subtitle?: React.ReactNode;
+  centered?: boolean;
+};
+
+export default function AiChat({ title, subtitle, centered }: Props = {}) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
@@ -75,11 +81,16 @@ export default function AiChat() {
     }
   }
 
+  const headTitle = title ?? 'AI 질문';
+  const headSubtitle = subtitle ?? (
+    <>멜른버그 카페 글을 근거로 답변. <span className="text-cyan font-bold">베타</span></>
+  );
+
   return (
-    <div className="max-w-[680px] mx-auto px-6 py-10">
-      <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">AI 질문</h1>
-      <p className="text-[13px] text-muted mb-8">
-        멜른버그 카페 글을 근거로 답변. <span className="text-cyan font-bold">베타</span>
+    <div className={`max-w-[680px] mx-auto px-6 ${centered ? 'py-20 text-center' : 'py-10'}`}>
+      <h1 className={`font-bold text-navy tracking-tight mb-2 ${centered ? 'text-[40px] md:text-[48px] leading-tight' : 'text-[28px]'}`}>{headTitle}</h1>
+      <p className={`text-muted mb-8 ${centered ? 'text-[15px]' : 'text-[13px]'}`}>
+        {headSubtitle}
       </p>
 
       <form onSubmit={handleSubmit} className="mb-8">
