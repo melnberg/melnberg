@@ -108,12 +108,14 @@
           const j = await r.json();
           const list = extractList(j);
           if (!list || list.length === 0) break;
-          for (const art of list) {
+          for (const raw of list) {
+            const art = raw.item || raw; // 새 API는 {type, item}로 래핑됨
             all.push({
               articleId: art.articleId || art.id,
               title: art.subject || art.title || '(제목 없음)',
               menuId: menu.menuId,
               menuName: menu.menuName,
+              headName: art.headName || null,
               writeDateTimestamp: art.writeDateTimestamp || art.writeDate || null,
               commentCount: art.commentCount || art.commentsCount || 0,
             });
