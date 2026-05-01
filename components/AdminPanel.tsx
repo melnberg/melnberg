@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { products } from '@/lib/products';
-import { type ProfileWithTier, type PaymentRecord, currentQuarter, formatExpiry, isActivePaid, tierLabelKo } from '@/lib/tier-utils';
+import { type ProfileWithTier, type PaymentRecord, currentQuarter, formatExpiry, isActivePaid, paymentStatusLabel, tierLabelKo } from '@/lib/tier-utils';
 
 type Props = {
   profiles: ProfileWithTier[];
@@ -95,8 +95,160 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
     router.refresh();
   }
 
+  async function approvePayment(payment: PaymentRecord, period: 'current' | 'next') {
+    if (busyId) return;
+    const product = products.find((p) => p.id === payment.product_id);
+    const grantsTier = product?.id === 'new-membership' || product?.id === 'renewal';
+    setBusyId(`approve-${payment.id}`);
+
+    const q = period === 'current' ? currentQuarter() : nextQuarter();
+    const expiresAt = grantsTier ? q.endsAt : null;
+
+    // 1. 결제 기록 paid로 전환 + 등급 정보 기록
+    const { error: payErr } = await supabase
+      .from('payments')
+      .update({
+        status: 'paid',
+        tier_granted: grantsTier ? 'paid' : null,
+        tier_period_label: grantsTier ? q.label : null,
+        tier_expires_at: expiresAt ? expiresAt.toISOString() : null,
+        paid_at: new Date().toISOString(),
+      })
+      .eq('id', payment.id);
+
+    if (payErr) {
+      alert(payErr.message);
+      setBusyId(null);
+      return;
+    }
+
+    // 2. 멤버십 상품인 경우 회원 등급도 갱신
+    if (grantsTier && expiresAt) {
+      const target = profiles.find((p) => p.id === payment.user_id);
+      const currentExpiry = target?.tier_expires_at ? new Date(target.tier_expires_at) : null;
+      const newExpiry = currentExpiry && currentExpiry > expiresAt ? currentExpiry : expiresAt;
+
+      const { error: profErr } = await supabase
+        .from('profiles')
+        .update({ tier: 'paid', tier_expires_at: newExpiry.toISOString() })
+        .eq('id', payment.user_id);
+
+      if (profErr) {
+        alert(profErr.message);
+        setBusyId(null);
+        return;
+      }
+
+      setProfiles(profiles.map((p) =>
+        p.id === payment.user_id ? { ...p, tier: 'paid', tier_expires_at: newExpiry.toISOString() } : p,
+      ));
+    }
+
+    setPayments(payments.map((p) =>
+      p.id === payment.id
+        ? {
+            ...p,
+            status: 'paid',
+            tier_granted: grantsTier ? 'paid' : null,
+            tier_period_label: grantsTier ? q.label : null,
+            tier_expires_at: expiresAt ? expiresAt.toISOString() : null,
+          }
+        : p,
+    ));
+    setBusyId(null);
+    router.refresh();
+  }
+
+  async function rejectPayment(payment: PaymentRecord) {
+    if (busyId) return;
+    if (!confirm('이 결제 신청을 반려(취소)하시겠습니까? 회원 등급은 변경되지 않습니다.')) return;
+    setBusyId(`reject-${payment.id}`);
+    const { error } = await supabase
+      .from('payments')
+      .update({ status: 'cancelled' })
+      .eq('id', payment.id);
+    if (error) {
+      alert(error.message);
+      setBusyId(null);
+      return;
+    }
+    setPayments(payments.map((p) => (p.id === payment.id ? { ...p, status: 'cancelled' } : p)));
+    setBusyId(null);
+    router.refresh();
+  }
+
+  const pendingPayments = payments.filter((p) => p.status === 'pending' || p.status === 'submitted');
+
   return (
     <div className="flex flex-col gap-12">
+      {/* 결제 신청 (승인 대기) */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[18px] font-bold text-navy">
+            결제 승인 대기
+            {pendingPayments.length > 0 && (
+              <span className="ml-2 inline-block bg-cyan text-navy text-[11px] font-bold tracking-widest uppercase px-2 py-0.5">
+                {pendingPayments.length}
+              </span>
+            )}
+          </h2>
+        </div>
+
+        {pendingPayments.length === 0 ? (
+          <p className="text-[13px] text-muted py-6 px-5 border border-border text-center">승인 대기 중인 결제가 없습니다.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px] border-collapse">
+              <thead>
+                <tr className="bg-bg/60 border-y border-navy text-muted">
+                  <th className="py-2 px-2 font-semibold text-left">상품 / 회원</th>
+                  <th className="py-2 px-2 font-semibold text-center w-24">금액</th>
+                  <th className="py-2 px-2 font-semibold text-center w-24">PG</th>
+                  <th className="py-2 px-2 font-semibold text-center w-28">입금자명</th>
+                  <th className="py-2 px-2 font-semibold text-center w-32">신청일</th>
+                  <th className="py-2 px-2 font-semibold text-center w-20">상태</th>
+                  <th className="py-2 px-2 font-semibold text-left">처리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingPayments.map((p) => {
+                  const profile = profiles.find((pp) => pp.id === p.user_id);
+                  const isMembership = p.product_id === 'new-membership' || p.product_id === 'renewal';
+                  return (
+                    <tr key={p.id} className="border-b border-border align-top hover:bg-bg/40">
+                      <td className="py-2.5 px-2">
+                        <div className="font-bold text-text">{p.product_name}</div>
+                        <div className="text-[11px] text-muted mt-0.5">{profile?.display_name ?? '(알 수 없음)'}</div>
+                      </td>
+                      <td className="py-2.5 px-2 text-center tabular-nums">{p.amount.toLocaleString('ko-KR')}원</td>
+                      <td className="py-2.5 px-2 text-center text-muted">{p.pg_provider ?? '-'}</td>
+                      <td className="py-2.5 px-2 text-center">{p.payer_name ?? <span className="text-muted">-</span>}</td>
+                      <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                        {new Date(p.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </td>
+                      <td className="py-2.5 px-2 text-center">
+                        <span className={`text-[10px] font-bold tracking-widest uppercase ${p.status === 'submitted' ? 'text-cyan' : 'text-muted'}`}>
+                          {paymentStatusLabel(p.status)}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <ApproveActions
+                          payment={p}
+                          isMembership={isMembership}
+                          onApprove={approvePayment}
+                          onReject={rejectPayment}
+                          busy={busyId === `approve-${p.id}` || busyId === `reject-${p.id}`}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       {/* 회원 목록 */}
       <section>
         <div className="flex items-center justify-between mb-3">
@@ -197,7 +349,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                       </td>
                       <td className="py-2.5 px-2 text-center">
                         <span className={`text-[10px] font-bold tracking-widest uppercase ${p.status === 'paid' ? 'text-cyan' : 'text-muted'}`}>
-                          {p.status === 'paid' ? '완료' : p.status === 'refunded' ? '환불' : '취소'}
+                          {paymentStatusLabel(p.status)}
                         </span>
                       </td>
                       <td className="py-2.5 px-2 text-center">
@@ -217,6 +369,54 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function ApproveActions({
+  payment,
+  isMembership,
+  onApprove,
+  onReject,
+  busy,
+}: {
+  payment: PaymentRecord;
+  isMembership: boolean;
+  onApprove: (payment: PaymentRecord, period: 'current' | 'next') => Promise<void>;
+  onReject: (payment: PaymentRecord) => Promise<void>;
+  busy: boolean;
+}) {
+  const [period, setPeriod] = useState<'current' | 'next'>('current');
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {isMembership && (
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as 'current' | 'next')}
+          disabled={busy}
+          className="border border-border px-2 py-1 text-[11px] outline-none focus:border-navy rounded-none"
+        >
+          <option value="current">현분기</option>
+          <option value="next">다음분기</option>
+        </select>
+      )}
+      <button
+        type="button"
+        onClick={() => onApprove(payment, period)}
+        disabled={busy}
+        className="bg-navy text-white px-3 py-1 text-[11px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-50 border-none"
+      >
+        {busy ? '...' : '승인'}
+      </button>
+      <button
+        type="button"
+        onClick={() => onReject(payment)}
+        disabled={busy}
+        className="bg-white border border-border text-text px-3 py-1 text-[11px] font-semibold tracking-wide cursor-pointer hover:border-red-600 hover:text-red-600 disabled:opacity-50"
+      >
+        반려
+      </button>
     </div>
   );
 }

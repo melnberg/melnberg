@@ -7,6 +7,7 @@ import LogoutButton from '@/components/LogoutButton';
 import NicknameEditor from '@/components/NicknameEditor';
 import { createClient } from '@/lib/supabase/server';
 import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
+import { paymentStatusLabel } from '@/lib/tier-utils';
 
 export const metadata = { title: '마이페이지 — 멜른버그' };
 
@@ -80,8 +81,10 @@ export default async function MePage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-[13px] font-bold tabular-nums">{p.amount.toLocaleString('ko-KR')}원</div>
-                      <div className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 ${p.status === 'paid' ? 'text-cyan' : 'text-muted'}`}>
-                        {p.status === 'paid' ? '결제완료' : p.status === 'refunded' ? '환불' : '취소'}
+                      <div className={`text-[10px] font-bold tracking-widest uppercase mt-0.5 ${
+                        p.status === 'paid' ? 'text-cyan' : p.status === 'submitted' ? 'text-navy' : 'text-muted'
+                      }`}>
+                        {paymentStatusLabel(p.status)}
                       </div>
                     </div>
                   </li>

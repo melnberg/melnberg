@@ -11,6 +11,8 @@ export type ProfileWithTier = {
   created_at: string;
 };
 
+export type PaymentStatus = 'pending' | 'submitted' | 'paid' | 'refunded' | 'cancelled';
+
 export type PaymentRecord = {
   id: number;
   user_id: string;
@@ -19,14 +21,25 @@ export type PaymentRecord = {
   amount: number;
   pg_provider: string | null;
   pg_payment_id: string | null;
-  status: 'paid' | 'refunded' | 'cancelled';
+  status: PaymentStatus;
   tier_granted: string | null;
   tier_period_label: string | null;
   tier_expires_at: string | null;
   note: string | null;
+  payer_name: string | null;
   paid_at: string;
   created_at: string;
 };
+
+export function paymentStatusLabel(status: PaymentStatus): string {
+  switch (status) {
+    case 'pending': return '결제대기';
+    case 'submitted': return '입금확인중';
+    case 'paid': return '결제완료';
+    case 'refunded': return '환불';
+    case 'cancelled': return '취소';
+  }
+}
 
 export function currentQuarter(date = new Date()): { label: string; startsAt: Date; endsAt: Date } {
   const year = date.getFullYear();

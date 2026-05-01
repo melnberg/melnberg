@@ -26,8 +26,8 @@ export default async function AdminPage() {
     supabase
       .from('payments')
       .select('*')
-      .order('paid_at', { ascending: false })
-      .limit(50),
+      .order('created_at', { ascending: false })
+      .limit(100),
   ]);
 
   // 이메일 가져오기는 어드민 권한 필요해서 — 사용자 ID만 노출

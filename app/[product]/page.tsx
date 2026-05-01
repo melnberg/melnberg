@@ -4,10 +4,9 @@ import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
 import PaymentForm from '@/components/PaymentForm';
 import { products, getProduct } from '@/lib/products';
+import { createClient } from '@/lib/supabase/server';
 
-export function generateStaticParams() {
-  return products.map((p) => ({ product: p.filename }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ product: string }> }) {
   const { product } = await params;
@@ -26,6 +25,10 @@ export default async function ProductPage({ params }: { params: Promise<{ produc
 
   const p = getProduct(decoded);
   if (!p) notFound();
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const loggedIn = !!user;
 
   return (
     <Layout current={p.filename}>
@@ -94,7 +97,7 @@ export default async function ProductPage({ params }: { params: Promise<{ produc
       <section className="py-14 border-b border-border">
         <div className="max-w-content mx-auto px-10">
           <SectionHeader title="결제" />
-          <PaymentForm product={p} />
+          <PaymentForm product={p} loggedIn={loggedIn} />
         </div>
       </section>
 
