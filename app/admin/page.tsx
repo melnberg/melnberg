@@ -40,7 +40,15 @@ export default async function AdminPage() {
 
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">
-          <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">어드민</h1>
+          <div className="flex items-baseline justify-between mb-2">
+            <h1 className="text-[28px] font-bold text-navy tracking-tight">어드민</h1>
+            <a
+              href="/admin/cafe-posts"
+              className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
+            >
+              카페 글 관리 →
+            </a>
+          </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>
 
           <AdminPanel profiles={profiles} payments={payments} />
