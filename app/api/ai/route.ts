@@ -45,20 +45,12 @@ export async function POST(req: NextRequest) {
     const context =
       chunks && chunks.length > 0
         ? chunks
-            .map((c, i) => '[' + (i + 1) + '] ' + c.post_title + '
-' + c.content)
-            .join('
-
----
-
-')
+            .map((c, i) => '[' + (i + 1) + '] ' + c.post_title + '\n' + c.content)
+            .join('\n\n---\n\n')
         : ''
 
     const systemPrompt = context
-      ? '당신은 멜른버그 커뮤니티의 AI 어시스턴트입니다. 아래 카페 글 내용을 참고하여 사용자의 질문에 친절하고 정확하게 답변해주세요. 참고 자료에 없는 내용은 솔직하게 모른다고 말해주세요.
-
-참고 자료:
-' + context
+      ? '당신은 멜른버그 커뮤니티의 AI 어시스턴트입니다. 아래 카페 글 내용을 참고하여 사용자의 질문에 친절하고 정확하게 답변해주세요. 참고 자료에 없는 내용은 솔직하게 모른다고 말해주세요.\n\n참고 자료:\n' + context
       : '당신은 멜른버그 커뮤니티의 AI 어시스턴트입니다. 현재 관련 자료를 찾지 못했습니다. 일반적인 지식으로 친절하게 답변해주세요.'
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -66,9 +58,7 @@ export async function POST(req: NextRequest) {
 
     const stream = new ReadableStream({
       async start(controller) {
-        const sourcesData = 'data: ' + JSON.stringify({ type: 'sources', sources }) + '
-
-'
+        const sourcesData = 'data: ' + JSON.stringify({ type: 'sources', sources }) + '\n\n'
         controller.enqueue(encoder.encode(sourcesData))
 
         try {
@@ -81,21 +71,15 @@ export async function POST(req: NextRequest) {
 
           for await (const event of anthropicStream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              const chunk = 'data: ' + JSON.stringify({ type: 'text', text: event.delta.text }) + '
-
-'
+              const chunk = 'data: ' + JSON.stringify({ type: 'text', text: event.delta.text }) + '\n\n'
               controller.enqueue(encoder.encode(chunk))
             }
           }
 
-          controller.enqueue(encoder.encode('data: ' + JSON.stringify({ type: 'done' }) + '
-
-'))
+          controller.enqueue(encoder.encode('data: ' + JSON.stringify({ type: 'done' }) + '\n\n'))
         } catch (err) {
           console.error('Claude stream error:', err)
-          controller.enqueue(encoder.encode('data: ' + JSON.stringify({ type: 'error', message: 'AI 응답 생성 중 오류가 발생했습니다.' }) + '
-
-'))
+          controller.enqueue(encoder.encode('data: ' + JSON.stringify({ type: 'error', message: 'AI 응답 생성 중 오류가 발생했습니다.' }) + '\n\n'))
         } finally {
           controller.close()
         }
