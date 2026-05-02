@@ -10,6 +10,8 @@ alter table public.ai_question_logs
   add column if not exists source_count int;
 
 -- 2. 기존 한도 검사 RPC를 log_id 반환하도록 수정
+-- (return type 변경이라 DROP 후 재생성 필요)
+drop function if exists public.check_and_log_ai_question(uuid, text, int);
 create or replace function public.check_and_log_ai_question(
   q_user_id uuid,
   q_question text,
@@ -50,6 +52,7 @@ end;
 $$;
 
 -- 3. IP 기반 RPC도 동일하게 수정
+drop function if exists public.check_and_log_ai_question_ip(text, text, int);
 create or replace function public.check_and_log_ai_question_ip(
   q_ip text,
   q_question text,
