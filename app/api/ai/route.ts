@@ -70,19 +70,23 @@ export async function POST(req: NextRequest) {
     let limitErr: { message?: string } | null = null;
     let limitResult: { blocked?: boolean; used_today?: number; daily_limit?: number } | undefined;
 
+    // 관리자는 무제한, 그 외 모두 일일 5회 (로그인이든 비로그인이든)
+    dailyLimit = 5;
+    limitLabel = '일일';
+    let isAdmin = false;
+
     if (user) {
-      // 로그인: user_id 기준
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin, tier')
+        .select('is_admin')
         .eq('id', user.id)
         .maybeSingle();
+      isAdmin = !!profile?.is_admin;
+    }
 
-      const isAdmin = !!profile?.is_admin;
-      const isPaid = profile?.tier === 'paid';
-      dailyLimit = isAdmin ? 9999 : isPaid ? 50 : 5;
-      limitLabel = isAdmin ? '관리자' : isPaid ? '정회원' : '일반 회원';
-
+    if (isAdmin) {
+      // 관리자는 한도 검사 스킵
+    } else if (user) {
       const res = await supabase.rpc('check_and_log_ai_question', {
         q_user_id: user.id,
         q_question: question.trim(),
@@ -91,15 +95,11 @@ export async function POST(req: NextRequest) {
       limitErr = res.error;
       limitResult = Array.isArray(res.data) ? res.data[0] : res.data;
     } else {
-      // 비로그인: IP 기준
       const ip = (
         req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || req.headers.get('x-real-ip')
         || 'unknown'
       );
-      dailyLimit = 3;
-      limitLabel = '비회원';
-
       const res = await supabase.rpc('check_and_log_ai_question_ip', {
         q_ip: ip,
         q_question: question.trim(),
@@ -110,14 +110,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (limitErr) {
-      // RPC가 아직 DB에 없으면 (009 미적용) 일단 통과 — 운영 사고 방지
       console.warn('AI question limit RPC unavailable, skipping limit:', limitErr.message);
     } else if (limitResult?.blocked) {
-      const upgradeMsg = user
-        ? '내일 다시 시도하거나 정회원 가입 시 일일 50회까지 가능.'
-        : '로그인하면 5회, 정회원은 50회까지 가능.';
       return NextResponse.json(
-        { error: `${limitLabel} 일일 한도(${dailyLimit}회) 도달함. ${upgradeMsg}` },
+        { error: `${limitLabel} 한도(${dailyLimit}회) 도달함. 내일 다시 시도해주세요.` },
         { status: 429 },
       );
     }
