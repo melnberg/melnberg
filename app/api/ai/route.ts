@@ -16,6 +16,43 @@ type ChunkRow = {
   posted_at: string | null;
 };
 
+const KEYWORD_STOPWORDS = new Set([
+  '어떤', '어디', '언제', '얼마', '얼마나', '몇', '왜',
+  '뭐', '뭘', '뭐임', '뭐지', '뭔지', '무엇', '무슨',
+  '어떻게', '어떡해', '누구', '누가',
+  '있나', '있나요', '있어요', '있음', '있는', '있어',
+  '없나', '없나요', '없어요', '없음', '없는',
+  '관련', '대해', '대한', '동네', '곳', '지역', '쪽',
+  '알려줘', '알려', '추천', '설명', '말해', '말해줘', '알고',
+  '같은', '같이', '같음', '함께', '제일', '가장', '많이', '조금',
+  '하는', '하나', '한번', '하기',
+  '되나', '되는', '될까', '돼',
+  '있고', '없고', '입니까', '인가요', '입니다',
+  '이거', '저거', '그거', '여기', '거기', '저기', '그게', '이게',
+]);
+
+const PARTICLE_REGEX = /(은|는|이|가|을|를|의|에|에서|에서는|에서도|로|으로|부터|까지|와|과|도|만|이라|이라고|라고|랑|이랑|에게|한테|이고|이며|이지)$/;
+
+function extractKeywords(question: string): string[] {
+  const tokens = question
+    .replace(/[?!.,()\[\]{}'":\-_/]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const seen = new Set<string>();
+  const keywords: string[] = [];
+  for (const raw of tokens) {
+    let word = raw.replace(PARTICLE_REGEX, '');
+    if (word.length < 2) continue;
+    if (/^\d+$/.test(word)) continue;
+    if (KEYWORD_STOPWORDS.has(word)) continue;
+    if (seen.has(word)) continue;
+    seen.add(word);
+    keywords.push(word);
+  }
+  return keywords.slice(0, 6);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { question } = await req.json();
@@ -26,15 +63,34 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
 
     const [queryEmbedding] = await embedTexts([question.trim()]);
+    const keywords = extractKeywords(question.trim());
 
-    const { data: chunks, error: searchError } = await supabase.rpc('search_cafe_chunks', {
-      query_embedding: queryEmbedding as unknown as string,
-      match_count: 10,
-    });
+    let chunks: ChunkRow[] | null = null;
+    let searchError: { message?: string } | null = null;
 
+    // 1차: 하이브리드 검색 (008 마이그레이션 적용 시)
+    {
+      const res = await supabase.rpc('search_cafe_chunks_hybrid', {
+        query_embedding: queryEmbedding as unknown as string,
+        keywords,
+        match_count: 20,
+      });
+      chunks = (res.data as ChunkRow[] | null) ?? null;
+      searchError = res.error;
+    }
+
+    // 폴백: 하이브리드 RPC가 아직 DB에 없으면 기존 벡터-only RPC로
     if (searchError) {
-      console.error('Vector search error:', searchError);
-      return NextResponse.json({ error: '검색 중 오류가 발생했습니다.' }, { status: 500 });
+      console.warn('Hybrid RPC not available, falling back to vector-only:', searchError.message);
+      const res = await supabase.rpc('search_cafe_chunks', {
+        query_embedding: queryEmbedding as unknown as string,
+        match_count: 15,
+      });
+      if (res.error) {
+        console.error('Vector search error:', res.error);
+        return NextResponse.json({ error: '검색 중 오류가 발생했습니다.' }, { status: 500 });
+      }
+      chunks = (res.data as ChunkRow[] | null) ?? null;
     }
 
     const rows = (chunks ?? []) as ChunkRow[];
@@ -62,16 +118,25 @@ export async function POST(req: NextRequest) {
       '- 이모지·이모티콘 일체 금지 (😊 🎁 ⚠️ ❌ ✅ 등 어떤 것도).',
       '- 자신있는 말투. 모호한 표현·헤징 금지.',
       '',
+      '[답변 깊이 — 가장 중요]',
+      '- 단순 사실 나열 금지. 각 포인트마다 자료에 있는 배경·이유·맥락을 함께 서술.',
+      '- "왜 그런지", "어떤 맥락에서 그런지" 자료에서 근거를 찾아 설명할 것.',
+      '- 발췌가 충분하면 분량 짧게 끊지 말고 자료에서 확인되는 만큼 깊이 있게 작성.',
+      '- 데이터·수치 인용 시 그 수치가 의미하는 바를 같이 해석.',
+      '',
       '[구조와 형식 — 마크다운 사용]',
       '- 답변은 마크다운으로 작성. 렌더러가 굵게·번호·목록·코드를 시각적으로 표현함.',
-      '- 섹션 구분이 필요하면 ## 소제목 (예: "## 원인", "## 해결 방법", "## 추천 순서").',
+      '- 섹션 구분이 필요하면 ## 소제목.',
       '- 더 작은 그룹은 ### 사용.',
-      '- 순서가 중요한 단계는 1. 2. 3. (numbered list). 각 항목 시작은 **굵은 핵심어** 로 시작하면 가독성 좋음.',
-      '  예: "1. **파일 크기 줄이기** — 24MB 이하로 맞추는 게 안전함."',
+      '- 순서가 중요한 단계는 1. 2. 3. (numbered list). 각 항목 시작은 **굵은 핵심어** 로.',
+      '  예: "1. **입지 경쟁력** — 강남 접근성과 한강 인접이 가격 방어 핵심."',
       '- 순서 무관한 항목은 - 대시 (bulleted list).',
-      '- 명령어·경로·코드·변수명은 인라인 백틱: `명령어`, `/path/to/file`',
       '- 핵심 키워드 강조는 **굵게**.',
-      '- 큰 섹션 구분에 --- 가로선 사용 가능 (남발 금지).',
+      '',
+      '[자료 사용 원칙]',
+      '- 발췌에 명시된 사실만 사용. 일반 상식·추측·외부 지식 추가 금지.',
+      '- 발췌 여러 개를 종합해 맥락 있는 답변 구성. 각 발췌를 따로따로 인용하지 말고 통합 서술.',
+      '- 질문과 무관한 발췌는 무시. 관련 있는 것만 활용.',
       '',
       '[자료 없음 처리 — 사과·헤징 절대 금지]',
       '- 다음 표현 일체 사용 금지: "자료가 부족합니다", "답변드리기 어렵습니다", "확인이 어렵습니다", "자료에 없습니다", "더 자세한 정보는...", "정보가 제한적입니다", "추가 정보가 필요합니다".',
