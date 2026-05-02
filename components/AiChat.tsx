@@ -17,12 +17,20 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const answerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (answerRef.current) {
       answerRef.current.scrollTop = answerRef.current.scrollHeight;
     }
   }, [answer]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [question]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,7 +95,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   );
 
   return (
-    <div className={`max-w-[960px] mx-auto px-6 ${centered ? 'py-20 text-center' : 'py-10'}`}>
+    <div className={`max-w-[1900px] mx-auto px-6 ${centered ? 'py-20 text-center' : 'py-10'}`}>
       <h1 className={`font-bold text-navy tracking-tight mb-2 ${centered ? 'text-[40px] md:text-[48px] leading-tight' : 'text-[28px]'}`}>{headTitle}</h1>
       <p className={`text-muted mb-8 ${centered ? 'text-[15px]' : 'text-[13px]'}`}>
         {headSubtitle}
@@ -96,6 +104,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
       <form onSubmit={handleSubmit} className="mb-8">
         <div className="relative">
           <textarea
+            ref={textareaRef}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => {
@@ -107,7 +116,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
             placeholder="궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)"
             rows={2}
             disabled={loading}
-            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-5 py-4 pr-16 text-[14px] text-left resize-y outline-none rounded-2xl bg-gradient-to-b from-white to-gray-50 shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] disabled:opacity-60 min-h-[80px]"
+            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-5 py-4 pr-16 text-[14px] text-left resize-none overflow-hidden outline-none rounded-2xl bg-gradient-to-b from-white to-gray-50 shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] disabled:opacity-60 min-h-[80px]"
           />
           <button
             type="submit"
