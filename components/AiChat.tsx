@@ -107,13 +107,13 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
             placeholder="궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)"
             rows={2}
             disabled={loading}
-            className="w-full border-2 border-navy focus:border-cyan transition-colors px-4 py-3 pr-16 text-[14px] text-left resize-y outline-none rounded-none disabled:opacity-60 min-h-[70px]"
+            className="w-full border border-border focus:border-muted transition-colors px-5 py-4 pr-16 text-[14px] text-left resize-y outline-none rounded-2xl bg-white disabled:opacity-60 min-h-[80px]"
           />
           <button
             type="submit"
             disabled={loading || !question.trim()}
             aria-label={loading ? '답변 생성 중' : '질문하기'}
-            className="absolute right-3 bottom-3 bg-navy text-white w-10 h-10 flex items-center justify-center border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40 disabled:cursor-not-allowed"
+            className="absolute right-3 bottom-3 bg-navy text-white w-10 h-10 rounded-lg flex items-center justify-center border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
