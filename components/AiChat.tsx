@@ -195,7 +195,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
               ) : (
                 <div
                   ref={i === turns.length - 1 ? lastAnswerRef : null}
-                  className="border border-border bg-bg/40 p-5"
+                  className="border border-border bg-bg/40 p-5 scroll-mb-44"
                 >
                   <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
                   <div className="text-[16px] text-text leading-relaxed text-left">
