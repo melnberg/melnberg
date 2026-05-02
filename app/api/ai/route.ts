@@ -254,14 +254,18 @@ export async function POST(req: NextRequest) {
           const message = err instanceof Error ? err.message : 'AI 응답 생성 중 오류가 발생했습니다.';
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`));
         } finally {
-          controller.close();
-          // 답변 텍스트를 로그에 저장 (스트림 종료 후)
+          // 답변 텍스트를 로그에 저장 (close() 전에 끝내야 Vercel 함수가 안 끊김)
           if (logId && fullAnswer) {
-            await supabase.rpc('update_ai_log_answer', {
-              q_log_id: logId,
-              q_answer: fullAnswer,
-            }).then(() => {}, (e) => console.warn('update_ai_log_answer failed:', e?.message));
+            try {
+              await supabase.rpc('update_ai_log_answer', {
+                q_log_id: logId,
+                q_answer: fullAnswer,
+              });
+            } catch (e) {
+              console.warn('update_ai_log_answer failed:', e instanceof Error ? e.message : e);
+            }
           }
+          controller.close();
         }
       },
     });

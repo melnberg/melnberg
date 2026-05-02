@@ -121,61 +121,71 @@ export default async function AdminAiLogsPage({
             <FilterTab href="/admin/ai-logs?filter=no-result" active={filter === 'no-result'}>자료없음만</FilterTab>
           </div>
 
-          {/* 로그 리스트 */}
+          {/* 로그 리스트 — 한 줄 요약 + 클릭 펼침 */}
           {logs.length === 0 ? (
             <div className="border border-border bg-bg/40 px-5 py-8 text-center text-[13px] text-muted">
               {filter === 'no-result' ? '자료없음 질문이 없습니다.' : '아직 질문이 없습니다.'}
             </div>
           ) : (
-            <ul className="flex flex-col gap-3">
+            <div className="border border-border">
+              {/* 헤더 행 */}
+              <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-bg/60 border-b border-border text-[10px] font-bold tracking-widest uppercase text-muted">
+                <span className="w-[88px] shrink-0">시각</span>
+                <span className="w-[100px] shrink-0">사용자</span>
+                <span className="flex-1 min-w-0">질문</span>
+                <span className="flex-1 min-w-0">답변</span>
+                <span className="w-[60px] shrink-0 text-right">청크</span>
+              </div>
+
               {logs.map((log) => {
                 const user = log.user_id ? (profilesMap.get(log.user_id) ?? log.user_id.slice(0, 8)) : null;
                 const noResult = log.chunk_count === 0 || log.chunk_count === null;
+                const userLabel = user ?? (log.ip_address ?? '?');
                 return (
-                  <li key={log.id} className="border border-border bg-white">
-                    {/* 헤더: 시간·사용자·청크·출처 */}
-                    <div className="flex items-center gap-4 flex-wrap px-4 py-2 bg-bg/40 border-b border-border text-[12px]">
-                      <span className="text-muted tabular-nums">{fmtTime(log.asked_at)}</span>
-                      {user ? (
-                        <span className="text-navy font-bold">{user}</span>
-                      ) : (
-                        <span className="text-muted">IP {log.ip_address ?? '?'}</span>
-                      )}
-                      <span className="ml-auto flex items-center gap-3 text-[11px]">
-                        <span className={noResult ? 'text-red-600 font-bold' : 'text-muted'}>
-                          청크 {log.chunk_count ?? 0}
-                        </span>
-                        <span className="text-muted">출처 {log.source_count ?? 0}</span>
+                  <details key={log.id} className="border-b border-border last:border-b-0 group">
+                    <summary className="flex items-center gap-3 px-4 py-2.5 text-[13px] cursor-pointer hover:bg-bg/40 list-none">
+                      <span className="w-[88px] shrink-0 text-muted tabular-nums text-[12px]">{fmtTime(log.asked_at)}</span>
+                      <span className={`w-[100px] shrink-0 truncate ${user ? 'text-navy font-bold' : 'text-muted text-[12px]'}`}>
+                        {userLabel}
                       </span>
-                    </div>
+                      <span className="flex-1 min-w-0 text-text truncate">{log.question}</span>
+                      <span className="flex-1 min-w-0 text-muted truncate text-[12px]">
+                        {log.answer ?? <em className="opacity-60">기록 없음</em>}
+                      </span>
+                      <span className={`w-[60px] shrink-0 text-right tabular-nums text-[12px] ${noResult ? 'text-red-600 font-bold' : 'text-muted'}`}>
+                        {log.chunk_count ?? 0}
+                      </span>
+                    </summary>
 
-                    {/* 질문 */}
-                    <div className="px-4 py-3">
-                      <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-1">질문</p>
-                      <p className="text-[14px] text-text whitespace-pre-wrap break-words">
-                        {log.question}
-                      </p>
-                    </div>
-
-                    {/* 답변 */}
-                    {log.answer ? (
-                      <details className="border-t border-border">
-                        <summary className="px-4 py-3 cursor-pointer text-[10px] font-bold tracking-widest uppercase text-muted hover:bg-bg/40">
-                          답변 펼쳐보기 ({log.answer.length}자)
-                        </summary>
-                        <div className="px-4 pb-4 text-[13px] text-text whitespace-pre-wrap break-words leading-relaxed bg-bg/20">
-                          {log.answer}
-                        </div>
-                      </details>
-                    ) : (
-                      <div className="border-t border-border px-4 py-2 text-[11px] text-muted italic">
-                        답변 기록 없음 (옛날 로그이거나 스트리밍 중단)
+                    <div className="px-4 pb-5 pt-2 bg-bg/30 border-t border-border space-y-4">
+                      <div>
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-1">질문</p>
+                        <p className="text-[14px] text-text whitespace-pre-wrap break-words leading-relaxed">{log.question}</p>
                       </div>
-                    )}
-                  </li>
+
+                      {log.answer ? (
+                        <div>
+                          <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-1">
+                            답변 ({log.answer.length}자)
+                          </p>
+                          <p className="text-[13px] text-text whitespace-pre-wrap break-words leading-relaxed">{log.answer}</p>
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-muted italic">답변 기록 없음 (옛 로그이거나 스트리밍 중단)</p>
+                      )}
+
+                      <div className="flex gap-4 text-[11px] text-muted pt-2 border-t border-border">
+                        <span>청크: <strong className={noResult ? 'text-red-600' : 'text-text'}>{log.chunk_count ?? 0}</strong></span>
+                        <span>출처: <strong className="text-text">{log.source_count ?? 0}</strong></span>
+                        <span className="ml-auto">
+                          {user ? `회원: ${user}` : `IP: ${log.ip_address ?? '?'}`}
+                        </span>
+                      </div>
+                    </div>
+                  </details>
                 );
               })}
-            </ul>
+            </div>
           )}
 
           {totalCount && totalCount > logs.length && (
