@@ -179,7 +179,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
       )}
 
       {hasTurns && (
-        <div className="flex flex-col gap-8 mb-8 text-left">
+        <div className="flex flex-col gap-8 mb-8 pb-32 text-left">
           {turns.map((turn, i) => (
             <div key={i} className="flex flex-col gap-4">
               <div className="flex justify-end">
