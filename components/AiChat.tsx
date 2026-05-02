@@ -107,7 +107,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
             placeholder="궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)"
             rows={2}
             disabled={loading}
-            className="w-full border border-border focus:border-muted transition-colors px-5 py-4 pr-16 text-[14px] text-left resize-y outline-none rounded-2xl bg-white disabled:opacity-60 min-h-[80px]"
+            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-5 py-4 pr-16 text-[14px] text-left resize-y outline-none rounded-2xl bg-gradient-to-b from-white to-gray-50 shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] disabled:opacity-60 min-h-[80px]"
           />
           <button
             type="submit"
