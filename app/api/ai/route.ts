@@ -95,14 +95,20 @@ export async function POST(req: NextRequest) {
 
     const rows = (chunks ?? []) as ChunkRow[];
 
-    // 출처 — 글 단위로 dedup
-    const sourceMap = new Map<number, { id: number; title: string; url: string | null }>();
-    for (const c of rows) {
-      if (!sourceMap.has(c.post_id)) {
-        sourceMap.set(c.post_id, { id: c.post_id, title: c.post_title, url: c.external_url });
+    // 출처 — 관련도 높은 청크만 (similarity > 0.5), 글 단위 dedup, top 6개로 제한
+    // 키워드 매치는 0.9+, 벡터 매치 중 강한 것만 유지
+    const relevantChunks = rows.filter((c) => c.similarity > 0.5);
+    const sourceMap = new Map<number, { id: number; title: string; url: string | null; similarity: number }>();
+    for (const c of relevantChunks) {
+      const existing = sourceMap.get(c.post_id);
+      if (!existing || existing.similarity < c.similarity) {
+        sourceMap.set(c.post_id, { id: c.post_id, title: c.post_title, url: c.external_url, similarity: c.similarity });
       }
     }
-    const sources = Array.from(sourceMap.values());
+    const sources = Array.from(sourceMap.values())
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 6)
+      .map(({ id, title, url }) => ({ id, title, url }));
 
     const context = rows.length > 0
       ? rows.map((c, i) => `[${i + 1}] ${c.post_title}\n${c.chunk_content}`).join('\n\n---\n\n')

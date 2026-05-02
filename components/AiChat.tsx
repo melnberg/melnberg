@@ -230,7 +230,14 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
                     >
                       {turn.answer}
                     </ReactMarkdown>
-                    {!turn.complete && i === turns.length - 1 && (
+                    {!turn.complete && i === turns.length - 1 && turn.answer === '' && (
+                      <div className="flex items-center gap-1.5 py-1" aria-label="답변 생성 중">
+                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce [animation-delay:-300ms]" />
+                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce [animation-delay:-150ms]" />
+                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce" />
+                      </div>
+                    )}
+                    {!turn.complete && i === turns.length - 1 && turn.answer !== '' && (
                       <span className="inline-block w-1.5 h-4 bg-muted animate-pulse ml-0.5 align-middle" />
                     )}
                   </div>
