@@ -172,9 +172,9 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
           <div
             ref={answerRef}
-            className="text-[14px] text-text whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto text-left"
+            className="text-[16px] text-text leading-relaxed max-h-[560px] overflow-y-auto text-left"
           >
-            {answer}
+            {renderStructured(answer)}
             {loading && <span className="inline-block w-1.5 h-4 bg-muted animate-pulse ml-0.5 align-middle" />}
           </div>
         </div>
@@ -205,4 +205,42 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
       )}
     </div>
   );
+}
+
+function renderStructured(text: string) {
+  if (!text) return null;
+  // ** 굵게 잔여물이 들어와도 별표는 제거
+  const cleaned = text.replace(/\*\*/g, '');
+  const lines = cleaned.split('\n');
+  return lines.map((line, i) => {
+    if (line.trim() === '') return <div key={i} className="h-3" />;
+    // 1.1.1 같은 깊은 소제목
+    const lvl3 = line.match(/^(\d+\.\d+\.\d+)(\s+)(.+)$/);
+    if (lvl3) {
+      return (
+        <div key={i} className="text-[16px] font-bold text-navy mt-3 mb-1">
+          <span className="text-cyan mr-2">{lvl3[1]}</span>{lvl3[3]}
+        </div>
+      );
+    }
+    // 1.1 같은 소제목
+    const lvl2 = line.match(/^(\d+\.\d+)(\s+)(.+)$/);
+    if (lvl2) {
+      return (
+        <div key={i} className="text-[18px] font-bold text-navy mt-4 mb-1">
+          <span className="text-cyan mr-2">{lvl2[1]}</span>{lvl2[3]}
+        </div>
+      );
+    }
+    // 1. 같은 대제목
+    const lvl1 = line.match(/^(\d+)\.\s+(.+)$/);
+    if (lvl1) {
+      return (
+        <div key={i} className="text-[22px] font-bold text-navy mt-6 mb-2 first:mt-0">
+          <span className="text-cyan mr-2">{lvl1[1]}.</span>{lvl1[2]}
+        </div>
+      );
+    }
+    return <div key={i} className="whitespace-pre-wrap">{line}</div>;
+  });
 }
