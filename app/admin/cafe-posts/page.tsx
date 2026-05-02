@@ -19,9 +19,9 @@ export default async function AdminCafePostsPage() {
   const isAdmin = await isCurrentUserAdmin();
   if (!isAdmin) redirect('/');
 
-  const { data: rawPosts } = await supabase
+  const { data: rawPosts, count: totalCount } = await supabase
     .from('cafe_posts')
-    .select('id, title, external_url, posted_at, ingested_at, cafe_post_chunks(count)')
+    .select('id, title, external_url, posted_at, ingested_at, cafe_post_chunks(count)', { count: 'exact' })
     .order('ingested_at', { ascending: false })
     .limit(200);
 
@@ -63,7 +63,9 @@ export default async function AdminCafePostsPage() {
           </section>
 
           <section>
-            <h2 className="text-[16px] font-bold text-navy mb-3">업로드된 글 ({posts.length}건)</h2>
+            <h2 className="text-[16px] font-bold text-navy mb-3">
+              업로드된 글 (전체 {totalCount ?? posts.length}건{totalCount && totalCount > posts.length ? ` · 최근 ${posts.length}건 표시` : ''})
+            </h2>
             <CafePostList posts={posts} />
           </section>
         </div>
