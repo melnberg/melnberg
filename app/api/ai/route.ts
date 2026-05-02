@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
     let dailyLimit: number;
     let limitLabel: string;
     let limitErr: { message?: string } | null = null;
-    let limitResult: { blocked?: boolean; used_today?: number; daily_limit?: number } | undefined;
+    let limitResult: { blocked?: boolean; used_today?: number; daily_limit?: number; log_id?: number } | undefined;
+    let logId: number | null = null;
 
     // 관리자는 무제한, 그 외 모두 일일 5회 (로그인이든 비로그인이든)
     dailyLimit = 5;
@@ -116,6 +117,8 @@ export async function POST(req: NextRequest) {
         { error: `${limitLabel} 한도(${dailyLimit}회) 도달함. 내일 다시 시도해주세요. 흑흑...` },
         { status: 429 },
       );
+    } else if (limitResult?.log_id) {
+      logId = limitResult.log_id;
     }
 
     const [queryEmbedding] = await embedTexts([question.trim()]);
@@ -165,6 +168,15 @@ export async function POST(req: NextRequest) {
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, 6)
       .map(({ id, title, url }) => ({ id, title, url }));
+
+    // 검색 결과 개수를 로그에 업데이트 (자료없음 추적용)
+    if (logId) {
+      await supabase.rpc('update_ai_log_results', {
+        q_log_id: logId,
+        q_chunk_count: rows.length,
+        q_source_count: sources.length,
+      }).then(() => {}, (e) => console.warn('update_ai_log_results failed:', e?.message));
+    }
 
     const context = rows.length > 0
       ? rows.map((c, i) => `[${i + 1}] ${c.post_title}\n${c.chunk_content}`).join('\n\n---\n\n')
