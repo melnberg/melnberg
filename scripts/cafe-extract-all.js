@@ -390,11 +390,20 @@
 
   function htmlToText(html) {
     if (!html) return '';
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    div.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
-    div.querySelectorAll('p, div').forEach((el) => el.appendChild(document.createTextNode('\n')));
-    return (div.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+    // img/script/iframe 등 리소스 fetch 유발 태그를 미리 제거해서 콘솔 404 도배 방지
+    const cleaned = html
+      .replace(/<img[^>]*>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
+      .replace(/<source[^>]*>/gi, '')
+      .replace(/<video[^>]*>[\s\S]*?<\/video>/gi, '')
+      .replace(/<audio[^>]*>[\s\S]*?<\/audio>/gi, '');
+    // DOMParser는 innerHTML과 달리 리소스를 자동 fetch하지 않음
+    const doc = new DOMParser().parseFromString(cleaned, 'text/html');
+    doc.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+    doc.querySelectorAll('p, div').forEach((el) => el.appendChild(doc.createTextNode('\n')));
+    return (doc.body?.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
   }
 
   function download(filename, content) {
