@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+// import Anthropic from '@anthropic-ai/sdk'; // ← Claude → GPT-5-mini로 교체 (2026-05)
 import { createClient } from '@/lib/supabase/server';
-import { embedTexts } from '@/lib/openai';
+import { embedTexts, getOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -246,12 +246,18 @@ export async function POST(req: NextRequest) {
       ? `${corePrompt}\n\n참고 자료:\n${context}`
       : `${corePrompt}\n\n참고 자료: (검색 결과 없음)\n→ "멜른버그 DB에 관련 내용이 없어요." 한 줄로 답할 것.`;
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 });
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 });
     }
 
-    const anthropic = new Anthropic({ apiKey });
+    // ─── (구) Anthropic Claude 호출 — 2026-05 GPT-5-mini로 교체. 비교용으로 보존.
+    // const apiKey = process.env.ANTHROPIC_API_KEY;
+    // if (!apiKey) {
+    //   return NextResponse.json({ error: 'ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 });
+    // }
+    // const anthropic = new Anthropic({ apiKey });
+
+    const openai = getOpenAI();
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -259,22 +265,41 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`));
         let fullAnswer = '';
         try {
-          const anthropicStream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-6',
-            max_tokens: 4096,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: question.trim() }],
+          // ─── (구) Claude 스트리밍 — 비교용 보존
+          // const anthropicStream = anthropic.messages.stream({
+          //   model: 'claude-sonnet-4-6',
+          //   max_tokens: 4096,
+          //   system: systemPrompt,
+          //   messages: [{ role: 'user', content: question.trim() }],
+          // });
+          // for await (const event of anthropicStream) {
+          //   if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          //     fullAnswer += event.delta.text;
+          //     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: event.delta.text })}\n\n`));
+          //   }
+          // }
+
+          // ─── (신) OpenAI GPT-5-mini 스트리밍
+          const openaiStream = await openai.chat.completions.create({
+            model: 'gpt-5-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: question.trim() },
+            ],
+            stream: true,
+            max_completion_tokens: 4096,
           });
 
-          for await (const event of anthropicStream) {
-            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              fullAnswer += event.delta.text;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: event.delta.text })}\n\n`));
+          for await (const chunk of openaiStream) {
+            const delta = chunk.choices?.[0]?.delta?.content ?? '';
+            if (delta) {
+              fullAnswer += delta;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: delta })}\n\n`));
             }
           }
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
         } catch (err) {
-          console.error('Claude stream error:', err);
+          console.error('OpenAI stream error:', err);
           const message = err instanceof Error ? err.message : 'AI 응답 생성 중 오류가 발생했습니다.';
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`));
         } finally {
