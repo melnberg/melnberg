@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Source = { id: number; title: string; url: string | null };
 
@@ -172,9 +174,39 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
           <div
             ref={answerRef}
-            className="text-[16px] text-text leading-relaxed max-h-[560px] overflow-y-auto text-left"
+            className="text-[16px] text-text leading-relaxed max-h-[640px] overflow-y-auto text-left"
           >
-            {renderStructured(answer)}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => <h2 className="text-[24px] font-bold text-navy mt-6 mb-3 first:mt-0">{children}</h2>,
+                h2: ({ children }) => <h2 className="text-[22px] font-bold text-navy mt-6 mb-3 first:mt-0">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-[18px] font-bold text-navy mt-5 mb-2 first:mt-0">{children}</h3>,
+                h4: ({ children }) => <h4 className="text-[16px] font-bold text-navy mt-4 mb-2 first:mt-0">{children}</h4>,
+                p: ({ children }) => <p className="my-2 leading-relaxed">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc pl-6 my-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-6 my-2 space-y-1.5 marker:font-bold marker:text-navy">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                strong: ({ children }) => <strong className="font-bold text-navy">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                code: ({ children, className }) => {
+                  const isBlock = className?.includes('language-');
+                  if (isBlock) {
+                    return <code className={`block bg-gray-100 p-3 rounded font-mono text-[13px] overflow-x-auto ${className ?? ''}`}>{children}</code>;
+                  }
+                  return <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-[13.5px] text-navy">{children}</code>;
+                },
+                pre: ({ children }) => <pre className="bg-gray-100 p-3 rounded overflow-x-auto my-3">{children}</pre>,
+                hr: () => <hr className="my-5 border-t border-border" />,
+                blockquote: ({ children }) => <blockquote className="border-l-4 border-cyan/40 pl-4 my-3 text-muted italic">{children}</blockquote>,
+                a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-navy-dark underline hover:text-navy">{children}</a>,
+                table: ({ children }) => <div className="overflow-x-auto my-3"><table className="w-full border-collapse text-[14px]">{children}</table></div>,
+                th: ({ children }) => <th className="border border-border bg-bg/60 px-3 py-2 text-left font-bold">{children}</th>,
+                td: ({ children }) => <td className="border border-border px-3 py-2">{children}</td>,
+              }}
+            >
+              {answer}
+            </ReactMarkdown>
             {loading && <span className="inline-block w-1.5 h-4 bg-muted animate-pulse ml-0.5 align-middle" />}
           </div>
         </div>
@@ -207,40 +239,3 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   );
 }
 
-function renderStructured(text: string) {
-  if (!text) return null;
-  // ** 굵게 잔여물이 들어와도 별표는 제거
-  const cleaned = text.replace(/\*\*/g, '');
-  const lines = cleaned.split('\n');
-  return lines.map((line, i) => {
-    if (line.trim() === '') return <div key={i} className="h-3" />;
-    // 1.1.1 같은 깊은 소제목
-    const lvl3 = line.match(/^(\d+\.\d+\.\d+)(\s+)(.+)$/);
-    if (lvl3) {
-      return (
-        <div key={i} className="text-[16px] font-bold text-navy mt-3 mb-1">
-          <span className="text-cyan mr-2">{lvl3[1]}</span>{lvl3[3]}
-        </div>
-      );
-    }
-    // 1.1 같은 소제목
-    const lvl2 = line.match(/^(\d+\.\d+)(\s+)(.+)$/);
-    if (lvl2) {
-      return (
-        <div key={i} className="text-[18px] font-bold text-navy mt-4 mb-1">
-          <span className="text-cyan mr-2">{lvl2[1]}</span>{lvl2[3]}
-        </div>
-      );
-    }
-    // 1. 같은 대제목
-    const lvl1 = line.match(/^(\d+)\.\s+(.+)$/);
-    if (lvl1) {
-      return (
-        <div key={i} className="text-[22px] font-bold text-navy mt-6 mb-2 first:mt-0">
-          <span className="text-cyan mr-2">{lvl1[1]}.</span>{lvl1[2]}
-        </div>
-      );
-    }
-    return <div key={i} className="whitespace-pre-wrap">{line}</div>;
-  });
-}
