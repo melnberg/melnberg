@@ -233,6 +233,7 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`));
+        let fullAnswer = '';
         try {
           const anthropicStream = anthropic.messages.stream({
             model: 'claude-sonnet-4-6',
@@ -243,6 +244,7 @@ export async function POST(req: NextRequest) {
 
           for await (const event of anthropicStream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              fullAnswer += event.delta.text;
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: event.delta.text })}\n\n`));
             }
           }
@@ -253,6 +255,13 @@ export async function POST(req: NextRequest) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`));
         } finally {
           controller.close();
+          // 답변 텍스트를 로그에 저장 (스트림 종료 후)
+          if (logId && fullAnswer) {
+            await supabase.rpc('update_ai_log_answer', {
+              q_log_id: logId,
+              q_answer: fullAnswer,
+            }).then(() => {}, (e) => console.warn('update_ai_log_answer failed:', e?.message));
+          }
         }
       },
     });

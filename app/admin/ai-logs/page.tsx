@@ -15,6 +15,7 @@ type LogRow = {
   ip_address: string | null;
   asked_at: string;
   question: string | null;
+  answer: string | null;
   chunk_count: number | null;
   source_count: number | null;
 };
@@ -38,7 +39,7 @@ export default async function AdminAiLogsPage({
 
   let query = supabase
     .from('ai_question_logs')
-    .select('id, user_id, ip_address, asked_at, question, chunk_count, source_count', { count: 'exact' })
+    .select('id, user_id, ip_address, asked_at, question, answer, chunk_count, source_count', { count: 'exact' })
     .order('asked_at', { ascending: false })
     .limit(limit);
 
@@ -120,48 +121,61 @@ export default async function AdminAiLogsPage({
             <FilterTab href="/admin/ai-logs?filter=no-result" active={filter === 'no-result'}>자료없음만</FilterTab>
           </div>
 
-          {/* 로그 테이블 */}
+          {/* 로그 리스트 */}
           {logs.length === 0 ? (
             <div className="border border-border bg-bg/40 px-5 py-8 text-center text-[13px] text-muted">
               {filter === 'no-result' ? '자료없음 질문이 없습니다.' : '아직 질문이 없습니다.'}
             </div>
           ) : (
-            <div className="border border-border overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead className="bg-bg/60 text-muted">
-                  <tr>
-                    <th className="text-left px-3 py-2 font-bold tracking-wider uppercase text-[10px] whitespace-nowrap">시각</th>
-                    <th className="text-left px-3 py-2 font-bold tracking-wider uppercase text-[10px] whitespace-nowrap">사용자</th>
-                    <th className="text-left px-3 py-2 font-bold tracking-wider uppercase text-[10px]">질문</th>
-                    <th className="text-right px-3 py-2 font-bold tracking-wider uppercase text-[10px] whitespace-nowrap">청크</th>
-                    <th className="text-right px-3 py-2 font-bold tracking-wider uppercase text-[10px] whitespace-nowrap">출처</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => {
-                    const user = log.user_id ? (profilesMap.get(log.user_id) ?? log.user_id.slice(0, 8)) : null;
-                    const noResult = log.chunk_count === 0 || log.chunk_count === null;
-                    return (
-                      <tr key={log.id} className="border-t border-border hover:bg-bg/40">
-                        <td className="px-3 py-2 text-muted whitespace-nowrap tabular-nums">{fmtTime(log.asked_at)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {user ? (
-                            <span className="text-navy font-bold">{user}</span>
-                          ) : (
-                            <span className="text-muted">IP {log.ip_address ?? '?'}</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-text break-words max-w-[600px]">{log.question}</td>
-                        <td className={`px-3 py-2 text-right tabular-nums ${noResult ? 'text-red-600 font-bold' : 'text-text'}`}>
-                          {log.chunk_count ?? 0}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-muted">{log.source_count ?? 0}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="flex flex-col gap-3">
+              {logs.map((log) => {
+                const user = log.user_id ? (profilesMap.get(log.user_id) ?? log.user_id.slice(0, 8)) : null;
+                const noResult = log.chunk_count === 0 || log.chunk_count === null;
+                return (
+                  <li key={log.id} className="border border-border bg-white">
+                    {/* 헤더: 시간·사용자·청크·출처 */}
+                    <div className="flex items-center gap-4 flex-wrap px-4 py-2 bg-bg/40 border-b border-border text-[12px]">
+                      <span className="text-muted tabular-nums">{fmtTime(log.asked_at)}</span>
+                      {user ? (
+                        <span className="text-navy font-bold">{user}</span>
+                      ) : (
+                        <span className="text-muted">IP {log.ip_address ?? '?'}</span>
+                      )}
+                      <span className="ml-auto flex items-center gap-3 text-[11px]">
+                        <span className={noResult ? 'text-red-600 font-bold' : 'text-muted'}>
+                          청크 {log.chunk_count ?? 0}
+                        </span>
+                        <span className="text-muted">출처 {log.source_count ?? 0}</span>
+                      </span>
+                    </div>
+
+                    {/* 질문 */}
+                    <div className="px-4 py-3">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-1">질문</p>
+                      <p className="text-[14px] text-text whitespace-pre-wrap break-words">
+                        {log.question}
+                      </p>
+                    </div>
+
+                    {/* 답변 */}
+                    {log.answer ? (
+                      <details className="border-t border-border">
+                        <summary className="px-4 py-3 cursor-pointer text-[10px] font-bold tracking-widest uppercase text-muted hover:bg-bg/40">
+                          답변 펼쳐보기 ({log.answer.length}자)
+                        </summary>
+                        <div className="px-4 pb-4 text-[13px] text-text whitespace-pre-wrap break-words leading-relaxed bg-bg/20">
+                          {log.answer}
+                        </div>
+                      </details>
+                    ) : (
+                      <div className="border-t border-border px-4 py-2 text-[11px] text-muted italic">
+                        답변 기록 없음 (옛날 로그이거나 스트리밍 중단)
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           )}
 
           {totalCount && totalCount > logs.length && (
