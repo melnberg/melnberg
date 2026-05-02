@@ -87,7 +87,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   );
 
   return (
-    <div className={`max-w-[1500px] mx-auto px-6 ${centered ? 'py-20 text-center' : 'py-10'}`}>
+    <div className={`w-full max-w-none mx-auto px-10 ${centered ? 'py-20 text-center' : 'py-10'}`}>
       <h1 className={`font-bold text-navy tracking-tight mb-2 ${centered ? 'text-[40px] md:text-[48px] leading-tight' : 'text-[28px]'}`}>{headTitle}</h1>
       <p className={`text-muted mb-8 ${centered ? 'text-[15px]' : 'text-[13px]'}`}>
         {headSubtitle}
@@ -105,9 +105,9 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
               }
             }}
             placeholder="궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)"
-            rows={4}
+            rows={2}
             disabled={loading}
-            className="w-full border-2 border-navy focus:border-cyan transition-colors px-4 py-3 pr-16 pb-14 text-[14px] text-left resize-y outline-none rounded-none disabled:opacity-60 min-h-[140px]"
+            className="w-full border-2 border-navy focus:border-cyan transition-colors px-4 py-3 pr-16 text-[14px] text-left resize-y outline-none rounded-none disabled:opacity-60 min-h-[70px]"
           />
           <button
             type="submit"
