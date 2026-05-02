@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
@@ -168,7 +170,39 @@ export default async function AdminAiLogsPage({
                           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-1">
                             답변 ({log.answer.length}자)
                           </p>
-                          <p className="text-[13px] text-text whitespace-pre-wrap break-words leading-relaxed">{log.answer}</p>
+                          <div className="text-[14px] text-text leading-relaxed">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                h1: ({ children }) => <h2 className="text-[20px] font-bold text-navy mt-4 mb-2 first:mt-0">{children}</h2>,
+                                h2: ({ children }) => <h2 className="text-[18px] font-bold text-navy mt-4 mb-2 first:mt-0">{children}</h2>,
+                                h3: ({ children }) => <h3 className="text-[16px] font-bold text-navy mt-3 mb-1.5 first:mt-0">{children}</h3>,
+                                h4: ({ children }) => <h4 className="text-[14px] font-bold text-navy mt-3 mb-1.5 first:mt-0">{children}</h4>,
+                                p: ({ children }) => <p className="my-1.5 leading-relaxed">{children}</p>,
+                                ul: ({ children }) => <ul className="list-disc pl-5 my-2 space-y-0.5">{children}</ul>,
+                                ol: ({ children }) => <ol className="list-decimal pl-5 my-2 space-y-1 marker:font-bold marker:text-navy">{children}</ol>,
+                                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                                strong: ({ children }) => <strong className="font-bold text-navy">{children}</strong>,
+                                em: ({ children }) => <em className="italic">{children}</em>,
+                                code: ({ children, className }) => {
+                                  const isBlock = className?.includes('language-');
+                                  if (isBlock) {
+                                    return <code className={`block bg-gray-100 p-2 rounded font-mono text-[12px] overflow-x-auto ${className ?? ''}`}>{children}</code>;
+                                  }
+                                  return <code className="bg-gray-100 px-1 py-0.5 rounded font-mono text-[12px] text-navy">{children}</code>;
+                                },
+                                pre: ({ children }) => <pre className="bg-gray-100 p-2 rounded overflow-x-auto my-2">{children}</pre>,
+                                hr: () => <hr className="my-4 border-t border-border" />,
+                                blockquote: ({ children }) => <blockquote className="border-l-4 border-cyan/40 pl-3 my-2 text-muted italic">{children}</blockquote>,
+                                a: ({ children, href }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-navy-dark underline hover:text-navy">{children}</a>,
+                                table: ({ children }) => <div className="overflow-x-auto my-2"><table className="w-full border-collapse text-[13px]">{children}</table></div>,
+                                th: ({ children }) => <th className="border border-border bg-bg/60 px-2 py-1 text-left font-bold">{children}</th>,
+                                td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
+                              }}
+                            >
+                              {log.answer}
+                            </ReactMarkdown>
+                          </div>
                         </div>
                       ) : (
                         <p className="text-[12px] text-muted italic">답변 기록 없음 (옛 로그이거나 스트리밍 중단)</p>
