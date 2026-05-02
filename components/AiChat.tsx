@@ -307,6 +307,9 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
             )}
           </button>
         </div>
+        <p className="text-[11px] text-muted text-center mt-2 leading-relaxed">
+          입력한 질문과 답변은 서비스 품질 개선 목적으로만 수집되며, 외부에 공개·공유되지 않아요.
+        </p>
       </form>
     </div>
   );
