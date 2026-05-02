@@ -124,7 +124,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
 
   return (
     <div
-      style={{ maxWidth: '1900px' }}
+      style={{ maxWidth: '1500px' }}
       className={`mx-auto px-10 w-full ${centered ? 'py-20 text-center' : 'py-10'}`}
     >
       <h1 className={`font-bold text-navy tracking-tight mb-2 ${centered ? 'text-[40px] md:text-[48px] leading-tight' : 'text-[28px]'}`}>{headTitle}</h1>
