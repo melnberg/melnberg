@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       console.warn('AI question limit RPC unavailable, skipping limit:', limitErr.message);
     } else if (limitResult?.blocked) {
       return NextResponse.json(
-        { error: `${limitLabel} 한도(${dailyLimit}회) 도달함. 내일 다시 시도해주세요.` },
+        { error: `${limitLabel} 한도(${dailyLimit}회) 도달함. 내일 다시 시도해주세요. 흑흑...` },
         { status: 429 },
       );
     }
