@@ -142,19 +142,25 @@ async function processPost(post) {
 async function main() {
   console.log(`🚀 메타데이터 추출 시작 (model=${MODEL}, concurrency=${CONCURRENCY}, limit=${LIMIT})`);
 
-  // 미처리 글 조회
-  const { data: rawPosts, error: fetchErr } = await supabase
-    .from('cafe_posts')
-    .select('id, title, content')
-    .is('metadata_extracted_at', null)
-    .order('id', { ascending: true })
-    .limit(LIMIT);
-
-  if (fetchErr) {
-    console.error('❌ posts fetch 실패:', fetchErr.message);
-    process.exit(1);
+  // 미처리 글 조회 — Supabase 1000건 제한 우회: range로 페이지네이션
+  const PAGE = 1000;
+  const posts = [];
+  for (let from = 0; from < LIMIT; from += PAGE) {
+    const to = Math.min(from + PAGE - 1, LIMIT - 1);
+    const { data: pageData, error: fetchErr } = await supabase
+      .from('cafe_posts')
+      .select('id, title, content')
+      .is('metadata_extracted_at', null)
+      .order('id', { ascending: true })
+      .range(from, to);
+    if (fetchErr) {
+      console.error('❌ posts fetch 실패:', fetchErr.message);
+      process.exit(1);
+    }
+    if (!pageData || pageData.length === 0) break;
+    posts.push(...pageData);
+    if (pageData.length < PAGE) break;  // 마지막 페이지
   }
-  const posts = rawPosts ?? [];
   console.log(`📋 처리 대상: ${posts.length}건`);
   if (posts.length === 0) {
     console.log('✅ 처리할 글 없음 (모두 enriched)');
