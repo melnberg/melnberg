@@ -87,34 +87,43 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   );
 
   return (
-    <div className={`max-w-[680px] mx-auto px-6 ${centered ? 'py-20 text-center' : 'py-10'}`}>
+    <div className={`max-w-[1100px] mx-auto px-6 ${centered ? 'py-20 text-center' : 'py-10'}`}>
       <h1 className={`font-bold text-navy tracking-tight mb-2 ${centered ? 'text-[40px] md:text-[48px] leading-tight' : 'text-[28px]'}`}>{headTitle}</h1>
       <p className={`text-muted mb-8 ${centered ? 'text-[15px]' : 'text-[13px]'}`}>
         {headSubtitle}
       </p>
 
       <form onSubmit={handleSubmit} className="mb-8">
-        <textarea
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit(e as unknown as React.FormEvent);
-            }
-          }}
-          placeholder="궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)"
-          rows={3}
-          disabled={loading}
-          className="w-full border border-border border-b-2 border-b-navy px-4 py-3 text-[14px] resize-y outline-none focus:border-b-cyan rounded-none disabled:opacity-60"
-        />
-        <button
-          type="submit"
-          disabled={loading || !question.trim()}
-          className="mt-3 bg-navy text-white px-6 py-3 text-[12px] font-bold tracking-wider uppercase border-none cursor-pointer hover:bg-navy-dark disabled:opacity-50"
-        >
-          {loading ? '답변 생성 중...' : '질문하기'}
-        </button>
+        <div className="relative">
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e as unknown as React.FormEvent);
+              }
+            }}
+            placeholder="궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)"
+            rows={4}
+            disabled={loading}
+            className="w-full border-2 border-navy focus:border-cyan transition-colors px-4 py-3 pr-16 pb-14 text-[14px] text-left resize-y outline-none rounded-none disabled:opacity-60 min-h-[140px]"
+          />
+          <button
+            type="submit"
+            disabled={loading || !question.trim()}
+            aria-label={loading ? '답변 생성 중' : '질문하기'}
+            className="absolute right-3 bottom-3 bg-navy text-white w-10 h-10 flex items-center justify-center border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <span className="block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+              </svg>
+            )}
+          </button>
+        </div>
       </form>
 
       {error && (
