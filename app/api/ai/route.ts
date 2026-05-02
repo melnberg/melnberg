@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       const res = await supabase.rpc('search_cafe_chunks_hybrid', {
         query_embedding: queryEmbedding as unknown as string,
         keywords,
-        match_count: 20,
+        match_count: 10,
       });
       chunks = (res.data as ChunkRow[] | null) ?? null;
       searchError = res.error;
