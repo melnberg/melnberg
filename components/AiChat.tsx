@@ -14,6 +14,7 @@ type Props = {
 
 export default function AiChat({ title, subtitle, centered }: Props = {}) {
   const [question, setQuestion] = useState('');
+  const [submittedQuestion, setSubmittedQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
     setAnswer('');
     setSources([]);
     setError('');
+    setSubmittedQuestion(question.trim());
     fullTextRef.current = '';
     animatingRef.current = false;
 
@@ -169,6 +171,14 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
       {error && (
         <div className="border border-red-300 bg-red-50 text-red-700 px-4 py-3 text-[13px] mb-6">
           {error}
+        </div>
+      )}
+
+      {submittedQuestion && (
+        <div className="flex justify-end mb-4 text-left">
+          <div className="bg-gray-100 text-text px-5 py-3 rounded-2xl max-w-[75%] text-[15px] whitespace-pre-wrap break-words">
+            {submittedQuestion}
+          </div>
         </div>
       )}
 
