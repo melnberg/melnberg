@@ -18,6 +18,27 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   const [error, setError] = useState('');
   const answerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fullTextRef = useRef('');
+  const animatingRef = useRef(false);
+
+  function startAnimation() {
+    if (animatingRef.current) return;
+    animatingRef.current = true;
+    const tick = () => {
+      setAnswer((prev) => {
+        const target = fullTextRef.current;
+        if (prev.length >= target.length) {
+          animatingRef.current = false;
+          return prev;
+        }
+        const remaining = target.length - prev.length;
+        const step = remaining > 120 ? 4 : remaining > 40 ? 2 : 1;
+        return target.slice(0, prev.length + step);
+      });
+      if (animatingRef.current) setTimeout(tick, 18);
+    };
+    tick();
+  }
 
   useEffect(() => {
     if (answerRef.current) {
@@ -40,6 +61,8 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
     setAnswer('');
     setSources([]);
     setError('');
+    fullTextRef.current = '';
+    animatingRef.current = false;
 
     try {
       const res = await fetch('/api/ai', {
@@ -76,7 +99,10 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
             try {
               const data = JSON.parse(line.slice(6));
               if (data.type === 'sources') setSources(data.sources);
-              else if (data.type === 'text') setAnswer((prev) => prev + data.text);
+              else if (data.type === 'text') {
+                fullTextRef.current += data.text;
+                startAnimation();
+              }
               else if (data.type === 'error') setError(data.message);
             } catch {}
           }
@@ -142,11 +168,11 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
       )}
 
       {(answer || loading) && (
-        <div className="border border-border bg-bg/40 p-5 mb-6">
+        <div className="border border-border bg-bg/40 p-5 mb-6 text-left">
           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
           <div
             ref={answerRef}
-            className="text-[14px] text-text whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto"
+            className="text-[14px] text-text whitespace-pre-wrap leading-relaxed max-h-[480px] overflow-y-auto text-left"
           >
             {answer}
             {loading && <span className="inline-block w-1.5 h-4 bg-muted animate-pulse ml-0.5 align-middle" />}
@@ -155,7 +181,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
       )}
 
       {sources.length > 0 && (
-        <div>
+        <div className="text-left">
           <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">참고 자료</p>
           <ul className="border border-border">
             {sources.map((s) => (
