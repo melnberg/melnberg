@@ -181,7 +181,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         // 클러스터러 미사용 시에만 map에 직접 부착.
         // 4단계 줌별 가시성:
         //   tier 0 (≥2000): 항상 표시
-        //   tier 1 (1000~1999, 초록): 줌 ≤6
+        //   tier 1 (1000~1999, 초록): 줌 ≤7
         //   tier 2 (300~999, 파랑 핀): 줌 ≤5
         //   tier 3 (≤299/미수집, 파란 점): 줌 ≤3
         type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3 };
@@ -204,7 +204,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           const level = map.getLevel();
           for (const { marker, tier } of allMarkers) {
             if (tier === 0) continue;
-            const visible = (tier === 1 && level <= 6) || (tier === 2 && level <= 5) || (tier === 3 && level <= 3);
+            const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 3);
             marker.setMap(visible ? map : null);
           }
         }
