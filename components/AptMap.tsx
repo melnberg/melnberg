@@ -195,6 +195,12 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchResults.length > 0) {
+                e.preventDefault();
+                jumpToApt(searchResults[0]);
+              }
+            }}
             placeholder="아파트 검색..."
             className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent"
           />
