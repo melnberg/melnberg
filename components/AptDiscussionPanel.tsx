@@ -68,6 +68,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   // 점거 상태
   const [occupierId, setOccupierId] = useState<string | null>(null);
   const [occupierName, setOccupierName] = useState<string | null>(null);
+  const [occupierScore, setOccupierScore] = useState<number | null>(null);
+  const [myScore, setMyScore] = useState<number | null>(null);
+  const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
   const [claiming, setClaiming] = useState(false);
 
   const supabase = createClient();
@@ -161,7 +164,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       setMyVotes(new Map());
     }
 
-    // 점거인 fetch
+    // 점거인 + score + 내 현재 점거 fetch
     {
       const { data: occ } = await supabase
         .from('apt_master')
@@ -177,9 +180,28 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           .eq('id', oid)
           .maybeSingle();
         setOccupierName((prof as { display_name?: string | null } | null)?.display_name ?? null);
+        const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: oid });
+        setOccupierScore(typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0));
       } else {
         setOccupierName(null);
+        setOccupierScore(null);
       }
+    }
+    // 본인 점수 + 다른 곳 점거중인지
+    if (user) {
+      const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: user.id });
+      setMyScore(typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0));
+      const { data: myOccs } = await supabase
+        .from('apt_master')
+        .select('id, apt_nm')
+        .eq('occupier_id', user.id)
+        .neq('id', apt.id)
+        .limit(1);
+      const o = (myOccs as Array<{ id: number; apt_nm: string }> | null)?.[0];
+      setMyCurrentApt(o ?? null);
+    } else {
+      setMyScore(null);
+      setMyCurrentApt(null);
     }
 
     setLoading(false);
@@ -187,14 +209,46 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
   async function claimApt() {
     if (!userId) { alert('점거하려면 로그인이 필요해요.'); return; }
+    // 본인이 다른 곳 점거중이면 안내창
+    if (myCurrentApt) {
+      const ok = confirm(`기존에 점거중인 [${myCurrentApt.apt_nm}]은 자동 퇴거됩니다. 그래도 진행하시겠어요?`);
+      if (!ok) return;
+    }
     setClaiming(true);
     const { data, error } = await supabase.rpc('claim_apt', { p_apt_id: apt.id });
     setClaiming(false);
     if (error) { alert(error.message); return; }
-    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_message: string | null } | undefined;
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_occupier_score: number | null; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '점거 실패'); return; }
     setOccupierId(row.out_occupier_id);
     setOccupierName(row.out_occupier_name ?? null);
+    setOccupierScore(row.out_occupier_score ?? null);
+    setMyCurrentApt(null);
+  }
+
+  async function forceEvict() {
+    if (!userId) { alert('로그인이 필요해요.'); return; }
+    if (myScore !== null && occupierScore !== null && myScore <= occupierScore) {
+      alert(`점수 부족 — 내 ${myScore} vs 점거인 ${occupierScore}. 강제집행하려면 더 높은 점수가 필요해요.`);
+      return;
+    }
+    if (myCurrentApt) {
+      const ok = confirm(`기존에 점거중인 [${myCurrentApt.apt_nm}]은 자동 퇴거됩니다. 그래도 강제집행하시겠어요?`);
+      if (!ok) return;
+    } else {
+      const ok = confirm(`${occupierName ?? '점거인'} 님을 강제집행해 이 단지를 차지합니다.`);
+      if (!ok) return;
+    }
+    setClaiming(true);
+    const { data, error } = await supabase.rpc('force_evict_apt', { p_apt_id: apt.id });
+    setClaiming(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_occupier_score: number | null; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '강제집행 실패'); return; }
+    setOccupierId(row.out_occupier_id);
+    setOccupierName(row.out_occupier_name ?? null);
+    setOccupierScore(row.out_occupier_score ?? null);
+    setMyCurrentApt(null);
   }
 
   useEffect(() => {
@@ -378,13 +432,30 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
           {occupierId ? (
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
-                <span className="text-[12px] text-[#666] font-medium">점거인</span>
-                <span className="text-[14px] font-bold text-black">{occupierName ?? '익명'}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+                <span className="text-[12px] text-[#666] font-medium flex-shrink-0">점거인</span>
+                <span className="text-[14px] font-bold text-black truncate">{occupierName ?? '익명'}</span>
+                {occupierScore !== null && (
+                  <span className="text-[11px] text-muted flex-shrink-0">(score {occupierScore})</span>
+                )}
               </div>
-              {occupierId === userId && (
-                <span className="text-[11px] font-bold text-cyan">내가 점거중</span>
+              {occupierId === userId ? (
+                <span className="text-[11px] font-bold text-cyan flex-shrink-0">내가 점거중</span>
+              ) : userId ? (
+                <button
+                  type="button"
+                  onClick={forceEvict}
+                  disabled={claiming || (myScore !== null && occupierScore !== null && myScore <= occupierScore)}
+                  className="text-[11px] font-bold px-2.5 py-1 bg-red-500 text-white hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                  title={myScore !== null && occupierScore !== null && myScore <= occupierScore ? `점수 부족 (내 ${myScore})` : '점거인 탈환'}
+                >
+                  강제집행
+                </button>
+              ) : (
+                <Link href="/login" className="text-[11px] font-bold text-cyan no-underline flex-shrink-0">
+                  로그인
+                </Link>
               )}
             </div>
           ) : userId ? (
