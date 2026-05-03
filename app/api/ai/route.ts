@@ -425,6 +425,16 @@ export async function POST(req: NextRequest) {
       '당신은 부동산 개인 상담사입니다. 검색엔진도, 카페 자료 요약 봇도 아닙니다.',
       '사용자에게 직접 의견을 들려주는 친절하고 단호한 상담사입니다.',
       '',
+      '【가장 우선하는 절대 금지: 별표 두 개 (** ) 패턴】',
+      '답변 본문 어디에도 "**" 문자열이 등장하면 안 됩니다. 강조 목적으로도, 굵게 표시 목적으로도, 단지명 강조 목적으로도, 어떤 이유로도 ** 사용 금지입니다.',
+      '강조는 마크다운 헤딩 (## / ###) 으로만 가능합니다. 본문 텍스트에서는 평문으로만 작성하세요.',
+      '예시 — 절대 하지 말 것:',
+      '  나쁜 예: 단지를 실거주 목적으로 본다면 **1단지·2단지의 특정 호수**는 추천합니다.',
+      '  좋은 예: 단지를 실거주 목적으로 본다면 1단지·2단지의 특정 호수(초등학교 배정권, 역 접근 유리한 동·층)는 추천합니다.',
+      '  나쁜 예: **계절성**: 집값은 6개월 오르고 6개월 쉬는 패턴이에요.',
+      '  좋은 예: 계절성 — 집값은 6개월 오르고 6개월 쉬는 패턴이에요. (또는 그냥 "계절성: 본문")',
+      '리스트 항목의 리드 단어도 ** 없이 그냥 "단어: 본문" 또는 "단어 — 본문" 형태로만 작성합니다.',
+      '',
       '【규칙 0 — 데이터 출처 분리 (정보 신뢰도의 핵심)】',
       '두 개의 데이터 소스가 시스템에 첨부됩니다. 각각 용도가 완전히 다릅니다.',
       '',
@@ -505,20 +515,18 @@ export async function POST(req: NextRequest) {
       '  3) 마지막 섹션 제목은 반드시 ### 결론 으로 닫고 1~3 문장으로 단정적인 결론을 줍니다.',
       '  4) 섹션 안 본문은 자연스러운 문단 서술 또는 불릿/번호 목록 (병렬 항목일 때).',
       '',
-      '[굵게 사용 — 제한된 허용]',
-      '- 굵게(별표 두 개 패턴)는 다음 두 케이스에만 허용:',
-      '  ㄱ) 목록 항목 맨 앞의 짧은 리드 단어/구. 예: "- 굵게리드: 본문 설명" 형태. 리드 단어는 한 단어~짧은 구(2~6자) 정도, 그 뒤에 콜론(:)이나 대시(—)로 본문 잇기.',
-      '  ㄴ) 매우 핵심적인 한 문장 안의 결정 단어 1개 (예: 단지명 1개). 한 답변 전체에서 이런 인라인 굵게는 0~2회로 제한.',
-      '- 그 외 일반 본문 문장 안에서는 굵게 처리 금지. 절대 단지명·지역명을 무차별로 굵게 처리하지 마세요.',
-      '- 이탤릭(`*...*`)은 사용 금지.',
+      '[강조 처리 — 마크다운 헤딩만 허용]',
+      '- 본문 텍스트에 별표 두 개(** ) 사용 절대 금지. 위 「가장 우선하는 절대 금지」 규칙에 따라 어떤 이유로도 ** 쓰지 않습니다.',
+      '- 이탤릭(*...*)도 사용 금지.',
+      '- 강조는 헤딩 (## 큰 제목, ### 섹션 제목) 으로만 합니다. 헤딩이 자동으로 굵고 큰 글자로 렌더링됩니다.',
       '',
-      '양식 예시 (참고):',
+      '양식 예시 (참고 — 본문에 ** 한 번도 쓰지 않음에 주목):',
       '  ## 매수 타이밍 판단',
       '  ### 기다리는 것의 비용',
       '  자산을 보유하지 않는 것 자체가 손실이에요. (생략) ...',
       '  ### 지금이 사야 할 시기인 이유',
-      '  - **계절성**: 집값은 6개월 오르고 6개월 쉬는 패턴이에요. ...',
-      '  - **분양권 데드라인**: 2025년 10월 이후 ...',
+      '  - 계절성: 집값은 6개월 오르고 6개월 쉬는 패턴이에요.',
+      '  - 분양권 데드라인 — 2025년 10월 이후 분양 단지는 전매제한 3년으로 강화됐습니다.',
       '  ### 결론',
       '  기다릴수록 유리한 시장이 아니에요. 지금 살 수 있는 최선의 물건을 사는 것이 원칙입니다.',
       '',
@@ -610,13 +618,29 @@ export async function POST(req: NextRequest) {
             reasoning_effort: 'minimal',
           });
 
+          // ** (굵게 마크다운) 강제 제거 — 모델이 가끔 어겨서 streaming delta에서도 잘라냄.
+          // 청크 사이에 ** 가 쪼개지는 경우 대비해 직전 마지막 글자가 '*'이면 1자 버퍼링.
+          let starBuffer = '';
           for await (const chunk of openaiStream) {
-            const delta = chunk.choices?.[0]?.delta?.content ?? '';
-            if (delta) {
-              if (_tFirstToken === 0) _tFirstToken = Date.now();
-              fullAnswer += delta;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: delta })}\n\n`));
+            const raw = chunk.choices?.[0]?.delta?.content ?? '';
+            if (!raw) continue;
+            if (_tFirstToken === 0) _tFirstToken = Date.now();
+            // 직전 청크 끝의 * 와 이번 청크 앞을 합쳐서 처리
+            const merged = starBuffer + raw;
+            // 마지막 한 글자가 * 면 다음 청크와 합쳐 ** 검사하기 위해 버퍼에 보류
+            const endsWithStar = merged.endsWith('*');
+            const body = endsWithStar ? merged.slice(0, -1) : merged;
+            starBuffer = endsWithStar ? '*' : '';
+            const cleaned = body.replace(/\*\*/g, '');
+            if (cleaned) {
+              fullAnswer += cleaned;
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: cleaned })}\n\n`));
             }
+          }
+          // 마지막 버퍼에 남은 단일 * 한 글자도 정리해서 흘려보냄
+          if (starBuffer) {
+            fullAnswer += starBuffer;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: starBuffer })}\n\n`));
           }
           const _tDone = Date.now();
           // 단계별 타이밍 로그 — Vercel Functions 로그에서 확인
