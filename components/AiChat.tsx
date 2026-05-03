@@ -255,7 +255,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                       <div className="relative h-[28px] overflow-hidden flex items-center">
                         <span
                           key={phaseIdx}
-                          className="text-[15px] md:text-[16px] font-bold text-text tracking-tight inline-block"
+                          className="text-[15px] md:text-[16px] font-sans font-bold text-text tracking-tight inline-block"
                           style={{ animation: 'slideUp 0.4s ease-out' }}
                         >
                           {shuffledPhases[phaseIdx] ?? LOADING_PHASES[0]}
@@ -274,7 +274,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                       </span>
                     </div>
                   ) : (
-                    <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
+                    <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">멜른버그 답변</p>
                   )}
                   <div className="text-[16px] text-text leading-relaxed text-left">
                     <ReactMarkdown
