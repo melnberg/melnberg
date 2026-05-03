@@ -481,15 +481,25 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               {occupierId === userId ? (
                 <span className="text-[11px] font-bold text-cyan flex-shrink-0">내가 점거중</span>
               ) : userId ? (
-                <button
-                  type="button"
-                  onClick={forceEvict}
-                  disabled={claiming || (myScore !== null && occupierScore !== null && myScore <= occupierScore)}
-                  className="text-[11px] font-bold px-2.5 py-1 bg-red-500 text-white hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-                  title={myScore !== null && occupierScore !== null && myScore <= occupierScore ? `점수 부족 (내 ${myScore})` : '점거인 탈환'}
-                >
-                  강제집행
-                </button>
+                <span className="relative group flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={forceEvict}
+                    disabled={claiming || (myScore !== null && occupierScore !== null && myScore <= occupierScore)}
+                    className="text-[11px] font-bold px-2.5 py-1 bg-red-500 text-white hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    강제집행
+                  </button>
+                  {/* 비활성 시 hover 조건 안내 */}
+                  {myScore !== null && occupierScore !== null && myScore <= occupierScore && (
+                    <div className="hidden group-hover:block absolute z-50 right-0 top-8 w-[230px] bg-navy text-white text-[11px] leading-relaxed p-3 shadow-xl">
+                      <div className="font-bold text-cyan mb-1">강제집행 조건 미달</div>
+                      <div className="flex justify-between mb-0.5"><span>내 score</span><b>{myScore}</b></div>
+                      <div className="flex justify-between mb-1.5"><span>점거인 score</span><b>{occupierScore}</b></div>
+                      <div className="text-[10px] text-cyan">점거인보다 score가 더 높아야 강제집행 가능. 글·댓글로 점수 올린 후 다시 시도.</div>
+                    </div>
+                  )}
+                </span>
               ) : (
                 <Link href="/login" className="text-[11px] font-bold text-cyan no-underline flex-shrink-0">
                   로그인
