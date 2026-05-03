@@ -39,6 +39,14 @@ export default async function MePage() {
 
   const payments = await listOwnPayments();
 
+  // 활동 통계 — 작성글·댓글·score
+  const [{ count: postCount }, { count: commentCount }, { data: scoreData }] = await Promise.all([
+    supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    supabase.rpc('get_user_score', { p_user_id: user.id }),
+  ]);
+  const score = typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0);
+
   return (
     <Layout>
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/me', label: '마이페이지', bold: true }]} meta="Account" />
@@ -63,6 +71,17 @@ export default async function MePage() {
             {isActive && (
               <Row label="만료일" value={formatExpiry(expiresAt)} />
             )}
+          </div>
+
+          {/* 활동 통계 */}
+          <div className="mt-8">
+            <h2 className="text-[15px] font-bold text-navy mb-3">활동</h2>
+            <div className="grid grid-cols-3 border border-border">
+              <Stat label="작성글" value={(postCount ?? 0).toLocaleString()} suffix="개" />
+              <Stat label="댓글" value={(commentCount ?? 0).toLocaleString()} suffix="개" border />
+              <Stat label="Score" value={String(score)} accent border />
+            </div>
+            <p className="text-[11px] text-muted mt-2">Score = 작성글 1점 + 댓글 0.7점. 단지 점거·강제집행 시 사용됩니다.</p>
           </div>
 
           {/* 결제 내역 */}
@@ -116,6 +135,18 @@ export default async function MePage() {
       </section>
 
     </Layout>
+  );
+}
+
+function Stat({ label, value, suffix, accent, border }: { label: string; value: string; suffix?: string; accent?: boolean; border?: boolean }) {
+  return (
+    <div className={`px-5 py-4 ${border ? 'border-l border-border' : ''}`}>
+      <div className="text-[11px] font-bold tracking-widest uppercase text-muted">{label}</div>
+      <div className={`text-[22px] font-bold mt-1 tabular-nums ${accent ? 'text-cyan' : 'text-navy'}`}>
+        {value}
+        {suffix && <span className="text-[13px] text-muted ml-1 font-normal">{suffix}</span>}
+      </div>
+    </div>
   );
 }
 

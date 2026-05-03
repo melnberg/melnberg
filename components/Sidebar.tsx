@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 
-export type SidebarUser = { name: string; email: string };
+export type SidebarUser = { name: string; email: string; score?: number };
 
 type Props = { current?: string; user?: SidebarUser | null };
 
@@ -62,7 +62,12 @@ export default function Sidebar({ current, user }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-bold text-text truncate">{user.name}</div>
-                <div className="text-[11px] text-muted">마이페이지 →</div>
+                <div className="text-[11px] text-muted flex items-center gap-1.5">
+                  {typeof user.score === 'number' && (
+                    <span className="text-cyan font-bold">⚡ {user.score}</span>
+                  )}
+                  <span>마이페이지 →</span>
+                </div>
               </div>
             </Link>
           ) : (
