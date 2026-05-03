@@ -283,28 +283,30 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         )}
       </div>
 
-      {/* 우측 하단 범례 — 핀 색상별 세대수 (투명 배경, 시야 안 가리게) */}
+      {/* 우측 하단 범례 — 핀 모양 그대로 표시 */}
       <div className="absolute bottom-8 right-6 z-20 pointer-events-none">
         <div className="text-[11px] font-bold text-navy mb-1.5 tracking-wider uppercase drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">세대수</div>
-        <ul className="space-y-1 text-[12px]">
+        <ul className="space-y-1.5 text-[12px]">
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#C8392E] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <img src="/pins/red_3000plus_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">3000+ 대단지</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#E8772E] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <img src="/pins/orange_2000plus_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">2000~2999</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#2D7A4F] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <img src="/pins/green_1000plus_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1000~1999</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#3066BE] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <img src="/pins/blue_under1000_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">300~999</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-[#3066BE] border border-white" />
+            <span className="w-5 flex items-center justify-center">
+              <span className="inline-block w-3 h-3 rounded-full bg-[#3066BE] border-2 border-white shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+            </span>
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">~299 (소단지)</span>
           </li>
         </ul>
