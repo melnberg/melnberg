@@ -24,7 +24,12 @@ type KakaoMaps = {
     styles?: Array<Record<string, string>>;
   }) => { addMarkers: (m: KakaoMarker[]) => void };
 };
-type KakaoMapInst = KakaoMap & { getLevel: () => number; setLevel: (level: number, opts?: { anchor?: KakaoLatLng }) => void };
+type KakaoMapInst = KakaoMap & {
+  getLevel: () => number;
+  setLevel: (level: number, opts?: { anchor?: KakaoLatLng }) => void;
+  setCenter: (latlng: KakaoLatLng) => void;
+  panTo: (latlng: KakaoLatLng) => void;
+};
 declare global {
   interface Window {
     kakao: { maps: KakaoMaps };
@@ -83,8 +88,26 @@ const CLUSTER_STYLES = [
 
 export default function AptMap({ pins }: { pins: AptPin[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstRef = useRef<KakaoMapInst | null>(null);
   const [selected, setSelected] = useState<AptPin | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 검색 결과 — 단지명 부분 매칭, 최대 8개
+  const searchResults = searchQuery.trim().length >= 1
+    ? pins.filter((p) => p.apt_nm.includes(searchQuery.trim())).slice(0, 8)
+    : [];
+
+  function jumpToApt(p: AptPin) {
+    const inst = mapInstRef.current;
+    if (inst) {
+      const ll = new window.kakao.maps.LatLng(p.lat, p.lng);
+      inst.setLevel(2);
+      inst.panTo(ll);
+    }
+    setSelected(p);
+    setSearchQuery('');
+  }
 
   useEffect(() => {
     if (!KAKAO_KEY) { setError('NEXT_PUBLIC_KAKAO_MAP_KEY 누락'); return; }
@@ -95,6 +118,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         if (cancelled || !mapRef.current) return;
         const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
+        mapInstRef.current = map;
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
@@ -151,10 +175,52 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
       {/* 좌상단 정보 카드 */}
-      <div className="absolute top-4 left-4 bg-white border border-border px-4 py-3 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+      <div className="absolute top-4 left-4 bg-white border border-border px-4 py-3 shadow-[0_4px_12px_rgba(0,0,0,0.08)] z-20">
         <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">아파트 토론방</div>
         <div className="text-sm font-bold text-navy mt-0.5">{pins.length.toLocaleString()}개 단지</div>
         <div className="text-[11px] text-muted mt-0.5">핀을 눌러 단지별 토론방으로 들어가세요</div>
+      </div>
+
+      {/* 가운데 하단 검색창 */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[420px] max-w-[calc(100vw-40px)] z-20">
+        <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-4 text-muted flex-shrink-0">
+            <circle cx={11} cy={11} r={7} />
+            <line x1={21} y1={21} x2={16.65} y2={16.65} />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="아파트 검색..."
+            className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              aria-label="지우기"
+              className="px-3 py-1 text-muted hover:text-navy"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {searchResults.length > 0 && (
+          <ul className="mt-1 bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[280px] overflow-y-auto">
+            {searchResults.map((p) => (
+              <li
+                key={p.id}
+                onClick={() => jumpToApt(p)}
+                className="px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 cursor-pointer hover:bg-navy-soft"
+              >
+                <div className="text-[13px] font-bold text-navy">{p.apt_nm}</div>
+                {p.dong && <div className="text-[11px] text-muted mt-0.5">{p.dong}</div>}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {selected && <AptDiscussionPanel apt={selected} onClose={() => setSelected(null)} />}
