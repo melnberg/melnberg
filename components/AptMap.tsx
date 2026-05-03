@@ -134,7 +134,6 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
-  const [aiSubmitting, setAiSubmitting] = useState(false);
   const router = useRouter();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -149,9 +148,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   function submitAi() {
     const q = aiQuery.trim();
     if (!q) return;
-    setAiSubmitting(true);
-    // 페이드 오버레이 후 navigate
-    setTimeout(() => router.push(`/ai?q=${encodeURIComponent(q)}&auto=1`), 220);
+    router.push(`/ai?q=${encodeURIComponent(q)}&auto=1`);
   }
 
   // 검색 결과 — 단지명·동 조합 매칭. "봉천두산"·"두산"·"두산 봉천" 모두 매칭.
@@ -351,7 +348,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent resize-none leading-relaxed"
             style={{ minHeight: '44px' }}
           />
-          <button type="submit" disabled={aiSubmitting} className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark disabled:opacity-60 self-stretch flex-shrink-0">
+          <button type="submit" className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark self-stretch flex-shrink-0">
             질문 →
           </button>
         </div>
@@ -360,18 +357,6 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         </div>
       </form>
 
-      {/* 페이드 오버레이 — AI 페이지로 전환 시 */}
-      {aiSubmitting && (
-        <div className="fixed inset-0 z-50 bg-white animate-fade-in flex items-center justify-center pointer-events-none">
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 text-cyan">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" className="animate-pulse"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
-              <span className="text-[14px] font-bold tracking-wider uppercase">AI</span>
-            </div>
-            <div className="mt-2 text-[12px] text-muted">멜른버그 AI에게 묻는 중...</div>
-          </div>
-        </div>
-      )}
 
       {/* 우측 하단 범례 — 핀 모양 그대로 표시 */}
       <div className="absolute bottom-8 right-6 z-20 pointer-events-none">
