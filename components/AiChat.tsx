@@ -23,13 +23,39 @@ type Props = {
 };
 
 const LOADING_PHASES = [
-  '멜른버그 DB 검색',
+  // 부동산 분석 실무
   '카페 글 매칭',
   '실거래가 조회',
-  '멜른버그 Q&A 검색',
+  '단지 시세 비교',
+  '평형별 그룹핑',
+  '직거래 필터링',
+  '입지 점수 계산',
+  '학군 인덱스 조회',
+  '재건축 사업성 검토',
+  '호재 트래킹',
+  '함정단지 검증',
+  '단지 서열 매기는 중',
+  '시군구 데이터 매칭',
+  '매물 후보 추리는 중',
+  '평당가 산출',
   '관점 정리',
-  '코멘트 검색',
-  '답변 작성',
+  '카페 인용 검토',
+  // 클로드 코드 스타일 (위트)
+  '시세 우려내는 중',
+  '데이터 빚는 중',
+  '인사이트 다듬는 중',
+  '문장 새기는 중',
+  '표 짜는 중',
+  '결론 갈고 닦는 중',
+  '논리 끓이는 중',
+  '근거 베이킹',
+  '관점 발효 중',
+  '의견 숙성 중',
+  '단지 픽업',
+  '벡터 항해 중',
+  '임베딩 추적',
+  '컨텍스트 직조',
+  '응답 조립',
 ];
 
 export default function AiChat({ title, subtitle, centered, showFooter }: Props = {}) {
@@ -42,13 +68,16 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
   const fullTextRef = useRef('');
   const animatingRef = useRef(false);
 
-  // 답변 시작 전(빈 답변 + 로딩) 동안 라벨 텍스트 순환
+  // 답변 시작 전 라벨 — 매 요청마다 셔플된 순서로 순환 (반복감 줄이기)
+  const [shuffledPhases, setShuffledPhases] = useState<string[]>(LOADING_PHASES);
   useEffect(() => {
     const lastTurn = turns[turns.length - 1];
     const cycling = loading && !!lastTurn && lastTurn.answer === '' && !lastTurn.complete;
     if (!cycling) return;
+    const shuffled = [...LOADING_PHASES].sort(() => Math.random() - 0.5);
+    setShuffledPhases(shuffled);
     setPhaseIdx(0);
-    const id = setInterval(() => setPhaseIdx((p) => (p + 1) % LOADING_PHASES.length), 1200);
+    const id = setInterval(() => setPhaseIdx((p) => (p + 1) % shuffled.length), 1100);
     return () => clearInterval(id);
   }, [loading, turns]);
 
@@ -226,10 +255,10 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                       <div className="relative h-[28px] overflow-hidden flex items-center">
                         <span
                           key={phaseIdx}
-                          className="text-[20px] md:text-[22px] font-bold text-navy tracking-tight bg-gradient-to-r from-navy via-cyan to-navy bg-clip-text text-transparent bg-[length:200%_100%] animate-[shine_2.4s_linear_infinite] inline-block"
-                          style={{ animation: 'shine 2.4s linear infinite, slideUp 0.4s ease-out' }}
+                          className="text-[15px] md:text-[16px] font-mono font-bold text-muted tracking-tight inline-block"
+                          style={{ animation: 'slideUp 0.4s ease-out' }}
                         >
-                          {LOADING_PHASES[phaseIdx]}
+                          {shuffledPhases[phaseIdx] ?? LOADING_PHASES[0]}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
