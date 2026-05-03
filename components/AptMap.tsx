@@ -94,8 +94,9 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 });
 
-        const useClusterer = !!window.kakao.maps.MarkerClusterer;
-        console.log(`[AptMap] pins: ${pins.length}, MarkerClusterer 사용: ${useClusterer}`);
+        // 임시 진단: 클러스터러 비활성화 — 마커 클릭이 진짜 fire하는지 확인용
+        const useClusterer = false;
+        console.log(`[AptMap] pins: ${pins.length}, MarkerClusterer 사용: ${useClusterer} (디버그 모드: 클러스터러 OFF)`);
 
         // 마커 생성 (pin 한 개당 1마커). 클러스터러가 없으면 지도에 직접 붙임.
         const markers: KakaoMarker[] = pins.map((p) => {
