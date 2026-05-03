@@ -93,7 +93,7 @@ export default function AptMap() {
 
   return (
     <div className="relative">
-      <div ref={mapRef} className="w-full h-[calc(100vh-240px)] min-h-[500px] bg-[#f0f0f0]" />
+      <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
       {selected && (
         <aside className="absolute top-0 right-0 h-full w-[360px] max-w-full bg-white border-l border-border shadow-[-8px_0_24px_rgba(0,0,0,0.06)] flex flex-col">
