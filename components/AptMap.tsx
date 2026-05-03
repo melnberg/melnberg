@@ -114,10 +114,12 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         if (useClusterer) {
           // disableClickZoom: true → 클러스터 click을 우리가 직접 처리
+          // minLevel: 2 → 줌 2 이상에서 클러스터, 줌 1에서만 개별 마커 (가장 가까운 줌)
+          //   (4500개 단지를 멀리서 한꺼번에 띄우면 너무 빽빽 — 동네 단위 줌인까지 클러스터 유지)
           const clusterer = new window.kakao.maps.MarkerClusterer({
             map,
             averageCenter: true,
-            minLevel: 6,
+            minLevel: 2,
             disableClickZoom: true,
             markers,
             calculator: [10, 50, 200],
