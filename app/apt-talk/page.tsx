@@ -17,7 +17,7 @@ async function fetchAptPins(): Promise<AptPin[]> {
   for (let offset = 0; offset < 50000; offset += 1000) {
     const { data, error } = await supabase
       .from('apt_master')
-      .select('id, apt_nm, dong, lawd_cd, lat, lng')
+      .select('id, apt_nm, dong, lawd_cd, lat, lng, household_count')
       .not('lat', 'is', null)
       .or('household_count.is.null,household_count.gte.100')
       .range(offset, offset + 999);

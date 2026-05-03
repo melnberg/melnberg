@@ -51,6 +51,7 @@ export type AptPin = {
   lawd_cd: string;
   lat: number;
   lng: number;
+  household_count: number | null;
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
@@ -145,12 +146,26 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 커스텀 핀 — 룩(체스 성) SVG.
-        const pinImage = new window.kakao.maps.MarkerImage(
-          '/pins/rook_castle_pin_clean.svg',
-          new window.kakao.maps.Size(30, 46),
-          { offset: new window.kakao.maps.Point(15, 46) },
+        // 커스텀 핀 4종 — 세대수 기반 색상
+        // 3000+ 빨강, 2000~ 보라, 1000~ 초록, 그 외 검정
+        const PIN_W = 32, PIN_H = 42;
+        const makeImg = (file: string) => new window.kakao.maps.MarkerImage(
+          `/pins/${file}`,
+          new window.kakao.maps.Size(PIN_W, PIN_H),
+          { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
         );
+        const pinRed = makeImg('red_core_2x.png');
+        const pinPurple = makeImg('purple_analysis_2x.png');
+        const pinGreen = makeImg('green_interest_2x.png');
+        const pinDark = makeImg('dark_cluster_2x.png');
+
+        function pickPin(hh: number | null) {
+          if (hh === null) return pinDark;
+          if (hh >= 3000) return pinRed;
+          if (hh >= 2000) return pinPurple;
+          if (hh >= 1000) return pinGreen;
+          return pinDark;
+        }
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
         // 클러스터러 미사용 시에만 map에 직접 부착.
@@ -160,7 +175,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             position: pos,
             title: p.apt_nm,
             clickable: true,
-            image: pinImage,
+            image: pickPin(p.household_count),
             ...(useClusterer ? {} : { map }),
           });
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
