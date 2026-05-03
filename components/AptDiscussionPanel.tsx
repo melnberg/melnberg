@@ -15,6 +15,14 @@ type Discussion = {
   author_id: string;
 };
 
+type Comment = {
+  id: number;
+  discussion_id: number;
+  content: string;
+  created_at: string;
+  author_id: string;
+};
+
 type MyVote = { discussion_id: number; vote_type: 'up' | 'down' };
 
 function relativeTime(iso: string): string {
@@ -34,19 +42,31 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [discussions, setDiscussions] = useState<Discussion[] | null>(null);
   const [myVotes, setMyVotes] = useState<Map<number, 'up' | 'down'>>(new Map());
   const [authors, setAuthors] = useState<Map<string, string>>(new Map());
+  const [comments, setComments] = useState<Map<number, Comment[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
 
-  // 글쓰기 폼 상태
+  // 마운트 직후 다음 tick에 transform 풀기 → 좌→우 슬라이드 애니메이션
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // 글쓰기 / 수정 폼
   const [writing, setWriting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
 
+  // 댓글 입력 (글 단위)
+  const [commentBody, setCommentBody] = useState<Map<number, string>>(new Map());
+  const [openComments, setOpenComments] = useState<Set<number>>(new Set());
+
   const supabase = createClient();
 
-  // 글 목록 + 내 vote + 로그인 사용자 fetch
   async function reload() {
     setLoading(true);
     setErr(null);
@@ -67,9 +87,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setDiscussions(ds);
     setUserId(user?.id ?? null);
 
-    // 작가 표시명 fetch — apt_discussions.author_id FK가 auth.users라 join 안 되서 별도 lookup
-    if (ds.length > 0) {
-      const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
+    const ids = ds.map((d) => d.id);
+
+    // 작가 표시명
+    const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
+    if (authorIds.length > 0) {
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, display_name')
@@ -83,9 +105,45 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       setAuthors(new Map());
     }
 
-    // 내 vote 가져오기 (로그인 한 경우만)
-    if (user && ds.length > 0) {
-      const ids = ds.map((d) => d.id);
+    // 댓글 (글 ID 묶음으로 한 번에 fetch)
+    if (ids.length > 0) {
+      const { data: cData } = await supabase
+        .from('apt_discussion_comments')
+        .select('id, discussion_id, content, created_at, author_id')
+        .in('discussion_id', ids)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true });
+      const cMap = new Map<number, Comment[]>();
+      for (const c of (cData ?? []) as Comment[]) {
+        const list = cMap.get(c.discussion_id) ?? [];
+        list.push(c);
+        cMap.set(c.discussion_id, list);
+      }
+      setComments(cMap);
+
+      // 댓글 작가도 authors map에 합침
+      const commentAuthorIds = Array.from(new Set((cData ?? []).map((c: Comment) => c.author_id))).filter((id) => !authorIds.includes(id));
+      if (commentAuthorIds.length > 0) {
+        const { data: extra } = await supabase
+          .from('profiles')
+          .select('id, display_name')
+          .in('id', commentAuthorIds);
+        if (extra) {
+          setAuthors((prev) => {
+            const m = new Map(prev);
+            for (const p of extra as Array<{ id: string; display_name: string | null }>) {
+              if (p.display_name) m.set(p.id, p.display_name);
+            }
+            return m;
+          });
+        }
+      }
+    } else {
+      setComments(new Map());
+    }
+
+    // 내 vote
+    if (user && ids.length > 0) {
       const { data: vData } = await supabase
         .from('apt_discussion_votes')
         .select('discussion_id, vote_type')
@@ -105,8 +163,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     let cancelled = false;
     setDiscussions(null);
     setWriting(false);
+    setEditingId(null);
     setBody('');
     setSubmitErr(null);
+    setOpenComments(new Set());
+    setCommentBody(new Map());
     reload().finally(() => { if (cancelled) return; });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,47 +178,65 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (!userId) { setSubmitErr('로그인이 필요해요.'); return; }
     const text = body.trim();
     if (!text) { setSubmitErr('내용을 입력해주세요.'); return; }
-    // 첫 줄을 title, 그 이후를 content로 분리
     const newlineIdx = text.indexOf('\n');
     const titleLine = newlineIdx === -1 ? text : text.slice(0, newlineIdx).trim();
     const restLines = newlineIdx === -1 ? null : text.slice(newlineIdx + 1).trim() || null;
     setSubmitting(true);
     setSubmitErr(null);
-    const { error } = await supabase.from('apt_discussions').insert({
-      apt_master_id: apt.id,
-      author_id: userId,
-      title: titleLine.slice(0, 200),
-      content: restLines,
-    });
+
+    let error;
+    if (editingId) {
+      ({ error } = await supabase.from('apt_discussions').update({
+        title: titleLine.slice(0, 200),
+        content: restLines,
+      }).eq('id', editingId));
+    } else {
+      ({ error } = await supabase.from('apt_discussions').insert({
+        apt_master_id: apt.id,
+        author_id: userId,
+        title: titleLine.slice(0, 200),
+        content: restLines,
+      }));
+    }
+
     if (error) { setSubmitErr(error.message); setSubmitting(false); return; }
     setSubmitting(false);
     setWriting(false);
+    setEditingId(null);
     setBody('');
+    await reload();
+  }
+
+  function startEdit(d: Discussion) {
+    setEditingId(d.id);
+    setBody(d.content ? `${d.title}\n${d.content}` : d.title);
+    setWriting(true);
+  }
+
+  async function deleteDiscussion(id: number) {
+    if (!confirm('이 글을 삭제하시겠어요?')) return;
+    const { error } = await supabase
+      .from('apt_discussions')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) { alert(error.message); return; }
     await reload();
   }
 
   async function vote(discussionId: number, type: 'up' | 'down') {
     if (!userId) { alert('추천하려면 로그인이 필요해요.'); return; }
     const current = myVotes.get(discussionId);
-
-    // 같은 vote 다시 누르면 취소
     if (current === type) {
       const { error } = await supabase
-        .from('apt_discussion_votes')
-        .delete()
-        .eq('discussion_id', discussionId)
-        .eq('user_id', userId);
+        .from('apt_discussion_votes').delete()
+        .eq('discussion_id', discussionId).eq('user_id', userId);
       if (error) { alert(error.message); return; }
     } else if (current) {
-      // 다른 vote에서 전환
       const { error } = await supabase
-        .from('apt_discussion_votes')
-        .update({ vote_type: type })
-        .eq('discussion_id', discussionId)
-        .eq('user_id', userId);
+        .from('apt_discussion_votes').update({ vote_type: type })
+        .eq('discussion_id', discussionId).eq('user_id', userId);
       if (error) { alert(error.message); return; }
     } else {
-      // 새로 vote
       const { error } = await supabase
         .from('apt_discussion_votes')
         .insert({ discussion_id: discussionId, user_id: userId, vote_type: type });
@@ -166,20 +245,46 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     await reload();
   }
 
+  function toggleComments(id: number) {
+    setOpenComments((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function submitComment(discussionId: number) {
+    if (!userId) { alert('로그인이 필요해요.'); return; }
+    const text = (commentBody.get(discussionId) ?? '').trim();
+    if (!text) return;
+    const { error } = await supabase.from('apt_discussion_comments').insert({
+      discussion_id: discussionId, author_id: userId, content: text,
+    });
+    if (error) { alert(error.message); return; }
+    setCommentBody((prev) => { const m = new Map(prev); m.set(discussionId, ''); return m; });
+    await reload();
+  }
+
+  async function deleteComment(commentId: number) {
+    if (!confirm('이 댓글을 삭제하시겠어요?')) return;
+    const { error } = await supabase
+      .from('apt_discussion_comments')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', commentId);
+    if (error) { alert(error.message); return; }
+    await reload();
+  }
+
   return (
-    <aside className="absolute top-0 left-0 h-full w-[380px] max-w-full bg-white border-r border-border shadow-[8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30">
+    <aside className={`absolute top-0 left-0 h-full w-[380px] max-w-full bg-white border-r border-border shadow-[8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30 transition-transform duration-200 ease-out ${shown ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div>
           <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{apt.dong ?? ''}</div>
           <h2 className="text-[18px] font-bold text-navy tracking-tight">{apt.apt_nm}</h2>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="닫기"
-          className="w-8 h-8 flex items-center justify-center text-muted hover:text-navy"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        <button type="button" onClick={onClose} aria-label="닫기" className="w-10 h-10 flex items-center justify-center text-navy hover:bg-navy-soft transition-colors">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -188,7 +293,6 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
       <div className="flex-1 overflow-y-auto">
         {loading && <div className="px-6 py-12 text-sm text-muted">불러오는 중...</div>}
-
         {err && <div className="px-6 py-12 text-sm text-red-600">에러: {err}</div>}
 
         {!loading && !err && discussions && discussions.length === 0 && !writing && (
@@ -203,8 +307,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               const score = d.vote_up_count - d.vote_down_count;
               const author = authors.get(d.author_id) ?? d.author_id.slice(0, 6);
               const myVote = myVotes.get(d.id);
+              const isMine = userId === d.author_id;
+              const dComments = comments.get(d.id) ?? [];
+              const isCommentsOpen = openComments.has(d.id);
               return (
-                <li key={d.id} className="border border-border bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.06)] hover:shadow-[0_2px_8px_rgba(0,32,96,0.10)] hover:border-navy transition-all">
+                <li key={d.id} className="border border-navy/30 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.10)] hover:shadow-[0_2px_10px_rgba(0,32,96,0.14)] transition-shadow">
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="text-[14px] font-bold text-navy leading-snug flex-1">{d.title}</h3>
                     <div className={`text-[13px] font-bold flex-shrink-0 ${score > 0 ? 'text-cyan' : score < 0 ? 'text-red-500' : 'text-muted'}`}>
@@ -218,33 +325,89 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     <span>{author}</span>
                     <span>·</span>
                     <span>{relativeTime(d.created_at)}</span>
+                    {isMine && (
+                      <>
+                        <span>·</span>
+                        <button type="button" onClick={() => startEdit(d)} className="text-muted hover:text-navy">수정</button>
+                        <span>·</span>
+                        <button type="button" onClick={() => deleteDiscussion(d.id)} className="text-muted hover:text-red-500">삭제</button>
+                      </>
+                    )}
                   </div>
-                  {/* 추천/비추천 */}
+                  {/* 추천/비추천/댓글 토글 */}
                   <div className="mt-2.5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => vote(d.id, 'up')}
-                      className={`flex items-center gap-1 px-2.5 py-1 border text-[12px] font-medium transition-colors ${myVote === 'up' ? 'border-cyan bg-cyan text-white' : 'border-border text-text hover:border-cyan hover:text-cyan'}`}
-                    >
+                    <button type="button" onClick={() => vote(d.id, 'up')}
+                      className={`flex items-center gap-1 px-2.5 py-1 border text-[12px] font-medium transition-colors ${myVote === 'up' ? 'border-cyan bg-cyan text-white' : 'border-border text-text hover:border-cyan hover:text-cyan'}`}>
                       <span>↑</span><span>{d.vote_up_count}</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => vote(d.id, 'down')}
-                      className={`flex items-center gap-1 px-2.5 py-1 border text-[12px] font-medium transition-colors ${myVote === 'down' ? 'border-red-500 bg-red-500 text-white' : 'border-border text-text hover:border-red-500 hover:text-red-500'}`}
-                    >
+                    <button type="button" onClick={() => vote(d.id, 'down')}
+                      className={`flex items-center gap-1 px-2.5 py-1 border text-[12px] font-medium transition-colors ${myVote === 'down' ? 'border-red-500 bg-red-500 text-white' : 'border-border text-text hover:border-red-500 hover:text-red-500'}`}>
                       <span>↓</span><span>{d.vote_down_count}</span>
                     </button>
+                    <button type="button" onClick={() => toggleComments(d.id)}
+                      className="flex items-center gap-1 px-2.5 py-1 border border-border text-text text-[12px] font-medium hover:border-navy hover:text-navy">
+                      <span>💬</span><span>{dComments.length}</span>
+                    </button>
                   </div>
+
+                  {/* 댓글 목록 + 입력 */}
+                  {isCommentsOpen && (
+                    <div className="mt-3 pt-3 border-t border-[#f0f0f0] space-y-2">
+                      {dComments.map((c) => {
+                        const cAuthor = authors.get(c.author_id) ?? c.author_id.slice(0, 6);
+                        const cIsMine = userId === c.author_id;
+                        return (
+                          <div key={c.id} className="text-[12px]">
+                            <p className="text-text whitespace-pre-wrap leading-snug">{c.content}</p>
+                            <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
+                              <span>{cAuthor}</span>
+                              <span>·</span>
+                              <span>{relativeTime(c.created_at)}</span>
+                              {cIsMine && (
+                                <>
+                                  <span>·</span>
+                                  <button type="button" onClick={() => deleteComment(c.id)} className="hover:text-red-500">삭제</button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {userId ? (
+                        <div className="flex gap-1.5 mt-2">
+                          <input
+                            type="text"
+                            value={commentBody.get(d.id) ?? ''}
+                            onChange={(e) => setCommentBody((prev) => { const m = new Map(prev); m.set(d.id, e.target.value); return m; })}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitComment(d.id); } }}
+                            placeholder="댓글을 입력..."
+                            maxLength={500}
+                            className="flex-1 px-2.5 py-1.5 border border-border bg-white text-[12px] focus:outline-none focus:border-navy"
+                          />
+                          <button type="button" onClick={() => submitComment(d.id)}
+                            className="px-3 py-1.5 bg-navy text-white text-[12px] font-bold hover:bg-navy-dark">
+                            등록
+                          </button>
+                        </div>
+                      ) : (
+                        <Link href="/login" className="block mt-2 text-[11px] text-muted hover:text-navy text-center py-1.5 border border-border no-underline">
+                          댓글 달려면 로그인
+                        </Link>
+                      )}
+                    </div>
+                  )}
                 </li>
               );
             })}
           </ul>
         )}
 
-        {/* 글쓰기 폼 — 제목·내용 통합. 첫 줄이 제목, 그 이후가 본문. */}
+        {/* 글쓰기 / 수정 폼 */}
         {writing && (
           <form onSubmit={submitWrite} className="px-6 py-5 border-t border-border bg-[#fafafa]">
+            <div className="text-[11px] font-bold text-muted mb-2 uppercase tracking-wider">
+              {editingId ? '글 수정' : '새 글'}
+            </div>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -257,42 +420,31 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
             />
             {submitErr && <p className="mt-2 text-xs text-red-600">{submitErr}</p>}
             <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => { setWriting(false); setBody(''); setSubmitErr(null); }}
+              <button type="button"
+                onClick={() => { setWriting(false); setEditingId(null); setBody(''); setSubmitErr(null); }}
                 className="flex-1 py-2 border border-border text-text text-sm font-medium hover:border-navy"
-                disabled={submitting}
-              >
+                disabled={submitting}>
                 취소
               </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 py-2 bg-navy text-white text-sm font-bold hover:bg-navy-dark disabled:opacity-50"
-              >
-                {submitting ? '등록중...' : '등록'}
+              <button type="submit" disabled={submitting}
+                className="flex-1 py-2 bg-navy text-white text-sm font-bold hover:bg-navy-dark disabled:opacity-50">
+                {submitting ? '등록중...' : editingId ? '수정' : '등록'}
               </button>
             </div>
           </form>
         )}
       </div>
 
-      {/* 하단 글쓰기 버튼 */}
       {!writing && (
         <div className="border-t border-border px-6 py-4">
           {userId ? (
-            <button
-              type="button"
-              onClick={() => setWriting(true)}
-              className="w-full bg-navy text-white py-3 px-4 text-sm font-bold tracking-wide hover:bg-navy-dark transition-colors"
-            >
+            <button type="button" onClick={() => setWriting(true)}
+              className="w-full bg-navy text-white py-3 px-4 text-sm font-bold tracking-wide hover:bg-navy-dark transition-colors">
               글쓰기
             </button>
           ) : (
-            <Link
-              href="/login"
-              className="block w-full bg-white border border-navy text-navy py-3 px-4 text-sm font-bold tracking-wide hover:bg-navy-soft text-center no-underline"
-            >
+            <Link href="/login"
+              className="block w-full bg-white border border-navy text-navy py-3 px-4 text-sm font-bold tracking-wide hover:bg-navy-soft text-center no-underline">
               로그인하고 글쓰기
             </Link>
           )}
