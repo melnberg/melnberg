@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AptDiscussionPanel from './AptDiscussionPanel';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
@@ -89,12 +90,18 @@ const PIN_COLORS = {
   blue: '#3066BE',
 };
 
-// 물방울 모양 핀 SVG 생성. occupied=true 면 안에 흰 깃발.
+// 물방울 모양 핀 SVG. 단색 + 광택. 점거 시 흰 삼각 깃발 추가.
 function buildPinSvg(color: string, occupied: boolean): string {
   const flag = occupied
-    ? '<line x1="12" y1="10" x2="12" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="12,10 22,14 12,18" fill="white" stroke="#1a1d22" stroke-width="0.6" stroke-linejoin="round"/>'
+    ? '<line x1="13" y1="10" x2="13" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="13,10 22,14 13,18" fill="white" stroke="rgba(0,0,0,0.4)" stroke-width="0.5" stroke-linejoin="round"/>'
     : '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="${color}" stroke="#1a1d22" stroke-width="2"/>${flag}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+<defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/>
+<path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="${color}" stroke="#1a1d22" stroke-width="2"/>
+<path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>
+${flag}
+</svg>`;
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
 
@@ -124,6 +131,8 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const [selected, setSelected] = useState<AptPin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiQuery, setAiQuery] = useState('');
+  const router = useRouter();
 
   // 검색 결과 — 단지명·동 조합 매칭. "봉천두산"·"두산"·"두산 봉천" 모두 매칭.
   const searchResults = (() => {
@@ -167,32 +176,30 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
         mapInstRef.current = map;
 
-        // 클러스터 제거 — 줌 단계로 작은 단지를 자동 숨김.
-        // 핀 4종 + 작은 점 (소단지)
+        // SVG 핀 8종 = 4색 × {기본/점거}. 점거 시 안에 흰 깃발.
         const PIN_W = 32, PIN_H = 45;
-        const makePin = (file: string) => new window.kakao.maps.MarkerImage(
-          `/pins/${file}`,
+        const makeImg = (color: string, occ: boolean) => new window.kakao.maps.MarkerImage(
+          buildPinSvg(color, occ),
           new window.kakao.maps.Size(PIN_W, PIN_H),
           { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
         );
-        const pinRed = makePin('red_3000plus_2x.png');
-        const pinOrange = makePin('orange_2000plus_2x.png');
-        const pinGreen = makePin('green_1000plus_2x.png');
-        const pinBlue = makePin('blue_under1000_2x.png');
-        // 300 이하 / 미수집 → 파란 점 (28→20, 70%)
+        const pins8 = {
+          red: { plain: makeImg(PIN_COLORS.red, false), occ: makeImg(PIN_COLORS.red, true) },
+          orange: { plain: makeImg(PIN_COLORS.orange, false), occ: makeImg(PIN_COLORS.orange, true) },
+          green: { plain: makeImg(PIN_COLORS.green, false), occ: makeImg(PIN_COLORS.green, true) },
+          blue: { plain: makeImg(PIN_COLORS.blue, false), occ: makeImg(PIN_COLORS.blue, true) },
+        };
         const dotBlue = new window.kakao.maps.MarkerImage(
           '/pins/blue_dot.svg',
           new window.kakao.maps.Size(20, 20),
           { offset: new window.kakao.maps.Point(10, 10) },
         );
 
-        function pickPin(hh: number | null) {
+        function pickPin(hh: number | null, occupied: boolean) {
           if (hh === null) return dotBlue;
-          if (hh >= 3000) return pinRed;
-          if (hh >= 2000) return pinOrange;
-          if (hh >= 1000) return pinGreen;
-          if (hh >= 300) return pinBlue;
-          return dotBlue;
+          const t = hh >= 3000 ? 'red' : hh >= 2000 ? 'orange' : hh >= 1000 ? 'green' : hh >= 300 ? 'blue' : null;
+          if (!t) return dotBlue;
+          return occupied ? pins8[t].occ : pins8[t].plain;
         }
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
@@ -209,7 +216,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             position: pos,
             title: p.apt_nm,
             clickable: true,
-            image: pickPin(p.household_count),
+            image: pickPin(p.household_count, !!p.occupier_id),
             map,
           }) as KakaoMarkerInst;
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
@@ -246,15 +253,13 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 좌상단 정보 카드 */}
-      <div className="absolute top-4 left-4 bg-white border border-border px-4 py-3 shadow-[0_4px_12px_rgba(0,0,0,0.08)] z-20">
-        <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">아파트 토론방</div>
-        <div className="text-sm font-bold text-navy mt-0.5">{pins.length.toLocaleString()}개 단지</div>
-        <div className="text-[11px] text-muted mt-0.5">핀을 눌러 단지별 토론방으로 들어가세요</div>
+      {/* 좌상단 작은 정보 배지 */}
+      <div className="absolute top-4 left-4 bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] z-20">
+        <span className="text-[12px] font-bold text-navy">{pins.length.toLocaleString()}개 단지</span>
       </div>
 
-      {/* 가운데 하단 검색창 */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[420px] max-w-[calc(100vw-40px)] z-20">
+      {/* 가운데 상단 — 아파트 검색 (A 위치) */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[420px] max-w-[calc(100vw-200px)] z-20">
         <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-4 text-muted flex-shrink-0">
             <circle cx={11} cy={11} r={7} />
@@ -300,6 +305,34 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           </ul>
         )}
       </div>
+
+      {/* 가운데 하단 — AI 검색 (B 위치). Enter → /ai?q=... */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const q = aiQuery.trim();
+          if (!q) return;
+          router.push(`/ai?q=${encodeURIComponent(q)}`);
+        }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[480px] max-w-[calc(100vw-200px)] z-20"
+      >
+        <div className="bg-white border border-navy shadow-[0_8px_24px_rgba(0,32,96,0.15)] flex items-center">
+          <div className="ml-4 flex-shrink-0 flex items-center gap-1 text-cyan">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+            <span className="text-[11px] font-bold tracking-wider uppercase">AI</span>
+          </div>
+          <input
+            type="text"
+            value={aiQuery}
+            onChange={(e) => setAiQuery(e.target.value)}
+            placeholder="멜른버그 AI에게 물어보기..."
+            className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent"
+          />
+          <button type="submit" className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark">
+            질문 →
+          </button>
+        </div>
+      </form>
 
       {/* 우측 하단 범례 — 핀 모양 그대로 표시 */}
       <div className="absolute bottom-8 right-6 z-20 pointer-events-none">

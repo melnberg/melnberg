@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Footer from './Footer';
@@ -59,7 +60,8 @@ const LOADING_PHASES = [
 ];
 
 export default function AiChat({ title, subtitle, centered, showFooter }: Props = {}) {
-  const [question, setQuestion] = useState('');
+  const searchParams = useSearchParams();
+  const [question, setQuestion] = useState(() => searchParams.get('q') ?? '');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
