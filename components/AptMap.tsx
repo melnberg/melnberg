@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import AptDiscussionPanel from './AptDiscussionPanel';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { __latlng: never };
@@ -136,44 +137,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         <div className="text-[11px] text-muted mt-0.5">핀을 눌러 단지별 토론방으로 들어가세요</div>
       </div>
 
-      {selected && (
-        <aside className="absolute top-0 right-0 h-full w-[360px] max-w-full bg-white border-l border-border shadow-[-8px_0_24px_rgba(0,0,0,0.06)] flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <div>
-              <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{selected.dong ?? ''}</div>
-              <h2 className="text-[18px] font-bold text-navy tracking-tight">{selected.apt_nm}</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              aria-label="닫기"
-              className="w-8 h-8 flex items-center justify-center text-muted hover:text-navy"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="text-sm text-muted leading-relaxed">
-              아직 이 단지에 대한 글이 없어요. 첫 글로 평가·후기를 남겨보세요.
-            </div>
-          </div>
-
-          <div className="border-t border-border px-6 py-4">
-            <button
-              type="button"
-              className="w-full bg-navy text-white py-3 px-4 text-sm font-bold tracking-wide hover:bg-navy-dark transition-colors"
-              disabled
-              title="다음 단계에서 활성화"
-            >
-              글쓰기 (준비중)
-            </button>
-          </div>
-        </aside>
-      )}
+      {selected && <AptDiscussionPanel apt={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
