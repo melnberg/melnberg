@@ -8,7 +8,7 @@ import type { AptPin } from './AptMap';
 type Discussion = {
   id: number;
   title: string;
-  content: string;
+  content: string | null;
   vote_up_count: number;
   vote_down_count: number;
   created_at: string;
@@ -40,8 +40,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
   // 글쓰기 폼 상태
   const [writing, setWriting] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
 
@@ -106,8 +105,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     let cancelled = false;
     setDiscussions(null);
     setWriting(false);
-    setTitle('');
-    setContent('');
+    setBody('');
     setSubmitErr(null);
     reload().finally(() => { if (cancelled) return; });
     return () => { cancelled = true; };
@@ -117,20 +115,24 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   async function submitWrite(e: React.FormEvent) {
     e.preventDefault();
     if (!userId) { setSubmitErr('로그인이 필요해요.'); return; }
-    if (!title.trim() || !content.trim()) { setSubmitErr('제목과 내용을 모두 입력해주세요.'); return; }
+    const text = body.trim();
+    if (!text) { setSubmitErr('내용을 입력해주세요.'); return; }
+    // 첫 줄을 title, 그 이후를 content로 분리
+    const newlineIdx = text.indexOf('\n');
+    const titleLine = newlineIdx === -1 ? text : text.slice(0, newlineIdx).trim();
+    const restLines = newlineIdx === -1 ? null : text.slice(newlineIdx + 1).trim() || null;
     setSubmitting(true);
     setSubmitErr(null);
     const { error } = await supabase.from('apt_discussions').insert({
       apt_master_id: apt.id,
       author_id: userId,
-      title: title.trim(),
-      content: content.trim(),
+      title: titleLine.slice(0, 200),
+      content: restLines,
     });
     if (error) { setSubmitErr(error.message); setSubmitting(false); return; }
     setSubmitting(false);
     setWriting(false);
-    setTitle('');
-    setContent('');
+    setBody('');
     await reload();
   }
 
@@ -209,7 +211,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                       {score > 0 ? '+' : ''}{score}
                     </div>
                   </div>
-                  <p className="text-[12px] text-text mt-1.5 leading-relaxed whitespace-pre-wrap">{d.content}</p>
+                  {d.content && (
+                    <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap">{d.content}</p>
+                  )}
                   <div className="text-[11px] text-muted mt-2 flex items-center gap-2">
                     <span>{author}</span>
                     <span>·</span>
@@ -238,32 +242,24 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           </ul>
         )}
 
-        {/* 글쓰기 폼 */}
+        {/* 글쓰기 폼 — 제목·내용 통합. 첫 줄이 제목, 그 이후가 본문. */}
         {writing && (
           <form onSubmit={submitWrite} className="px-6 py-5 border-t border-border bg-[#fafafa]">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="제목"
-              maxLength={100}
-              className="w-full px-3 py-2 border border-border bg-white text-sm focus:outline-none focus:border-navy"
-              required
-            />
             <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="이 단지에 대한 평가·후기를 자유롭게..."
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="첫 줄이 제목이 됩니다. 줄바꿈하면 그 아래는 본문."
               maxLength={2000}
-              rows={6}
-              className="w-full mt-2 px-3 py-2 border border-border bg-white text-sm focus:outline-none focus:border-navy resize-none"
+              rows={7}
+              className="w-full px-3 py-2 border border-border bg-white text-sm focus:outline-none focus:border-navy resize-none"
               required
+              autoFocus
             />
             {submitErr && <p className="mt-2 text-xs text-red-600">{submitErr}</p>}
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
-                onClick={() => { setWriting(false); setTitle(''); setContent(''); setSubmitErr(null); }}
+                onClick={() => { setWriting(false); setBody(''); setSubmitErr(null); }}
                 className="flex-1 py-2 border border-border text-text text-sm font-medium hover:border-navy"
                 disabled={submitting}
               >
