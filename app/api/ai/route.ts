@@ -348,18 +348,36 @@ export async function POST(req: NextRequest) {
         const { lawdCds } = extractRegions(q);
         const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
 
-        // 카페 코퍼스에 등장하는 단지만 추천 대상.
+        // 사용자가 질문에 직접 명시한 단지명 — 시세 view의 apt_nm 중 질문에 그대로 등장하는 것
+        // 카페 매칭 우회: "반포자이 24평 가격" 같은 직접 질문에서 카페 글 부재로 답변 실패하는 문제 해결.
+        const directlyAskedRaw = new Set<string>();
+        for (const p of priceRows) {
+          if (!p.apt_nm || p.apt_nm.length < 4) continue;
+          if (q.includes(p.apt_nm)) directlyAskedRaw.add(p.apt_nm);
+        }
+        // substring 제거: "반포자이"·"신반포자이" 둘 다 매치되면 더 긴 쪽만 유지
+        const directlyAsked = new Set(
+          [...directlyAskedRaw].filter((n) =>
+            ![...directlyAskedRaw].some((other) => other !== n && other.includes(n)),
+          ),
+        );
+
+        // 카페 코퍼스에 등장하는 단지만 추천 대상 (사용자 직접 질문 단지는 제외하고 우선 통과).
         // 가격·지역 조건은 그 위에 추가 필터로만 작동 (조건 안 맞으면 제외).
         const cafeMatched: PriceRow[] = [];
         let priceOnlyCount = 0;
 
         for (const p of priceRows) {
           if (!p.apt_nm || p.apt_nm.length < 4) continue;
+          const isDirectlyAsked = directlyAsked.has(p.apt_nm);
           const isCafe = aptInCorpus(p.apt_nm, corpus);
           const priceOk = !priceRange || (p.median_amount >= priceRange.min && p.median_amount <= priceRange.max);
           const regionOk = lawdCds.size === 0 || lawdCds.has(p.lawd_cd);
 
-          if (isCafe && priceOk && regionOk) {
+          if (isDirectlyAsked) {
+            // 단지명 직접 질문 → 가격·지역·카페 매칭 모두 우회 (사용자가 콕 집어 물은 단지)
+            cafeMatched.push(p);
+          } else if (isCafe && priceOk && regionOk) {
             cafeMatched.push(p);
           } else if (!isCafe && priceOk && regionOk && (priceRange || lawdCds.size > 0)) {
             // 카페엔 없지만 가격·지역 조건만 맞는 단지 → 통계로만 카운트
@@ -411,6 +429,9 @@ export async function POST(req: NextRequest) {
           let block = `\n\n[참고 시세 — 추천 대상 단지의 현재 시세 평균]\n`;
           block += `규칙: 카페에서 다룬 단지 중 사용자 조건(가격·지역) 맞는 것만 표시. 답변에 등장할 수 있는 단지는 이 목록뿐.\n`;
           block += `산출 정책: 최근 2개월 평균 → 거래 부족 시 3개월 → 6개월 순으로 확장. 직거래·해제거래·1층 제외.${filterLine}\n`;
+          if (directlyAsked.size > 0) {
+            block += `사용자가 질문에 직접 명시한 단지: ${[...directlyAsked].join(', ')} → 카페 매칭·가격범위·지역 필터와 무관하게 답변 가능. 이 단지의 시세는 반드시 이 데이터 기준으로 답할 것.\n`;
+          }
 
           if (slicedCafe.length > 0) {
             const lines = slicedCafe.map((p) => {
