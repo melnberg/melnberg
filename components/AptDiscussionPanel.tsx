@@ -12,7 +12,6 @@ type Discussion = {
   vote_down_count: number;
   created_at: string;
   author_id: string;
-  author: { display_name: string | null } | null;
 };
 
 function relativeTime(iso: string): string {
@@ -40,9 +39,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setErr(null);
 
     const supabase = createClient();
+    // 작가 표시명은 profiles 별도 fetch (apt_discussions.author_id FK가 auth.users라 join 안 됨)
     supabase
       .from('apt_discussions')
-      .select('id, title, content, vote_up_count, vote_down_count, created_at, author_id, author:profiles!author_id(display_name)')
+      .select('id, title, content, vote_up_count, vote_down_count, created_at, author_id')
       .eq('apt_master_id', apt.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -92,7 +92,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           <ul className="divide-y divide-[#f0f0f0]">
             {discussions.map((d) => {
               const score = d.vote_up_count - d.vote_down_count;
-              const author = d.author?.display_name ?? d.author_id.slice(0, 6);
+              const author = d.author_id.slice(0, 6);
               return (
                 <li key={d.id} className="px-6 py-4 hover:bg-[#fafafa] cursor-pointer transition-colors">
                   <div className="flex items-start justify-between gap-3">

@@ -11,7 +11,7 @@ type KakaoMaps = {
   load: (cb: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
   Map: new (container: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap;
-  Marker: new (opts: { position: KakaoLatLng; title?: string }) => KakaoMarker;
+  Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap }) => KakaoMarker;
   event: { addListener: (target: unknown, type: string, handler: () => void) => void };
   MarkerClusterer: new (opts: {
     map: KakaoMap;
@@ -92,26 +92,34 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
       .then(() => {
         if (cancelled || !mapRef.current) return;
         const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
-        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 8 });
+        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 });
 
-        // 마커 생성 (pin 한 개당 1마커)
+        const useClusterer = !!window.kakao.maps.MarkerClusterer;
+        console.log(`[AptMap] pins: ${pins.length}, MarkerClusterer 사용: ${useClusterer}`);
+
+        // 마커 생성 (pin 한 개당 1마커). 클러스터러가 없으면 지도에 직접 붙임.
         const markers: KakaoMarker[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
-          const marker = new window.kakao.maps.Marker({ position: pos, title: p.apt_nm });
+          const marker = new window.kakao.maps.Marker({
+            position: pos,
+            title: p.apt_nm,
+            ...(useClusterer ? {} : { map }),
+          } as { position: KakaoLatLng; title?: string });
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
           return marker;
         });
 
-        // 클러스터러 — 동/구 단위로 자동 묶임 (줌 레벨에 따라)
-        new window.kakao.maps.MarkerClusterer({
-          map,
-          averageCenter: true,
-          minLevel: 5,                  // 줌 레벨 5 이상에서만 클러스터
-          disableClickZoom: false,      // 클러스터 클릭 시 자동 줌인
-          markers,
-          calculator: [10, 50, 200],    // 묶음 크기 단계
-          styles: CLUSTER_STYLES,
-        });
+        if (useClusterer) {
+          new window.kakao.maps.MarkerClusterer({
+            map,
+            averageCenter: true,
+            minLevel: 6,
+            disableClickZoom: false,
+            markers,
+            calculator: [10, 50, 200],
+            styles: CLUSTER_STYLES,
+          });
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
 
