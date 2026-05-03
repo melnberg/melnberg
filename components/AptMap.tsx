@@ -192,7 +192,8 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         function applyVisibility() {
           const level = map.getLevel();
-          const showSmall = level <= 2;
+          // 줌 6 이상(멀리) → 2000세대 이상만 표시. 줌 5 이하(이 정도 줌인부터) → 모두 표시.
+          const showSmall = level <= 5;
           for (const { marker, isBig } of allMarkers) {
             if (isBig) continue;
             marker.setMap(showSmall ? map : null);
