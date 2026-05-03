@@ -1,5 +1,4 @@
 import Layout from '@/components/Layout';
-import Footer from '@/components/Footer';
 import AiChat from '@/components/AiChat';
 
 export const metadata = {
@@ -17,7 +16,6 @@ export default function Home() {
         subtitle="멜른버그 데이터 안에서 답변을 해 드립니다."
         centered
       />
-      <Footer />
     </Layout>
   );
 }

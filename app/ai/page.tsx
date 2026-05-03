@@ -1,5 +1,4 @@
 import Layout from '@/components/Layout';
-import Footer from '@/components/Footer';
 import AiChat from '@/components/AiChat';
 
 export const metadata = {
@@ -13,7 +12,6 @@ export default async function AiPage() {
   return (
     <Layout current="ai">
       <AiChat />
-      <Footer />
     </Layout>
   );
 }

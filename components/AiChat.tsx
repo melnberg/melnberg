@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Footer from './Footer';
 
 type Source = { id: number; title: string; url: string | null };
 
@@ -165,6 +166,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
   const showHero = !hasTurns;
 
   return (
+    <>
     <div
       style={{ width: 'min(900px, 100%)' }}
       className={`mx-auto px-10 ${showHero && centered ? 'py-20 text-center' : 'py-10'}`}
@@ -308,9 +310,11 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
           </button>
         </div>
         <p className="text-[11px] text-muted text-center mt-2 leading-relaxed">
-          입력한 질문과 답변은 서비스 품질 개선 목적으로만 수집되며, 외부에 공개·공유되지 않아요.
+          입력하신 질문과 답변은 서비스 품질 개선 및 콘텐츠 제작에 활용될 수 있으며, 개인을 식별할 수 있는 정보는 포함되지 않습니다.
         </p>
       </form>
     </div>
+    {!hasTurns && <Footer />}
+    </>
   );
 }
