@@ -209,9 +209,16 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
   async function claimApt() {
     if (!userId) { alert('점거하려면 로그인이 필요해요.'); return; }
-    // 본인이 다른 곳 점거중이면 안내창
-    if (myCurrentApt) {
-      const ok = confirm(`기존에 점거중인 [${myCurrentApt.apt_nm}]은 자동 퇴거됩니다. 그래도 진행하시겠어요?`);
+    // 클릭 시점에 fresh fetch — 패널 로딩 중이거나 stale일 때 대비
+    const { data: myOccs } = await supabase
+      .from('apt_master')
+      .select('id, apt_nm')
+      .eq('occupier_id', userId)
+      .neq('id', apt.id)
+      .limit(1);
+    const existing = (myOccs as Array<{ id: number; apt_nm: string }> | null)?.[0];
+    if (existing) {
+      const ok = confirm(`기존에 점거중인 [${existing.apt_nm}]은 자동 퇴거됩니다. 그래도 진행하시겠어요?`);
       if (!ok) return;
     }
     setClaiming(true);
@@ -232,8 +239,16 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       alert(`점수 부족 — 내 ${myScore} vs 점거인 ${occupierScore}. 강제집행하려면 더 높은 점수가 필요해요.`);
       return;
     }
-    if (myCurrentApt) {
-      const ok = confirm(`기존에 점거중인 [${myCurrentApt.apt_nm}]은 자동 퇴거됩니다. 그래도 강제집행하시겠어요?`);
+    // fresh fetch
+    const { data: myOccs } = await supabase
+      .from('apt_master')
+      .select('id, apt_nm')
+      .eq('occupier_id', userId)
+      .neq('id', apt.id)
+      .limit(1);
+    const existing = (myOccs as Array<{ id: number; apt_nm: string }> | null)?.[0];
+    if (existing) {
+      const ok = confirm(`기존에 점거중인 [${existing.apt_nm}]은 자동 퇴거됩니다. 그래도 강제집행하시겠어요?`);
       if (!ok) return;
     } else {
       const ok = confirm(`${occupierName ?? '점거인'} 님을 강제집행해 이 단지를 차지합니다.`);
@@ -260,6 +275,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setSubmitErr(null);
     setOpenComments(new Set());
     setCommentBody(new Map());
+    setMyCurrentApt(null);
+    setOccupierId(null);
+    setOccupierName(null);
+    setOccupierScore(null);
+    setMyScore(null);
     reload().finally(() => { if (cancelled) return; });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -430,6 +450,30 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                 <span className="text-[12px] text-[#666] font-medium flex-shrink-0">점거인</span>
                 <span className="text-[14px] font-bold text-black truncate">{occupierName ?? '익명'}</span>
+                {/* 도움말 — hover 시 점거 규칙 안내 */}
+                <span className="relative group flex-shrink-0">
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted text-muted text-[10px] font-bold cursor-help hover:border-navy hover:text-navy">?</span>
+                  <div className="hidden group-hover:block absolute z-50 left-1/2 -translate-x-1/2 top-6 w-[280px] bg-navy text-white text-[11px] leading-relaxed p-3 shadow-xl">
+                    <div className="font-bold text-cyan mb-1.5">점거 규칙</div>
+                    <div className="mb-2">
+                      <div className="font-bold mb-0.5">📌 Score 산정</div>
+                      <div>• 작성글 1점 + 댓글 0.7점</div>
+                    </div>
+                    <div className="mb-2">
+                      <div className="font-bold mb-0.5">🚪 점거</div>
+                      <div>빈 단지 → 누구나 점거 가능</div>
+                    </div>
+                    <div className="mb-2">
+                      <div className="font-bold mb-0.5">⚔️ 강제집행 (박탈)</div>
+                      <div>• 조건: 내 score &gt; 점거인 score</div>
+                      <div>• 동점이면 박탈 불가</div>
+                    </div>
+                    <div>
+                      <div className="font-bold mb-0.5">🔄 점거 옮기기</div>
+                      <div>1인 1점거 — 새 단지 점거 시 기존 단지에서 자동 퇴거</div>
+                    </div>
+                  </div>
+                </span>
                 {occupierScore !== null && (
                   <span className="text-[11px] text-muted flex-shrink-0">(score {occupierScore})</span>
                 )}
