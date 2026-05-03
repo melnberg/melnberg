@@ -176,6 +176,44 @@ export async function POST(req: NextRequest) {
 
     const rows = (chunks ?? []) as ChunkRow[];
 
+    // ─── 시세 보조 컨텍스트 (국토부 실거래가) ───────────────
+    // 검색된 카페 글에서 언급되는 단지명을 추출 → apt_representative_price view 조회 → 컨텍스트 첨부
+    let priceContext = '';
+    try {
+      const { data: aptList } = await supabase
+        .from('apt_trades')
+        .select('apt_nm')
+        .limit(10000);
+
+      const allAptNames = Array.from(new Set((aptList ?? []).map((r) => r.apt_nm as string)))
+        .filter((n) => n && n.length >= 4); // 4자 미만은 false positive 위험 (예: '신동')
+
+      const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
+      const matched = new Set<string>();
+      for (const apt of allAptNames) {
+        if (corpus.includes(apt)) matched.add(apt);
+      }
+
+      if (matched.size > 0) {
+        const { data: prices } = await supabase
+          .from('apt_representative_price')
+          .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date')
+          .in('apt_nm', Array.from(matched).slice(0, 30))
+          .order('apt_nm')
+          .order('area_group');
+
+        if (prices && prices.length > 0) {
+          const lines = (prices as Array<{ apt_nm: string; umd_nm: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string }>).map((p) => {
+            const eok = (p.median_amount / 10000).toFixed(1);
+            return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (최근 6개월 ${p.trade_count}건 중앙값, 마지막 거래 ${p.last_deal_date})`;
+          });
+          priceContext = `\n\n[참고 시세 — 국토부 실거래가 기반]\n정책: 최근 6개월·직거래 제외·해제거래 제외·1층 제외·거래 3건 이상 단지만 산출.\n${lines.join('\n')}`;
+        }
+      }
+    } catch (e) {
+      console.warn('price context build failed:', e instanceof Error ? e.message : e);
+    }
+
     // 출처 — 관련도 높은 청크만 (similarity > 0.5), 글 단위 dedup, top 6개로 제한
     // 키워드 매치는 0.9+, 벡터 매치 중 강한 것만 유지
     const relevantChunks = rows.filter((c) => c.similarity > 0.5);
@@ -237,6 +275,13 @@ export async function POST(req: NextRequest) {
       '- 비교 질문이면 둘 중 하나를 명확히 선택. 둘 다 별로면 "차라리 Z를 봐라" 식으로 대안 제시.',
       '- 진짜 결론을 못 내릴 정도로 자료가 모자라면 그 사실을 명시: "이 부분은 카페 글 기준으로 한쪽 결론이 안 나와 — 추가 자료 필요".',
       '',
+      '[최근 시세 인용 — 카페 분석 시점 보정]',
+      '- 답변 컨텍스트에 "[참고 시세]" 블록이 첨부된 경우, **카페 분석은 작성 시점 기준이라 시세가 옛날일 수 있음**을 짚고 최근 시세를 자연스럽게 언급할 것.',
+      '- 인용 패턴 예: "카페 분석 시점엔 ~억대로 봤는데, 최근 거래는 ~억까지 올라왔어", "지금 실거래 기준으로는 ~억 선이야".',
+      '- **참고 시세 블록에 없는 단지의 시세는 절대 언급하지 말 것 (지어내지 말 것).**',
+      '- 참고 시세 블록 자체가 없으면 시세 얘기 자체를 하지 않음.',
+      '- 출처 표기: "국토부 실거래가 기준"이라고 한 번 정도 짚어주면 신뢰도 ↑',
+      '',
       '[형식 보조]',
       '- 마크다운 사용 가능. 단 위 톤 규칙대로 절제해서 사용.',
       '- 이모지·이모티콘 사용 금지 (😊 🎁 등).',
@@ -244,7 +289,7 @@ export async function POST(req: NextRequest) {
     ].join('\n');
 
     const systemPrompt = context
-      ? `${corePrompt}\n\n참고 자료:\n${context}`
+      ? `${corePrompt}\n\n참고 자료:\n${context}${priceContext}`
       : `${corePrompt}\n\n참고 자료: (검색 결과 없음)\n→ "멜른버그 DB에 관련 내용이 없어요." 한 줄로 답할 것.`;
 
     if (!process.env.OPENAI_API_KEY) {
