@@ -20,33 +20,45 @@ export default function NaverIdEditor({ initial }: { initial: string | null }) {
     setTierMsg(null);
     setLoading(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); setErr('로그인이 필요합니다.'); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setErr('로그인이 필요합니다.'); return; }
 
-    // profiles 업데이트 + 카페 유료회원 매칭 시 자동 paid 전환
-    const naverId = trimmed || null;
-    const { error: pErr } = await supabase.from('profiles').update({ naver_id: naverId }).eq('id', user.id);
-    if (pErr) { setLoading(false); setErr(pErr.message); return; }
+      const naverId = trimmed || null;
 
-    // 카페 유료회원 매칭 체크 → 매칭이면 tier upgrade
-    if (naverId) {
-      const { data: matched } = await supabase
-        .from('cafe_paid_members')
+      // profiles UPDATE 후 row 반환 받기 (RLS 검증 + 디버깅)
+      const { data: updated, error: pErr } = await supabase
+        .from('profiles')
+        .update({ naver_id: naverId })
+        .eq('id', user.id)
         .select('naver_id')
-        .eq('naver_id', naverId)
         .maybeSingle();
-      if (matched) {
-        const { error: tErr } = await supabase
-          .from('profiles')
-          .update({ tier: 'paid', tier_expires_at: '2099-12-31T00:00:00Z' })
-          .eq('id', user.id);
-        if (!tErr) setTierMsg('카페 유료회원 인증 완료 — 정회원으로 전환됐습니다.');
-      }
-    }
+      if (pErr) { setErr(`저장 실패: ${pErr.message}`); return; }
+      if (!updated) { setErr('저장 실패: 프로필 없음'); return; }
 
-    setLoading(false);
-    setEditing(false);
-    router.refresh();
+      // 카페 유료회원 매칭
+      if (naverId) {
+        const { data: matched } = await supabase
+          .from('cafe_paid_members')
+          .select('naver_id')
+          .eq('naver_id', naverId)
+          .maybeSingle();
+        if (matched) {
+          const { error: tErr } = await supabase
+            .from('profiles')
+            .update({ tier: 'paid', tier_expires_at: '2099-12-31T00:00:00Z' })
+            .eq('id', user.id);
+          if (!tErr) setTierMsg('카페 유료회원 인증 완료 — 정회원으로 전환됐습니다.');
+        }
+      }
+
+      setEditing(false);
+      router.refresh();
+    } catch (e) {
+      setErr(`예외: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (!editing) {
