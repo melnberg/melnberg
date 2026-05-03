@@ -146,24 +146,31 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 커스텀 핀 4종 — 세대수 기반 색상 (사용자 디자인 v2)
+        // 핀 4종 + 작은 점 (소단지)
         const PIN_W = 32, PIN_H = 45;
-        const makeImg = (file: string) => new window.kakao.maps.MarkerImage(
+        const makePin = (file: string) => new window.kakao.maps.MarkerImage(
           `/pins/${file}`,
           new window.kakao.maps.Size(PIN_W, PIN_H),
           { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
         );
-        const pinRed = makeImg('red_3000plus_2x.png');
-        const pinOrange = makeImg('orange_2000plus_2x.png');
-        const pinGreen = makeImg('green_1000plus_2x.png');
-        const pinBlue = makeImg('blue_under1000_2x.png');
+        const pinRed = makePin('red_3000plus_2x.png');
+        const pinOrange = makePin('orange_2000plus_2x.png');
+        const pinGreen = makePin('green_1000plus_2x.png');
+        const pinBlue = makePin('blue_under1000_2x.png');
+        // 300 이하 / 미수집 → 작은 파란 점 (지하철역 동그라미 사이즈)
+        const dotBlue = new window.kakao.maps.MarkerImage(
+          '/pins/blue_dot.svg',
+          new window.kakao.maps.Size(14, 14),
+          { offset: new window.kakao.maps.Point(7, 7) },
+        );
 
         function pickPin(hh: number | null) {
-          if (hh === null) return pinBlue;
+          if (hh === null) return dotBlue;
           if (hh >= 3000) return pinRed;
           if (hh >= 2000) return pinOrange;
           if (hh >= 1000) return pinGreen;
-          return pinBlue;
+          if (hh >= 300) return pinBlue;
+          return dotBlue;
         }
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
@@ -294,7 +301,11 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           </li>
           <li className="flex items-center gap-2">
             <span className="inline-block w-3 h-3 rounded-full bg-[#3066BE] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
-            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1~999</span>
+            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">300~999</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-[#3066BE] border border-white" />
+            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">~299 (소단지)</span>
           </li>
         </ul>
       </div>
