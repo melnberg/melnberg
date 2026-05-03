@@ -192,7 +192,7 @@ export default async function AdminAiLogsPage({
                           </p>
                           <div className="text-[14px] text-text leading-relaxed">
                             <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
+                              remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
                               components={{
                                 h1: ({ children }) => <h2 className="text-[20px] font-bold text-navy mt-4 mb-2 first:mt-0">{children}</h2>,
                                 h2: ({ children }) => <h2 className="text-[18px] font-bold text-navy mt-4 mb-2 first:mt-0">{children}</h2>,

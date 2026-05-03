@@ -272,7 +272,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                   )}
                   <div className="text-[16px] text-text leading-relaxed text-left">
                     <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
+                      remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
                       components={{
                         h1: ({ children }) => <h2 className="text-[24px] font-bold text-navy mt-6 mb-3 first:mt-0">{children}</h2>,
                         h2: ({ children }) => <h2 className="text-[22px] font-bold text-navy mt-6 mb-3 first:mt-0">{children}</h2>,

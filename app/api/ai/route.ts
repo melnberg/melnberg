@@ -8,9 +8,145 @@ export const maxDuration = 60;
 
 // 시세 view 캐시 — 모듈 스코프, TTL 10분
 // 적재는 일/주 단위로만 일어나므로 10분 캐시는 안전
-type PriceRow = { apt_nm: string; umd_nm: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string };
+type PriceRow = { apt_nm: string; umd_nm: string; lawd_cd: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string };
 let priceCache: { rows: PriceRow[]; expiresAt: number } | null = null;
 const PRICE_CACHE_TTL_MS = 10 * 60 * 1000;
+
+// ─── 시군구·호선 매핑 ─────────────────────────
+// 사용자 질문에서 지역 키워드 → 시군구 LAWD_CD 리스트로 변환
+const SGG_NAME_TO_CD: Record<string, string> = {
+  // 서울
+  '종로': '11110', '종로구': '11110',
+  '중구': '11140',
+  '용산': '11170', '용산구': '11170',
+  '성동': '11200', '성동구': '11200',
+  '광진': '11215', '광진구': '11215',
+  '동대문': '11230', '동대문구': '11230',
+  '중랑': '11260', '중랑구': '11260',
+  '성북': '11290', '성북구': '11290',
+  '강북': '11305', '강북구': '11305',
+  '도봉': '11320', '도봉구': '11320',
+  '노원': '11350', '노원구': '11350',
+  '은평': '11380', '은평구': '11380',
+  '서대문': '11410', '서대문구': '11410',
+  '마포': '11440', '마포구': '11440',
+  '양천': '11470', '양천구': '11470',
+  '강서': '11500', '강서구': '11500',
+  '구로': '11530', '구로구': '11530',
+  '금천': '11545', '금천구': '11545',
+  '영등포': '11560', '영등포구': '11560',
+  '동작': '11590', '동작구': '11590',
+  '관악': '11620', '관악구': '11620',
+  '서초': '11650', '서초구': '11650',
+  '강남': '11680', '강남구': '11680',
+  '송파': '11710', '송파구': '11710',
+  '강동': '11740', '강동구': '11740',
+  // 인천
+  '인천': '28', // prefix 매칭
+  // 경기 핵심
+  '분당': '41135', '분당구': '41135',
+  '판교': '41135', // 판교는 분당구 소속
+  '수정구': '41131', '중원구': '41133',
+  '고양': '41281', '덕양': '41281', '일산동': '41285', '일산서': '41287',
+  '용인': '41463', '수지': '41467', '기흥': '41465', '처인': '41463',
+  '수원': '41117', '영통': '41117', '팔달': '41115', '권선': '41113', '장안': '41111',
+  '성남': '41131',
+  '안양': '41173', '동안구': '41173',
+  '부천': '41192',
+  '광명': '41210',
+  '평택': '41220',
+  '의정부': '41150',
+  '하남': '41450',
+  '과천': '41290',
+  '구리': '41310',
+  '남양주': '41360',
+  '시흥': '41390',
+  '군포': '41410',
+  '의왕': '41430',
+  '파주': '41480',
+  '김포': '41570',
+};
+
+// 지하철 호선별 서울·경기 시군구 (대략적, 주요 역세권 위주)
+const SUBWAY_LINE_TO_SGG: Record<string, string[]> = {
+  '1호선': ['11110', '11140', '11230', '11290', '11320', '11350', '11530', '11560', '11545', '11680', '28200', '41281', '41220'],
+  '2호선': ['11140', '11200', '11215', '11230', '11290', '11440', '11530', '11560', '11590', '11620', '11650', '11680', '11710'],
+  '3호선': ['11110', '11140', '11410', '11650', '11680', '11290', '11380', '41135'],
+  '4호선': ['11110', '11140', '11290', '11305', '11320', '11350', '11650', '11710'],
+  '5호선': ['11110', '11140', '11200', '11215', '11440', '11470', '11500', '11560', '11590', '11650', '11680', '11710', '11740'],
+  '6호선': ['11170', '11200', '11260', '11290', '11380', '11440'],
+  '7호선': ['11215', '11260', '11305', '11320', '11350', '11500', '11540', '11590', '11650', '11680', '11710'],
+  '8호선': ['11710', '11740', '41131', '41450'],
+  '9호선': ['11170', '11440', '11500', '11560', '11590', '11650', '11680', '11710'],
+  '신분당선': ['11650', '11680', '41135', '41467'],
+};
+
+function extractPriceRange(question: string): { min: number; max: number } | null {
+  // 만원 단위 (1억 = 10000)
+  // "X억대" → X*10000 ~ (X+1)*10000-1
+  const dae = question.match(/(\d{1,3})\s*억\s*대/);
+  if (dae) {
+    const x = Number(dae[1]);
+    return { min: x * 10000, max: (x + 1) * 10000 - 1 };
+  }
+  // "X억 이하" / "X억 미만" / "X억 이내"
+  const ihaa = question.match(/(\d{1,3})\s*억\s*(이하|미만|이내)/);
+  if (ihaa) {
+    return { min: 0, max: Number(ihaa[1]) * 10000 };
+  }
+  // "X억 이상" / "X억 초과"
+  const isang = question.match(/(\d{1,3})\s*억\s*(이상|초과)/);
+  if (isang) {
+    return { min: Number(isang[1]) * 10000, max: 999_999_999 };
+  }
+  // "X~Y억" / "X억~Y억" / "X에서 Y억"
+  const range = question.match(/(\d{1,3})\s*억?\s*[~\-에서]+\s*(\d{1,3})\s*억/);
+  if (range) {
+    const x = Number(range[1]); const y = Number(range[2]);
+    return { min: Math.min(x, y) * 10000, max: Math.max(x, y) * 10000 };
+  }
+  // "X억" 단독 — loose ±1억
+  const exact = question.match(/(\d{1,3})\s*억(?!\s*(짜리|기준))/);
+  if (exact) {
+    const x = Number(exact[1]);
+    return { min: Math.max(0, (x - 1) * 10000), max: (x + 1) * 10000 };
+  }
+  return null;
+}
+
+function extractRegions(question: string): { lawdCds: Set<string> } {
+  const cds = new Set<string>();
+
+  // 시군구명 매칭
+  for (const [name, cd] of Object.entries(SGG_NAME_TO_CD)) {
+    if (question.includes(name)) {
+      // '인천' 같은 prefix는 28로 시작하는 모든 시군구 추가
+      if (cd === '28') {
+        ['28110', '28140', '28177', '28185', '28200', '28237', '28245', '28260'].forEach((c) => cds.add(c));
+      } else {
+        cds.add(cd);
+      }
+    }
+  }
+
+  // 호선 매칭
+  for (const [line, sggs] of Object.entries(SUBWAY_LINE_TO_SGG)) {
+    if (question.includes(line)) {
+      sggs.forEach((c) => cds.add(c));
+    }
+  }
+
+  return { lawdCds: cds };
+}
+
+// 단지명 fuzzy 매칭 — corpus에 단지명의 핵심 토큰이 있으면 매칭
+function aptInCorpus(aptNm: string, corpus: string): boolean {
+  if (!aptNm || aptNm.length < 4) return false;
+  if (corpus.includes(aptNm)) return true;
+  // 공백·괄호로 토큰 분리, 가장 긴 토큰(4자 이상)이 corpus에 있으면 매칭
+  const tokens = aptNm.split(/[\s()\[\]]+/).filter((t) => t.length >= 4);
+  return tokens.some((t) => corpus.includes(t));
+}
 
 type ChunkRow = {
   chunk_id: number;
@@ -167,7 +303,7 @@ export async function POST(req: NextRequest) {
       ? Promise.resolve({ data: cachedPrice })
       : (supabase
           .from('apt_representative_price')
-          .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date') as unknown as Promise<{ data: PriceRow[] | null }>);
+          .select('apt_nm, umd_nm, lawd_cd, area_group, trade_count, median_amount, last_deal_date') as unknown as Promise<{ data: PriceRow[] | null }>);
 
     const [searchRes, priceRes] = await Promise.all([searchPromise, pricePromise]);
 
@@ -192,6 +328,9 @@ export async function POST(req: NextRequest) {
     const rows = (chunks ?? []) as ChunkRow[];
 
     // ─── 시세 보조 컨텍스트 (priceRes로부터) ───────────────
+    // 두 가지 매칭 경로를 합침:
+    //   1) 직접 필터: 질문에서 가격대·지역 추출 → 조건 맞는 단지 (가격대·지역 질문에 핵심)
+    //   2) 카페 코퍼스 매칭: 검색된 카페 글에 등장한 단지 (정성적 추천 보조)
     let priceContext = '';
     try {
       const priceRows: PriceRow[] | null = (priceRes.data as PriceRow[] | null) ?? [];
@@ -200,18 +339,51 @@ export async function POST(req: NextRequest) {
       }
 
       if (priceRows && priceRows.length > 0) {
+        const q = question.trim();
+        const priceRange = extractPriceRange(q);
+        const { lawdCds } = extractRegions(q);
         const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
-        const matched = priceRows
-          .filter((p) => p.apt_nm && p.apt_nm.length >= 4 && corpus.includes(p.apt_nm))
-          .slice(0, 30);
+
+        // key = 단지명 + 평형 group → 중복 제거
+        const matchedMap = new Map<string, PriceRow & { source: 'direct' | 'cafe' }>();
+
+        // 1. 직접 필터 매칭 (가격대·지역 조건 있을 때만)
+        if (priceRange || lawdCds.size > 0) {
+          for (const p of priceRows) {
+            const priceOk = !priceRange || (p.median_amount >= priceRange.min && p.median_amount <= priceRange.max);
+            const regionOk = lawdCds.size === 0 || lawdCds.has(p.lawd_cd);
+            if (priceOk && regionOk) {
+              const key = `${p.apt_nm}__${p.area_group}`;
+              matchedMap.set(key, { ...p, source: 'direct' });
+            }
+          }
+        }
+
+        // 2. 카페 코퍼스 fuzzy 매칭 (보조)
+        for (const p of priceRows) {
+          const key = `${p.apt_nm}__${p.area_group}`;
+          if (matchedMap.has(key)) continue;
+          if (aptInCorpus(p.apt_nm, corpus)) {
+            matchedMap.set(key, { ...p, source: 'cafe' });
+          }
+        }
+
+        // 정렬: 직접 매칭 먼저, 그 안에서는 거래량 많은 순 → 카페 매칭은 거래량 순
+        const matched = Array.from(matchedMap.values()).sort((a, b) => {
+          if (a.source !== b.source) return a.source === 'direct' ? -1 : 1;
+          return b.trade_count - a.trade_count;
+        }).slice(0, 40);
 
         if (matched.length > 0) {
-          matched.sort((a, b) => a.apt_nm.localeCompare(b.apt_nm) || a.area_group - b.area_group);
           const lines = matched.map((p) => {
             const eok = (p.median_amount / 10000).toFixed(1);
             return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (최근 6개월 ${p.trade_count}건 중앙값, 마지막 거래 ${p.last_deal_date})`;
           });
-          priceContext = `\n\n[참고 시세 — 국토부 실거래가 기반]\n정책: 최근 6개월·직거래 제외·해제거래 제외·1층 제외·거래 3건 이상 단지만 산출.\n${lines.join('\n')}`;
+          const filterDesc = [];
+          if (priceRange) filterDesc.push(`가격: ${(priceRange.min / 10000).toFixed(0)}~${(priceRange.max / 10000).toFixed(0)}억`);
+          if (lawdCds.size > 0) filterDesc.push(`지역: 시군구 ${lawdCds.size}개 매칭`);
+          const filterLine = filterDesc.length > 0 ? `\n질문에서 추출된 조건: ${filterDesc.join(', ')}` : '';
+          priceContext = `\n\n[참고 시세 — 국토부 실거래가 기반]\n정책: 최근 6개월·직거래 제외·해제거래 제외·1층 제외·거래 3건 이상 단지만 산출.${filterLine}\n${lines.join('\n')}`;
         }
       }
     } catch (e) {
