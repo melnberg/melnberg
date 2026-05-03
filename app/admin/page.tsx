@@ -54,6 +54,12 @@ export default async function AdminPage() {
               >
                 카페 글 관리 →
               </a>
+              <a
+                href="/admin/cafe-members"
+                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
+              >
+                카페 유료회원 →
+              </a>
             </div>
           </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>

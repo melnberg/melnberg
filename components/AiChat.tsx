@@ -61,23 +61,17 @@ const LOADING_PHASES = [
 
 export default function AiChat({ title, subtitle, centered, showFooter }: Props = {}) {
   const searchParams = useSearchParams();
-  const [question, setQuestion] = useState(() => searchParams.get('q') ?? '');
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // auto=1로 들어오면 첫 렌더부터 turn 표시 + loading=true (빈 form 깜빡임 제거)
+  const initialAutoQ = searchParams.get('auto') === '1' ? (searchParams.get('q') ?? '').trim() : '';
+  const [question, setQuestion] = useState(() => initialAutoQ ? '' : (searchParams.get('q') ?? ''));
+  const [turns, setTurns] = useState<Turn[]>(() =>
+    initialAutoQ
+      ? [{ question: initialAutoQ, answer: '', sources: [], complete: false }]
+      : []
+  );
+  const [loading, setLoading] = useState(() => !!initialAutoQ);
   const formRef = useRef<HTMLFormElement>(null);
   const autoSubmittedRef = useRef(false);
-
-  // ?q=...&auto=1 로 들어오면 자동 제출
-  useEffect(() => {
-    if (autoSubmittedRef.current) return;
-    const q = searchParams.get('q');
-    const auto = searchParams.get('auto');
-    if (q && auto === '1') {
-      autoSubmittedRef.current = true;
-      // React 렌더 직후 form 제출 (microtask로 즉시)
-      queueMicrotask(() => formRef.current?.requestSubmit());
-    }
-  }, [searchParams]);
-  const [loading, setLoading] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const lastAnswerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,17 +132,10 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
     el.style.height = `${el.scrollHeight}px`;
   }, [question]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const q = question.trim();
-    if (!q || loading) return;
-
-    setQuestion('');
-    setLoading(true);
+  // API 호출 + 스트리밍 — turn은 이미 추가되어 있다고 가정
+  async function fetchAnswer(q: string) {
     fullTextRef.current = '';
     animatingRef.current = false;
-
-    setTurns((prev) => [...prev, { question: q, answer: '', sources: [], complete: false }]);
 
     try {
       const res = await fetch('/api/ai', {
@@ -223,6 +210,26 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
       });
     }
   }
+
+  // 폼 제출 — turn 추가 후 fetch
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const q = question.trim();
+    if (!q || loading) return;
+    setQuestion('');
+    setLoading(true);
+    setTurns((prev) => [...prev, { question: q, answer: '', sources: [], complete: false }]);
+    await fetchAnswer(q);
+  }
+
+  // ?q=...&auto=1 자동 fetch — turn은 이미 useState init에서 추가됨
+  useEffect(() => {
+    if (autoSubmittedRef.current) return;
+    if (!initialAutoQ) return;
+    autoSubmittedRef.current = true;
+    void fetchAnswer(initialAutoQ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const headTitle = title ?? 'AI 질문';
   const headSubtitle = subtitle ?? (
