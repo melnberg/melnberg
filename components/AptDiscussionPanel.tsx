@@ -165,7 +165,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   }
 
   return (
-    <aside className="absolute top-0 right-0 h-full w-[380px] max-w-full bg-white border-l border-border shadow-[-8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30">
+    <aside className="absolute top-0 left-0 h-full w-[380px] max-w-full bg-white border-r border-border shadow-[8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div>
           <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{apt.dong ?? ''}</div>
