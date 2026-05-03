@@ -57,6 +57,7 @@ export type AptPin = {
   kapt_build_year: number | null;
   kapt_code: string | null;
   geocoded_address: string | null;
+  occupier_id: string | null;
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
@@ -78,6 +79,23 @@ function loadKakaoSdk(): Promise<void> {
     s.onerror = () => reject(new Error('kakao sdk load failed'));
     document.head.appendChild(s);
   });
+}
+
+// 핀 색상
+const PIN_COLORS = {
+  red: '#C8392E',
+  orange: '#E8772E',
+  green: '#2D7A4F',
+  blue: '#3066BE',
+};
+
+// 물방울 모양 핀 SVG 생성. occupied=true 면 안에 흰 깃발.
+function buildPinSvg(color: string, occupied: boolean): string {
+  const flag = occupied
+    ? '<line x1="12" y1="10" x2="12" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="12,10 22,14 12,18" fill="white" stroke="#1a1d22" stroke-width="0.6" stroke-linejoin="round"/>'
+    : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="${color}" stroke="#1a1d22" stroke-width="2"/>${flag}</svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
 
 // 클러스터 색상 단계 (CLAUDE.md 컬러 규칙: navy/blue/cyan 3색)

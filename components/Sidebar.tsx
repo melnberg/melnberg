@@ -87,9 +87,9 @@ export default function Sidebar({ current, user }: Props) {
 
         <nav className="flex-1 py-1 pb-4 flex flex-col">
           <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
-          <SItem href="/" label="멜른버그 AI" active={current === 'home'} icon={<AiIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/apt-talk" label="아파트 토론방" active={current === 'apt-talk'} icon={<ApartmentIcon />} onClick={() => setOpen(false)} />
           <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} />
 
           <SectionToggle
