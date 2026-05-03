@@ -33,6 +33,7 @@ function relativeTime(iso: string): string {
 export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onClose: () => void }) {
   const [discussions, setDiscussions] = useState<Discussion[] | null>(null);
   const [myVotes, setMyVotes] = useState<Map<number, 'up' | 'down'>>(new Map());
+  const [authors, setAuthors] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -66,6 +67,22 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     const ds = (dData ?? []) as unknown as Discussion[];
     setDiscussions(ds);
     setUserId(user?.id ?? null);
+
+    // 작가 표시명 fetch — apt_discussions.author_id FK가 auth.users라 join 안 되서 별도 lookup
+    if (ds.length > 0) {
+      const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', authorIds);
+      const aMap = new Map<string, string>();
+      for (const p of (profilesData ?? []) as Array<{ id: string; display_name: string | null }>) {
+        if (p.display_name) aMap.set(p.id, p.display_name);
+      }
+      setAuthors(aMap);
+    } else {
+      setAuthors(new Map());
+    }
 
     // 내 vote 가져오기 (로그인 한 경우만)
     if (user && ds.length > 0) {
@@ -182,7 +199,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           <ul className="divide-y divide-[#f0f0f0]">
             {discussions.map((d) => {
               const score = d.vote_up_count - d.vote_down_count;
-              const author = d.author_id.slice(0, 6);
+              const author = authors.get(d.author_id) ?? d.author_id.slice(0, 6);
               const myVote = myVotes.get(d.id);
               return (
                 <li key={d.id} className="px-6 py-4">
