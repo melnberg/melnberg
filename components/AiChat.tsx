@@ -255,17 +255,26 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                       <div className="relative h-[28px] overflow-hidden flex items-center">
                         <span
                           key={phaseIdx}
-                          className="text-[15px] md:text-[16px] font-mono font-bold text-muted tracking-tight inline-block"
-                          style={{ animation: 'slideUp 0.4s ease-out' }}
+                          className="text-[15px] md:text-[16px] font-bold text-text tracking-tight inline-block"
+                          style={{
+                            fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "SF Mono", "Consolas", "Liberation Mono", "Menlo", monospace',
+                            animation: 'slideUp 0.4s ease-out',
+                          }}
                         >
                           {shuffledPhases[phaseIdx] ?? LOADING_PHASES[0]}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce [animation-delay:-300ms]" />
-                        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce [animation-delay:-150ms]" />
-                        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce" />
-                      </div>
+                      <span className="relative inline-flex items-center justify-center w-5 h-5" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" className="absolute w-5 h-5 text-cyan" style={{ animation: 'twinkle 1.4s ease-in-out infinite' }} fill="currentColor">
+                          <path d="M12 1L13.8 9.2L22 11L13.8 12.8L12 21L10.2 12.8L2 11L10.2 9.2L12 1Z" />
+                        </svg>
+                        <svg viewBox="0 0 24 24" className="absolute w-3 h-3 text-navy translate-x-[7px] -translate-y-[7px]" style={{ animation: 'twinkle 1.6s ease-in-out infinite 0.45s' }} fill="currentColor">
+                          <path d="M12 1L13.8 9.2L22 11L13.8 12.8L12 21L10.2 12.8L2 11L10.2 9.2L12 1Z" />
+                        </svg>
+                        <svg viewBox="0 0 24 24" className="absolute w-2 h-2 text-cyan -translate-x-[8px] translate-y-[6px]" style={{ animation: 'twinkle 1.8s ease-in-out infinite 0.9s' }} fill="currentColor">
+                          <path d="M12 1L13.8 9.2L22 11L13.8 12.8L12 21L10.2 12.8L2 11L10.2 9.2L12 1Z" />
+                        </svg>
+                      </span>
                     </div>
                   ) : (
                     <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
