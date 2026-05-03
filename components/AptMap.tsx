@@ -53,6 +53,10 @@ export type AptPin = {
   lat: number;
   lng: number;
   household_count: number | null;
+  building_count: number | null;
+  kapt_build_year: number | null;
+  kapt_code: string | null;
+  geocoded_address: string | null;
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;

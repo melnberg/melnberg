@@ -292,17 +292,49 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         </svg>
       </button>
 
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <div>
-          <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{apt.dong ?? ''}</div>
-          <h2 className="text-[18px] font-bold text-navy tracking-tight">{apt.apt_nm}</h2>
+      <div className="px-6 py-4 border-b border-border">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{apt.dong ?? ''}</div>
+            <h2 className="text-[18px] font-bold text-navy tracking-tight">{apt.apt_nm}</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="닫기" className="w-10 h-10 flex items-center justify-center text-navy hover:bg-navy-soft transition-colors flex-shrink-0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
-        <button type="button" onClick={onClose} aria-label="닫기" className="w-10 h-10 flex items-center justify-center text-navy hover:bg-navy-soft transition-colors">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+
+        {/* 단지 정보 (한국부동산원 ODcloud) */}
+        {(apt.household_count || apt.building_count || apt.kapt_build_year || apt.geocoded_address) && (
+          <div className="mt-3 pt-3 border-t border-[#f0f0f0] grid grid-cols-3 gap-2 text-[12px]">
+            {apt.household_count && (
+              <div>
+                <div className="text-muted text-[10px]">세대수</div>
+                <div className="font-bold text-navy">{apt.household_count.toLocaleString()}</div>
+              </div>
+            )}
+            {apt.building_count && (
+              <div>
+                <div className="text-muted text-[10px]">동수</div>
+                <div className="font-bold text-navy">{apt.building_count}개</div>
+              </div>
+            )}
+            {apt.kapt_build_year && (
+              <div>
+                <div className="text-muted text-[10px]">준공</div>
+                <div className="font-bold text-navy">{apt.kapt_build_year}년</div>
+              </div>
+            )}
+            {apt.geocoded_address && (
+              <div className="col-span-3 pt-1.5 border-t border-[#f5f5f5]">
+                <div className="text-muted text-[10px]">주소</div>
+                <div className="text-text text-[11px] leading-snug">{apt.geocoded_address}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto">
