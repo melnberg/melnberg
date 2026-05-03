@@ -326,7 +326,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
       {/* 가운데 하단 — AI 검색 (B 위치). /ai 페이지 디자인과 통일. */}
       <form
         onSubmit={(e) => { e.preventDefault(); submitAi(); }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[520px] max-w-[calc(100vw-200px)] z-20"
+        className="absolute bottom-1 left-1/2 -translate-x-1/2 w-[520px] max-w-[calc(100vw-200px)] z-20"
       >
         <div className="relative">
           <textarea
@@ -354,7 +354,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             </svg>
           </button>
         </div>
-        <p className="mt-2 text-[10px] text-muted text-center leading-relaxed">
+        <p className="mt-1 text-[10px] text-muted text-center leading-tight">
           입력하신 질문과 답변은 서비스 품질 개선 및 콘텐츠 제작에 활용될 수 있으며, 개인을 식별할 수 있는 정보는 포함되지 않습니다.
         </p>
       </form>
