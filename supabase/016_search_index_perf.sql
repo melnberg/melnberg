@@ -11,7 +11,7 @@
 
 drop index if exists cafe_post_chunks_embedding_idx;
 
-create index cafe_post_chunks_embedding_hnsw_idx
+create index if not exists cafe_post_chunks_embedding_hnsw_idx
   on public.cafe_post_chunks
   using hnsw (embedding vector_cosine_ops)
   with (m = 16, ef_construction = 64);
