@@ -177,33 +177,24 @@ export async function POST(req: NextRequest) {
     const rows = (chunks ?? []) as ChunkRow[];
 
     // ─── 시세 보조 컨텍스트 (국토부 실거래가) ───────────────
-    // 검색된 카페 글에서 언급되는 단지명을 추출 → apt_representative_price view 조회 → 컨텍스트 첨부
+    // 한 번의 쿼리로 view 전체 가져오기 (apt_representative_price는 view라서 행 수가 작음)
+    // → corpus와 substring 매칭 → 시세 블록 생성
     let priceContext = '';
     try {
-      const { data: aptList } = await supabase
-        .from('apt_trades')
-        .select('apt_nm')
-        .limit(10000);
+      type PriceRow = { apt_nm: string; umd_nm: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string };
+      const { data: priceRows } = await supabase
+        .from('apt_representative_price')
+        .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date');
 
-      const allAptNames = Array.from(new Set((aptList ?? []).map((r) => r.apt_nm as string)))
-        .filter((n) => n && n.length >= 4); // 4자 미만은 false positive 위험 (예: '신동')
+      if (priceRows && priceRows.length > 0) {
+        const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
+        const matched = (priceRows as PriceRow[])
+          .filter((p) => p.apt_nm && p.apt_nm.length >= 4 && corpus.includes(p.apt_nm))
+          .slice(0, 30);
 
-      const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
-      const matched = new Set<string>();
-      for (const apt of allAptNames) {
-        if (corpus.includes(apt)) matched.add(apt);
-      }
-
-      if (matched.size > 0) {
-        const { data: prices } = await supabase
-          .from('apt_representative_price')
-          .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date')
-          .in('apt_nm', Array.from(matched).slice(0, 30))
-          .order('apt_nm')
-          .order('area_group');
-
-        if (prices && prices.length > 0) {
-          const lines = (prices as Array<{ apt_nm: string; umd_nm: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string }>).map((p) => {
+        if (matched.length > 0) {
+          matched.sort((a, b) => a.apt_nm.localeCompare(b.apt_nm) || a.area_group - b.area_group);
+          const lines = matched.map((p) => {
             const eok = (p.median_amount / 10000).toFixed(1);
             return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (최근 6개월 ${p.trade_count}건 중앙값, 마지막 거래 ${p.last_deal_date})`;
           });
