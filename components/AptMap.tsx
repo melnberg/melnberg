@@ -339,9 +339,9 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
                 submitAi();
               }
             }}
-            placeholder="멜른버그 카페·실거래가 DB 기반으로 답해드림"
+            placeholder="멜른버그AI 에게 질문하기 (mlbg DB기반)"
             rows={1}
-            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-5 py-4 pr-16 text-[15px] resize-none overflow-hidden outline-none rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] leading-relaxed"
+            className="w-full border border-navy focus:border-navy-dark transition-colors px-5 py-4 pr-16 text-[15px] resize-none overflow-hidden outline-none rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] leading-relaxed"
             style={{ minHeight: '60px' }}
           />
           <button
@@ -354,8 +354,8 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             </svg>
           </button>
         </div>
-        <p className="mt-2 text-[11px] text-muted text-center leading-relaxed bg-white/80 backdrop-blur-sm rounded px-2 py-0.5">
-          멜른버그 카페·실거래가 DB 기반. 입력하신 질문과 답변은 서비스 품질 개선 및 콘텐츠 제작에 활용될 수 있으며, 개인을 식별할 수 있는 정보는 포함되지 않습니다.
+        <p className="mt-2 text-[10px] text-muted text-center leading-relaxed">
+          입력하신 질문과 답변은 서비스 품질 개선 및 콘텐츠 제작에 활용될 수 있으며, 개인을 식별할 수 있는 정보는 포함되지 않습니다.
         </p>
       </form>
 
