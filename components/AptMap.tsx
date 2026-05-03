@@ -346,7 +346,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
                 submitAi();
               }
             }}
-            placeholder="멜른버그 AI에게 물어보기... (Shift+Enter 줄바꿈)"
+            placeholder="멜른버그 카페·실거래가 DB 기반으로 답해드림 (Shift+Enter 줄바꿈)"
             rows={1}
             className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent resize-none leading-relaxed"
             style={{ minHeight: '44px' }}
@@ -354,6 +354,9 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           <button type="submit" disabled={aiSubmitting} className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark disabled:opacity-60 self-stretch flex-shrink-0">
             질문 →
           </button>
+        </div>
+        <div className="mt-1 text-[10px] text-center text-muted bg-white/80 backdrop-blur-sm px-2 py-0.5 inline-block left-1/2 -translate-x-1/2 relative">
+          답변은 멜른버그 카페 글 + 국토부 실거래가 데이터에 한정됨
         </div>
       </form>
 
