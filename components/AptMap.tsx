@@ -161,11 +161,11 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         const pinOrange = makePin('orange_2000plus_2x.png');
         const pinGreen = makePin('green_1000plus_2x.png');
         const pinBlue = makePin('blue_under1000_2x.png');
-        // 300 이하 / 미수집 → 파란 점
+        // 300 이하 / 미수집 → 파란 점 (28→20, 70%)
         const dotBlue = new window.kakao.maps.MarkerImage(
           '/pins/blue_dot.svg',
-          new window.kakao.maps.Size(28, 28),
-          { offset: new window.kakao.maps.Point(14, 14) },
+          new window.kakao.maps.Size(20, 20),
+          { offset: new window.kakao.maps.Point(10, 10) },
         );
 
         function pickPin(hh: number | null) {
@@ -179,9 +179,12 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
         // 클러스터러 미사용 시에만 map에 직접 부착.
-        // 마커는 모두 map에 직접 부착. 줌 멀리(레벨 3+)에서는 2000세대 이상만 표시.
-        type MarkerWithPin = { marker: KakaoMarkerInst; isBig: boolean };
-        const allMarkers: MarkerWithPin[] = pins.map((p) => {
+        // 마커 분류:
+        //   tier 0 (big): 2000+ 세대 — 항상 표시
+        //   tier 1 (mid): 300~1999 + 1000~1999 초록 + 300~999 파랑 핀 — 줌 5 이하에서 표시
+        //   tier 2 (dot): ≤299 + 미수집 — 파란 점, 줌 3 이하에서만 표시
+        type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 };
+        const allMarkers: MarkerTier[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
           const marker = new window.kakao.maps.Marker({
             position: pos,
@@ -191,16 +194,20 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             map,
           }) as KakaoMarkerInst;
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
-          return { marker, isBig: (p.household_count ?? 0) >= 2000 };
+          const hh = p.household_count ?? 0;
+          const tier: 0 | 1 | 2 = hh >= 2000 ? 0 : hh >= 300 ? 1 : 2;
+          return { marker, tier };
         });
 
         function applyVisibility() {
           const level = map.getLevel();
-          // 줌 6 이상(멀리) → 2000세대 이상만 표시. 줌 5 이하(이 정도 줌인부터) → 모두 표시.
-          const showSmall = level <= 5;
-          for (const { marker, isBig } of allMarkers) {
-            if (isBig) continue;
-            marker.setMap(showSmall ? map : null);
+          // tier 0 — 항상 보임
+          // tier 1 — 줌 5 이하
+          // tier 2 (점) — 줌 3 이하
+          for (const { marker, tier } of allMarkers) {
+            if (tier === 0) continue;
+            const visible = tier === 1 ? level <= 5 : level <= 3;
+            marker.setMap(visible ? map : null);
           }
         }
         applyVisibility();
