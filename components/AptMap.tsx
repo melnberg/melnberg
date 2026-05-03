@@ -38,6 +38,7 @@ type KakaoMapInst = KakaoMap & {
   setCenter: (latlng: KakaoLatLng) => void;
   panTo: (latlng: KakaoLatLng) => void;
 };
+type KakaoMarkerInst = KakaoMarker & { setMap: (map: KakaoMap | null) => void };
 declare global {
   interface Window {
     kakao: { maps: KakaoMaps };
@@ -144,8 +145,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
         mapInstRef.current = map;
 
-        const useClusterer = !!window.kakao.maps.MarkerClusterer;
-
+        // 클러스터 제거 — 줌 단계로 작은 단지를 자동 숨김.
         // 핀 4종 + 작은 점 (소단지)
         const PIN_W = 32, PIN_H = 45;
         const makePin = (file: string) => new window.kakao.maps.MarkerImage(
@@ -175,41 +175,33 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
         // 클러스터러 미사용 시에만 map에 직접 부착.
-        const markers: KakaoMarker[] = pins.map((p) => {
+        // 마커는 모두 map에 직접 부착. 줌 변화에 따라 작은 단지(< 1000)만 자동 hide.
+        type MarkerWithPin = { marker: KakaoMarkerInst; isBig: boolean };
+        const allMarkers: MarkerWithPin[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
           const marker = new window.kakao.maps.Marker({
             position: pos,
             title: p.apt_nm,
             clickable: true,
             image: pickPin(p.household_count),
-            ...(useClusterer ? {} : { map }),
-          });
+            map,
+          }) as KakaoMarkerInst;
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
-          return marker;
+          return { marker, isBig: (p.household_count ?? 0) >= 1000 };
         });
 
-        if (useClusterer) {
-          // disableClickZoom: true → 클러스터 click을 우리가 직접 처리
-          // minLevel: 3 → 줌 3 이상에서 클러스터, 줌 1·2에선 개별 마커 (가장 가까운 두 단계)
-          // gridSize: 35 → 가까이 있는 마커는 더 일찍 분리 (default 60)
-          const clusterer = new window.kakao.maps.MarkerClusterer({
-            map,
-            averageCenter: true,
-            minLevel: 3,
-            // minClusterSize 기본값(2) — 외딴 단일 단지는 룩 핀으로, 2개 이상만 클러스터
-            gridSize: 35,
-            disableClickZoom: true,
-            markers,
-            calculator: [10, 50, 200],
-            styles: CLUSTER_STYLES,
-          });
-          // 클러스터 클릭 → 줌인 (마커 click과 분리)
-          window.kakao.maps.event.addListener(clusterer, 'clusterclick', (...args: unknown[]) => {
-            const cluster = args[0] as KakaoCluster;
-            const level = map.getLevel() - 2;
-            map.setLevel(level < 1 ? 1 : level, { anchor: cluster.getCenter() });
-          });
+        // 줌 변화 시 작은 단지(< 1000) 표시/숨김 토글
+        function applyVisibility() {
+          const level = map.getLevel();
+          // 줌 3 이상(멀리 보기) → 1000세대 이상만 표시. 줌 2 이하(가까이) → 모두.
+          const showSmall = level <= 2;
+          for (const { marker, isBig } of allMarkers) {
+            if (isBig) continue;
+            marker.setMap(showSmall ? map : null);
+          }
         }
+        applyVisibility();
+        window.kakao.maps.event.addListener(map, 'zoom_changed', applyVisibility);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
 
