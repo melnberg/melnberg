@@ -35,7 +35,7 @@ create index if not exists cafe_posts_title_trgm_idx
   using gin (title gin_trgm_ops);
 
 -- ═══ Part 3: 함수 안에서 hnsw.ef_search 설정 ═══
--- 검색 정확도/속도 트레이드오프. ef_search 클수록 정확하지만 느려짐. 기본 40, 우리는 80 권장.
+-- 검색 정확도/속도 트레이드오프. ef_search 클수록 정확하지만 느려짐. 1만 청크 + top-10이면 기본 40으로 충분.
 
 create or replace function public.search_cafe_chunks_hybrid(
   query_embedding vector(1536),
@@ -55,8 +55,8 @@ language plpgsql stable
 security definer set search_path = public
 as $$
 begin
-  -- HNSW 검색 정확도 향상 (기본 40 → 80)
-  perform set_config('hnsw.ef_search', '80', true);
+  -- HNSW 검색 — ef_search 40 (1만 청크 + top-10에 충분)
+  perform set_config('hnsw.ef_search', '40', true);
 
   return query
   with keyword_hits as (
