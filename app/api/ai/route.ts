@@ -149,7 +149,9 @@ export async function POST(req: NextRequest) {
       logId = limitResult.log_id;
     }
 
+    const _t0 = Date.now();
     const [queryEmbedding] = await embedTexts([question.trim()]);
+    const _tEmbed = Date.now();
     const keywords = extractKeywords(question.trim());
 
     let chunks: ChunkRow[] | null = null;
@@ -180,6 +182,7 @@ export async function POST(req: NextRequest) {
       chunks = (res.data as ChunkRow[] | null) ?? null;
     }
 
+    const _tSearch = Date.now();
     const rows = (chunks ?? []) as ChunkRow[];
 
     // ─── 시세 보조 컨텍스트 (국토부 실거래가) ───────────────
@@ -215,6 +218,7 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.warn('price context build failed:', e instanceof Error ? e.message : e);
     }
+    const _tPrice = Date.now();
 
     // 출처 — 관련도 높은 청크만 (similarity > 0.5), 글 단위 dedup, top 6개로 제한
     // 키워드 매치는 0.9+, 벡터 매치 중 강한 것만 유지
@@ -256,17 +260,19 @@ export async function POST(req: NextRequest) {
       '  예: "~야", "~거든", "~지", "~잖아", "~구나", "~봐", "~네"',
       '  예: "이쪽이 더 나아 보여", "이유는 GTX 호재가 큰 거거든", "상황 보면 ~한 흐름이 나오지"',
       '- 존댓말("~입니다", "~예요", "~해요") X. 음슴체("~임", "~함") X. **반말 + 다정한 어미**가 기본.',
+      '- 다만 "친한 친구가 차분히 조언해주는" 톤. 거칠지 않고 매끄럽게. "~거든", "~지", "~네", "~봐", "~해" 같은 어미 활용.',
       '',
-      '[답변 구조 — 목차형 강제]',
-      '- **번호 매긴 목차 구조가 기본**. 줄줄이 풀어쓰는 문단 서술 금지.',
-      '- 답변 시작 직후 한 줄 요약(결론) → **번호 매긴 항목들** 순서로.',
-      '- 번호 매기기 규칙 (꼭 지킬 것):',
-      '  1. `1.`, `2.`, `3.` 순서대로 명시적으로 번호 매김. 모든 항목을 `1.`로 쓰지 말 것.',
-      '  2. 항목 사이에 빈 줄·소제목 끼우지 않고 **연속으로** 작성. 안 그러면 마크다운이 1, 1, 1로 잘림.',
-      '  3. 각 항목 안에서 부연 설명은 같은 줄에 이어 쓰거나 들여쓰기 한 줄 추가.',
-      '- 소제목(## 제목)은 섹션이 명확히 두 개 이상 갈릴 때만 사용.',
-      '- 굵게(**...**)는 핵심 단지명·지역명·숫자만 강조.',
-      '- 한 항목은 한 문장 ~ 두세 문장. 너무 길면 다음 번호로 분리.',
+      '[답변 구조 — 매끄러운 흐름의 조언자]',
+      '- **카페 글 요약·나열 금지**. 여러 글을 통합·해석해서 하나의 매끄러운 답변으로.',
+      '- 흐름: ① 가벼운 인사 또는 질문 의도 짚기(1줄 이내, 생략 가능) → ② **결론 한 문단** → ③ **근거·맥락 한~두 문단** → ④ **마무리 권유 또는 추가 옵션**.',
+      '- 각 문단은 자연스럽게 이어지는 서술. 번호 리스트(1. 2. 3.) 사용 자제 — 진짜 병렬 항목 비교(예: 단지 3개 후보 비교)일 때만 사용. 그 외엔 문단 서술이 기본.',
+      '- 번호를 쓸 때 규칙: `1.`, `2.`, `3.` 순서대로 명시. 항목 사이에 빈 줄·소제목 X (마크다운 끊김 방지).',
+      '- 소제목(## 제목) 사용 거의 X. 답변이 정말 길어 섹션 구분 필요할 때만.',
+      '',
+      '[가독성 — 굵게 강조 적극 활용]',
+      '- 핵심 단지명, 지역명, 숫자(가격·평형·연도), 결론 문구는 **굵게 처리**해서 한눈에 들어오게. 예: **도곡렉슬**, **압구정**, **약 30억**, **추천한다**.',
+      '- 한 문단 안에서 굵게 처리는 2~4개 정도. 너무 많으면 강조 효과 사라짐.',
+      '- 답변 마지막 문장(권유·결론)은 굵게 처리해서 마침표 강조.',
       '',
       '[출처를 자연스럽게 녹이기 — 멜른버그 답변임을 느끼게]',
       '- 답변하면서 근거가 된 카페 글의 제목·관점을 자연스럽게 언급. "멜른버그 콘텐츠에서 나온 답변"이라는 느낌을 강하게 줄 것.',
@@ -326,6 +332,8 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`));
         let fullAnswer = '';
+        let _tFirstToken = 0;
+        const _tBeforeOpenAI = Date.now();
         try {
           // ─── (구) Claude 스트리밍 — 비교용 보존
           // const anthropicStream = anthropic.messages.stream({
@@ -355,10 +363,22 @@ export async function POST(req: NextRequest) {
           for await (const chunk of openaiStream) {
             const delta = chunk.choices?.[0]?.delta?.content ?? '';
             if (delta) {
+              if (_tFirstToken === 0) _tFirstToken = Date.now();
               fullAnswer += delta;
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: delta })}\n\n`));
             }
           }
+          const _tDone = Date.now();
+          // 단계별 타이밍 로그 — Vercel Functions 로그에서 확인
+          console.log('[AI timings]', {
+            embed_ms: _tEmbed - _t0,
+            search_ms: _tSearch - _tEmbed,
+            price_ms: _tPrice - _tSearch,
+            openai_first_token_ms: _tFirstToken ? _tFirstToken - _tBeforeOpenAI : null,
+            openai_full_ms: _tDone - _tBeforeOpenAI,
+            total_ms: _tDone - _t0,
+            answer_chars: fullAnswer.length,
+          });
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
         } catch (err) {
           console.error('OpenAI stream error:', err);

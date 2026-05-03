@@ -51,8 +51,11 @@ function* yyyymmRange(from, to) {
   }
 }
 
-// ─── XML 느슨한 파서 (단발 호출용) ──────────────
-function parseItems(xml) {
+// ─── XML 느슨한 파서 (Supabase 스키마 매핑) ──────────────
+// 스키마: lawd_cd, deal_year/month/day, apt_nm, exclu_use_ar, floor, build_year,
+//        road_nm, road_nm_bonbun, road_nm_bubun, dong(법정동), jibun,
+//        deal_amount, agent_nm, deal_type, reg_date, cancel_deal_type, cancel_deal_day
+function parseItems(xml, lawdCd) {
   return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
     const body = m[1];
     const get = (tag) => {
@@ -64,37 +67,28 @@ function parseItems(xml) {
     const dealYear = get('dealYear');
     const dealMonth = get('dealMonth');
     const dealDay = get('dealDay');
-    const dealDate = dealYear && dealMonth && dealDay
-      ? `${dealYear}-${String(dealMonth).padStart(2, '0')}-${String(dealDay).padStart(2, '0')}`
-      : null;
-    const cdealDay = get('cdealDay');
-    const rgstDate = get('rgstDate');
     return {
-      apt_seq: get('aptSeq'),
+      lawd_cd: lawdCd,
       apt_nm: get('aptNm'),
-      apt_dong: get('aptDong'),
-      sgg_cd: get('sggCd'),
-      umd_cd: get('umdCd'),
-      umd_nm: get('umdNm'),
-      jibun: get('jibun'),
-      road_nm: get('roadNm'),
-      excl_use_ar: Number(get('excluUseAr')),
+      exclu_use_ar: Number(get('excluUseAr')),
       floor: get('floor') ? Number(get('floor')) : null,
       build_year: get('buildYear') ? Number(get('buildYear')) : null,
-      deal_date: dealDate,
+      road_nm: get('roadNm'),
+      road_nm_bonbun: get('roadNmBonbun'),
+      road_nm_bubun: get('roadNmBubun'),
+      dong: get('umdNm'),  // 법정동명 (그쪽 스키마는 이걸 dong으로 보관)
+      jibun: get('jibun'),
+      deal_year: dealYear ? Number(dealYear) : null,
+      deal_month: dealMonth ? Number(dealMonth) : null,
+      deal_day: dealDay ? Number(dealDay) : null,
       deal_amount: dealAmount,
-      dealing_gbn: get('dealingGbn'),
-      cdeal_type: get('cdealType'),
-      cdeal_day: cdealDay && /^\d{8}$/.test(cdealDay)
-        ? `${cdealDay.slice(0, 4)}-${cdealDay.slice(4, 6)}-${cdealDay.slice(6, 8)}`
-        : null,
-      rgst_date: rgstDate && /^\d{8}$/.test(rgstDate)
-        ? `${rgstDate.slice(0, 4)}-${rgstDate.slice(4, 6)}-${rgstDate.slice(6, 8)}`
-        : null,
-      sler_gbn: get('slerGbn'),
-      buyer_gbn: get('buyerGbn'),
+      agent_nm: get('estateAgentSggNm'),
+      deal_type: get('dealingGbn'),  // 중개거래 / 직거래
+      reg_date: get('rgstDate'),  // 등기일자 (text 그대로)
+      cancel_deal_type: get('cdealType'),  // 해제여부
+      cancel_deal_day: get('cdealDay'),  // 해제사유발생일 (text 그대로)
     };
-  }).filter((r) => r.apt_nm && r.deal_date && r.deal_amount && r.excl_use_ar);
+  }).filter((r) => r.apt_nm && r.deal_year && r.deal_amount && r.exclu_use_ar);
 }
 
 // ─── API 호출 (페이지네이션) ─────────────────
@@ -132,17 +126,19 @@ async function fetchMonth(lawdCd, dealYmd) {
 }
 
 // ─── DB upsert ─────────────────────────
+// Supabase Claude가 만든 테이블에 unique 제약이 없으면 단순 INSERT (중복 발생 가능 — 추후 dedup view 처리)
+// 안전한 방법: 같은 자연키 거래가 이미 있는지 SELECT 후 없는 것만 INSERT
 async function upsertTrades(rows) {
   if (rows.length === 0) return { inserted: 0, errors: 0 };
-  // 자연키로 충돌 → 무시 (이미 적재된 거래 skip)
-  const { error, count } = await supabase
+  const { data, error } = await supabase
     .from('apt_trades')
-    .upsert(rows, { onConflict: 'apt_nm,jibun,excl_use_ar,floor,deal_date,deal_amount,apt_dong', ignoreDuplicates: true, count: 'exact' });
+    .insert(rows)
+    .select('id');
   if (error) {
-    console.error('upsert 오류:', error.message);
+    console.error('insert 오류:', error.message);
     return { inserted: 0, errors: rows.length };
   }
-  return { inserted: count ?? 0, errors: 0 };
+  return { inserted: data?.length ?? 0, errors: 0 };
 }
 
 // ─── 메인 ──────────────────────────
