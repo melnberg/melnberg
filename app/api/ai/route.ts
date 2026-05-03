@@ -614,8 +614,9 @@ export async function POST(req: NextRequest) {
             ],
             stream: true,
             max_completion_tokens: 4096,
-            // GPT-5 reasoning 모델: 기본 medium → minimal로 낮춰서 첫 토큰 latency 단축
-            reasoning_effort: 'minimal',
+            // GPT-5 reasoning 모델: medium 사용 — 답변 깊이·맥락 통합력 확보
+            // (latency ~12~15초로 늘지만 'minimal' 시절의 얕은 답변 문제 해소)
+            reasoning_effort: 'medium',
           });
 
           // ** (굵게 마크다운) 강제 제거 — 모델이 가끔 어겨서 streaming delta에서도 잘라냄.
