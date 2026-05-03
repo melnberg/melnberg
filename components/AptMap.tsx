@@ -92,8 +92,9 @@ const PIN_COLORS = {
 
 // 물방울 모양 핀 SVG. 단색 + 광택. 점거 시 흰 삼각 깃발 추가.
 function buildPinSvg(color: string, occupied: boolean): string {
+  // 깃발: 광택 없이 순백색, 더 크게. 깃대 + 큰 삼각.
   const flag = occupied
-    ? '<line x1="13" y1="10" x2="13" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="13,10 22,14 13,18" fill="white" stroke="rgba(0,0,0,0.4)" stroke-width="0.5" stroke-linejoin="round"/>'
+    ? '<line x1="11" y1="6" x2="11" y2="27" stroke="white" stroke-width="2.8" stroke-linecap="round"/><polygon points="11,6 26,13 11,20" fill="white"/>'
     : '';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
 <defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs>
