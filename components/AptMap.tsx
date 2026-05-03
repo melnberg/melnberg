@@ -146,25 +146,24 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 커스텀 핀 4종 — 세대수 기반 색상
-        // 3000+ 빨강, 2000~ 보라, 1000~ 초록, 그 외 검정
-        const PIN_W = 32, PIN_H = 42;
+        // 커스텀 핀 4종 — 세대수 기반 색상 (사용자 디자인 v2)
+        const PIN_W = 32, PIN_H = 45;
         const makeImg = (file: string) => new window.kakao.maps.MarkerImage(
           `/pins/${file}`,
           new window.kakao.maps.Size(PIN_W, PIN_H),
           { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
         );
-        const pinRed = makeImg('red_core_2x.png');
-        const pinPurple = makeImg('purple_analysis_2x.png');
-        const pinGreen = makeImg('green_interest_2x.png');
-        const pinDark = makeImg('dark_cluster_2x.png');
+        const pinRed = makeImg('red_3000plus_2x.png');
+        const pinOrange = makeImg('orange_2000plus_2x.png');
+        const pinGreen = makeImg('green_1000plus_2x.png');
+        const pinBlue = makeImg('blue_under1000_2x.png');
 
         function pickPin(hh: number | null) {
-          if (hh === null) return pinDark;
+          if (hh === null) return pinBlue;
           if (hh >= 3000) return pinRed;
-          if (hh >= 2000) return pinPurple;
+          if (hh >= 2000) return pinOrange;
           if (hh >= 1000) return pinGreen;
-          return pinDark;
+          return pinBlue;
         }
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
@@ -286,7 +285,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">3000+ 대단지</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#5C3D8C] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <span className="inline-block w-3 h-3 rounded-full bg-[#E8772E] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">2000~2999</span>
           </li>
           <li className="flex items-center gap-2">
@@ -294,7 +293,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1000~1999</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#2A2D34] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <span className="inline-block w-3 h-3 rounded-full bg-[#3066BE] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1~999</span>
           </li>
         </ul>
