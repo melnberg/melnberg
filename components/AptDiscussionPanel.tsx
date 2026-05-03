@@ -307,10 +307,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
   async function deleteDiscussion(id: number) {
     if (!confirm('이 글을 삭제하시겠어요?')) return;
-    const { error } = await supabase
-      .from('apt_discussions')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
+    const { error } = await supabase.rpc('delete_apt_discussion', { p_id: id });
     if (error) { alert(error.message); return; }
     await reload();
   }
@@ -360,10 +357,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
   async function deleteComment(commentId: number) {
     if (!confirm('이 댓글을 삭제하시겠어요?')) return;
-    const { error } = await supabase
-      .from('apt_discussion_comments')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', commentId);
+    const { error } = await supabase.rpc('delete_apt_discussion_comment', { p_id: commentId });
     if (error) { alert(error.message); return; }
     await reload();
   }
