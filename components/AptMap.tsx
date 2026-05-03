@@ -98,15 +98,15 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 마커 생성 — 항상 map에 직접 setMap. 클러스터러는 visibility만 관리하도록.
-        // (이전 시도에서 마커를 map 없이 만들고 클러스터러에만 넘기면 click이 가로채진 것으로 추정)
+        // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
+        // 클러스터러 미사용 시에만 map에 직접 부착.
         const markers: KakaoMarker[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
           const marker = new window.kakao.maps.Marker({
             position: pos,
             title: p.apt_nm,
             clickable: true,
-            map,
+            ...(useClusterer ? {} : { map }),
           });
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
           return marker;
