@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
 import {
@@ -132,7 +131,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
         </div>
       </article>
 
-      <Footer />
     </Layout>
   );
 }

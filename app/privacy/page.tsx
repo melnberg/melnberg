@@ -1,6 +1,5 @@
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 
 export const metadata = {
   title: '개인정보처리방침 — 멜른버그',
@@ -93,7 +92,6 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

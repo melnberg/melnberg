@@ -15,6 +15,7 @@ export default function Home() {
         title="멜른버그 AI 질문하기"
         subtitle="멜른버그 데이터 안에서 답변을 해 드립니다."
         centered
+        showFooter
       />
     </Layout>
   );

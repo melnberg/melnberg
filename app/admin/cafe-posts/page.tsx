@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import CafePostUpload from '@/components/CafePostUpload';
 import CafePostList, { type CafePostRow } from '@/components/CafePostList';
 import { createClient } from '@/lib/supabase/server';
@@ -71,7 +70,6 @@ export default async function AdminCafePostsPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

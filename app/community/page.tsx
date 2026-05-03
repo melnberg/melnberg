@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import { listPosts, formatBoardTime } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 
@@ -101,7 +100,6 @@ export default async function CommunityPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

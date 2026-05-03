@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import LogoutButton from '@/components/LogoutButton';
 import NicknameEditor from '@/components/NicknameEditor';
 import { createClient } from '@/lib/supabase/server';
@@ -106,7 +105,6 @@ export default async function MePage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

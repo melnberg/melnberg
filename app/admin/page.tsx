@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import AdminPanel from '@/components/AdminPanel';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
@@ -63,7 +62,6 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

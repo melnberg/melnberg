@@ -1,6 +1,5 @@
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 
 export const metadata = {
   title: '이용약관 — 멜른버그',
@@ -241,7 +240,6 @@ export default function TermsPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

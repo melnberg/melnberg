@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
@@ -114,7 +113,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         </div>
       </article>
 
-      <Footer />
     </Layout>
   );
 }

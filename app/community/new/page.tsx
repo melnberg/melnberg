@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import PostForm from '@/components/PostForm';
 import { createClient } from '@/lib/supabase/server';
 
@@ -31,7 +30,6 @@ export default async function NewPostPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

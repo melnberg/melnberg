@@ -19,9 +19,10 @@ type Props = {
   title?: string;
   subtitle?: React.ReactNode;
   centered?: boolean;
+  showFooter?: boolean;
 };
 
-export default function AiChat({ title, subtitle, centered }: Props = {}) {
+export default function AiChat({ title, subtitle, centered, showFooter }: Props = {}) {
   const [question, setQuestion] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
@@ -314,7 +315,7 @@ export default function AiChat({ title, subtitle, centered }: Props = {}) {
         </p>
       </form>
     </div>
-    {!hasTurns && <Footer />}
+    {showFooter && !hasTurns && <Footer />}
     </>
   );
 }

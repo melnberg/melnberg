@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import { listPosts, formatBoardTime, isCurrentUserAdmin } from '@/lib/community';
 
 export const metadata = {
@@ -102,7 +101,6 @@ export default async function BlogPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

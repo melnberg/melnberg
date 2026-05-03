@@ -1,6 +1,5 @@
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import SignupForm from '@/components/SignupForm';
 
 export const metadata = {
@@ -21,7 +20,6 @@ export default function SignupPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

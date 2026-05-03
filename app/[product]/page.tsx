@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import PaymentForm from '@/components/PaymentForm';
 import { products, getProduct } from '@/lib/products';
 import { createClient } from '@/lib/supabase/server';
@@ -121,7 +120,6 @@ export default async function ProductPage({ params }: { params: Promise<{ produc
         </section>
       )}
 
-      <Footer />
     </Layout>
   );
 }

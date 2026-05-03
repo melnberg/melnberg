@@ -4,7 +4,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import SaveAsFaqForm from '@/components/admin/SaveAsFaqForm';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
@@ -260,7 +259,6 @@ export default async function AdminAiLogsPage({
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

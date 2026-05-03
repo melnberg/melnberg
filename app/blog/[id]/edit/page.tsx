@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import PostForm from '@/components/PostForm';
 import { getPost, isCurrentUserAdmin } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
@@ -45,7 +44,6 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }

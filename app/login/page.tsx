@@ -1,6 +1,5 @@
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import Footer from '@/components/Footer';
 import LoginForm from '@/components/LoginForm';
 
 export const metadata = {
@@ -21,7 +20,6 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <Footer />
     </Layout>
   );
 }
