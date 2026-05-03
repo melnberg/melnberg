@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       <section className="pt-14 pb-20">
         <div className="max-w-[760px] mx-auto px-10">
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">개인정보처리방침</h1>
-          <p className="text-xs text-muted mb-8 pb-5 border-b-2 border-navy">시행일: 2026년 4월 1일</p>
+          <p className="text-xs text-muted mb-8 pb-5 border-b-2 border-navy">시행일: 2026년 6월 3일</p>
 
           <Section title="1. 수집하는 개인정보">
             <p>멜른버그(Melnberg)는 네이버 로그인을 통해 다음 정보를 수집합니다.</p>
@@ -47,13 +47,31 @@ export default function PrivacyPage() {
 
           <Section title="5. 상담 및 문의 데이터">
             <ul>
-              <li>이용자가 제출한 상담 내용 및 첨부 자료(매물 정보, 자산 현황 등)는 해당 상담 응대 목적으로만 사용됩니다.</li>
-              <li>AI 모델 학습에 활용되지 않습니다.</li>
+              <li>이용자가 유료 Q&amp;A 컨설팅, 1:1 상담 등에 제출한 자료(매물 정보, 자산 현황, 개인적·구체적 정보)는 해당 상담 응대 목적으로만 사용됩니다.</li>
+              <li>본 조의 상담 데이터는 AI 모델 학습 및 콘텐츠 제작에 활용되지 않습니다.</li>
               <li>이용자 동의 없이 외부에 공유되지 않으며, 익명 처리된 사례로 콘텐츠에 인용할 경우 사전 동의를 받습니다.</li>
             </ul>
           </Section>
 
-          <Section title="6. 개인정보의 안전성 확보 조치">
+          <Section title="6. AI 검색 서비스 입력 데이터">
+            <ul>
+              <li>
+                이용자가 멜른버그 AI 검색 서비스에 입력한 질문 및 관련 데이터는 다음 목적으로 활용될 수 있습니다.
+                <ul className="mt-1.5 ml-1">
+                  <li>검색 답변 품질 향상 및 답변 데이터베이스 보강</li>
+                  <li>통계 분석 및 콘텐츠 기획·제작</li>
+                  <li>서비스 운영 개선</li>
+                </ul>
+              </li>
+              <li>입력된 질문은 이용자의 개인 식별 정보(닉네임, 네이버 ID 등)와 분리하여 저장되며, 활용 시에는 익명화된 형태로 처리됩니다.</li>
+              <li>질문 원문이 그대로 외부에 공개되지 않으며, 가공·요약·재구성된 형태로만 운영자의 콘텐츠 또는 검색 데이터에 반영됩니다.</li>
+              <li>이용자는 AI 검색 서비스에 주민등록번호, 정확한 매물 주소, 구체적 자산 규모, 금융 계좌 정보 등 민감한 개인 정보를 입력하지 않을 책임이 있습니다.</li>
+              <li>이용자는 본인이 입력한 데이터의 삭제를 운영자에게 요청할 수 있습니다. 단, 이미 익명화·통계화 처리되어 개인을 식별할 수 없는 데이터에 대해서는 삭제가 어려울 수 있습니다.</li>
+              <li>본 조의 적용 범위는 본 처리방침 시행일(2026년 6월 3일) 이후 입력되는 데이터에 한정됩니다.</li>
+            </ul>
+          </Section>
+
+          <Section title="7. 개인정보의 안전성 확보 조치">
             <ul>
               <li>데이터 전송 시 SSL/TLS 암호화 적용</li>
               <li>접근 권한 제한 및 관리</li>
@@ -61,16 +79,16 @@ export default function PrivacyPage() {
             </ul>
           </Section>
 
-          <Section title="7. 이용자의 권리">
+          <Section title="8. 이용자의 권리">
             <p>이용자는 언제든지 자신의 개인정보에 대해 열람, 수정, 삭제를 요청할 수 있으며, 회원 탈퇴를 통해 개인정보 처리를 중단할 수 있습니다.</p>
           </Section>
 
-          <Section title="8. 개인정보 보호 책임자">
+          <Section title="9. 개인정보 보호 책임자">
             <p>개인정보 관련 문의는 멜른버그 카페 또는 블로그(하멜른 돈벌시간) 피드백 채널을 통해 접수할 수 있습니다.</p>
           </Section>
 
           <p className="mt-10 pt-5 border-t border-border text-[13px] text-muted">
-            <strong>부칙</strong> — 이 개인정보처리방침은 2026년 4월 1일부터 시행합니다.
+            <strong>부칙</strong> — 이 개인정보처리방침은 2026년 6월 3일부터 시행합니다.
           </p>
         </div>
       </section>
