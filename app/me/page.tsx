@@ -4,6 +4,8 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import LogoutButton from '@/components/LogoutButton';
 import NicknameEditor from '@/components/NicknameEditor';
+import NaverIdEditor from '@/components/NaverIdEditor';
+import DeleteAccountButton from '@/components/DeleteAccountButton';
 import { createClient } from '@/lib/supabase/server';
 import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
 import { paymentStatusLabel } from '@/lib/tier-utils';
@@ -20,7 +22,7 @@ export default async function MePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, tier, tier_expires_at, is_admin')
+    .select('display_name, tier, tier_expires_at, is_admin, naver_id')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -50,6 +52,10 @@ export default async function MePage() {
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
               <span className="text-[12px] font-bold tracking-widest uppercase text-muted">닉네임</span>
               <NicknameEditor initial={displayName} />
+            </div>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
+              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">네이버 ID<br/><span className="text-[10px] normal-case font-medium text-muted">카페 유료회원 인증</span></span>
+              <NaverIdEditor initial={profile?.naver_id ?? null} />
             </div>
             <Row label="이메일" value={user.email ?? '-'} />
             <Row label="가입일" value={user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'} />
@@ -101,6 +107,10 @@ export default async function MePage() {
             <div className="ml-auto">
               <LogoutButton />
             </div>
+          </div>
+
+          <div className="mt-12 pt-6 border-t border-border flex justify-end">
+            <DeleteAccountButton />
           </div>
         </div>
       </section>
