@@ -256,10 +256,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                         <span
                           key={phaseIdx}
                           className="text-[15px] md:text-[16px] font-bold text-text tracking-tight inline-block"
-                          style={{
-                            fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", "SF Mono", "Consolas", "Liberation Mono", "Menlo", monospace',
-                            animation: 'slideUp 0.4s ease-out',
-                          }}
+                          style={{ animation: 'slideUp 0.4s ease-out' }}
                         >
                           {shuffledPhases[phaseIdx] ?? LOADING_PHASES[0]}
                         </span>
