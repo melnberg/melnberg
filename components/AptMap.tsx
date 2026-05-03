@@ -347,7 +347,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           <button
             type="submit"
             aria-label="질문하기"
-            className="absolute right-3 bottom-3 bg-navy text-white w-10 h-10 flex items-center justify-center hover:bg-navy-dark disabled:opacity-40"
+            className="absolute right-0 top-0 bottom-0 aspect-square bg-navy text-white flex items-center justify-center hover:bg-navy-dark disabled:opacity-40"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />

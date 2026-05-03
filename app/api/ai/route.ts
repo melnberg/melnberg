@@ -239,18 +239,25 @@ export async function POST(req: NextRequest) {
     let limitResult: { blocked?: boolean; used_today?: number; daily_limit?: number; log_id?: number } | undefined;
     let logId: number | null = null;
 
-    // 관리자는 무제한, 그 외 모두 일일 5회 (로그인이든 비로그인이든)
-    dailyLimit = 5;
+    // 한도 정책:
+    //   - 관리자: 무제한
+    //   - 정회원 (paid + 만료 전): 7회/일
+    //   - 그 외 (무료/비로그인): 2회/일
+    dailyLimit = 2;
     limitLabel = '일일';
     let isAdmin = false;
 
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('is_admin, tier, tier_expires_at')
         .eq('id', user.id)
         .maybeSingle();
       isAdmin = !!profile?.is_admin;
+      const tier = (profile as { tier?: string | null } | null)?.tier;
+      const expiresAt = (profile as { tier_expires_at?: string | null } | null)?.tier_expires_at;
+      const isActivePaid = tier === 'paid' && (!expiresAt || new Date(expiresAt) > new Date());
+      if (isActivePaid) dailyLimit = 7;
     }
 
     if (isAdmin) {
