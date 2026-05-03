@@ -196,13 +196,13 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         )}
 
         {!loading && !err && discussions && discussions.length > 0 && (
-          <ul className="divide-y divide-[#f0f0f0]">
+          <ul className="px-4 py-4 space-y-3">
             {discussions.map((d) => {
               const score = d.vote_up_count - d.vote_down_count;
               const author = authors.get(d.author_id) ?? d.author_id.slice(0, 6);
               const myVote = myVotes.get(d.id);
               return (
-                <li key={d.id} className="px-6 py-4">
+                <li key={d.id} className="border border-border bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.06)] hover:shadow-[0_2px_8px_rgba(0,32,96,0.10)] hover:border-navy transition-all">
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="text-[14px] font-bold text-navy leading-snug flex-1">{d.title}</h3>
                     <div className={`text-[13px] font-bold flex-shrink-0 ${score > 0 ? 'text-cyan' : score < 0 ? 'text-red-500' : 'text-muted'}`}>
