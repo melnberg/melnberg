@@ -157,11 +157,11 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         const pinOrange = makePin('orange_2000plus_2x.png');
         const pinGreen = makePin('green_1000plus_2x.png');
         const pinBlue = makePin('blue_under1000_2x.png');
-        // 300 이하 / 미수집 → 작은 파란 점 (지하철역 동그라미 사이즈)
+        // 300 이하 / 미수집 → 파란 점
         const dotBlue = new window.kakao.maps.MarkerImage(
           '/pins/blue_dot.svg',
-          new window.kakao.maps.Size(14, 14),
-          { offset: new window.kakao.maps.Point(7, 7) },
+          new window.kakao.maps.Size(28, 28),
+          { offset: new window.kakao.maps.Point(14, 14) },
         );
 
         function pickPin(hh: number | null) {
@@ -175,7 +175,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
         // 클러스터러 미사용 시에만 map에 직접 부착.
-        // 마커는 모두 map에 직접 부착. 줌 변화에 따라 작은 단지(< 1000)만 자동 hide.
+        // 마커는 모두 map에 직접 부착. 줌 멀리(레벨 3+)에서는 2000세대 이상만 표시.
         type MarkerWithPin = { marker: KakaoMarkerInst; isBig: boolean };
         const allMarkers: MarkerWithPin[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
@@ -187,13 +187,11 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             map,
           }) as KakaoMarkerInst;
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
-          return { marker, isBig: (p.household_count ?? 0) >= 1000 };
+          return { marker, isBig: (p.household_count ?? 0) >= 2000 };
         });
 
-        // 줌 변화 시 작은 단지(< 1000) 표시/숨김 토글
         function applyVisibility() {
           const level = map.getLevel();
-          // 줌 3 이상(멀리 보기) → 1000세대 이상만 표시. 줌 2 이하(가까이) → 모두.
           const showSmall = level <= 2;
           for (const { marker, isBig } of allMarkers) {
             if (isBig) continue;
