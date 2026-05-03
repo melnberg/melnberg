@@ -191,10 +191,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     const { data, error } = await supabase.rpc('claim_apt', { p_apt_id: apt.id });
     setClaiming(false);
     if (error) { alert(error.message); return; }
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row?.success) { alert(row?.message ?? '점거 실패'); return; }
-    setOccupierId(row.occupier_id);
-    setOccupierName(row.occupier_name ?? null);
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '점거 실패'); return; }
+    setOccupierId(row.out_occupier_id);
+    setOccupierName(row.out_occupier_name ?? null);
   }
 
   useEffect(() => {

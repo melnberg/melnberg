@@ -14,9 +14,18 @@ create index if not exists apt_master_occupier_idx
   on public.apt_master (occupier_id)
   where occupier_id is not null;
 
--- 점거 RPC
+-- 기존 함수 drop (반환 컬럼명 변경됨)
+drop function if exists public.claim_apt(bigint);
+
+-- 점거 RPC — OUT 파라미터에 'out_' 접두사로 컬럼명 충돌 방지
 create or replace function public.claim_apt(p_apt_id bigint)
-returns table(success boolean, occupier_id uuid, occupied_at timestamptz, occupier_name text, message text)
+returns table(
+  out_success boolean,
+  out_occupier_id uuid,
+  out_occupied_at timestamptz,
+  out_occupier_name text,
+  out_message text
+)
 language plpgsql
 security definer
 set search_path = public
@@ -31,24 +40,22 @@ begin
     return query select false, null::uuid, null::timestamptz, null::text, '로그인이 필요해요'::text;
     return;
   end if;
-  -- 대상 단지 점거 상태 확인
   select am.occupier_id into v_existing_occ from public.apt_master am where am.id = p_apt_id;
   if v_existing_occ is not null and v_existing_occ <> v_uid then
     select display_name into v_name from public.profiles where id = v_existing_occ;
     return query select false, v_existing_occ, null::timestamptz, v_name, ('이미 ' || coalesce(v_name, '다른 사용자') || ' 님이 점거중')::text;
     return;
   end if;
-  -- 본인이 이미 이 단지 점거중이면 변경 없음
   if v_existing_occ = v_uid then
     select display_name into v_name from public.profiles where id = v_uid;
     return query select true, v_uid, v_now, v_name, '이미 점거중'::text;
     return;
   end if;
   -- 본인의 기존 점거 자동 해제 (1인 1점거)
-  update public.apt_master set occupier_id = null, occupied_at = null
-    where occupier_id = v_uid and id <> p_apt_id;
+  update public.apt_master am set occupier_id = null, occupied_at = null
+    where am.occupier_id = v_uid and am.id <> p_apt_id;
   -- 대상 단지 점거
-  update public.apt_master set occupier_id = v_uid, occupied_at = v_now where id = p_apt_id;
+  update public.apt_master am set occupier_id = v_uid, occupied_at = v_now where am.id = p_apt_id;
   select display_name into v_name from public.profiles where id = v_uid;
   return query select true, v_uid, v_now, v_name, null::text;
 end;
