@@ -371,13 +371,44 @@ export async function POST(req: NextRequest) {
         cafeMatched.sort((a, b) => b.trade_count - a.trade_count);
         const slicedCafe = cafeMatched.slice(0, 30);
 
-        if (slicedCafe.length > 0 || priceOnlyCount > 0) {
+        // 카페 매칭된 단지의 raw 거래 사례 추가 — view 평균이 없는 평형(거래 적어 산출 미달)도 사례로 시세 감 잡기 위함
+        const matchedAptNames = Array.from(new Set(cafeMatched.map((p) => p.apt_nm))).slice(0, 15);
+        type RawTrade = { apt_nm: string; exclu_use_ar: number; floor: number | null; deal_year: number; deal_month: number; deal_day: number; deal_amount: number; deal_type: string | null; cancel_deal_type: string | null };
+        const rawByAptArea = new Map<string, RawTrade[]>();
+        if (matchedAptNames.length > 0) {
+          const { data: rawData } = await supabase
+            .from('apt_trades')
+            .select('apt_nm, exclu_use_ar, floor, deal_year, deal_month, deal_day, deal_amount, deal_type, cancel_deal_type')
+            .in('apt_nm', matchedAptNames)
+            .order('deal_year', { ascending: false })
+            .order('deal_month', { ascending: false })
+            .order('deal_day', { ascending: false });
+          const rawArr = (rawData as RawTrade[] | null) ?? [];
+          // 직거래·해제·1층 제외 (view 정책과 동일) — 시세 왜곡 방지
+          const filtered = rawArr.filter((r) =>
+            (!r.cancel_deal_type || r.cancel_deal_type === '')
+            && (!r.deal_type || r.deal_type !== '직거래')
+            && r.floor !== 1,
+          );
+          // 단지+평형(5㎡ bucket)별 최근 5건
+          for (const r of filtered) {
+            const bucket = Math.floor(r.exclu_use_ar / 5) * 5;
+            const key = `${r.apt_nm}__${bucket}`;
+            const list = rawByAptArea.get(key) ?? [];
+            if (list.length < 5) {
+              list.push(r);
+              rawByAptArea.set(key, list);
+            }
+          }
+        }
+
+        if (slicedCafe.length > 0 || priceOnlyCount > 0 || rawByAptArea.size > 0) {
           const filterDesc = [];
           if (priceRange) filterDesc.push(`가격: ${(priceRange.min / 10000).toFixed(0)}~${(priceRange.max / 10000).toFixed(0)}억`);
           if (lawdCds.size > 0) filterDesc.push(`지역: 시군구 ${lawdCds.size}개 매칭`);
           const filterLine = filterDesc.length > 0 ? `\n질문에서 추출된 조건: ${filterDesc.join(', ')}` : '';
 
-          let block = `\n\n[참고 시세 — 추천 대상 단지의 현재 시세]\n`;
+          let block = `\n\n[참고 시세 — 추천 대상 단지의 현재 시세 평균]\n`;
           block += `규칙: 카페에서 다룬 단지 중 사용자 조건(가격·지역) 맞는 것만 표시. 답변에 등장할 수 있는 단지는 이 목록뿐.\n`;
           block += `산출 정책: 최근 2개월 평균 → 거래 부족 시 3개월 → 6개월 순으로 확장. 직거래·해제거래·1층 제외.${filterLine}\n`;
 
@@ -389,6 +420,22 @@ export async function POST(req: NextRequest) {
             block += lines.join('\n');
           } else {
             block += '(카페에서 다룬 단지 중 조건에 맞는 단지 없음)';
+          }
+
+          // 거래 사례 (평균 산출 미달 평형 포함)
+          if (rawByAptArea.size > 0) {
+            block += `\n\n[참고 거래 사례 — 단지·평형별 최근 5건]\n`;
+            block += `용도: 위 평균이 산출되지 않은 평형(거래 3건 미만)도 사례로 시세 감 잡기 위함. 평균이 아니므로 신뢰도 낮음을 답변에 명시할 것.\n`;
+            const sortedKeys = Array.from(rawByAptArea.keys()).sort();
+            for (const key of sortedKeys) {
+              const [aptNm, areaStr] = key.split('__');
+              const trades = rawByAptArea.get(key) ?? [];
+              const tradeStrs = trades.map((t) => {
+                const eok = (t.deal_amount / 10000).toFixed(1);
+                return `${t.deal_year}-${String(t.deal_month).padStart(2, '0')} ${eok}억 (${t.exclu_use_ar}㎡, ${t.floor}층)`;
+              });
+              block += `- ${aptNm} ${areaStr}㎡대: ${tradeStrs.join(' / ')}\n`;
+            }
           }
 
           if (priceOnlyCount > 0) {
@@ -462,11 +509,18 @@ export async function POST(req: NextRequest) {
       '  - 둘 다 만족하는 단지만 답변에 등장. 한쪽만 만족하면 제외하거나 명시 (예: "카페에서 추천하지만 지금은 ~억대라 범위 밖이에요").',
       '',
       '!!! 절대 규칙 — 카페 미수록 단지 등장 금지 !!!',
-      '[참고 시세] 블록은 두 영역으로 나뉠 수 있습니다:',
-      '  1) "[참고 시세 — 추천 대상 단지의 현재 시세]" → 답변에 등장 가능한 유일한 단지 목록',
-      '  2) "[참고 통계 — 답변에 단지명 등장 금지]" → 답변에 단지명·시세 절대 등장 X. 통계 안내만 가능.',
-      '두 번째 영역의 단지는 카페에서 평가하지 않은 단지입니다. 답변에 그 단지명을 등장시키면 신뢰도가 무너집니다.',
+      '[참고 시세] 블록은 세 영역으로 나뉠 수 있습니다:',
+      '  1) "[참고 시세 — 추천 대상 단지의 현재 시세 평균]" → 답변에 등장 가능한 단지의 평균 시세 (가장 신뢰도 높음)',
+      '  2) "[참고 거래 사례 — 단지·평형별 최근 5건]" → 평균 산출 미달 평형의 raw 거래 사례. 답변에 사례 형태로 인용 가능 ("최근 거래는 ~억 정도였어요"), 단 "평균이 아닌 사례"라는 점 명시.',
+      '  3) "[참고 통계 — 답변에 단지명 등장 금지]" → 답변에 단지명·시세 절대 등장 X. 통계 안내만 가능.',
+      '세 번째 영역의 단지는 카페에서 평가하지 않은 단지입니다. 답변에 그 단지명을 등장시키면 신뢰도가 무너집니다.',
       '예: 답변에 "CS타워" 같이 카페에 안 다뤄진 단지를 추천하면 안 됩니다.',
+      '',
+      '거래 사례 인용 패턴 (영역 2):',
+      '  - 평균이 산출됐으면 (영역 1): "약 ~억 정도예요" (단정)',
+      '  - 평균 미산출, 사례만 있을 때 (영역 2): "거래가 적어서 평균은 못 내지만, 최근 사례는 ~억 / ~억 정도예요" (사례 인용)',
+      '  - 24평이 영역 1에 없고 영역 2에도 없으면: "최근 거래가 거의 없어서 정확한 시세는 직접 확인이 필요해요" (솔직 고백)',
+      '',
       '카페에서 다룬 단지 중 조건 맞는 게 없으면 솔직히 "조건에 맞는 단지를 카페가 다루지 않아 정확한 추천이 어렵습니다" 라고 답하고, 카페에 없는 단지를 가져와 채우지 마세요.',
       '',
       '【규칙 1 — 출처 호명·메타 표현 절대 금지】',
