@@ -277,7 +277,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
 
       <form
         onSubmit={handleSubmit}
-        className={hasTurns ? 'sticky bottom-4 z-10 pt-4 bg-gradient-to-t from-white via-white to-transparent' : 'mb-8'}
+        className={hasTurns ? 'sticky bottom-4 z-10 pt-4 pb-2 bg-white' : 'mb-8'}
       >
         <div className="relative">
           <textarea

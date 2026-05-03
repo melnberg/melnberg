@@ -6,6 +6,12 @@ import { embedTexts, getOpenAI } from '@/lib/openai';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
+// 시세 view 캐시 — 모듈 스코프, TTL 10분
+// 적재는 일/주 단위로만 일어나므로 10분 캐시는 안전
+type PriceRow = { apt_nm: string; umd_nm: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string };
+let priceCache: { rows: PriceRow[]; expiresAt: number } | null = null;
+const PRICE_CACHE_TTL_MS = 10 * 60 * 1000;
+
 type ChunkRow = {
   chunk_id: number;
   post_id: number;
@@ -177,18 +183,23 @@ export async function POST(req: NextRequest) {
     const rows = (chunks ?? []) as ChunkRow[];
 
     // ─── 시세 보조 컨텍스트 (국토부 실거래가) ───────────────
-    // 한 번의 쿼리로 view 전체 가져오기 (apt_representative_price는 view라서 행 수가 작음)
-    // → corpus와 substring 매칭 → 시세 블록 생성
+    // view를 메모리에 캐시 (TTL 10분) — 매 요청마다 DB 안 감
     let priceContext = '';
     try {
-      type PriceRow = { apt_nm: string; umd_nm: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string };
-      const { data: priceRows } = await supabase
-        .from('apt_representative_price')
-        .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date');
+      let priceRows: PriceRow[] | null = null;
+      if (priceCache && priceCache.expiresAt > Date.now()) {
+        priceRows = priceCache.rows;
+      } else {
+        const { data } = await supabase
+          .from('apt_representative_price')
+          .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date');
+        priceRows = (data as PriceRow[] | null) ?? [];
+        priceCache = { rows: priceRows, expiresAt: Date.now() + PRICE_CACHE_TTL_MS };
+      }
 
       if (priceRows && priceRows.length > 0) {
         const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
-        const matched = (priceRows as PriceRow[])
+        const matched = priceRows
           .filter((p) => p.apt_nm && p.apt_nm.length >= 4 && corpus.includes(p.apt_nm))
           .slice(0, 30);
 
