@@ -5,7 +5,10 @@
 -- 실행 위치: Supabase Dashboard → SQL Editor
 -- ──────────────────────────────────────────────
 
-create or replace view public.apt_representative_price as
+-- 기존 view의 컬럼 순서와 다르면 CREATE OR REPLACE가 실패하므로 DROP 먼저
+drop view if exists public.apt_representative_price;
+
+create view public.apt_representative_price as
 with valid_trades as (
   -- 산출 모집단 — 직거래·해제거래·1층 제외, 최근 6개월 한정
   select
