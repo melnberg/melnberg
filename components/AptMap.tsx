@@ -145,12 +145,11 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 커스텀 핀 이미지 (카카오맵 표준: 2x 레티나, 표시는 1x 사이즈)
-        // 핀 끝(아래 중앙)이 좌표 가리키도록 offset (20, 82)
+        // 커스텀 핀 이미지 — 작은 사이즈 (지도 밀도 고려)
         const pinImage = new window.kakao.maps.MarkerImage(
           '/pins/green_interest_2x.png',
-          new window.kakao.maps.Size(40, 82),
-          { offset: new window.kakao.maps.Point(20, 82) },
+          new window.kakao.maps.Size(24, 49),
+          { offset: new window.kakao.maps.Point(12, 49) },
         );
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
