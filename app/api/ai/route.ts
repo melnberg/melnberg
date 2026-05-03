@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 // 시세 view 캐시 — 모듈 스코프, TTL 10분
 // 적재는 일/주 단위로만 일어나므로 10분 캐시는 안전
-type PriceRow = { apt_nm: string; umd_nm: string; lawd_cd: string; area_group: number; trade_count: number; median_amount: number; last_deal_date: string };
+type PriceRow = { apt_nm: string; umd_nm: string; lawd_cd: string; area_group: number; trade_count: number; median_amount: number; window_used: string; last_deal_date: string };
 let priceCache: { rows: PriceRow[]; expiresAt: number } | null = null;
 const PRICE_CACHE_TTL_MS = 10 * 60 * 1000;
 
@@ -307,7 +307,7 @@ export async function POST(req: NextRequest) {
       ? Promise.resolve({ data: cachedPrice })
       : (supabase
           .from('apt_representative_price')
-          .select('apt_nm, umd_nm, lawd_cd, area_group, trade_count, median_amount, last_deal_date') as unknown as Promise<{ data: PriceRow[] | null }>);
+          .select('apt_nm, umd_nm, lawd_cd, area_group, trade_count, median_amount, window_used, last_deal_date') as unknown as Promise<{ data: PriceRow[] | null }>);
 
     const [searchRes, priceRes] = await Promise.all([searchPromise, pricePromise]);
 
@@ -381,13 +381,13 @@ export async function POST(req: NextRequest) {
         if (matched.length > 0) {
           const lines = matched.map((p) => {
             const eok = (p.median_amount / 10000).toFixed(1);
-            return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (최근 6개월 ${p.trade_count}건 중앙값, 마지막 거래 ${p.last_deal_date})`;
+            return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (${p.window_used} 평균, ${p.trade_count}건, 마지막 거래 ${p.last_deal_date})`;
           });
           const filterDesc = [];
           if (priceRange) filterDesc.push(`가격: ${(priceRange.min / 10000).toFixed(0)}~${(priceRange.max / 10000).toFixed(0)}억`);
           if (lawdCds.size > 0) filterDesc.push(`지역: 시군구 ${lawdCds.size}개 매칭`);
           const filterLine = filterDesc.length > 0 ? `\n질문에서 추출된 조건: ${filterDesc.join(', ')}` : '';
-          priceContext = `\n\n[참고 시세 — 국토부 실거래가 기반]\n정책: 최근 6개월·직거래 제외·해제거래 제외·1층 제외·거래 3건 이상 단지만 산출.${filterLine}\n${lines.join('\n')}`;
+          priceContext = `\n\n[참고 시세 — 국토부 실거래가 기반]\n정책: 최근 2개월 평균 → 거래 부족 시 3개월 → 6개월 순으로 확장. 직거래·해제거래·1층 제외. 6개월 내 거래 3건 이상 단지만 산출.${filterLine}\n${lines.join('\n')}`;
         }
       }
     } catch (e) {
