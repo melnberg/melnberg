@@ -10,6 +10,7 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 // apt_master에서 좌표 있는 단지 전체 fetch (페이지네이션 — PostgREST max-rows=1000 우회)
+// 100세대 미만 단지는 숨김. 세대수 미수집(null)은 일단 표시 (fetch 진행 중일 수 있음).
 async function fetchAptPins(): Promise<AptPin[]> {
   const supabase = await createClient();
   const all: AptPin[] = [];
@@ -18,6 +19,7 @@ async function fetchAptPins(): Promise<AptPin[]> {
       .from('apt_master')
       .select('id, apt_nm, dong, lawd_cd, lat, lng')
       .not('lat', 'is', null)
+      .or('household_count.is.null,household_count.gte.100')
       .range(offset, offset + 999);
     if (error) {
       console.warn('apt_master fetch error at offset', offset, error.message);
