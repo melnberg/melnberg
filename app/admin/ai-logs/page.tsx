@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Footer from '@/components/Footer';
+import SaveAsFaqForm from '@/components/admin/SaveAsFaqForm';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 
@@ -51,6 +52,21 @@ export default async function AdminAiLogsPage({
 
   const { data: rawLogs, count: totalCount } = await query;
   const logs = (rawLogs ?? []) as LogRow[];
+
+  // log_id → 저장된 FAQ post_id 매핑 (이미 FAQ로 저장된 로그 표시용)
+  const logExternalIds = logs.map((l) => `log_${l.id}`);
+  const faqByLogId = new Map<number, number>();
+  if (logExternalIds.length > 0) {
+    const { data: faqPosts } = await supabase
+      .from('cafe_posts')
+      .select('id, external_id')
+      .eq('source', 'faq')
+      .in('external_id', logExternalIds);
+    for (const row of (faqPosts ?? []) as Array<{ id: number; external_id: string }>) {
+      const m = row.external_id.match(/^log_(\d+)$/);
+      if (m) faqByLogId.set(Number(m[1]), row.id);
+    }
+  }
 
   // user_id → display_name 매핑
   const userIds = Array.from(new Set(logs.map((l) => l.user_id).filter((x): x is string => !!x)));
@@ -150,7 +166,12 @@ export default async function AdminAiLogsPage({
                       <span className={`w-[100px] shrink-0 truncate ${user ? 'text-navy font-bold' : 'text-muted text-[12px]'}`}>
                         {userLabel}
                       </span>
-                      <span className="flex-1 min-w-0 text-text truncate">{log.question}</span>
+                      <span className="flex-1 min-w-0 text-text truncate">
+                        {faqByLogId.has(log.id) && (
+                          <span className="inline-block mr-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-cyan/15 text-cyan rounded-sm align-middle">FAQ</span>
+                        )}
+                        {log.question}
+                      </span>
                       <span className="flex-1 min-w-0 text-muted truncate text-[12px]">
                         {log.answer ?? <em className="opacity-60">기록 없음</em>}
                       </span>
@@ -215,6 +236,15 @@ export default async function AdminAiLogsPage({
                           {user ? `회원: ${user}` : `IP: ${log.ip_address ?? '?'}`}
                         </span>
                       </div>
+
+                      {log.question && log.answer && (
+                        <SaveAsFaqForm
+                          logId={log.id}
+                          defaultTitle={log.question}
+                          defaultContent={log.answer}
+                          existingPostId={faqByLogId.get(log.id) ?? null}
+                        />
+                      )}
                     </div>
                   </details>
                 );
