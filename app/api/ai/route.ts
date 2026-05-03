@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import Anthropic from '@anthropic-ai/sdk'; // ← Claude → GPT-5-mini로 교체 (2026-05)
+import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
-import { embedTexts, getOpenAI } from '@/lib/openai';
+import { embedTexts } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -581,22 +581,18 @@ export async function POST(req: NextRequest) {
       '- 과도한 친절·아부("~해드릴게요!", "도와드리겠습니다!") 금지. 차분한 전문가 톤 일관 유지.',
     ].join('\n');
 
-    const systemPrompt = context
-      ? `${corePrompt}\n\n참고 자료:\n${context}${priceContext}`
-      : `${corePrompt}\n\n참고 자료: (검색 결과 없음)\n→ "멜른버그 DB에 관련 내용이 없어요." 한 줄로 답할 것.`;
+    // 시스템 프롬프트 분할 — corePrompt는 매 호출 동일하므로 prompt cache로 묶고,
+    // 동적 부분(카페 검색 결과 + 시세)은 cache 안 함.
+    const dynamicSystem = context
+      ? `\n\n참고 자료:\n${context}${priceContext}`
+      : `\n\n참고 자료: (검색 결과 없음)\n→ "멜른버그 DB에 관련 내용이 없어요." 한 줄로 답할 것.`;
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: 'OPENAI_API_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 });
     }
+    const anthropic = new Anthropic({ apiKey });
 
-    // ─── (구) Anthropic Claude 호출 — 2026-05 GPT-5-mini로 교체. 비교용으로 보존.
-    // const apiKey = process.env.ANTHROPIC_API_KEY;
-    // if (!apiKey) {
-    //   return NextResponse.json({ error: 'ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.' }, { status: 500 });
-    // }
-    // const anthropic = new Anthropic({ apiKey });
-
-    const openai = getOpenAI();
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -604,74 +600,73 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'sources', sources })}\n\n`));
         let fullAnswer = '';
         let _tFirstToken = 0;
-        const _tBeforeOpenAI = Date.now();
+        const _tBeforeLLM = Date.now();
+        let cacheReadTokens = 0;
+        let cacheCreationTokens = 0;
+        let inputTokens = 0;
+        let outputTokens = 0;
         try {
-          // ─── (구) Claude 스트리밍 — 비교용 보존
-          // const anthropicStream = anthropic.messages.stream({
-          //   model: 'claude-sonnet-4-6',
-          //   max_tokens: 4096,
-          //   system: systemPrompt,
-          //   messages: [{ role: 'user', content: question.trim() }],
-          // });
-          // for await (const event of anthropicStream) {
-          //   if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          //     fullAnswer += event.delta.text;
-          //     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: event.delta.text })}\n\n`));
-          //   }
-          // }
-
-          // ─── (신) OpenAI GPT-5-mini 스트리밍
-          const openaiStream = await openai.chat.completions.create({
-            model: 'gpt-5-mini',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: question.trim() },
+          // Anthropic Claude Haiku 4.5 스트리밍 + 프롬프트 캐싱
+          // corePrompt는 매번 동일 → cache_control 적용. dynamic 부분(카페·시세)은 캐시 X.
+          const anthropicStream = anthropic.messages.stream({
+            model: 'claude-haiku-4-5',
+            max_tokens: 4096,
+            system: [
+              { type: 'text', text: corePrompt, cache_control: { type: 'ephemeral' } },
+              { type: 'text', text: dynamicSystem },
             ],
-            stream: true,
-            max_completion_tokens: 4096,
-            // GPT-5 reasoning 모델: medium 사용 — 답변 깊이·맥락 통합력 확보
-            // (latency ~12~15초로 늘지만 'minimal' 시절의 얕은 답변 문제 해소)
-            reasoning_effort: 'medium',
+            messages: [{ role: 'user', content: question.trim() }],
           });
 
           // ** (굵게 마크다운) 강제 제거 — 모델이 가끔 어겨서 streaming delta에서도 잘라냄.
-          // 청크 사이에 ** 가 쪼개지는 경우 대비해 직전 마지막 글자가 '*'이면 1자 버퍼링.
           let starBuffer = '';
-          for await (const chunk of openaiStream) {
-            const raw = chunk.choices?.[0]?.delta?.content ?? '';
-            if (!raw) continue;
-            if (_tFirstToken === 0) _tFirstToken = Date.now();
-            // 직전 청크 끝의 * 와 이번 청크 앞을 합쳐서 처리
-            const merged = starBuffer + raw;
-            // 마지막 한 글자가 * 면 다음 청크와 합쳐 ** 검사하기 위해 버퍼에 보류
-            const endsWithStar = merged.endsWith('*');
-            const body = endsWithStar ? merged.slice(0, -1) : merged;
-            starBuffer = endsWithStar ? '*' : '';
-            const cleaned = body.replace(/\*\*/g, '');
-            if (cleaned) {
-              fullAnswer += cleaned;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: cleaned })}\n\n`));
+          for await (const event of anthropicStream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              const raw = event.delta.text;
+              if (!raw) continue;
+              if (_tFirstToken === 0) _tFirstToken = Date.now();
+              const merged = starBuffer + raw;
+              const endsWithStar = merged.endsWith('*');
+              const body = endsWithStar ? merged.slice(0, -1) : merged;
+              starBuffer = endsWithStar ? '*' : '';
+              const cleaned = body.replace(/\*\*/g, '');
+              if (cleaned) {
+                fullAnswer += cleaned;
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: cleaned })}\n\n`));
+              }
+            } else if (event.type === 'message_start') {
+              const usage = event.message.usage;
+              if (usage) {
+                inputTokens = usage.input_tokens ?? 0;
+                cacheCreationTokens = usage.cache_creation_input_tokens ?? 0;
+                cacheReadTokens = usage.cache_read_input_tokens ?? 0;
+              }
+            } else if (event.type === 'message_delta') {
+              if (event.usage?.output_tokens) outputTokens = event.usage.output_tokens;
             }
           }
-          // 마지막 버퍼에 남은 단일 * 한 글자도 정리해서 흘려보냄
           if (starBuffer) {
             fullAnswer += starBuffer;
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', text: starBuffer })}\n\n`));
           }
           const _tDone = Date.now();
-          // 단계별 타이밍 로그 — Vercel Functions 로그에서 확인
+          // 단계별 타이밍 + 토큰·캐시 로그
           console.log('[AI timings]', {
             embed_ms: _tEmbed - _t0,
             search_ms: _tSearch - _tEmbed,
             price_ms: _tPrice - _tSearch,
-            openai_first_token_ms: _tFirstToken ? _tFirstToken - _tBeforeOpenAI : null,
-            openai_full_ms: _tDone - _tBeforeOpenAI,
+            llm_first_token_ms: _tFirstToken ? _tFirstToken - _tBeforeLLM : null,
+            llm_full_ms: _tDone - _tBeforeLLM,
             total_ms: _tDone - _t0,
             answer_chars: fullAnswer.length,
+            input_tokens: inputTokens,
+            cache_read_tokens: cacheReadTokens,
+            cache_creation_tokens: cacheCreationTokens,
+            output_tokens: outputTokens,
           });
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
         } catch (err) {
-          console.error('OpenAI stream error:', err);
+          console.error('Anthropic stream error:', err);
           const message = err instanceof Error ? err.message : 'AI 응답 생성 중 오류가 발생했습니다.';
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', message })}\n\n`));
         } finally {
