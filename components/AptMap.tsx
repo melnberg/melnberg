@@ -7,12 +7,13 @@ import AptDiscussionPanel from './AptDiscussionPanel';
 type KakaoLatLng = { __latlng: never };
 type KakaoMarker = { __marker: never };
 type KakaoMap = { __map: never };
+type KakaoCluster = { getCenter: () => KakaoLatLng };
 type KakaoMaps = {
   load: (cb: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
   Map: new (container: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap;
   Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap; clickable?: boolean }) => KakaoMarker;
-  event: { addListener: (target: unknown, type: string, handler: () => void) => void };
+  event: { addListener: (target: unknown, type: string, handler: (...args: unknown[]) => void) => void };
   MarkerClusterer: new (opts: {
     map: KakaoMap;
     averageCenter?: boolean;
@@ -23,6 +24,7 @@ type KakaoMaps = {
     styles?: Array<Record<string, string>>;
   }) => { addMarkers: (m: KakaoMarker[]) => void };
 };
+type KakaoMapInst = KakaoMap & { getLevel: () => number; setLevel: (level: number, opts?: { anchor?: KakaoLatLng }) => void };
 declare global {
   interface Window {
     kakao: { maps: KakaoMaps };
@@ -92,37 +94,40 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
       .then(() => {
         if (cancelled || !mapRef.current) return;
         const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
-        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 });
+        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
 
-        // 임시 진단: 클러스터러 비활성화 — 마커 클릭이 진짜 fire하는지 확인용
-        const useClusterer = false;
-        console.log(`[AptMap] pins: ${pins.length}, MarkerClusterer 사용: ${useClusterer} (디버그 모드: 클러스터러 OFF)`);
+        const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 마커 생성 (pin 한 개당 1마커). 클러스터러가 없으면 지도에 직접 붙임.
+        // 마커 생성 — 항상 map에 직접 setMap. 클러스터러는 visibility만 관리하도록.
+        // (이전 시도에서 마커를 map 없이 만들고 클러스터러에만 넘기면 click이 가로채진 것으로 추정)
         const markers: KakaoMarker[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
           const marker = new window.kakao.maps.Marker({
             position: pos,
             title: p.apt_nm,
             clickable: true,
-            ...(useClusterer ? {} : { map }),
+            map,
           });
-          window.kakao.maps.event.addListener(marker, 'click', () => {
-            console.log('[AptMap] marker clicked:', p.apt_nm, p.id);
-            setSelected(p);
-          });
+          window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
           return marker;
         });
 
         if (useClusterer) {
-          new window.kakao.maps.MarkerClusterer({
+          // disableClickZoom: true → 클러스터 click을 우리가 직접 처리
+          const clusterer = new window.kakao.maps.MarkerClusterer({
             map,
             averageCenter: true,
             minLevel: 6,
-            disableClickZoom: false,
+            disableClickZoom: true,
             markers,
             calculator: [10, 50, 200],
             styles: CLUSTER_STYLES,
+          });
+          // 클러스터 클릭 → 줌인 (마커 click과 분리)
+          window.kakao.maps.event.addListener(clusterer, 'clusterclick', (...args: unknown[]) => {
+            const cluster = args[0] as KakaoCluster;
+            const level = map.getLevel() - 2;
+            map.setLevel(level < 1 ? 1 : level, { anchor: cluster.getCenter() });
           });
         }
       })
