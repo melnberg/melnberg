@@ -179,11 +179,12 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
         // 클러스터러 미사용 시에만 map에 직접 부착.
-        // 마커 분류:
-        //   tier 0 (big): 2000+ 세대 — 항상 표시
-        //   tier 1 (mid): 300~1999 + 1000~1999 초록 + 300~999 파랑 핀 — 줌 5 이하에서 표시
-        //   tier 2 (dot): ≤299 + 미수집 — 파란 점, 줌 3 이하에서만 표시
-        type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 };
+        // 4단계 줌별 가시성:
+        //   tier 0 (≥2000): 항상 표시
+        //   tier 1 (1000~1999, 초록): 줌 ≤6
+        //   tier 2 (300~999, 파랑 핀): 줌 ≤5
+        //   tier 3 (≤299/미수집, 파란 점): 줌 ≤3
+        type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3 };
         const allMarkers: MarkerTier[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
           const marker = new window.kakao.maps.Marker({
@@ -195,18 +196,15 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           }) as KakaoMarkerInst;
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
           const hh = p.household_count ?? 0;
-          const tier: 0 | 1 | 2 = hh >= 2000 ? 0 : hh >= 300 ? 1 : 2;
+          const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
           return { marker, tier };
         });
 
         function applyVisibility() {
           const level = map.getLevel();
-          // tier 0 — 항상 보임
-          // tier 1 — 줌 5 이하
-          // tier 2 (점) — 줌 3 이하
           for (const { marker, tier } of allMarkers) {
             if (tier === 0) continue;
-            const visible = tier === 1 ? level <= 5 : level <= 3;
+            const visible = (tier === 1 && level <= 6) || (tier === 2 && level <= 5) || (tier === 3 && level <= 3);
             marker.setMap(visible ? map : null);
           }
         }

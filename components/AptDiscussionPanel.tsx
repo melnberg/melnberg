@@ -308,29 +308,29 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
         {/* 단지 정보 (한국부동산원 ODcloud) */}
         {(apt.household_count || apt.building_count || apt.kapt_build_year || apt.geocoded_address) && (
-          <div className="mt-3 pt-3 border-t border-[#f0f0f0] grid grid-cols-3 gap-2 text-[12px]">
+          <div className="mt-3 pt-3 border-t border-[#f0f0f0] grid grid-cols-3 gap-2">
             {apt.household_count && (
               <div>
-                <div className="text-muted text-[10px]">세대수</div>
-                <div className="font-bold text-navy">{apt.household_count.toLocaleString()}</div>
+                <div className="text-[#666] text-[12px] font-medium">세대수</div>
+                <div className="font-bold text-black text-[16px]">{apt.household_count.toLocaleString()}</div>
               </div>
             )}
             {apt.building_count && (
               <div>
-                <div className="text-muted text-[10px]">동수</div>
-                <div className="font-bold text-navy">{apt.building_count}개</div>
+                <div className="text-[#666] text-[12px] font-medium">동수</div>
+                <div className="font-bold text-black text-[16px]">{apt.building_count}개</div>
               </div>
             )}
             {apt.kapt_build_year && (
               <div>
-                <div className="text-muted text-[10px]">준공</div>
-                <div className="font-bold text-navy">{apt.kapt_build_year}년</div>
+                <div className="text-[#666] text-[12px] font-medium">준공</div>
+                <div className="font-bold text-black text-[16px]">{apt.kapt_build_year}년</div>
               </div>
             )}
             {apt.geocoded_address && (
-              <div className="col-span-3 pt-1.5 border-t border-[#f5f5f5]">
-                <div className="text-muted text-[10px]">주소</div>
-                <div className="text-text text-[11px] leading-snug">{apt.geocoded_address}</div>
+              <div className="col-span-3 pt-2 border-t border-[#f5f5f5]">
+                <div className="text-[#666] text-[12px] font-medium">주소</div>
+                <div className="text-black text-[14px] leading-snug font-medium">{apt.geocoded_address}</div>
               </div>
             )}
           </div>
