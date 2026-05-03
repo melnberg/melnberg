@@ -323,16 +323,12 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         )}
       </div>
 
-      {/* 가운데 하단 — AI 검색 (B 위치). Enter → /ai로 자동 전송. Shift+Enter 줄바꿈. */}
+      {/* 가운데 하단 — AI 검색 (B 위치). /ai 페이지 디자인과 통일. */}
       <form
         onSubmit={(e) => { e.preventDefault(); submitAi(); }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[480px] max-w-[calc(100vw-200px)] z-20"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[520px] max-w-[calc(100vw-200px)] z-20"
       >
-        <div className="bg-white border border-navy shadow-[0_8px_24px_rgba(0,32,96,0.15)] flex items-end">
-          <div className="ml-4 mb-3 flex-shrink-0 flex items-center gap-1 text-cyan">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
-            <span className="text-[11px] font-bold tracking-wider uppercase">AI</span>
-          </div>
+        <div className="relative">
           <textarea
             ref={aiTextareaRef}
             value={aiQuery}
@@ -343,18 +339,24 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
                 submitAi();
               }
             }}
-            placeholder="멜른버그 카페·실거래가 DB 기반으로 답해드림 (Shift+Enter 줄바꿈)"
+            placeholder="멜른버그 카페·실거래가 DB 기반으로 답해드림"
             rows={1}
-            className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent resize-none leading-relaxed"
-            style={{ minHeight: '44px' }}
+            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-5 py-4 pr-16 text-[15px] resize-none overflow-hidden outline-none rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] leading-relaxed"
+            style={{ minHeight: '60px' }}
           />
-          <button type="submit" className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark self-stretch flex-shrink-0">
-            질문 →
+          <button
+            type="submit"
+            aria-label="질문하기"
+            className="absolute right-3 bottom-3 bg-navy text-white w-10 h-10 rounded-lg flex items-center justify-center hover:bg-navy-dark disabled:opacity-40"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
+            </svg>
           </button>
         </div>
-        <div className="mt-1 text-[10px] text-center text-muted bg-white/80 backdrop-blur-sm px-2 py-0.5 inline-block left-1/2 -translate-x-1/2 relative">
-          답변은 멜른버그 카페 글 + 국토부 실거래가 데이터에 한정됨
-        </div>
+        <p className="mt-2 text-[11px] text-muted text-center leading-relaxed bg-white/80 backdrop-blur-sm rounded px-2 py-0.5">
+          멜른버그 카페·실거래가 DB 기반. 입력하신 질문과 답변은 서비스 품질 개선 및 콘텐츠 제작에 활용될 수 있으며, 개인을 식별할 수 있는 정보는 포함되지 않습니다.
+        </p>
       </form>
 
 

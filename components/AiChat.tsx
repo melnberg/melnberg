@@ -384,7 +384,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                 handleSubmit(e as unknown as React.FormEvent);
               }
             }}
-            placeholder={hasTurns ? '메시지를 입력하세요…' : '궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)'}
+            placeholder={hasTurns ? '메시지를 입력하세요…' : '궁금한 점을 입력하세요.'}
             rows={2}
             disabled={loading}
             className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-6 py-4 pr-16 text-[15px] text-left resize-none overflow-hidden outline-none rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] disabled:bg-gray-50 disabled:cursor-not-allowed min-h-[80px]"
