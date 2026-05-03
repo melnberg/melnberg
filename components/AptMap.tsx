@@ -329,9 +329,6 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         className="absolute bottom-1 left-1/2 -translate-x-1/2 w-[520px] max-w-[calc(100vw-200px)] z-20"
       >
         <div className="relative">
-          <span className="absolute -top-2 left-3 z-10 bg-cyan text-white text-[10px] font-bold tracking-wider uppercase px-1.5 py-0.5">
-            Beta
-          </span>
           <textarea
             ref={aiTextareaRef}
             value={aiQuery}

@@ -232,9 +232,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
   }, []);
 
   const headTitle = title ?? 'AI 질문';
-  const headSubtitle = subtitle ?? (
-    <>멜른버그 카페 글을 근거로 답변. <span className="text-cyan font-bold">베타</span></>
-  );
+  const headSubtitle = subtitle ?? <>멜른버그 카페 글을 근거로 답변합니다.</>;
 
   const hasTurns = turns.length > 0;
   // auto=1 (홈에서 넘어옴)이면 hero 건너뛰기 — 깜빡임 방지
