@@ -170,7 +170,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
     <>
     <div
       style={{ width: 'min(900px, 100%)' }}
-      className={`mx-auto px-10 ${showHero && centered ? 'py-20 text-center' : 'py-10'}`}
+      className={`mx-auto px-10 ${showHero && centered ? 'py-20 text-center' : 'py-10'} ${showFooter && showHero ? 'min-h-screen' : ''}`}
     >
       {showHero && (
         <>
