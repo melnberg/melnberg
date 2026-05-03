@@ -348,46 +348,53 @@ export async function POST(req: NextRequest) {
         const { lawdCds } = extractRegions(q);
         const corpus = rows.map((r) => `${r.post_title} ${r.chunk_content}`).join(' ');
 
-        // key = 단지명 + 평형 group → 중복 제거
-        const matchedMap = new Map<string, PriceRow & { source: 'direct' | 'cafe' }>();
+        // 카페 코퍼스에 등장하는 단지만 추천 대상.
+        // 가격·지역 조건은 그 위에 추가 필터로만 작동 (조건 안 맞으면 제외).
+        const cafeMatched: PriceRow[] = [];
+        let priceOnlyCount = 0;
 
-        // 1. 직접 필터 매칭 (가격대·지역 조건 있을 때만)
-        if (priceRange || lawdCds.size > 0) {
-          for (const p of priceRows) {
-            const priceOk = !priceRange || (p.median_amount >= priceRange.min && p.median_amount <= priceRange.max);
-            const regionOk = lawdCds.size === 0 || lawdCds.has(p.lawd_cd);
-            if (priceOk && regionOk) {
-              const key = `${p.apt_nm}__${p.area_group}`;
-              matchedMap.set(key, { ...p, source: 'direct' });
-            }
-          }
-        }
-
-        // 2. 카페 코퍼스 fuzzy 매칭 (보조)
         for (const p of priceRows) {
-          const key = `${p.apt_nm}__${p.area_group}`;
-          if (matchedMap.has(key)) continue;
-          if (aptInCorpus(p.apt_nm, corpus)) {
-            matchedMap.set(key, { ...p, source: 'cafe' });
+          if (!p.apt_nm || p.apt_nm.length < 4) continue;
+          const isCafe = aptInCorpus(p.apt_nm, corpus);
+          const priceOk = !priceRange || (p.median_amount >= priceRange.min && p.median_amount <= priceRange.max);
+          const regionOk = lawdCds.size === 0 || lawdCds.has(p.lawd_cd);
+
+          if (isCafe && priceOk && regionOk) {
+            cafeMatched.push(p);
+          } else if (!isCafe && priceOk && regionOk && (priceRange || lawdCds.size > 0)) {
+            // 카페엔 없지만 가격·지역 조건만 맞는 단지 → 통계로만 카운트
+            priceOnlyCount++;
           }
         }
 
-        // 정렬: 직접 매칭 먼저, 그 안에서는 거래량 많은 순 → 카페 매칭은 거래량 순
-        const matched = Array.from(matchedMap.values()).sort((a, b) => {
-          if (a.source !== b.source) return a.source === 'direct' ? -1 : 1;
-          return b.trade_count - a.trade_count;
-        }).slice(0, 40);
+        // 카페 매칭 단지 정렬: 거래량 많은 순
+        cafeMatched.sort((a, b) => b.trade_count - a.trade_count);
+        const slicedCafe = cafeMatched.slice(0, 30);
 
-        if (matched.length > 0) {
-          const lines = matched.map((p) => {
-            const eok = (p.median_amount / 10000).toFixed(1);
-            return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (${p.window_used} 평균, ${p.trade_count}건, 마지막 거래 ${p.last_deal_date})`;
-          });
+        if (slicedCafe.length > 0 || priceOnlyCount > 0) {
           const filterDesc = [];
           if (priceRange) filterDesc.push(`가격: ${(priceRange.min / 10000).toFixed(0)}~${(priceRange.max / 10000).toFixed(0)}억`);
           if (lawdCds.size > 0) filterDesc.push(`지역: 시군구 ${lawdCds.size}개 매칭`);
           const filterLine = filterDesc.length > 0 ? `\n질문에서 추출된 조건: ${filterDesc.join(', ')}` : '';
-          priceContext = `\n\n[참고 시세 — 국토부 실거래가 기반]\n정책: 최근 2개월 평균 → 거래 부족 시 3개월 → 6개월 순으로 확장. 직거래·해제거래·1층 제외. 6개월 내 거래 3건 이상 단지만 산출.${filterLine}\n${lines.join('\n')}`;
+
+          let block = `\n\n[참고 시세 — 추천 대상 단지의 현재 시세]\n`;
+          block += `규칙: 카페에서 다룬 단지 중 사용자 조건(가격·지역) 맞는 것만 표시. 답변에 등장할 수 있는 단지는 이 목록뿐.\n`;
+          block += `산출 정책: 최근 2개월 평균 → 거래 부족 시 3개월 → 6개월 순으로 확장. 직거래·해제거래·1층 제외.${filterLine}\n`;
+
+          if (slicedCafe.length > 0) {
+            const lines = slicedCafe.map((p) => {
+              const eok = (p.median_amount / 10000).toFixed(1);
+              return `- ${p.apt_nm} (${p.umd_nm}) ${p.area_group}㎡대: 약 ${eok}억 (${p.window_used} 평균, ${p.trade_count}건, 마지막 거래 ${p.last_deal_date})`;
+            });
+            block += lines.join('\n');
+          } else {
+            block += '(카페에서 다룬 단지 중 조건에 맞는 단지 없음)';
+          }
+
+          if (priceOnlyCount > 0) {
+            block += `\n\n[참고 통계 — 답변에 단지명 등장 금지]\n사용자 조건에 들어오는 단지는 카페에서 다루지 않은 것까지 포함해 약 ${priceOnlyCount}개 더 있음. 다만 카페에서 평가하지 않은 단지는 추천 대상이 아니므로 답변에 단지명·시세를 절대 쓰지 말 것. 답변 끝에 "이 외에도 가격 조건에 맞는 단지가 더 있지만, 멜른버그에서 다루지 않은 단지라 별도 임장·조사가 필요합니다" 정도로만 안내 가능.`;
+          }
+          priceContext = block;
         }
       }
     } catch (e) {
@@ -453,6 +460,14 @@ export async function POST(req: NextRequest) {
       '  - 추천 단지 선정 → A(카페)에서 카페가 어느 단지를 추천했는지 확인',
       '  - 그 단지가 사용자 가격대에 맞는지 → B(실거래)에서 median_amount 확인',
       '  - 둘 다 만족하는 단지만 답변에 등장. 한쪽만 만족하면 제외하거나 명시 (예: "카페에서 추천하지만 지금은 ~억대라 범위 밖이에요").',
+      '',
+      '!!! 절대 규칙 — 카페 미수록 단지 등장 금지 !!!',
+      '[참고 시세] 블록은 두 영역으로 나뉠 수 있습니다:',
+      '  1) "[참고 시세 — 추천 대상 단지의 현재 시세]" → 답변에 등장 가능한 유일한 단지 목록',
+      '  2) "[참고 통계 — 답변에 단지명 등장 금지]" → 답변에 단지명·시세 절대 등장 X. 통계 안내만 가능.',
+      '두 번째 영역의 단지는 카페에서 평가하지 않은 단지입니다. 답변에 그 단지명을 등장시키면 신뢰도가 무너집니다.',
+      '예: 답변에 "CS타워" 같이 카페에 안 다뤄진 단지를 추천하면 안 됩니다.',
+      '카페에서 다룬 단지 중 조건 맞는 게 없으면 솔직히 "조건에 맞는 단지를 카페가 다루지 않아 정확한 추천이 어렵습니다" 라고 답하고, 카페에 없는 단지를 가져와 채우지 마세요.',
       '',
       '【규칙 1 — 출처 호명·메타 표현 절대 금지】',
       '아래 표현은 답변에 한 번도 등장하면 안 됩니다 (한 단어라도 섞으면 답변 실패):',
