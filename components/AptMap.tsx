@@ -95,10 +95,25 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 검색 결과 — 단지명 부분 매칭, 최대 8개
-  const searchResults = searchQuery.trim().length >= 1
-    ? pins.filter((p) => p.apt_nm.includes(searchQuery.trim())).slice(0, 8)
-    : [];
+  // 검색 결과 — 단지명·동 조합 매칭. "봉천두산"·"두산"·"두산 봉천" 모두 매칭.
+  const searchResults = (() => {
+    const q = searchQuery.trim();
+    if (!q) return [];
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return pins
+      .filter((p) => {
+        const dongFull = p.dong ?? '';
+        const dongShort = dongFull.replace(/동$/, '');
+        const targets = [
+          p.apt_nm,
+          `${dongShort}${p.apt_nm}`,
+          `${dongFull}${p.apt_nm}`,
+          `${p.apt_nm}${dongShort}`,
+        ];
+        return tokens.every((t) => targets.some((target) => target.includes(t)));
+      })
+      .slice(0, 8);
+  })();
 
   function jumpToApt(p: AptPin) {
     const inst = mapInstRef.current;
