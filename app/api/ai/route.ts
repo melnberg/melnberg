@@ -154,19 +154,25 @@ export async function POST(req: NextRequest) {
     const _tEmbed = Date.now();
     const keywords = extractKeywords(question.trim());
 
-    let chunks: ChunkRow[] | null = null;
-    let searchError: { message?: string } | null = null;
+    // 카페 검색 + 시세 view 동시 호출 (둘은 서로 독립적이라 병렬 가능)
+    const searchPromise = supabase.rpc('search_cafe_chunks_hybrid', {
+      query_embedding: queryEmbedding as unknown as string,
+      keywords,
+      match_count: 10,
+    });
 
-    // 1차: 하이브리드 검색 (008 마이그레이션 적용 시)
-    {
-      const res = await supabase.rpc('search_cafe_chunks_hybrid', {
-        query_embedding: queryEmbedding as unknown as string,
-        keywords,
-        match_count: 10,
-      });
-      chunks = (res.data as ChunkRow[] | null) ?? null;
-      searchError = res.error;
-    }
+    // 시세 view 캐시 hit이면 promise 즉시 resolve
+    const cachedPrice = priceCache && priceCache.expiresAt > Date.now() ? priceCache.rows : null;
+    const pricePromise: Promise<{ data: PriceRow[] | null }> = cachedPrice
+      ? Promise.resolve({ data: cachedPrice })
+      : (supabase
+          .from('apt_representative_price')
+          .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date') as unknown as Promise<{ data: PriceRow[] | null }>);
+
+    const [searchRes, priceRes] = await Promise.all([searchPromise, pricePromise]);
+
+    let chunks: ChunkRow[] | null = (searchRes.data as ChunkRow[] | null) ?? null;
+    const searchError = searchRes.error;
 
     // 폴백: 하이브리드 RPC가 아직 DB에 없으면 기존 벡터-only RPC로
     if (searchError) {
@@ -185,18 +191,11 @@ export async function POST(req: NextRequest) {
     const _tSearch = Date.now();
     const rows = (chunks ?? []) as ChunkRow[];
 
-    // ─── 시세 보조 컨텍스트 (국토부 실거래가) ───────────────
-    // view를 메모리에 캐시 (TTL 10분) — 매 요청마다 DB 안 감
+    // ─── 시세 보조 컨텍스트 (priceRes로부터) ───────────────
     let priceContext = '';
     try {
-      let priceRows: PriceRow[] | null = null;
-      if (priceCache && priceCache.expiresAt > Date.now()) {
-        priceRows = priceCache.rows;
-      } else {
-        const { data } = await supabase
-          .from('apt_representative_price')
-          .select('apt_nm, umd_nm, area_group, trade_count, median_amount, last_deal_date');
-        priceRows = (data as PriceRow[] | null) ?? [];
+      const priceRows: PriceRow[] | null = (priceRes.data as PriceRow[] | null) ?? [];
+      if (!cachedPrice && priceRows) {
         priceCache = { rows: priceRows, expiresAt: Date.now() + PRICE_CACHE_TTL_MS };
       }
 
@@ -358,6 +357,8 @@ export async function POST(req: NextRequest) {
             ],
             stream: true,
             max_completion_tokens: 4096,
+            // GPT-5 reasoning 모델: 기본 medium → minimal로 낮춰서 첫 토큰 latency 단축
+            reasoning_effort: 'minimal',
           });
 
           for await (const chunk of openaiStream) {
