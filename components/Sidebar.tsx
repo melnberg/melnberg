@@ -85,16 +85,6 @@ export default function Sidebar({ current, user }: Props) {
           )}
         </div>
 
-        <div className="px-5 pt-2 pb-3">
-          <Link
-            href="/짧은상담"
-            className="flex items-center justify-center w-full bg-navy text-white py-3.5 px-4 text-sm font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
-            onClick={() => setOpen(false)}
-          >
-            상담 신청 →
-          </Link>
-        </div>
-
         <nav className="flex-1 py-1 pb-4 flex flex-col">
           <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
           <SItem href="/" label="멜른버그 AI" active={current === 'home'} icon={<AiIcon />} onClick={() => setOpen(false)} />

@@ -3,12 +3,24 @@
 import { useEffect, useRef, useState } from 'react';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
+type KakaoLatLng = { __latlng: never };
+type KakaoMarker = { __marker: never };
+type KakaoMap = { __map: never };
 type KakaoMaps = {
   load: (cb: () => void) => void;
-  LatLng: new (lat: number, lng: number) => unknown;
-  Map: new (container: HTMLElement, opts: { center: unknown; level: number }) => unknown;
-  Marker: new (opts: { position: unknown; map: unknown; title?: string }) => unknown;
+  LatLng: new (lat: number, lng: number) => KakaoLatLng;
+  Map: new (container: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap;
+  Marker: new (opts: { position: KakaoLatLng; title?: string }) => KakaoMarker;
   event: { addListener: (target: unknown, type: string, handler: () => void) => void };
+  MarkerClusterer: new (opts: {
+    map: KakaoMap;
+    averageCenter?: boolean;
+    minLevel?: number;
+    disableClickZoom?: boolean;
+    markers?: KakaoMarker[];
+    calculator?: number[];
+    styles?: Array<Record<string, string>>;
+  }) => { addMarkers: (m: KakaoMarker[]) => void };
 };
 declare global {
   interface Window {
@@ -16,33 +28,22 @@ declare global {
   }
 }
 
-type Apt = {
-  id: string;
-  name: string;
-  dong: string;
+export type AptPin = {
+  id: number;
+  apt_nm: string;
+  dong: string | null;
+  lawd_cd: string;
   lat: number;
   lng: number;
 };
 
-// Phase B — 하드코딩 핀 (시각 검증용). 진짜 좌표는 Phase C에서 apt_master view로 교체.
-const SAMPLE_APTS: Apt[] = [
-  { id: 'banpo-jai',      name: '반포자이',          dong: '반포동',   lat: 37.5076, lng: 127.0094 },
-  { id: 'rae-perstige',   name: '래미안퍼스티지',     dong: '반포동',   lat: 37.5063, lng: 127.0079 },
-  { id: 'acro-river',     name: '아크로리버파크',     dong: '반포동',   lat: 37.5108, lng: 127.0024 },
-  { id: 'jamsil-jugong5', name: '잠실주공5단지',      dong: '잠실동',   lat: 37.5118, lng: 127.0820 },
-  { id: 'dogok-rexle',    name: '도곡렉슬',          dong: '도곡동',   lat: 37.4853, lng: 127.0467 },
-  { id: 'eunma',          name: '은마아파트',         dong: '대치동',   lat: 37.4998, lng: 127.0606 },
-  { id: 'helio',          name: '헬리오시티',         dong: '가락동',   lat: 37.5054, lng: 127.1036 },
-  { id: 'gaepo-jugong1',  name: '래미안블레스티지',   dong: '개포동',   lat: 37.4799, lng: 127.0497 },
-];
-
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
-const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false`;
+const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=clusterer`;
 
 function loadKakaoSdk(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('SSR'));
-    if (window.kakao && window.kakao.maps) return resolve();
+    if (window.kakao && window.kakao.maps && window.kakao.maps.MarkerClusterer) return resolve();
     const existing = document.querySelector(`script[src^="https://dapi.kakao.com/v2/maps/sdk.js"]`);
     if (existing) {
       existing.addEventListener('load', () => window.kakao.maps.load(() => resolve()));
@@ -57,9 +58,29 @@ function loadKakaoSdk(): Promise<void> {
   });
 }
 
-export default function AptMap() {
+// 클러스터 색상 단계 (CLAUDE.md 컬러 규칙: navy/blue/cyan 3색)
+const CLUSTER_STYLES = [
+  { background: '#00B0F0', color: '#fff', size: '36px' },   // 1~9
+  { background: '#0070C0', color: '#fff', size: '42px' },   // 10~49
+  { background: '#002060', color: '#fff', size: '50px' },   // 50~199
+  { background: '#002060', color: '#fff', size: '60px' },   // 200+
+].map((s) => ({
+  background: s.background,
+  color: s.color,
+  width: s.size,
+  height: s.size,
+  borderRadius: '50%',
+  textAlign: 'center',
+  lineHeight: s.size,
+  fontWeight: '700',
+  fontSize: '13px',
+  border: '2px solid rgba(255,255,255,0.7)',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+}));
+
+export default function AptMap({ pins }: { pins: AptPin[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState<Apt | null>(null);
+  const [selected, setSelected] = useState<AptPin | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,18 +91,31 @@ export default function AptMap() {
       .then(() => {
         if (cancelled || !mapRef.current) return;
         const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
-        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 });
+        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 8 });
 
-        for (const apt of SAMPLE_APTS) {
-          const pos = new window.kakao.maps.LatLng(apt.lat, apt.lng);
-          const marker = new window.kakao.maps.Marker({ position: pos, map, title: apt.name });
-          window.kakao.maps.event.addListener(marker, 'click', () => setSelected(apt));
-        }
+        // 마커 생성 (pin 한 개당 1마커)
+        const markers: KakaoMarker[] = pins.map((p) => {
+          const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
+          const marker = new window.kakao.maps.Marker({ position: pos, title: p.apt_nm });
+          window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
+          return marker;
+        });
+
+        // 클러스터러 — 동/구 단위로 자동 묶임 (줌 레벨에 따라)
+        new window.kakao.maps.MarkerClusterer({
+          map,
+          averageCenter: true,
+          minLevel: 5,                  // 줌 레벨 5 이상에서만 클러스터
+          disableClickZoom: false,      // 클러스터 클릭 시 자동 줌인
+          markers,
+          calculator: [10, 50, 200],    // 묶음 크기 단계
+          styles: CLUSTER_STYLES,
+        });
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
 
     return () => { cancelled = true; };
-  }, []);
+  }, [pins]);
 
   if (error) {
     return (
@@ -95,12 +129,19 @@ export default function AptMap() {
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
+      {/* 좌상단 정보 카드 */}
+      <div className="absolute top-4 left-4 bg-white border border-border px-4 py-3 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+        <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">아파트 토론방</div>
+        <div className="text-sm font-bold text-navy mt-0.5">{pins.length.toLocaleString()}개 단지</div>
+        <div className="text-[11px] text-muted mt-0.5">핀을 눌러 단지별 토론방으로 들어가세요</div>
+      </div>
+
       {selected && (
         <aside className="absolute top-0 right-0 h-full w-[360px] max-w-full bg-white border-l border-border shadow-[-8px_0_24px_rgba(0,0,0,0.06)] flex flex-col">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <div>
-              <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{selected.dong}</div>
-              <h2 className="text-[18px] font-bold text-navy tracking-tight">{selected.name}</h2>
+              <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{selected.dong ?? ''}</div>
+              <h2 className="text-[18px] font-bold text-navy tracking-tight">{selected.apt_nm}</h2>
             </div>
             <button
               type="button"
