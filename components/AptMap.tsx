@@ -145,11 +145,11 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
-        // 커스텀 핀 — 룩(체스 성) SVG. 비율 200:305 ≈ 2:3, 사이즈 3배 확대.
+        // 커스텀 핀 — 룩(체스 성) SVG. 비율 200:305 ≈ 2:3.
         const pinImage = new window.kakao.maps.MarkerImage(
           '/pins/rook_castle_pin_clean.svg',
-          new window.kakao.maps.Size(72, 110),
-          { offset: new window.kakao.maps.Point(36, 110) },
+          new window.kakao.maps.Size(36, 55),
+          { offset: new window.kakao.maps.Point(18, 55) },
         );
 
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
@@ -175,6 +175,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             map,
             averageCenter: true,
             minLevel: 3,
+            minClusterSize: 1,    // 외딴 1개 단지도 클러스터로 (줌아웃에서 룩 핀 안 보이게)
             gridSize: 35,
             disableClickZoom: true,
             markers,
