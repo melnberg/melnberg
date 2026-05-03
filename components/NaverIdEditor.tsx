@@ -36,19 +36,28 @@ export default function NaverIdEditor({ initial }: { initial: string | null }) {
       if (pErr) { setErr(`저장 실패: ${pErr.message}`); return; }
       if (!updated) { setErr('저장 실패: 프로필 없음'); return; }
 
-      // 카페 유료회원 매칭
+      // 카페 유료회원 매칭 — 네이버ID + 닉네임 둘 다 일치해야 함
       if (naverId) {
-        const { data: matched } = await supabase
-          .from('cafe_paid_members')
-          .select('naver_id')
-          .eq('naver_id', naverId)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
           .maybeSingle();
-        if (matched) {
-          const { error: tErr } = await supabase
-            .from('profiles')
-            .update({ tier: 'paid', tier_expires_at: '2099-12-31T00:00:00Z' })
-            .eq('id', user.id);
-          if (!tErr) setTierMsg('카페 유료회원 인증 완료 — 정회원으로 전환됐습니다.');
+        const nickname = (profile as { display_name?: string | null } | null)?.display_name;
+        if (nickname) {
+          const { data: matched } = await supabase
+            .from('cafe_paid_members')
+            .select('naver_id')
+            .eq('naver_id', naverId)
+            .eq('cafe_nickname', nickname)
+            .maybeSingle();
+          if (matched) {
+            const { error: tErr } = await supabase
+              .from('profiles')
+              .update({ tier: 'paid', tier_expires_at: '2099-12-31T00:00:00Z' })
+              .eq('id', user.id);
+            if (!tErr) setTierMsg('카페 유료회원 인증 완료 — 정회원으로 전환됐습니다.');
+          }
         }
       }
 
