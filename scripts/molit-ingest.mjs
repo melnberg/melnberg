@@ -117,7 +117,7 @@ async function fetchMonth(lawdCd, dealYmd) {
       throw new Error(`API resultCode=${resultCode} (${msg}). 본문: ${xml.slice(0, 300)}`);
     }
     const totalCount = Number(xml.match(/<totalCount>([^<]+)<\/totalCount>/)?.[1] ?? '0');
-    const items = parseItems(xml);
+    const items = parseItems(xml, lawdCd);
     all.push(...items);
     if (page * perPage >= totalCount) break;
     page++;
@@ -126,16 +126,19 @@ async function fetchMonth(lawdCd, dealYmd) {
 }
 
 // ─── DB upsert ─────────────────────────
-// Supabase Claude가 만든 테이블에 unique 제약이 없으면 단순 INSERT (중복 발생 가능 — 추후 dedup view 처리)
-// 안전한 방법: 같은 자연키 거래가 이미 있는지 SELECT 후 없는 것만 INSERT
+// apt_trades_natural_uk 유니크 제약: (apt_nm, jibun, exclu_use_ar, floor, deal_year, deal_month, deal_day, deal_amount)
+// onConflict 지정 + ignoreDuplicates=true → 같은 거래 재실행해도 중복 적재 X
 async function upsertTrades(rows) {
   if (rows.length === 0) return { inserted: 0, errors: 0 };
   const { data, error } = await supabase
     .from('apt_trades')
-    .insert(rows)
+    .upsert(rows, {
+      onConflict: 'apt_nm,jibun,exclu_use_ar,floor,deal_year,deal_month,deal_day,deal_amount',
+      ignoreDuplicates: true,
+    })
     .select('id');
   if (error) {
-    console.error('insert 오류:', error.message);
+    console.error('upsert 오류:', error.message);
     return { inserted: 0, errors: rows.length };
   }
   return { inserted: data?.length ?? 0, errors: 0 };
