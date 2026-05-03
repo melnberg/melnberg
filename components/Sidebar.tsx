@@ -99,11 +99,12 @@ export default function Sidebar({ current, user }: Props) {
           <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
           <SItem href="/" label="멜른버그 AI" active={current === 'home'} icon={<AiIcon />} onClick={() => setOpen(false)} />
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/apt-talk" label="아파트토론방" active={current === 'apt-talk'} icon={<ApartmentIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/apt-talk" label="아파트 토론방" active={current === 'apt-talk'} icon={<ApartmentIcon />} onClick={() => setOpen(false)} />
           <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} />
 
           <SectionToggle
             label="상담"
+            icon={<ConsultIcon />}
             open={consultOpen}
             onClick={() => setConsultOpen((v) => !v)}
           />
@@ -116,11 +117,13 @@ export default function Sidebar({ current, user }: Props) {
               active={current === p.filename}
               icon={p.id === 'short-consult' ? <ChatShortIcon /> : <ChatLongIcon />}
               onClick={() => setOpen(false)}
+              sub
             />
           ))}
 
           <SectionToggle
             label="멤버십"
+            icon={<MembershipIcon />}
             open={membershipOpen}
             onClick={() => setMembershipOpen((v) => !v)}
           />
@@ -133,6 +136,7 @@ export default function Sidebar({ current, user }: Props) {
               active={current === p.filename}
               icon={p.id === 'new-membership' ? <StarIcon /> : <RenewIcon />}
               onClick={() => setOpen(false)}
+              sub
             />
           ))}
         </nav>
@@ -184,12 +188,15 @@ export default function Sidebar({ current, user }: Props) {
   );
 }
 
-function SItem({ href, label, price, active, icon, onClick }: { href: string; label: string; price?: string; active?: boolean; icon: React.ReactNode; onClick?: () => void }) {
+function SItem({ href, label, price, active, icon, onClick, sub }: { href: string; label: string; price?: string; active?: boolean; icon: React.ReactNode; onClick?: () => void; sub?: boolean }) {
+  const padX = sub ? 'pl-12 pr-6' : 'px-6';
+  const subBg = sub ? 'bg-[#fafafa]' : '';
+  const activeBg = active ? 'bg-navy-soft text-navy font-bold border-navy' : `text-text font-medium border-transparent hover:bg-navy-soft ${subBg}`;
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 px-6 py-3 text-sm no-underline relative border-l-[3px] transition-colors ${active ? 'bg-navy-soft text-navy font-bold border-navy' : 'text-text font-medium border-transparent hover:bg-navy-soft'}`}
+      className={`flex items-center gap-3 ${padX} py-3 text-sm no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors ${activeBg}`}
     >
       {icon}
       <span>{label}</span>
@@ -199,25 +206,26 @@ function SItem({ href, label, price, active, icon, onClick }: { href: string; la
   );
 }
 
-function SectionToggle({ label, open, onClick }: { label: string; open: boolean; onClick: () => void }) {
+function SectionToggle({ label, icon, open, onClick }: { label: string; icon: React.ReactNode; open: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-between w-full px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted hover:text-navy transition-colors"
+      className="flex items-center gap-3 w-full px-6 py-3 text-sm font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors"
       aria-expanded={open}
     >
+      {icon}
       <span>{label}</span>
       <svg
-        width="10"
-        height="10"
+        width="12"
+        height="12"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth={2.5}
+        strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`transition-transform ${open ? 'rotate-180' : ''}`}
+        className={`ml-auto text-muted transition-transform ${open ? 'rotate-180' : ''}`}
       >
         <polyline points="6 9 12 15 18 9" />
       </svg>
@@ -236,5 +244,7 @@ const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l
 const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>;
 const StarIcon = () => <svg {...iconProps}><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>;
 const RenewIcon = () => <svg {...iconProps}><path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" /></svg>;
+const ConsultIcon = () => <svg {...iconProps}><path d="M3 18v-7a9 9 0 0 1 18 0v7" /><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3v4z" /><path d="M3 19a2 2 0 0 0 2 2h1v-6H3v4z" /></svg>;
+const MembershipIcon = () => <svg {...iconProps}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /><line x1="6" y1="15" x2="10" y2="15" /></svg>;
 
 const AiIcon = () => <svg {...iconProps} viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
