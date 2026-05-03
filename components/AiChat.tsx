@@ -73,9 +73,8 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
     const auto = searchParams.get('auto');
     if (q && auto === '1') {
       autoSubmittedRef.current = true;
-      // React 렌더 후 form 제출
-      const id = setTimeout(() => formRef.current?.requestSubmit(), 50);
-      return () => clearTimeout(id);
+      // React 렌더 직후 form 제출 (microtask로 즉시)
+      queueMicrotask(() => formRef.current?.requestSubmit());
     }
   }, [searchParams]);
   const [loading, setLoading] = useState(false);
@@ -231,7 +230,9 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
   );
 
   const hasTurns = turns.length > 0;
-  const showHero = !hasTurns;
+  // auto=1 (홈에서 넘어옴)이면 hero 건너뛰기 — 깜빡임 방지
+  const autoSubmitting = searchParams.get('auto') === '1';
+  const showHero = !hasTurns && !autoSubmitting;
 
   return (
     <>
