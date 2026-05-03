@@ -175,7 +175,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             map,
             averageCenter: true,
             minLevel: 3,
-            minClusterSize: 1,    // 외딴 1개 단지도 클러스터로 (줌아웃에서 룩 핀 안 보이게)
+            // minClusterSize 기본값(2) — 외딴 단일 단지는 룩 핀으로, 2개 이상만 클러스터
             gridSize: 35,
             disableClickZoom: true,
             markers,
