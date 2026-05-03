@@ -341,13 +341,13 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             }}
             placeholder="멜른버그AI 에게 질문하기 (mlbg DB기반)"
             rows={1}
-            className="w-full border border-navy focus:border-navy-dark transition-colors px-5 py-4 pr-16 text-[15px] resize-none overflow-hidden outline-none bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] leading-relaxed"
+            className="w-full border border-navy focus:border-navy-dark transition-colors px-5 py-4 pr-[68px] text-[15px] resize-none overflow-hidden outline-none bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] leading-relaxed"
             style={{ minHeight: '60px' }}
           />
           <button
             type="submit"
             aria-label="질문하기"
-            className="absolute right-0 top-0 bottom-0 aspect-square bg-navy text-white flex items-center justify-center hover:bg-navy-dark disabled:opacity-40"
+            className="absolute right-0 top-0 bottom-0 w-[60px] bg-navy text-white flex items-center justify-center hover:bg-navy-dark disabled:opacity-40"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />
