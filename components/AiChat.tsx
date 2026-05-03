@@ -63,6 +63,21 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
   const searchParams = useSearchParams();
   const [question, setQuestion] = useState(() => searchParams.get('q') ?? '');
   const [turns, setTurns] = useState<Turn[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
+  const autoSubmittedRef = useRef(false);
+
+  // ?q=...&auto=1 로 들어오면 자동 제출
+  useEffect(() => {
+    if (autoSubmittedRef.current) return;
+    const q = searchParams.get('q');
+    const auto = searchParams.get('auto');
+    if (q && auto === '1') {
+      autoSubmittedRef.current = true;
+      // React 렌더 후 form 제출
+      const id = setTimeout(() => formRef.current?.requestSubmit(), 50);
+      return () => clearTimeout(id);
+    }
+  }, [searchParams]);
   const [loading, setLoading] = useState(false);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const lastAnswerRef = useRef<HTMLDivElement>(null);
@@ -346,6 +361,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
       )}
 
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
         className={hasTurns ? 'sticky bottom-4 z-10 pt-4 pb-2 bg-white' : 'mb-8'}
       >

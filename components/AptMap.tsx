@@ -92,9 +92,10 @@ const PIN_COLORS = {
 
 // 물방울 모양 핀 SVG. 단색 + 광택. 점거 시 흰 삼각 깃발 추가.
 function buildPinSvg(color: string, occupied: boolean): string {
-  // 깃발: 광택 없이 순백색, 더 크게. 깃대 + 큰 삼각.
+  // 깃발: 흰색 + 검정 테두리. 사이즈 20% 축소.
+  // 깃대: 검정 outer + 흰 inner (테두리 효과). 삼각: 흰 fill + 검정 stroke.
   const flag = occupied
-    ? '<line x1="11" y1="6" x2="11" y2="27" stroke="white" stroke-width="2.8" stroke-linecap="round"/><polygon points="11,6 26,13 11,20" fill="white"/>'
+    ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
     : '';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
 <defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs>
@@ -133,7 +134,25 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
+  const [aiSubmitting, setAiSubmitting] = useState(false);
   const router = useRouter();
+  const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // textarea 자동 높이 조절 — 위쪽으로 늘어남 (bottom-anchored)
+  useEffect(() => {
+    if (aiTextareaRef.current) {
+      aiTextareaRef.current.style.height = 'auto';
+      aiTextareaRef.current.style.height = `${Math.min(aiTextareaRef.current.scrollHeight, 240)}px`;
+    }
+  }, [aiQuery]);
+
+  function submitAi() {
+    const q = aiQuery.trim();
+    if (!q) return;
+    setAiSubmitting(true);
+    // 페이드 오버레이 후 navigate
+    setTimeout(() => router.push(`/ai?q=${encodeURIComponent(q)}&auto=1`), 220);
+  }
 
   // 검색 결과 — 단지명·동 조합 매칭. "봉천두산"·"두산"·"두산 봉천" 모두 매칭.
   const searchResults = (() => {
@@ -307,33 +326,49 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         )}
       </div>
 
-      {/* 가운데 하단 — AI 검색 (B 위치). Enter → /ai?q=... */}
+      {/* 가운데 하단 — AI 검색 (B 위치). Enter → /ai로 자동 전송. Shift+Enter 줄바꿈. */}
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const q = aiQuery.trim();
-          if (!q) return;
-          router.push(`/ai?q=${encodeURIComponent(q)}`);
-        }}
+        onSubmit={(e) => { e.preventDefault(); submitAi(); }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[480px] max-w-[calc(100vw-200px)] z-20"
       >
-        <div className="bg-white border border-navy shadow-[0_8px_24px_rgba(0,32,96,0.15)] flex items-center">
-          <div className="ml-4 flex-shrink-0 flex items-center gap-1 text-cyan">
+        <div className="bg-white border border-navy shadow-[0_8px_24px_rgba(0,32,96,0.15)] flex items-end">
+          <div className="ml-4 mb-3 flex-shrink-0 flex items-center gap-1 text-cyan">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
             <span className="text-[11px] font-bold tracking-wider uppercase">AI</span>
           </div>
-          <input
-            type="text"
+          <textarea
+            ref={aiTextareaRef}
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
-            placeholder="멜른버그 AI에게 물어보기..."
-            className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitAi();
+              }
+            }}
+            placeholder="멜른버그 AI에게 물어보기... (Shift+Enter 줄바꿈)"
+            rows={1}
+            className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent resize-none leading-relaxed"
+            style={{ minHeight: '44px' }}
           />
-          <button type="submit" className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark">
+          <button type="submit" disabled={aiSubmitting} className="bg-navy text-white px-4 py-3 text-[12px] font-bold hover:bg-navy-dark disabled:opacity-60 self-stretch flex-shrink-0">
             질문 →
           </button>
         </div>
       </form>
+
+      {/* 페이드 오버레이 — AI 페이지로 전환 시 */}
+      {aiSubmitting && (
+        <div className="fixed inset-0 z-50 bg-white animate-fade-in flex items-center justify-center pointer-events-none">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 text-cyan">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" className="animate-pulse"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
+              <span className="text-[14px] font-bold tracking-wider uppercase">AI</span>
+            </div>
+            <div className="mt-2 text-[12px] text-muted">멜른버그 AI에게 묻는 중...</div>
+          </div>
+        </div>
+      )}
 
       {/* 우측 하단 범례 — 핀 모양 그대로 표시 */}
       <div className="absolute bottom-8 right-6 z-20 pointer-events-none">
