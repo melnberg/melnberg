@@ -302,12 +302,29 @@ export async function POST(req: NextRequest) {
     });
 
     // 시세 view 캐시 hit이면 promise 즉시 resolve
+    // ↓ Supabase PostgREST max-rows=1000 제한 회피: 페이지네이션으로 전량 fetch
+    //   view 행 약 9700개. 한 번에 다 가져오면 단지명 매칭 누락(반포자이 등 1000행 밖) → 답변 실패.
+    //   cold start 약 3~4초 비용은 10분 모듈 캐시로 흡수.
     const cachedPrice = priceCache && priceCache.expiresAt > Date.now() ? priceCache.rows : null;
     const pricePromise: Promise<{ data: PriceRow[] | null }> = cachedPrice
       ? Promise.resolve({ data: cachedPrice })
-      : (supabase
-          .from('apt_representative_price')
-          .select('apt_nm, umd_nm, lawd_cd, area_group, trade_count, median_amount, window_used, last_deal_date') as unknown as Promise<{ data: PriceRow[] | null }>);
+      : (async () => {
+          const all: PriceRow[] = [];
+          for (let offset = 0; offset < 50000; offset += 1000) {
+            const { data, error } = await supabase
+              .from('apt_representative_price')
+              .select('apt_nm, umd_nm, lawd_cd, area_group, trade_count, median_amount, window_used, last_deal_date')
+              .range(offset, offset + 999);
+            if (error) {
+              console.warn('price view fetch error at offset', offset, error.message);
+              break;
+            }
+            if (!data || data.length === 0) break;
+            all.push(...(data as unknown as PriceRow[]));
+            if (data.length < 1000) break;
+          }
+          return { data: all };
+        })();
 
     const [searchRes, priceRes] = await Promise.all([searchPromise, pricePromise]);
 
