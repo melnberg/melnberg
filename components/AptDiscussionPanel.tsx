@@ -65,6 +65,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [commentBody, setCommentBody] = useState<Map<number, string>>(new Map());
   const [openComments, setOpenComments] = useState<Set<number>>(new Set());
 
+  // 점거 상태
+  const [occupierId, setOccupierId] = useState<string | null>(null);
+  const [occupierName, setOccupierName] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState(false);
+
   const supabase = createClient();
 
   async function reload() {
@@ -156,7 +161,40 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       setMyVotes(new Map());
     }
 
+    // 점거인 fetch
+    {
+      const { data: occ } = await supabase
+        .from('apt_master')
+        .select('occupier_id, occupied_at')
+        .eq('id', apt.id)
+        .maybeSingle();
+      const oid = (occ as { occupier_id?: string | null } | null)?.occupier_id ?? null;
+      setOccupierId(oid);
+      if (oid) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', oid)
+          .maybeSingle();
+        setOccupierName((prof as { display_name?: string | null } | null)?.display_name ?? null);
+      } else {
+        setOccupierName(null);
+      }
+    }
+
     setLoading(false);
+  }
+
+  async function claimApt() {
+    if (!userId) { alert('점거하려면 로그인이 필요해요.'); return; }
+    setClaiming(true);
+    const { data, error } = await supabase.rpc('claim_apt', { p_apt_id: apt.id });
+    setClaiming(false);
+    if (error) { alert(error.message); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row?.success) { alert(row?.message ?? '점거 실패'); return; }
+    setOccupierId(row.occupier_id);
+    setOccupierName(row.occupier_name ?? null);
   }
 
   useEffect(() => {
@@ -335,6 +373,39 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
             )}
           </div>
         )}
+
+        {/* 점거 상태 + 버튼 */}
+        <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
+          {occupierId ? (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+                <span className="text-[12px] text-[#666] font-medium">점거인</span>
+                <span className="text-[14px] font-bold text-black">{occupierName ?? '익명'}</span>
+              </div>
+              {occupierId === userId && (
+                <span className="text-[11px] font-bold text-cyan">내가 점거중</span>
+              )}
+            </div>
+          ) : userId ? (
+            <button
+              type="button"
+              onClick={claimApt}
+              disabled={claiming}
+              className="w-full bg-cyan text-white py-2.5 text-[13px] font-bold tracking-wide hover:bg-cyan-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+              <span>{claiming ? '점거중...' : '이 단지 점거하기'}</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="block w-full bg-white border border-cyan text-cyan py-2.5 text-[13px] font-bold tracking-wide hover:bg-navy-soft text-center no-underline"
+            >
+              로그인하고 점거하기
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
