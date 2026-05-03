@@ -8,11 +8,17 @@ type KakaoLatLng = { __latlng: never };
 type KakaoMarker = { __marker: never };
 type KakaoMap = { __map: never };
 type KakaoCluster = { getCenter: () => KakaoLatLng };
+type KakaoSize = { __size: never };
+type KakaoPoint = { __point: never };
+type KakaoMarkerImage = { __mImage: never };
 type KakaoMaps = {
   load: (cb: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
+  Size: new (w: number, h: number) => KakaoSize;
+  Point: new (x: number, y: number) => KakaoPoint;
+  MarkerImage: new (src: string, size: KakaoSize, opts?: { offset?: KakaoPoint }) => KakaoMarkerImage;
   Map: new (container: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap;
-  Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap; clickable?: boolean }) => KakaoMarker;
+  Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap; clickable?: boolean; image?: KakaoMarkerImage }) => KakaoMarker;
   event: { addListener: (target: unknown, type: string, handler: (...args: unknown[]) => void) => void };
   MarkerClusterer: new (opts: {
     map: KakaoMap;
@@ -139,6 +145,14 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         const useClusterer = !!window.kakao.maps.MarkerClusterer;
 
+        // 커스텀 핀 이미지 (카카오맵 표준: 2x 레티나, 표시는 1x 사이즈)
+        // 핀 끝(아래 중앙)이 좌표 가리키도록 offset (20, 82)
+        const pinImage = new window.kakao.maps.MarkerImage(
+          '/pins/green_interest_2x.png',
+          new window.kakao.maps.Size(40, 82),
+          { offset: new window.kakao.maps.Point(20, 82) },
+        );
+
         // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
         // 클러스터러 미사용 시에만 map에 직접 부착.
         const markers: KakaoMarker[] = pins.map((p) => {
@@ -147,6 +161,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
             position: pos,
             title: p.apt_nm,
             clickable: true,
+            image: pinImage,
             ...(useClusterer ? {} : { map }),
           });
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
