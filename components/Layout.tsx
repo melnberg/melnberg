@@ -7,12 +7,19 @@ export default async function Layout({ current, children }: { current?: string; 
 
   let sidebarUser: SidebarUser | null = null;
   if (user) {
-    const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: user.id });
+    const [{ data: scoreData }, { data: profile }] = await Promise.all([
+      supabase.rpc('get_user_score', { p_user_id: user.id }),
+      supabase.from('profiles').select('tier, tier_expires_at').eq('id', user.id).maybeSingle(),
+    ]);
     const score = typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0);
+    const tier = (profile as { tier?: string | null } | null)?.tier;
+    const expiresAt = (profile as { tier_expires_at?: string | null } | null)?.tier_expires_at;
+    const isPaid = tier === 'paid' && (!expiresAt || new Date(expiresAt) > new Date());
     sidebarUser = {
       name: (user.user_metadata?.display_name as string | undefined) ?? user.email?.split('@')[0] ?? '회원',
       email: user.email ?? '',
       score,
+      isPaid,
     };
   }
 

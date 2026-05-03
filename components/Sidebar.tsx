@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 
-export type SidebarUser = { name: string; email: string; score?: number };
+export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean };
 
 type Props = { current?: string; user?: SidebarUser | null };
 
@@ -61,7 +61,12 @@ export default function Sidebar({ current, user }: Props) {
                 {(user.name[0] ?? '').toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-bold text-text truncate">{user.name}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-bold text-text truncate">{user.name}</span>
+                  {user.isPaid && (
+                    <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5 flex-shrink-0">정회원</span>
+                  )}
+                </div>
                 <div className="text-[11px] text-muted flex items-center gap-1.5">
                   {typeof user.score === 'number' && (
                     <span className="text-cyan font-bold">⚡ {user.score}</span>
