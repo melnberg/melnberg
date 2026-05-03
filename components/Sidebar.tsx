@@ -14,6 +14,12 @@ const memberships = products.filter((p) => p.id === 'new-membership' || p.id ===
 export default function Sidebar({ current, user }: Props) {
   const [open, setOpen] = useState(false);
 
+  // 현재 페이지가 해당 섹션의 아이템이면 자동 펼침. 이외엔 닫힘 상태로 시작.
+  const isConsultActive = consults.some((p) => current === p.filename);
+  const isMembershipActive = memberships.some((p) => current === p.filename);
+  const [consultOpen, setConsultOpen] = useState(isConsultActive);
+  const [membershipOpen, setMembershipOpen] = useState(isMembershipActive);
+
   useEffect(() => {
     const close = () => setOpen(false);
     if (open && window.innerWidth <= 780) {
@@ -91,13 +97,17 @@ export default function Sidebar({ current, user }: Props) {
 
         <nav className="flex-1 py-1 pb-4 flex flex-col">
           <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
-          <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/" label="멜른버그 AI" active={current === 'home'} icon={<AiIcon />} onClick={() => setOpen(false)} />
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/apt-talk" label="아파트토론방" active={current === 'apt-talk'} icon={<ApartmentIcon />} onClick={() => setOpen(false)} />
           <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/ai" label="AI 질문" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
 
-          <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">상담</div>
-          {consults.map((p) => (
+          <SectionToggle
+            label="상담"
+            open={consultOpen}
+            onClick={() => setConsultOpen((v) => !v)}
+          />
+          {consultOpen && consults.map((p) => (
             <SItem
               key={p.id}
               href={`/${p.filename}`}
@@ -109,8 +119,12 @@ export default function Sidebar({ current, user }: Props) {
             />
           ))}
 
-          <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">멤버십</div>
-          {memberships.map((p) => (
+          <SectionToggle
+            label="멤버십"
+            open={membershipOpen}
+            onClick={() => setMembershipOpen((v) => !v)}
+          />
+          {membershipOpen && memberships.map((p) => (
             <SItem
               key={p.id}
               href={`/${p.filename}`}
@@ -185,12 +199,39 @@ function SItem({ href, label, price, active, icon, onClick }: { href: string; la
   );
 }
 
+function SectionToggle({ label, open, onClick }: { label: string; open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center justify-between w-full px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted hover:text-navy transition-colors"
+      aria-expanded={open}
+    >
+      <span>{label}</span>
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`transition-transform ${open ? 'rotate-180' : ''}`}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
+  );
+}
+
 const iconCls = 'w-[18px] h-[18px] flex-shrink-0';
 const iconProps = { fill: 'none' as const, stroke: 'currentColor' as const, strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, viewBox: '0 0 24 24', className: iconCls };
 
 const HomeIcon = () => <svg {...iconProps}><path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" /></svg>;
 const BlogIcon = () => <svg {...iconProps}><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z" /><path d="M4 4v12a4 4 0 0 0 4 4" /></svg>;
 const CommunityIcon = () => <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+const ApartmentIcon = () => <svg {...iconProps}><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3" /></svg>;
 const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>;
 const StarIcon = () => <svg {...iconProps}><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>;
