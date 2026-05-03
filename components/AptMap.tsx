@@ -277,25 +277,25 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         )}
       </div>
 
-      {/* 우측 하단 범례 — 핀 색상별 세대수 */}
-      <div className="absolute bottom-8 right-6 bg-white border border-border px-4 py-3 shadow-[0_4px_12px_rgba(0,0,0,0.08)] z-20">
-        <div className="text-[11px] font-bold text-navy mb-2 tracking-wider uppercase">세대수</div>
-        <ul className="space-y-1.5 text-[12px]">
+      {/* 우측 하단 범례 — 핀 색상별 세대수 (투명 배경, 시야 안 가리게) */}
+      <div className="absolute bottom-8 right-6 z-20 pointer-events-none">
+        <div className="text-[11px] font-bold text-navy mb-1.5 tracking-wider uppercase drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">세대수</div>
+        <ul className="space-y-1 text-[12px]">
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#C8392E]" />
-            <span className="text-text"><span className="font-bold">3000+</span> 대단지</span>
+            <span className="inline-block w-3 h-3 rounded-full bg-[#C8392E] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">3000+ 대단지</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#5C3D8C]" />
-            <span className="text-text"><span className="font-bold">2000~2999</span></span>
+            <span className="inline-block w-3 h-3 rounded-full bg-[#5C3D8C] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">2000~2999</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#2D7A4F]" />
-            <span className="text-text"><span className="font-bold">1000~1999</span></span>
+            <span className="inline-block w-3 h-3 rounded-full bg-[#2D7A4F] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1000~1999</span>
           </li>
           <li className="flex items-center gap-2">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#2A2D34]" />
-            <span className="text-text"><span className="font-bold">1~999</span></span>
+            <span className="inline-block w-3 h-3 rounded-full bg-[#2A2D34] shadow-[0_0_2px_rgba(255,255,255,0.8)]" />
+            <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1~999</span>
           </li>
         </ul>
       </div>
