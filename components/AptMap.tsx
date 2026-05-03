@@ -11,7 +11,7 @@ type KakaoMaps = {
   load: (cb: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
   Map: new (container: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap;
-  Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap }) => KakaoMarker;
+  Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap; clickable?: boolean }) => KakaoMarker;
   event: { addListener: (target: unknown, type: string, handler: () => void) => void };
   MarkerClusterer: new (opts: {
     map: KakaoMap;
@@ -103,9 +103,13 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           const marker = new window.kakao.maps.Marker({
             position: pos,
             title: p.apt_nm,
+            clickable: true,
             ...(useClusterer ? {} : { map }),
-          } as { position: KakaoLatLng; title?: string });
-          window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
+          });
+          window.kakao.maps.event.addListener(marker, 'click', () => {
+            console.log('[AptMap] marker clicked:', p.apt_nm, p.id);
+            setSelected(p);
+          });
           return marker;
         });
 
