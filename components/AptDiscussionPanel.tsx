@@ -451,19 +451,21 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                       </>
                     )}
                   </div>
-                  {/* 추천/비추천/댓글 토글 */}
-                  <div className="mt-2.5 flex items-center gap-2">
-                    <button type="button" onClick={() => vote(d.id, 'up')}
-                      className={`flex items-center gap-1 px-2.5 py-1 border text-[12px] font-medium transition-colors ${myVote === 'up' ? 'border-cyan bg-cyan text-white' : 'border-border text-text hover:border-cyan hover:text-cyan'}`}>
-                      <span>↑</span><span>{d.vote_up_count}</span>
-                    </button>
-                    <button type="button" onClick={() => vote(d.id, 'down')}
-                      className={`flex items-center gap-1 px-2.5 py-1 border text-[12px] font-medium transition-colors ${myVote === 'down' ? 'border-red-500 bg-red-500 text-white' : 'border-border text-text hover:border-red-500 hover:text-red-500'}`}>
-                      <span>↓</span><span>{d.vote_down_count}</span>
-                    </button>
+                  {/* 좌: 댓글 / 우: 하트 */}
+                  <div className="mt-2.5 flex items-center justify-between">
                     <button type="button" onClick={() => toggleComments(d.id)}
-                      className="flex items-center gap-1 px-2.5 py-1 border border-border text-text text-[12px] font-medium hover:border-navy hover:text-navy">
-                      <span>💬</span><span>{dComments.length}</span>
+                      className="flex items-center gap-1.5 text-[13px] text-text font-medium hover:text-navy transition-colors">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      <span>댓글 {dComments.length}</span>
+                    </button>
+                    <button type="button" onClick={() => vote(d.id, 'up')}
+                      className={`flex items-center gap-1.5 text-[13px] font-medium transition-colors ${myVote === 'up' ? 'text-red-500' : 'text-text hover:text-red-500'}`}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                      </svg>
+                      <span>{d.vote_up_count}</span>
                     </button>
                   </div>
 
