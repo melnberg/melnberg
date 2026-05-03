@@ -490,15 +490,23 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   >
                     강제집행
                   </button>
-                  {/* 비활성 시 hover 조건 안내 */}
-                  {myScore !== null && occupierScore !== null && myScore <= occupierScore && (
-                    <div className="hidden group-hover:block absolute z-50 right-0 top-8 w-[230px] bg-navy text-white text-[11px] leading-relaxed p-3 shadow-xl">
-                      <div className="font-bold text-cyan mb-1">강제집행 조건 미달</div>
-                      <div className="flex justify-between mb-0.5"><span>내 score</span><b>{myScore}</b></div>
-                      <div className="flex justify-between mb-1.5"><span>점거인 score</span><b>{occupierScore}</b></div>
-                      <div className="text-[10px] text-cyan">점거인보다 score가 더 높아야 강제집행 가능. 글·댓글로 점수 올린 후 다시 시도.</div>
+                  {/* 호버 시 강제집행 조건 + 점수 비교 */}
+                  <div className="hidden group-hover:block absolute z-50 right-0 top-8 w-[240px] bg-navy text-white text-[11px] leading-relaxed p-3 shadow-xl">
+                    <div className="font-bold text-cyan mb-1.5">⚔️ 강제집행 (박탈)</div>
+                    <div className="mb-0.5">• 조건: 내 score &gt; 점거인 score</div>
+                    <div className="mb-2">• 동점이면 박탈 불가</div>
+                    <div className="pt-2 border-t border-white/20 space-y-0.5">
+                      {myScore !== null && (
+                        <div className="flex justify-between"><span>내 score</span><b>{myScore}</b></div>
+                      )}
+                      {occupierScore !== null && (
+                        <div className="flex justify-between"><span>점거인 score</span><b>{occupierScore}</b></div>
+                      )}
+                      {myScore !== null && occupierScore !== null && myScore <= occupierScore && (
+                        <div className="text-[10px] text-cyan mt-1.5">글·댓글로 score 올린 후 다시 시도.</div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </span>
               ) : (
                 <Link href="/login" className="text-[11px] font-bold text-cyan no-underline flex-shrink-0">
