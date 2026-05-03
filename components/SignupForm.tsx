@@ -35,7 +35,7 @@ export default function SignupForm() {
       setMsg({ type: 'error', text: error.message });
       return;
     }
-    setMsg({ type: 'info', text: '가입이 완료됐습니다. 이메일로 발송된 인증 링크를 확인해주세요.' });
+    setMsg({ type: 'info', text: '가입이 완료되었습니다.\n이메일로 발송된 인증 링크를 확인해주세요.' });
     setTimeout(() => router.push('/login'), 2500);
   }
 
@@ -51,7 +51,7 @@ export default function SignupForm() {
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
 
       {msg && (
-        <div className={`text-sm px-4 py-3 break-keep leading-relaxed ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
+        <div className={`text-sm px-4 py-3 break-keep leading-relaxed whitespace-pre-line ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
           {msg.text}
         </div>
       )}
