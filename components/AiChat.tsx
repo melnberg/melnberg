@@ -22,14 +22,35 @@ type Props = {
   showFooter?: boolean;
 };
 
+const LOADING_PHASES = [
+  '멜른버그 DB 검색',
+  '카페 글 매칭',
+  '실거래가 조회',
+  '멜른버그 Q&A 검색',
+  '관점 정리',
+  '코멘트 검색',
+  '답변 작성',
+];
+
 export default function AiChat({ title, subtitle, centered, showFooter }: Props = {}) {
   const [question, setQuestion] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
+  const [phaseIdx, setPhaseIdx] = useState(0);
   const lastAnswerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fullTextRef = useRef('');
   const animatingRef = useRef(false);
+
+  // 답변 시작 전(빈 답변 + 로딩) 동안 라벨 텍스트 순환
+  useEffect(() => {
+    const lastTurn = turns[turns.length - 1];
+    const cycling = loading && !!lastTurn && lastTurn.answer === '' && !lastTurn.complete;
+    if (!cycling) return;
+    setPhaseIdx(0);
+    const id = setInterval(() => setPhaseIdx((p) => (p + 1) % LOADING_PHASES.length), 1200);
+    return () => clearInterval(id);
+  }, [loading, turns]);
 
   function startAnimation() {
     if (animatingRef.current) return;
@@ -200,7 +221,26 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                   ref={i === turns.length - 1 ? lastAnswerRef : null}
                   className="border border-border bg-bg/40 p-5 scroll-mb-44"
                 >
-                  <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
+                  {!turn.complete && i === turns.length - 1 && turn.answer === '' ? (
+                    <div className="flex items-center gap-2.5 mb-3" aria-label="답변 생성 중">
+                      <div className="relative h-[28px] overflow-hidden flex items-center">
+                        <span
+                          key={phaseIdx}
+                          className="text-[20px] md:text-[22px] font-bold text-navy tracking-tight bg-gradient-to-r from-navy via-cyan to-navy bg-clip-text text-transparent bg-[length:200%_100%] animate-[shine_2.4s_linear_infinite] inline-block"
+                          style={{ animation: 'shine 2.4s linear infinite, slideUp 0.4s ease-out' }}
+                        >
+                          {LOADING_PHASES[phaseIdx]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce [animation-delay:-300ms]" />
+                        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce [animation-delay:-150ms]" />
+                        <span className="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce" />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] font-bold tracking-widest uppercase text-muted mb-3">AI 답변</p>
+                  )}
                   <div className="text-[16px] text-text leading-relaxed text-left">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -233,13 +273,6 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
                     >
                       {turn.answer}
                     </ReactMarkdown>
-                    {!turn.complete && i === turns.length - 1 && turn.answer === '' && (
-                      <div className="flex items-center gap-1.5 py-1" aria-label="답변 생성 중">
-                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce [animation-delay:-300ms]" />
-                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce [animation-delay:-150ms]" />
-                        <span className="w-2 h-2 bg-muted rounded-full animate-bounce" />
-                      </div>
-                    )}
                     {!turn.complete && i === turns.length - 1 && turn.answer !== '' && (
                       <span className="inline-block w-1.5 h-4 bg-muted animate-pulse ml-0.5 align-middle" />
                     )}
@@ -293,7 +326,7 @@ export default function AiChat({ title, subtitle, centered, showFooter }: Props 
             placeholder={hasTurns ? '메시지를 입력하세요…' : '궁금한 점을 입력하세요. (Shift+Enter 줄바꿈)'}
             rows={2}
             disabled={loading}
-            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-6 py-4 pr-16 text-[15px] text-left resize-none overflow-hidden outline-none rounded-2xl bg-gradient-to-b from-white to-gray-50 shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] disabled:opacity-60 min-h-[80px]"
+            className="w-full border border-gray-300 focus:border-gray-500 transition-colors px-6 py-4 pr-16 text-[15px] text-left resize-none overflow-hidden outline-none rounded-2xl bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] disabled:bg-gray-50 disabled:cursor-not-allowed min-h-[80px]"
           />
           <button
             type="submit"

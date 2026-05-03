@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* AI 답변 로딩 라벨 — 그라데이션 흐름 + 슬라이드업 */
+@keyframes shine {
+  0%   { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+@keyframes slideUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
 @layer base {
   html { scroll-behavior: smooth; }
   body {
