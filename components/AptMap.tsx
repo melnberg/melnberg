@@ -18,6 +18,8 @@ type KakaoMaps = {
     map: KakaoMap;
     averageCenter?: boolean;
     minLevel?: number;
+    minClusterSize?: number;
+    gridSize?: number;
     disableClickZoom?: boolean;
     markers?: KakaoMarker[];
     calculator?: number[];
@@ -138,12 +140,13 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
 
         if (useClusterer) {
           // disableClickZoom: true → 클러스터 click을 우리가 직접 처리
-          // minLevel: 2 → 줌 2 이상에서 클러스터, 줌 1에서만 개별 마커 (가장 가까운 줌)
-          //   (4500개 단지를 멀리서 한꺼번에 띄우면 너무 빽빽 — 동네 단위 줌인까지 클러스터 유지)
+          // minLevel: 3 → 줌 3 이상에서 클러스터, 줌 1·2에선 개별 마커 (가장 가까운 두 단계)
+          // gridSize: 35 → 가까이 있는 마커는 더 일찍 분리 (default 60)
           const clusterer = new window.kakao.maps.MarkerClusterer({
             map,
             averageCenter: true,
-            minLevel: 2,
+            minLevel: 3,
+            gridSize: 35,
             disableClickZoom: true,
             markers,
             calculator: [10, 50, 200],
