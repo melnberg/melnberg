@@ -83,11 +83,11 @@ const SUBWAY_LINE_TO_SGG: Record<string, string[]> = {
 
 function extractPriceRange(question: string): { min: number; max: number } | null {
   // 만원 단위 (1억 = 10000)
-  // "X억대" → X*10000 ~ (X+1)*10000-1
+  // "X억대" → (X-1) ~ (X+1) 억 (사용자 의도: 12억대 = 11~13억 범위)
   const dae = question.match(/(\d{1,3})\s*억\s*대/);
   if (dae) {
     const x = Number(dae[1]);
-    return { min: x * 10000, max: (x + 1) * 10000 - 1 };
+    return { min: Math.max(0, (x - 1) * 10000), max: (x + 1) * 10000 };
   }
   // "X억 이하" / "X억 미만" / "X억 이내"
   const ihaa = question.match(/(\d{1,3})\s*억\s*(이하|미만|이내)/);
@@ -140,11 +140,15 @@ function extractRegions(question: string): { lawdCds: Set<string> } {
 }
 
 // 단지명 fuzzy 매칭 — corpus에 단지명의 핵심 토큰이 있으면 매칭
+// 카페 글이 "압구정 현대2차"로 부르고 시세 view엔 "현대2차(10,11,20,23,24,25동)"로 적힌 경우 등 처리
 function aptInCorpus(aptNm: string, corpus: string): boolean {
   if (!aptNm || aptNm.length < 4) return false;
   if (corpus.includes(aptNm)) return true;
-  // 공백·괄호로 토큰 분리, 가장 긴 토큰(4자 이상)이 corpus에 있으면 매칭
-  const tokens = aptNm.split(/[\s()\[\]]+/).filter((t) => t.length >= 4);
+  // 1) 괄호 안 내용 제거 후 매칭 (예: "현대2차(10,11동)" → "현대2차")
+  const stripped = aptNm.replace(/\([^)]*\)/g, '').trim();
+  if (stripped.length >= 4 && corpus.includes(stripped)) return true;
+  // 2) 공백·괄호·· 으로 토큰 분리. 가장 긴 토큰(4자 이상)이 corpus에 있으면 매칭
+  const tokens = aptNm.split(/[\s()\[\]·,]+/).filter((t) => t.length >= 4);
   return tokens.some((t) => corpus.includes(t));
 }
 
