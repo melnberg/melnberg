@@ -6,19 +6,22 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import OAuthButtons from './OAuthButtons';
 
+// 통합 가입 흐름:
+// 1) 이메일/비번 입력 → Supabase 인증 메일 발송
+// 2) 사용자가 메일 링크 클릭 → /auth/callback → 세션 생성
+// 3) /auth/callback 이 profile_completed_at = NULL 감지 → /complete-signup 으로 우회
+// 4) /complete-signup 에서 닉네임·네이버ID·폰·블로그 입력 → 완료
+// OAuth(카카오/구글) 도 동일하게 /complete-signup 거침. 단일 폼 단일 검증.
+
 export default function SignupForm() {
   const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [naverId, setNaverId] = useState('');
-  const [linkUrl, setLinkUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
   const [emailFormOpen, setEmailFormOpen] = useState(false);
 
-  // 이메일 중복 확인
   const [emailChecked, setEmailChecked] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
 
@@ -56,49 +59,18 @@ export default function SignupForm() {
       setMsg({ type: 'error', text: '이메일 중복 확인을 먼저 해주세요.' });
       return;
     }
-
-    const cleanNaverId = naverId.trim().split('@')[0];
-    if (cleanNaverId && /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(cleanNaverId)) {
-      setMsg({ type: 'error', text: '네이버 ID에 한글을 넣을 수 없습니다.' });
+    if (password.length < 8) {
+      setMsg({ type: 'error', text: '비밀번호는 8자 이상이어야 합니다.' });
       return;
-    }
-    if (cleanNaverId && !/^[a-z0-9_-]+$/i.test(cleanNaverId)) {
-      setMsg({ type: 'error', text: '네이버 ID는 영문·숫자·_·- 만 가능합니다.' });
-      return;
-    }
-
-    let cleanLink: string | null = null;
-    const rawLink = linkUrl.trim();
-    if (rawLink) {
-      if (/^javascript:/i.test(rawLink)) { setMsg({ type: 'error', text: '잘못된 링크 형식입니다.' }); return; }
-      cleanLink = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
-      if (cleanLink.length > 500) { setMsg({ type: 'error', text: '링크가 너무 깁니다 (500자 초과).' }); return; }
-    }
-
-    const nameT = name.trim();
-    if (nameT) {
-      const { data: dupName } = await supabase.from('profiles').select('id').eq('display_name', nameT).limit(1);
-      if (dupName && dupName.length > 0) {
-        setMsg({ type: 'error', text: `이미 사용 중인 닉네임입니다: "${nameT}"` });
-        return;
-      }
-    }
-    if (cleanNaverId) {
-      const { data: dupId } = await supabase.from('profiles').select('id').eq('naver_id', cleanNaverId).limit(1);
-      if (dupId && dupId.length > 0) {
-        setMsg({ type: 'error', text: `이미 가입된 네이버 ID입니다: "${cleanNaverId}"` });
-        return;
-      }
     }
 
     setLoading(true);
-    // Supabase 기본 이메일 인증 흐름 — 인증 메일 발송, 사용자가 메일 링크 클릭하면 가입 완료
+    // mlbg_signup 마커 안 보냄 → profile_completed_at NULL → 인증 후 /complete-signup 강제
     const { error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
       options: {
-        data: { display_name: nameT, naver_id: cleanNaverId || null, link_url: cleanLink, mlbg_signup: true },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/complete-signup')}`,
       },
     });
 
@@ -107,8 +79,8 @@ export default function SignupForm() {
       setMsg({ type: 'error', text: error.message });
       return;
     }
-    setMsg({ type: 'info', text: '가입이 완료되었습니다.\n이메일로 발송된 인증 링크를 클릭해주세요.' });
-    setTimeout(() => router.push('/login'), 3000);
+    setMsg({ type: 'info', text: '인증 메일이 발송되었습니다.\n메일함에서 링크를 클릭해주세요.\n(클릭하면 닉네임·휴대폰 등 추가 정보 입력 페이지로 이동합니다.)' });
+    setTimeout(() => router.push('/login'), 4000);
   }
 
   return (
@@ -140,7 +112,7 @@ export default function SignupForm() {
           <Row label="이메일">
             <input
               id="email" type="email" value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailChecked(null); }}
+              onChange={(ev) => { setEmail(ev.target.value); setEmailChecked(null); }}
               placeholder="you@example.com" required
               className={inputCls}
             />
@@ -150,25 +122,11 @@ export default function SignupForm() {
           </Row>
 
           <Row label="비밀번호">
-            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" required minLength={8} className={inputCls} />
+            <input id="password" type="password" value={password} onChange={(ev) => setPassword(ev.target.value)} placeholder="8자 이상" required minLength={8} className={inputCls} />
           </Row>
 
-          <Row label="네이버 ID">
-            <input id="naver_id" type="text" value={naverId} onChange={(e) => setNaverId(e.target.value)} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} className={inputCls} />
-          </Row>
-          <p className="text-[11px] text-muted leading-relaxed pl-[80px] -mt-1">
-            ⓘ 카페 유료회원 인증용. 네이버 <b>로그인 아이디</b>만 (닉네임·풀주소 X).
-          </p>
-
-          <Row label="닉네임">
-            <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} className={inputCls} />
-          </Row>
-
-          <Row label="블로그/SNS">
-            <input id="link_url" type="text" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://blog.naver.com/..." maxLength={500} className={inputCls} />
-          </Row>
-          <p className="text-[11px] text-muted leading-relaxed pl-[80px] -mt-1">
-            다른 회원이 닉네임을 클릭하면 이 링크로 연결됩니다 (선택).
+          <p className="text-[11px] text-muted leading-relaxed pl-[80px]">
+            ⓘ 가입 후 메일 인증 → 닉네임·휴대폰 등 추가 정보 입력 단계가 이어집니다.
           </p>
 
           {msg && (
@@ -182,7 +140,7 @@ export default function SignupForm() {
             disabled={loading}
             className="bg-navy text-white border-none px-6 py-3.5 text-[13px] font-bold tracking-wider uppercase cursor-pointer mt-2 hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '가입 중...' : '가입하기 →'}
+            {loading ? '가입 중...' : '인증 메일 보내기 →'}
           </button>
 
           <p className="text-sm text-muted text-center mt-2">

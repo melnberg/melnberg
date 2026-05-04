@@ -45,7 +45,8 @@ export default function CompleteSignupForm({
     }
 
     const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone && !/^01[016789]\d{7,8}$/.test(cleanPhone)) {
+    if (!cleanPhone) { setErr('휴대폰 번호를 입력해주세요.'); return; }
+    if (!/^01[016789]\d{7,8}$/.test(cleanPhone)) {
       setErr('휴대폰 번호 형식이 올바르지 않아요. (예: 010-1234-5678)');
       return;
     }
@@ -94,7 +95,7 @@ export default function CompleteSignupForm({
       <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
         멜른버그 카페 조합원이라면 네이버 로그인 ID + 닉네임 일치 시 자동 인증됩니다.
       </p>
-      <Field label="휴대폰 번호 (선택)" id="phone" value={phone} onChange={setPhone} placeholder="010-1234-5678" />
+      <Field label="휴대폰 번호" id="phone" value={phone} onChange={setPhone} placeholder="010-1234-5678" required />
       <Field label="블로그·SNS 링크 (선택)" id="link" value={linkUrl} onChange={setLinkUrl} placeholder="https://blog.naver.com/..." />
 
       {err && <div className="text-[12px] px-3 py-2 bg-red-50 text-red-700 border border-red-200">{err}</div>}
