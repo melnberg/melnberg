@@ -19,6 +19,7 @@ export default function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
   const [emailFormOpen, setEmailFormOpen] = useState(false);
+  const [sentEmail, setSentEmail] = useState<string | null>(null);
 
   const [emailChecked, setEmailChecked] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -77,7 +78,36 @@ export default function SignupForm() {
       setMsg({ type: 'error', text: error.message });
       return;
     }
-    setMsg({ type: 'info', text: '인증 메일이 발송되었습니다.\n메일함에서 링크를 클릭해주세요.\n(클릭하면 닉네임·휴대폰 등 추가 정보 입력 페이지로 이동합니다.)' });
+    setSentEmail(email.trim().toLowerCase());
+  }
+
+  if (sentEmail) {
+    return (
+      <div className="border border-border bg-white p-8 flex flex-col items-center text-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-navy-soft flex items-center justify-center">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="text-navy">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
+        </div>
+        <h2 className="text-[22px] font-bold text-navy tracking-tight">인증 메일이 발송됐어요</h2>
+        <p className="text-[14px] text-text leading-relaxed break-keep">
+          <span className="font-bold text-navy">{sentEmail}</span> 로<br/>
+          인증 링크를 보냈습니다.
+        </p>
+        <div className="w-full border-t border-border my-2" />
+        <p className="text-[13px] text-text leading-relaxed break-keep">
+          📩 <b>메일함을 열어 인증 링크를 클릭</b>해주세요.<br/>
+          링크를 누르면 <b>닉네임 · 휴대폰</b> 등 추가 정보 입력 페이지로 이어집니다.
+        </p>
+        <p className="text-[11px] text-muted leading-relaxed mt-2 break-keep">
+          메일이 안 보이면 스팸함도 확인해주세요. 도착까지 1~2분 걸릴 수 있어요.
+        </p>
+        <Link href="/login" className="mt-2 text-[12px] text-muted hover:text-navy no-underline">
+          로그인 페이지로 →
+        </Link>
+      </div>
+    );
   }
 
   return (
