@@ -3,6 +3,7 @@
   "installCommand": "npm install",
   "buildCommand": "next build",
   "outputDirectory": ".next",
+  "regions": ["icn1"],
   "crons": [
     {
       "path": "/api/cron/molit-ingest",
