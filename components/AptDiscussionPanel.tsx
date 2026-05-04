@@ -686,7 +686,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         {!loading && !err && discussions && discussions.length > 0 && (
           <ul className="px-4 py-4 space-y-3">
             {discussions.map((d) => {
-              const score = d.vote_up_count - d.vote_down_count;
+              void d.vote_down_count; // 미사용 (down 투표 없음)
               const author = authors.get(d.author_id) ?? { name: d.author_id.slice(0, 6) };
               const myVote = myVotes.get(d.id);
               const isMine = userId === d.author_id;
@@ -694,12 +694,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               const isCommentsOpen = openComments.has(d.id);
               return (
                 <li key={d.id} className="border border-navy/30 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.10)] hover:shadow-[0_2px_10px_rgba(0,32,96,0.14)] transition-shadow">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-[15px] font-extrabold text-navy leading-snug flex-1 tracking-tight">{d.title}</h3>
-                    <div className={`text-[13px] font-bold flex-shrink-0 ${score > 0 ? 'text-cyan' : score < 0 ? 'text-red-500' : 'text-muted'}`}>
-                      {score > 0 ? '+' : ''}{score}
-                    </div>
-                  </div>
+                  <h3 className="text-[15px] font-extrabold text-navy leading-snug tracking-tight">{d.title}</h3>
                   {d.content && (
                     <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap">{d.content}</p>
                   )}
