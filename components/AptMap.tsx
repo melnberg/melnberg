@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import { createClient } from '@/lib/supabase/client';
+import Nickname from './Nickname';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { __latlng: never };
@@ -59,6 +60,7 @@ export type FeedItem = {
   lng: number | null;
   author_name: string | null;
   author_link: string | null;
+  author_is_paid: boolean;
 };
 
 export type AptPin = {
@@ -155,7 +157,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
-  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null }>>(new Map());
+  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean }>>(new Map());
   const router = useRouter();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -287,10 +289,14 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name, link_url').in('id', ids);
-    const map = new Map<string, { name: string; link: string | null }>();
-    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null }>) {
-      if (r.display_name) map.set(r.id, { name: r.display_name, link: r.link_url });
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', ids);
+    const map = new Map<string, { name: string; link: string | null; isPaid: boolean }>();
+    const now = Date.now();
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+      if (r.display_name) {
+        const isPaid = r.tier === 'paid' && (!r.tier_expires_at || new Date(r.tier_expires_at).getTime() > now);
+        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid });
+      }
     }
     setOccupierProfiles(map);
   }
@@ -572,19 +578,9 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="text-[11px] text-cyan font-bold truncate">
-                          {(() => {
-                            const prof = p.occupier_id ? occupierProfiles.get(p.occupier_id) : null;
-                            const name = prof?.name ?? (p.occupier_id ? '...' : '');
-                            return prof?.link ? (
-                              <a
-                                href={prof.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="hover:underline"
-                              >{name}</a>
-                            ) : name;
-                          })()}
+                          {p.occupier_id ? (
+                            <Nickname info={occupierProfiles.get(p.occupier_id) ? { name: occupierProfiles.get(p.occupier_id)!.name, link: occupierProfiles.get(p.occupier_id)!.link, isPaid: occupierProfiles.get(p.occupier_id)!.isPaid } : { name: '...' }} />
+                          ) : ''}
                         </div>
                         {p.occupied_at && (
                           <div className="text-[10px] text-muted mt-0.5">{occupiedSinceLabel(p.occupied_at)}</div>
@@ -630,16 +626,9 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                           >
                             {f.apt_nm ?? '(단지 정보 없음)'}
                           </button>
-                          {f.author_link ? (
-                            <a
-                              href={f.author_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] text-cyan font-bold flex-shrink-0 hover:underline"
-                            >{f.author_name ?? '익명'}</a>
-                          ) : (
-                            <span className="text-[10px] text-cyan font-bold flex-shrink-0">{f.author_name ?? '익명'}</span>
-                          )}
+                          <span className="text-[10px] text-cyan font-bold flex-shrink-0">
+                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid }} />
+                          </span>
                         </div>
                         <div className="text-[12px] text-text leading-snug mb-0.5">{f.title}</div>
                         {fullContent && (

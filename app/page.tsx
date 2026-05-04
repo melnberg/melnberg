@@ -41,13 +41,16 @@ async function fetchFeed(): Promise<FeedItem[]> {
   if (!discs || discs.length === 0) return [];
 
   const authorIds = Array.from(new Set(discs.map((d) => (d as Record<string, unknown>).author_id as string).filter(Boolean)));
-  const profileMap = new Map<string, { display_name: string | null; link_url: string | null }>();
+  type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null };
+  const profileMap = new Map<string, ProfRow>();
   if (authorIds.length > 0) {
-    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url').in('id', authorIds);
-    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null }>) {
-      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url });
+    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', authorIds);
+    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url, tier: p.tier, tier_expires_at: p.tier_expires_at });
     }
   }
+  const now = Date.now();
+  const isActivePaid = (p: ProfRow | undefined) => !!p && p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > now);
 
   return (discs as Array<Record<string, unknown>>).map((r) => {
     const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
@@ -64,6 +67,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       lng: am?.lng ?? null,
       author_name: prof?.display_name ?? null,
       author_link: prof?.link_url ?? null,
+      author_is_paid: isActivePaid(prof),
     };
   });
 }

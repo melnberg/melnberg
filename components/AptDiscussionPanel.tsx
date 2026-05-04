@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import Nickname, { type NicknameInfo } from './Nickname';
 import type { AptPin } from './AptMap';
 
 type Discussion = {
@@ -57,7 +58,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const router = useRouter();
   const [discussions, setDiscussions] = useState<Discussion[] | null>(null);
   const [myVotes, setMyVotes] = useState<Map<number, 'up' | 'down'>>(new Map());
-  const [authors, setAuthors] = useState<Map<string, string>>(new Map());
+  const [authors, setAuthors] = useState<Map<string, NicknameInfo>>(new Map());
   const [comments, setComments] = useState<Map<number, Comment[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -84,6 +85,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   // 점거 상태
   const [occupierId, setOccupierId] = useState<string | null>(null);
   const [occupierName, setOccupierName] = useState<string | null>(null);
+  const [occupierLink, setOccupierLink] = useState<string | null>(null);
+  const [occupierIsPaid, setOccupierIsPaid] = useState<boolean>(false);
   const [occupierScore, setOccupierScore] = useState<number | null>(null);
   const [myScore, setMyScore] = useState<number | null>(null);
   const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
@@ -129,16 +132,22 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
     const ids = ds.map((d) => d.id);
 
-    // 작가 표시명
+    // 작가 표시명 + 링크 + 등급
     const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
+    const nowMs = Date.now();
+    const toInfo = (p: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }): NicknameInfo => ({
+      name: p.display_name,
+      link: p.link_url,
+      isPaid: p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs),
+    });
     if (authorIds.length > 0) {
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, display_name')
+        .select('id, display_name, link_url, tier, tier_expires_at')
         .in('id', authorIds);
-      const aMap = new Map<string, string>();
-      for (const p of (profilesData ?? []) as Array<{ id: string; display_name: string | null }>) {
-        if (p.display_name) aMap.set(p.id, p.display_name);
+      const aMap = new Map<string, NicknameInfo>();
+      for (const p of (profilesData ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+        if (p.display_name) aMap.set(p.id, toInfo(p));
       }
       setAuthors(aMap);
     } else {
@@ -166,13 +175,13 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       if (commentAuthorIds.length > 0) {
         const { data: extra } = await supabase
           .from('profiles')
-          .select('id, display_name')
+          .select('id, display_name, link_url, tier, tier_expires_at')
           .in('id', commentAuthorIds);
         if (extra) {
           setAuthors((prev) => {
             const m = new Map(prev);
-            for (const p of extra as Array<{ id: string; display_name: string | null }>) {
-              if (p.display_name) m.set(p.id, p.display_name);
+            for (const p of extra as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+              if (p.display_name) m.set(p.id, toInfo(p));
             }
             return m;
           });
@@ -208,14 +217,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       if (oid) {
         const { data: prof } = await supabase
           .from('profiles')
-          .select('display_name')
+          .select('display_name, link_url, tier, tier_expires_at')
           .eq('id', oid)
           .maybeSingle();
-        setOccupierName((prof as { display_name?: string | null } | null)?.display_name ?? null);
+        const p = prof as { display_name?: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null } | null;
+        setOccupierName(p?.display_name ?? null);
+        setOccupierLink(p?.link_url ?? null);
+        setOccupierIsPaid(p?.tier === 'paid' && (!p?.tier_expires_at || new Date(p.tier_expires_at).getTime() > Date.now()));
         const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: oid });
         setOccupierScore(typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0));
       } else {
         setOccupierName(null);
+        setOccupierLink(null);
+        setOccupierIsPaid(false);
         setOccupierScore(null);
       }
     }
@@ -487,7 +501,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               <div className="flex items-center gap-2 min-w-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                 <span className="text-[12px] text-[#666] font-medium flex-shrink-0">점거인</span>
-                <span className="text-[14px] font-bold text-black truncate">{occupierName ?? '익명'}</span>
+                <span className="text-[14px] font-bold text-black truncate">
+                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid }} />
+                </span>
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted text-muted text-[10px] font-bold cursor-help hover:border-navy hover:text-navy">?</span>
@@ -652,7 +668,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           <ul className="px-4 py-4 space-y-3">
             {discussions.map((d) => {
               const score = d.vote_up_count - d.vote_down_count;
-              const author = authors.get(d.author_id) ?? d.author_id.slice(0, 6);
+              const author = authors.get(d.author_id) ?? { name: d.author_id.slice(0, 6) };
               const myVote = myVotes.get(d.id);
               const isMine = userId === d.author_id;
               const dComments = comments.get(d.id) ?? [];
@@ -660,7 +676,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               return (
                 <li key={d.id} className="border border-navy/30 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.10)] hover:shadow-[0_2px_10px_rgba(0,32,96,0.14)] transition-shadow">
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-[14px] font-bold text-navy leading-snug flex-1">{d.title}</h3>
+                    <h3 className="text-[15px] font-extrabold text-navy leading-snug flex-1 tracking-tight">{d.title}</h3>
                     <div className={`text-[13px] font-bold flex-shrink-0 ${score > 0 ? 'text-cyan' : score < 0 ? 'text-red-500' : 'text-muted'}`}>
                       {score > 0 ? '+' : ''}{score}
                     </div>
@@ -669,7 +685,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap">{d.content}</p>
                   )}
                   <div className="text-[11px] text-muted mt-2 flex items-center gap-2">
-                    <span>{author}</span>
+                    <Nickname info={author} className="text-muted" />
+
                     <span>·</span>
                     <span>{relativeTime(d.created_at)}</span>
                     {isMine && (
@@ -703,13 +720,13 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   {isCommentsOpen && (
                     <div className="mt-3 pt-3 border-t border-[#f0f0f0] space-y-2">
                       {dComments.map((c) => {
-                        const cAuthor = authors.get(c.author_id) ?? c.author_id.slice(0, 6);
+                        const cAuthor = authors.get(c.author_id) ?? { name: c.author_id.slice(0, 6) };
                         const cIsMine = userId === c.author_id;
                         return (
                           <div key={c.id} className="text-[12px]">
                             <p className="text-text whitespace-pre-wrap leading-snug">{c.content}</p>
                             <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
-                              <span>{cAuthor}</span>
+                              <Nickname info={cAuthor} className="text-muted" />
                               <span>·</span>
                               <span>{relativeTime(c.created_at)}</span>
                               {cIsMine && (
