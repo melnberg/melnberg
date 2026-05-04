@@ -67,6 +67,21 @@ export default function SignupForm() {
       }
     }
 
+    // 이메일 중복 사전 검사 — Supabase 는 미인증 상태 같은 이메일 재가입을 "성공" 처리해서
+    // 사용자가 같은 이메일 여러 번 가입한 것처럼 보임. 서버 admin 으로 명확히 차단.
+    const emailT = email.trim().toLowerCase();
+    if (emailT) {
+      const r = await fetch('/api/auth/check-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailT }),
+      });
+      const { exists } = (await r.json().catch(() => ({}))) as { exists?: boolean };
+      if (exists) {
+        setMsg({ type: 'error', text: `이미 가입된 이메일입니다: "${emailT}". 로그인 페이지에서 로그인해주세요.` });
+        return;
+      }
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
