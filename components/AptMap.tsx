@@ -165,9 +165,25 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
     }
   }, [aiQuery]);
 
-  function submitAi() {
+  async function submitAi() {
     const q = aiQuery.trim();
     if (!q) return;
+    // 점거 게이팅 — 비로그인/비점거자는 차단
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('로그인 후 단지를 점거해야 사용 가능합니다.');
+      router.push('/login?next=/');
+      return;
+    }
+    const { count: occCount } = await supabase
+      .from('apt_master')
+      .select('id', { count: 'exact', head: true })
+      .eq('occupier_id', user.id);
+    if (!occCount || occCount === 0) {
+      alert('단지를 점거해야 사용 가능합니다. 지도에서 단지를 클릭해 글을 1개 이상 쓴 뒤 점거해주세요.');
+      return;
+    }
     router.push(`/ai?q=${encodeURIComponent(q)}&auto=1`);
   }
 

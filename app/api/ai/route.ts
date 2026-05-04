@@ -260,6 +260,26 @@ export async function POST(req: NextRequest) {
       if (isActivePaid) dailyLimit = 7;
     }
 
+    // 점거 게이팅 — 관리자 외에는 1개 이상 단지 점거중이어야 사용 가능
+    if (!isAdmin) {
+      if (!user) {
+        return NextResponse.json(
+          { error: '로그인 후 단지를 점거해야 사용 가능합니다.', code: 'NEED_OCCUPATION' },
+          { status: 403 },
+        );
+      }
+      const { count: occCount } = await supabase
+        .from('apt_master')
+        .select('id', { count: 'exact', head: true })
+        .eq('occupier_id', user.id);
+      if (!occCount || occCount === 0) {
+        return NextResponse.json(
+          { error: '단지를 점거해야 사용 가능합니다.', code: 'NEED_OCCUPATION' },
+          { status: 403 },
+        );
+      }
+    }
+
     if (isAdmin) {
       // 관리자는 한도 검사 스킵
     } else if (user) {
