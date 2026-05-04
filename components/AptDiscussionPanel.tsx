@@ -538,6 +538,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                       <div>내 score &gt; 점거인 score 일 때만</div>
                       <div className="text-[10px] text-white/60">동점은 박탈 불가</div>
                     </div>
+                    <div className="px-4 py-3 border-t border-white/10">
+                      <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">Score 산정</div>
+                      <div className="flex justify-between text-[11px]"><span>작성글</span><b>1점</b></div>
+                      <div className="flex justify-between text-[11px]"><span>댓글</span><b>0.7점</b></div>
+                    </div>
                     <div className="px-4 py-3 border-t border-white/10 space-y-1">
                       {myScore !== null && (
                         <div className="flex justify-between"><span className="text-white/70">내 score</span><b>{myScore}</b></div>

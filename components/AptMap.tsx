@@ -128,9 +128,13 @@ const CLUSTER_STYLES = [
   boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 }));
 
+type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
+
 export default function AptMap({ pins }: { pins: AptPin[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
+  const markersRef = useRef<MarkerTier[]>([]);
+  const [mapReady, setMapReady] = useState(false);
   const [selected, setSelected] = useState<AptPin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,82 +222,92 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
     setSearchQuery('');
   }
 
+  // 1) 지도 init — 한 번만. pins 변경 시 재생성하지 않음 (router.refresh로 인한 리셋 방지).
   useEffect(() => {
     if (!KAKAO_KEY) { setError('NEXT_PUBLIC_KAKAO_MAP_KEY 누락'); return; }
     let cancelled = false;
 
     loadKakaoSdk()
       .then(() => {
-        if (cancelled || !mapRef.current) return;
+        if (cancelled || !mapRef.current || mapInstRef.current) return;
         const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
         mapInstRef.current = map;
 
-        // SVG 핀 8종 = 4색 × {기본/점거}. 점거 시 안에 흰 깃발.
-        const PIN_W = 32, PIN_H = 45;
-        const makeImg = (color: string, occ: boolean) => new window.kakao.maps.MarkerImage(
-          buildPinSvg(color, occ),
-          new window.kakao.maps.Size(PIN_W, PIN_H),
-          { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
-        );
-        const pins8 = {
-          red: { plain: makeImg(PIN_COLORS.red, false), occ: makeImg(PIN_COLORS.red, true) },
-          orange: { plain: makeImg(PIN_COLORS.orange, false), occ: makeImg(PIN_COLORS.orange, true) },
-          green: { plain: makeImg(PIN_COLORS.green, false), occ: makeImg(PIN_COLORS.green, true) },
-          blue: { plain: makeImg(PIN_COLORS.blue, false), occ: makeImg(PIN_COLORS.blue, true) },
-        };
-        const dotBlue = new window.kakao.maps.MarkerImage(
-          '/pins/blue_dot.svg',
-          new window.kakao.maps.Size(20, 20),
-          { offset: new window.kakao.maps.Point(10, 10) },
-        );
-
-        function pickPin(hh: number | null, occupied: boolean) {
-          if (hh === null) return dotBlue;
-          const t = hh >= 3000 ? 'red' : hh >= 2000 ? 'orange' : hh >= 1000 ? 'green' : hh >= 300 ? 'blue' : null;
-          if (!t) return dotBlue;
-          return occupied ? pins8[t].occ : pins8[t].plain;
-        }
-
-        // 마커 생성 — 클러스터러 사용 시 map 미설정 (클러스터러가 visibility 자동 관리).
-        // 클러스터러 미사용 시에만 map에 직접 부착.
-        // 4단계 줌별 가시성:
-        //   tier 0 (≥2000): 항상 표시
-        //   tier 1 (1000~1999, 초록): 줌 ≤7
-        //   tier 2 (300~999, 파랑 핀): 줌 ≤5
-        //   tier 3 (≤299/미수집, 파란 점): 줌 ≤4 (100m 스케일에서 보임)
-        // 점거된 단지: tier 무관 항상 표시
-        type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
-        const allMarkers: MarkerTier[] = pins.map((p) => {
-          const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
-          const marker = new window.kakao.maps.Marker({
-            position: pos,
-            title: p.apt_nm,
-            clickable: true,
-            image: pickPin(p.household_count, !!p.occupier_id),
-            map,
-          }) as KakaoMarkerInst;
-          window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
-          const hh = p.household_count ?? 0;
-          const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
-          return { marker, tier, occupied: !!p.occupier_id };
-        });
-
-        function applyVisibility() {
+        // 줌 변경 리스너는 한 번만 등록 — markersRef.current 참조
+        window.kakao.maps.event.addListener(map, 'zoom_changed', () => {
           const level = map.getLevel();
-          for (const { marker, tier, occupied } of allMarkers) {
+          for (const { marker, tier, occupied } of markersRef.current) {
             if (tier === 0 || occupied) continue;
             const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
             marker.setMap(visible ? map : null);
           }
-        }
-        applyVisibility();
-        window.kakao.maps.event.addListener(map, 'zoom_changed', applyVisibility);
+        });
+
+        setMapReady(true);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
 
     return () => { cancelled = true; };
-  }, [pins]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 2) 마커 갱신 — pins 변경 시 기존 제거 후 재생성. 지도 view는 그대로.
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+
+    // 기존 마커 제거
+    for (const { marker } of markersRef.current) marker.setMap(null);
+    markersRef.current = [];
+
+    // SVG 핀 8종 = 4색 × {기본/점거}.
+    const PIN_W = 32, PIN_H = 45;
+    const makeImg = (color: string, occ: boolean) => new window.kakao.maps.MarkerImage(
+      buildPinSvg(color, occ),
+      new window.kakao.maps.Size(PIN_W, PIN_H),
+      { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
+    );
+    const pins8 = {
+      red: { plain: makeImg(PIN_COLORS.red, false), occ: makeImg(PIN_COLORS.red, true) },
+      orange: { plain: makeImg(PIN_COLORS.orange, false), occ: makeImg(PIN_COLORS.orange, true) },
+      green: { plain: makeImg(PIN_COLORS.green, false), occ: makeImg(PIN_COLORS.green, true) },
+      blue: { plain: makeImg(PIN_COLORS.blue, false), occ: makeImg(PIN_COLORS.blue, true) },
+    };
+    const dotBlue = new window.kakao.maps.MarkerImage(
+      '/pins/blue_dot.svg',
+      new window.kakao.maps.Size(20, 20),
+      { offset: new window.kakao.maps.Point(10, 10) },
+    );
+
+    function pickPin(hh: number | null, occupied: boolean) {
+      if (hh === null) return dotBlue;
+      const t = hh >= 3000 ? 'red' : hh >= 2000 ? 'orange' : hh >= 1000 ? 'green' : hh >= 300 ? 'blue' : null;
+      if (!t) return dotBlue;
+      return occupied ? pins8[t].occ : pins8[t].plain;
+    }
+
+    const level = map.getLevel();
+    const allMarkers: MarkerTier[] = pins.map((p) => {
+      const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
+      const hh = p.household_count ?? 0;
+      const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
+      const occupied = !!p.occupier_id;
+      const visible = tier === 0 || occupied
+        || (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: p.apt_nm,
+        clickable: true,
+        image: pickPin(p.household_count, occupied),
+        map: visible ? map : undefined,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
+      return { marker, tier, occupied };
+    });
+
+    markersRef.current = allMarkers;
+  }, [pins, mapReady]);
 
   if (error) {
     return (
