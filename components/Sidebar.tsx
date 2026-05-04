@@ -113,7 +113,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {consultOpen && consults.map((p) => (
             <SItem
               key={p.id}
-              href={`/${p.filename}`}
+              href={`/pay/${p.id}`}
               label={p.name}
               price={p.price.toLocaleString('en-US')}
               active={current === p.filename}
@@ -132,7 +132,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {membershipOpen && memberships.map((p) => (
             <SItem
               key={p.id}
-              href={`/${p.filename}`}
+              href={`/pay/${p.id}`}
               label={p.id === 'new-membership' ? '2분기 신규가입' : '2분기 갱신'}
               price={p.price.toLocaleString('en-US')}
               active={current === p.filename}
