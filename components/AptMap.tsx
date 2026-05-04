@@ -310,6 +310,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [evicts, setEvicts] = useState<EvictEvent[] | null>(null);
   const [evictCount, setEvictCount] = useState(0);
 
+  // 스코어 랭킹 top 5
+  type RankRow = { user_id: string; display_name: string; score: number };
+  const [ranking, setRanking] = useState<RankRow[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/score-ranking');
+        if (!r.ok) return;
+        const json = (await r.json()) as { ranking: RankRow[] };
+        if (!cancelled) setRanking(json.ranking ?? []);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
   function jumpToFeedItem(item: FeedItem) {
@@ -626,6 +642,21 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   return (
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
+
+      {/* 상단 가로 바 — 스코어 랭킹 top 5 */}
+      {ranking.length > 0 && (
+        <div className="absolute top-4 left-[300px] right-4 z-20 bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-3 py-1.5 text-[11px] flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+          <span className="font-bold text-navy flex-shrink-0">🏆 스코어 랭킹 TOP 5</span>
+          {ranking.map((r, i) => (
+            <span key={r.user_id} className="flex-shrink-0">
+              <span className="text-cyan font-bold">{i + 1}위</span>{' '}
+              <span className="text-text font-semibold">{r.display_name}</span>
+              <span className="text-muted">({r.score})</span>
+              {i < ranking.length - 1 && <span className="text-muted/50 ml-2">·</span>}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* 좌상단 — 아파트 검색 + 정보 배지 스택 */}
       <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 w-[280px]">
