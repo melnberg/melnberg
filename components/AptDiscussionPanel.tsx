@@ -303,6 +303,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setOccupierScore(row.out_occupier_score ?? null);
     setMyCurrentApt(null);
     setHistory(null); // 다음 열기 시 재fetch
+    // 홈 지도 핀 캐시 무효화 신호 (점거 마커 즉시 갱신)
+    window.dispatchEvent(new Event('mlbg-pins-changed'));
   }
 
   async function forceEvict() {
@@ -337,6 +339,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setOccupierScore(row.out_occupier_score ?? null);
     setMyCurrentApt(null);
     setHistory(null);
+    window.dispatchEvent(new Event('mlbg-pins-changed'));
   }
 
   useEffect(() => {

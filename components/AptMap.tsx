@@ -236,6 +236,34 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; clearTimeout(smallTimer); };
   }, [pinsFromProps]);
 
+  // 점거/강제집행 액션 후 big 캐시 무효화 + refetch (이벤트 기반)
+  useEffect(() => {
+    function onPinsChanged() {
+      try { localStorage.removeItem(PINS_CACHE_KEY_BIG); } catch { /* ignore */ }
+      (async () => {
+        try {
+          const r = await fetch('/api/home-pins', { cache: 'no-store' });
+          if (!r.ok) return;
+          const json = (await r.json()) as { pins: AptPin[] };
+          writePinCache(PINS_CACHE_KEY_BIG, json.pins);
+          // 기존 small 은 그대로 유지하면서 big 만 갱신
+          setPins((prev) => {
+            const seen = new Set<number>();
+            const merged: AptPin[] = [];
+            for (const p of [...json.pins, ...prev]) {
+              if (seen.has(p.id)) continue;
+              seen.add(p.id);
+              merged.push(p);
+            }
+            return merged;
+          });
+        } catch { /* ignore */ }
+      })();
+    }
+    window.addEventListener('mlbg-pins-changed', onPinsChanged);
+    return () => window.removeEventListener('mlbg-pins-changed', onPinsChanged);
+  }, []);
+
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
   const markersRef = useRef<MarkerTier[]>([]);
