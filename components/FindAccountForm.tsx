@@ -8,16 +8,16 @@ export default function FindAccountForm() {
   const [tab, setTab] = useState<'id' | 'pw'>('id');
   return (
     <div>
-      <div className="flex gap-1 border-b border-border mb-6">
+      <div className="flex border-b border-border mb-6">
         <button
           type="button"
           onClick={() => setTab('id')}
-          className={`px-5 py-2.5 text-[13px] font-bold tracking-wide -mb-px ${tab === 'id' ? 'border-b-2 border-navy text-navy' : 'text-muted hover:text-navy'}`}
+          className={`flex-1 py-2.5 text-[13px] font-bold tracking-wide -mb-px text-center ${tab === 'id' ? 'border-b-2 border-navy text-navy' : 'text-muted hover:text-navy'}`}
         >아이디(이메일) 찾기</button>
         <button
           type="button"
           onClick={() => setTab('pw')}
-          className={`px-5 py-2.5 text-[13px] font-bold tracking-wide -mb-px ${tab === 'pw' ? 'border-b-2 border-navy text-navy' : 'text-muted hover:text-navy'}`}
+          className={`flex-1 py-2.5 text-[13px] font-bold tracking-wide -mb-px text-center ${tab === 'pw' ? 'border-b-2 border-navy text-navy' : 'text-muted hover:text-navy'}`}
         >비밀번호 재설정</button>
       </div>
       {tab === 'id' ? <FindIdTab /> : <ResetPwTab />}
