@@ -49,10 +49,11 @@ declare global {
 }
 
 export type FeedItem = {
+  kind: 'discussion' | 'comment';
   id: number;
   apt_master_id: number;
-  title: string;
-  content: string | null;
+  title: string;          // discussion: 글 제목 / comment: 부모 글 제목
+  content: string | null; // discussion: 본문 / comment: 댓글 내용
   created_at: string;
   apt_nm: string | null;
   dong: string | null;
@@ -168,11 +169,11 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
 
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
-  const [expandedFeed, setExpandedFeed] = useState<Set<number>>(new Set());
-  function toggleFeedExpand(id: number) {
+  const [expandedFeed, setExpandedFeed] = useState<Set<string>>(new Set());
+  function toggleFeedExpand(key: string) {
     setExpandedFeed((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
@@ -623,10 +624,12 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
             ) : (
               <ul>
                 {feed.map((f) => {
-                  const expanded = expandedFeed.has(f.id);
+                  const feedKey = `${f.kind}-${f.id}`;
+                  const expanded = expandedFeed.has(feedKey);
                   const fullContent = (f.content ?? '').trim();
+                  const isComment = f.kind === 'comment';
                   return (
-                    <li key={f.id} className="border-b border-[#f0f0f0] last:border-b-0">
+                    <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
                       <div className="px-3 py-2.5 bg-white hover:bg-[#fafbfc]">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <button
@@ -640,7 +643,12 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                             <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo }} />
                           </span>
                         </div>
-                        <div className="text-[12px] text-text leading-snug mb-0.5">{f.title}</div>
+                        <div className="text-[12px] text-text leading-snug mb-0.5 flex items-center gap-1.5">
+                          {isComment && (
+                            <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0">댓글</span>
+                          )}
+                          <span className="truncate">{f.title}</span>
+                        </div>
                         {fullContent && (
                           <>
                             <div className={`text-[12px] text-text leading-snug whitespace-pre-wrap ${expanded ? '' : 'line-clamp-2'}`}>
@@ -649,7 +657,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                             {fullContent.length > 50 && (
                               <button
                                 type="button"
-                                onClick={() => toggleFeedExpand(f.id)}
+                                onClick={() => toggleFeedExpand(feedKey)}
                                 className="mt-1 text-[10px] text-muted hover:text-navy font-bold"
                               >
                                 {expanded ? '접기 ^' : '펼치기 v'}

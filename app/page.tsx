@@ -21,7 +21,8 @@ const fetchAptPins = unstable_cache(
         .from('apt_master')
         .select('id, apt_nm, dong, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at')
         .not('lat', 'is', null)
-        .gt('household_count', 20)
+        // 빌라/오피스텔 등 비아파트 제거: K-apt 등록(kapt_code) 또는 100세대 이상만
+        .or('kapt_code.not.is.null,household_count.gte.100')
         .range(offset, offset + 999);
       if (error) {
         console.warn('apt_master fetch error at offset', offset, error.message);
@@ -37,42 +38,55 @@ const fetchAptPins = unstable_cache(
   { revalidate: 300, tags: ['apt-master'] },
 );
 
-// 피드 — 30초 캐싱. is_solo 분리 select 합쳐서 한 번만 호출.
+// 피드 — 30초 캐싱. 글(apt_discussions) + 댓글(apt_discussion_comments) 합쳐 시간순.
 const fetchFeed = unstable_cache(
   async (): Promise<FeedItem[]> => {
     const supabase = createPublicClient();
-    const { data: discs } = await supabase
-      .from('apt_discussions')
-      .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (!discs || discs.length === 0) return [];
+    const [{ data: discs }, { data: cmts }] = await Promise.all([
+      supabase
+        .from('apt_discussions')
+        .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('apt_discussion_comments')
+        .select('id, discussion_id, author_id, content, created_at, discussion:apt_discussions!discussion_id(title, apt_master_id, apt_master(apt_nm, dong, lat, lng))')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ]);
 
-    const authorIds = Array.from(new Set(discs.map((d) => (d as Record<string, unknown>).author_id as string).filter(Boolean)));
+    const allAuthorIds = Array.from(new Set([
+      ...((discs ?? []).map((d) => (d as Record<string, unknown>).author_id as string)),
+      ...((cmts ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
+    ].filter(Boolean)));
+
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null };
     const profileMap = new Map<string, ProfRow>();
-    if (authorIds.length > 0) {
+    if (allAuthorIds.length > 0) {
       const { data: profs } = await supabase
         .from('profiles')
         .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
-        .in('id', authorIds);
-      for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
+        .in('id', allAuthorIds);
+      for (const p of (profs ?? []) as Array<{ id: string } & ProfRow>) {
         profileMap.set(p.id, p);
       }
     }
     const now = Date.now();
     const isActivePaid = (p: ProfRow | undefined) => !!p && p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > now);
 
-    return (discs as Array<Record<string, unknown>>).map((r) => {
-      const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
-      const prof = profileMap.get(r.author_id as string);
+    const discussionItems: FeedItem[] = (discs ?? []).map((r) => {
+      const row = r as Record<string, unknown>;
+      const am = row.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+      const prof = profileMap.get(row.author_id as string);
       return {
-        id: r.id as number,
-        apt_master_id: r.apt_master_id as number,
-        title: r.title as string,
-        content: r.content as string | null,
-        created_at: r.created_at as string,
+        kind: 'discussion',
+        id: row.id as number,
+        apt_master_id: row.apt_master_id as number,
+        title: row.title as string,
+        content: row.content as string | null,
+        created_at: row.created_at as string,
         apt_nm: am?.apt_nm ?? null,
         dong: am?.dong ?? null,
         lat: am?.lat ?? null,
@@ -83,9 +97,36 @@ const fetchFeed = unstable_cache(
         author_is_solo: !!prof?.is_solo,
       };
     });
+
+    const commentItems: FeedItem[] = (cmts ?? []).map((r) => {
+      const row = r as Record<string, unknown>;
+      const disc = row.discussion as { title: string | null; apt_master_id: number | null; apt_master: { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null } | null;
+      const am = disc?.apt_master ?? null;
+      const prof = profileMap.get(row.author_id as string);
+      return {
+        kind: 'comment',
+        id: row.id as number,
+        apt_master_id: (disc?.apt_master_id ?? 0) as number,
+        title: disc?.title ?? '(삭제된 글)',
+        content: row.content as string | null,
+        created_at: row.created_at as string,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+      };
+    });
+
+    return [...discussionItems, ...commentItems]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, 50);
   },
   ['home-feed'],
-  { revalidate: 30, tags: ['apt-discussions', 'profiles'] },
+  { revalidate: 30, tags: ['apt-discussions', 'apt-discussion-comments', 'profiles'] },
 );
 
 export default async function HomePage() {
