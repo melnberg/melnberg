@@ -491,7 +491,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted text-muted text-[10px] font-bold cursor-help hover:border-navy hover:text-navy">?</span>
-                  <div className="hidden group-hover:block absolute z-50 left-1/2 -translate-x-1/2 top-6 w-[300px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
+                  <div className="hidden group-hover:block absolute z-50 left-0 top-6 w-[280px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
                     <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">점거 규칙</div>
                     <div className="px-4 py-3 space-y-3">
                       <div>
