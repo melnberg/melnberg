@@ -44,15 +44,19 @@ export default function OAuthButtons({ next = '/' }: { next?: string }) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.79 1.84 5.24 4.6 6.66l-1.18 4.31c-.1.36.29.65.6.45L11.32 19c.22.02.45.03.68.03 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"/></svg>
         {busy === 'kakao' ? '카카오 연결 중...' : '카카오로 시작하기'}
       </button>
-      <button
-        type="button"
-        onClick={startNaver}
-        disabled={!!busy}
-        className="w-full bg-[#03C75A] text-white py-3 text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#02b350] disabled:opacity-60 border-none cursor-pointer"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.5 8.85L6.18 3.99H3.5v8.02h3v-4.86l3.32 4.86H12.5V3.99h-3z"/></svg>
-        {busy === 'naver' ? '네이버 연결 중...' : '네이버로 시작하기'}
-      </button>
+      {/* 네이버 — 검수 통과 전이라 등록된 멤버만 로그인 가능. 일반 사용자에게 혼란.
+          승인 후 다시 활성화. 함수 startNaver 와 /api/auth/naver/* 는 코드 유지. */}
+      {false && (
+        <button
+          type="button"
+          onClick={startNaver}
+          disabled={!!busy}
+          className="w-full bg-[#03C75A] text-white py-3 text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#02b350] disabled:opacity-60 border-none cursor-pointer"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.5 8.85L6.18 3.99H3.5v8.02h3v-4.86l3.32 4.86H12.5V3.99h-3z"/></svg>
+          {busy === 'naver' ? '네이버 연결 중...' : '네이버로 시작하기'}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => startSupabase('google')}
