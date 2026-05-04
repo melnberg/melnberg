@@ -38,11 +38,18 @@ export default function Nickname({
 
   const isPaid = !!info?.isPaid;
   const isSolo = !!info?.isSolo;
+  const hasLink = !!info?.link;
   const nameCls = isSolo ? 'text-pink-500' : '';
+  const dotTitle = hasLink ? '블로그·SNS 등록됨 — 클릭 시 새 탭에서 열림' : '블로그·SNS 미등록 — 클릭 시 등록 안내';
   const inner = (
     <>
       <span className={nameCls}>{name}</span>
       {isPaid && <span className={BADGE_CLS}>조합원</span>}
+      <span
+        className={`inline-block w-2 h-2 rounded-full ml-1 align-middle ${hasLink ? 'bg-green-500' : 'bg-[#d4d4d4]'}`}
+        title={dotTitle}
+        aria-label={dotTitle}
+      />
     </>
   );
 
