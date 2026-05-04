@@ -62,7 +62,25 @@ export default async function MePage() {
 
       <section className="py-12">
         <div className="max-w-[680px] mx-auto px-6">
-          <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">마이페이지</h1>
+          <div className="flex items-baseline justify-between gap-4 flex-wrap mb-2">
+            <h1 className="text-[28px] font-bold text-navy tracking-tight">마이페이지</h1>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/me/feedback"
+                className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy"
+              >
+                내 건의사항
+              </Link>
+              {profile?.is_admin && (
+                <Link
+                  href="/admin"
+                  className="px-3 py-1.5 border border-navy bg-navy text-white text-[12px] font-bold no-underline hover:bg-navy-dark"
+                >
+                  어드민 페이지
+                </Link>
+              )}
+            </div>
+          </div>
           <p className="text-sm text-muted mb-8">계정 정보를 확인합니다.</p>
 
           <ProfileForm
@@ -136,17 +154,7 @@ export default async function MePage() {
             )}
           </div>
 
-          <div className="mt-10 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-5">
-              <Link href="/me/feedback" className="text-[13px] font-bold text-navy no-underline hover:underline">
-                내 건의사항 →
-              </Link>
-              {profile?.is_admin && (
-                <Link href="/admin" className="text-[13px] font-bold text-navy no-underline hover:underline">
-                  어드민 페이지 →
-                </Link>
-              )}
-            </div>
+          <div className="mt-10 flex items-center justify-end">
             <LogoutButton />
           </div>
 

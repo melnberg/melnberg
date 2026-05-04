@@ -67,39 +67,14 @@ export default async function AdminPage() {
 
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">
-          <div className="flex items-baseline justify-between mb-2 gap-3 flex-wrap">
+          <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
             <h1 className="text-[28px] font-bold text-navy tracking-tight">어드민</h1>
-            <div className="flex gap-4">
-              <a
-                href="/admin/ai-logs"
-                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
-              >
-                AI 질문 로그 →
-              </a>
-              <a
-                href="/admin/cafe-posts"
-                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
-              >
-                카페 글 관리 →
-              </a>
-              <a
-                href="/admin/cafe-members"
-                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
-              >
-                카페 유료회원 →
-              </a>
-              <a
-                href="/admin/apt-master"
-                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
-              >
-                아파트 마스터 →
-              </a>
-              <a
-                href="/admin/feedback"
-                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
-              >
-                건의사항 →
-              </a>
+            <div className="flex gap-2 flex-wrap">
+              <a href="/admin/ai-logs" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">AI 질문 로그</a>
+              <a href="/admin/cafe-posts" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">카페 글 관리</a>
+              <a href="/admin/cafe-members" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">카페 유료회원</a>
+              <a href="/admin/apt-master" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">아파트 마스터</a>
+              <a href="/admin/feedback" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">건의사항</a>
             </div>
           </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>
