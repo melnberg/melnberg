@@ -31,15 +31,26 @@ async function fetchAptPins(): Promise<AptPin[]> {
 
 async function fetchFeed(): Promise<FeedItem[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  // apt_master는 FK 있어서 join, profiles는 FK 없어서 별도 fetch
+  const { data: discs } = await supabase
     .from('apt_discussions')
-    .select('id, apt_master_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng), author:profiles!author_id(display_name)')
+    .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(50);
-  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+  if (!discs || discs.length === 0) return [];
+
+  const authorIds = Array.from(new Set(discs.map((d) => (d as Record<string, unknown>).author_id as string).filter(Boolean)));
+  const nameMap = new Map<string, string>();
+  if (authorIds.length > 0) {
+    const { data: profs } = await supabase.from('profiles').select('id, display_name').in('id', authorIds);
+    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null }>) {
+      if (p.display_name) nameMap.set(p.id, p.display_name);
+    }
+  }
+
+  return (discs as Array<Record<string, unknown>>).map((r) => {
     const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
-    const author = r.author as { display_name: string | null } | null;
     return {
       id: r.id as number,
       apt_master_id: r.apt_master_id as number,
@@ -50,7 +61,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       dong: am?.dong ?? null,
       lat: am?.lat ?? null,
       lng: am?.lng ?? null,
-      author_name: author?.display_name ?? null,
+      author_name: nameMap.get(r.author_id as string) ?? null,
     };
   });
 }
