@@ -448,14 +448,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const allMarkers: MarkerTier[] = [];
     let cancelled = false;
 
-    // 청크 처리 — 1000개씩 setTimeout(0) 으로 yield. 메인 스레드 1프레임 이상 안 잡음.
-    const CHUNK = 1000;
+    // 우선순위 정렬: 큰 단지·점거 단지 먼저 → 화면에 중요한 핀이 100ms 내 등장.
+    // 작은 단지는 뒤에서 천천히. 청크 사이즈 2000 으로 키워 yield 오버헤드 절감.
+    const sorted = [...pins].sort((a, b) => {
+      const aOcc = a.occupier_id ? 1 : 0;
+      const bOcc = b.occupier_id ? 1 : 0;
+      if (aOcc !== bOcc) return bOcc - aOcc; // 점거 우선
+      return (b.household_count ?? 0) - (a.household_count ?? 0); // 큰 단지 우선
+    });
+
+    const CHUNK = 2000;
     let i = 0;
     function processChunk() {
       if (cancelled) return;
-      const end = Math.min(i + CHUNK, pins.length);
+      const end = Math.min(i + CHUNK, sorted.length);
       for (; i < end; i++) {
-        const p = pins[i];
+        const p = sorted[i];
         const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
         const hh = p.household_count ?? 0;
         const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
@@ -473,7 +481,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         allMarkers.push({ marker, tier, occupied });
       }
       markersRef.current = allMarkers;
-      if (i < pins.length) setTimeout(processChunk, 0);
+      if (i < sorted.length) setTimeout(processChunk, 0);
     }
     processChunk();
 
