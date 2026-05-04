@@ -1,27 +1,33 @@
+import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 import NotificationsBell from './NotificationsBell';
 
-async function fetchRecentPosts(): Promise<SidebarRecentPost[]> {
-  const supabase = await createClient();
-  const { data: recentRaw } = await supabase
-    .from('posts')
-    .select('id, title, created_at, author:profiles!author_id(display_name)')
-    .eq('category', 'community')
-    .order('created_at', { ascending: false })
-    .limit(5);
-  return (recentRaw ?? []).map((p) => {
-    const author = (p as Record<string, unknown>).author as { display_name?: string | null } | null;
-    return {
-      id: p.id as number,
-      title: p.title as string,
-      created_at: p.created_at as string,
-      author_name: author?.display_name ?? null,
-    };
-  });
-}
+// 사이드바 최신글 — 30초 캐싱. 모든 페이지 공통이라 cache hit 비율 매우 높음.
+const fetchRecentPosts = unstable_cache(
+  async (): Promise<SidebarRecentPost[]> => {
+    const supabase = await createClient();
+    const { data: recentRaw } = await supabase
+      .from('posts')
+      .select('id, title, created_at, author:profiles!author_id(display_name)')
+      .eq('category', 'community')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    return (recentRaw ?? []).map((p) => {
+      const author = (p as Record<string, unknown>).author as { display_name?: string | null } | null;
+      return {
+        id: p.id as number,
+        title: p.title as string,
+        created_at: p.created_at as string,
+        author_name: author?.display_name ?? null,
+      };
+    });
+  },
+  ['sidebar-recent-posts'],
+  { revalidate: 30, tags: ['posts'] },
+);
 
 export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
   // 모두 독립적인 쿼리 — 병렬 실행. cached 헬퍼라 페이지에서 또 호출해도 dedupe됨.

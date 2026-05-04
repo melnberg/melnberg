@@ -33,7 +33,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // 정적 자원 제외
-    '/((?!_next/static|_next/image|favicon.ico|logo.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // 정적 자원 + 세션 갱신 불필요한 경로 제외
+    // - /api/cron/* : Vercel Cron 호출, 사용자 세션 없음
+    // - /api/payments/confirm : Toss 결제 confirm 콜백, 사용자 세션 없음
+    '/((?!_next/static|_next/image|favicon.ico|logo.svg|api/cron|api/payments/confirm|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf)$).*)',
   ],
 };
