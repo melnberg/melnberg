@@ -136,15 +136,18 @@ export default async function MePage() {
             )}
           </div>
 
-          <div className="mt-10 flex items-center justify-between">
-            {profile?.is_admin && (
-              <Link href="/admin" className="text-[13px] font-bold text-navy no-underline hover:underline">
-                어드민 페이지 →
+          <div className="mt-10 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-5">
+              <Link href="/me/feedback" className="text-[13px] font-bold text-navy no-underline hover:underline">
+                내 건의사항 →
               </Link>
-            )}
-            <div className="ml-auto">
-              <LogoutButton />
+              {profile?.is_admin && (
+                <Link href="/admin" className="text-[13px] font-bold text-navy no-underline hover:underline">
+                  어드민 페이지 →
+                </Link>
+              )}
             </div>
+            <LogoutButton />
           </div>
 
           <div className="mt-12 pt-6 border-t border-border flex justify-end">
