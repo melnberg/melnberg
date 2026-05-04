@@ -419,24 +419,24 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
       </form>
 
 
-      {/* 우측 하단 범례 — 핀 모양 그대로 표시 */}
+      {/* 우측 하단 범례 — 실제 지도 핀과 동일 SVG (깃발 없음) */}
       <div className="absolute bottom-8 right-6 z-20 pointer-events-none">
         <div className="text-[11px] font-bold text-navy mb-1.5 tracking-wider uppercase drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">세대수</div>
         <ul className="space-y-1.5 text-[12px]">
           <li className="flex items-center gap-2">
-            <img src="/pins/red_3000plus_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+            <img src={buildPinSvg(PIN_COLORS.red, false)} alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">3000+ 대단지</span>
           </li>
           <li className="flex items-center gap-2">
-            <img src="/pins/orange_2000plus_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+            <img src={buildPinSvg(PIN_COLORS.orange, false)} alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">2000~2999</span>
           </li>
           <li className="flex items-center gap-2">
-            <img src="/pins/green_1000plus_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+            <img src={buildPinSvg(PIN_COLORS.green, false)} alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">1000~1999</span>
           </li>
           <li className="flex items-center gap-2">
-            <img src="/pins/blue_under1000_2x.png" alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+            <img src={buildPinSvg(PIN_COLORS.blue, false)} alt="" className="w-5 h-7 object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             <span className="text-navy font-bold drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">300~999</span>
           </li>
           <li className="flex items-center gap-2">
