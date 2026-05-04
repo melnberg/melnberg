@@ -169,14 +169,6 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
 
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
-  const [expandedFeed, setExpandedFeed] = useState<Set<string>>(new Set());
-  function toggleFeedExpand(key: string) {
-    setExpandedFeed((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
   function jumpToFeedItem(item: FeedItem) {
     if (item.lat == null || item.lng == null) return;
     const inst = mapInstRef.current;
@@ -625,7 +617,6 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
               <ul>
                 {feed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
-                  const expanded = expandedFeed.has(feedKey);
                   const fullContent = (f.content ?? '').trim();
                   const isComment = f.kind === 'comment';
                   return (
@@ -643,25 +634,16 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                             <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo }} />
                           </span>
                         </div>
-                        <div className="text-[12px] text-text leading-snug mb-0.5 flex items-center gap-1.5">
-                          {isComment && (
-                            <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0">댓글</span>
-                          )}
-                          <span className="truncate">{f.title}</span>
-                        </div>
-                        {fullContent && (
+                        {isComment ? (
+                          <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                            <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
+                            <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>
+                          </div>
+                        ) : (
                           <>
-                            <div className={`text-[12px] text-text leading-snug whitespace-pre-wrap ${expanded ? '' : 'line-clamp-2'}`}>
-                              {fullContent}
-                            </div>
-                            {fullContent.length > 50 && (
-                              <button
-                                type="button"
-                                onClick={() => toggleFeedExpand(feedKey)}
-                                className="mt-1 text-[10px] text-muted hover:text-navy font-bold"
-                              >
-                                {expanded ? '접기 ^' : '펼치기 v'}
-                              </button>
+                            <div className="text-[12px] text-text leading-snug mb-0.5 break-words">{f.title}</div>
+                            {fullContent && (
+                              <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">{fullContent}</div>
                             )}
                           </>
                         )}
