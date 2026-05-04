@@ -39,26 +39,50 @@ export default function Nickname({
   const isPaid = !!info?.isPaid;
   const isSolo = !!info?.isSolo;
   const hasLink = !!info?.link;
+
+  // 비조합원: 닉네임만 평범하게 표시 (뱃지·dot·링크·팝업 없음)
+  if (!isPaid) return <span className={className}>{name}</span>;
   // dot: 좌(블로그) + 우(솔로). 솔로면 우반 분홍, 아니면 단색.
   const linkColor = hasLink ? '#22c55e' /* green-500 */ : '#d4d4d4' /* gray */;
   const soloColor = '#ec4899'; // pink-500
   const dotStyle: React.CSSProperties = isSolo
     ? { background: `linear-gradient(to right, ${linkColor} 0 50%, ${soloColor} 50% 100%)` }
     : { background: linkColor };
-  const dotTitle = [
-    hasLink ? '블로그·SNS 등록됨 (초록)' : '블로그·SNS 미등록 (회색)',
-    isSolo ? '미혼 솔로 (분홍)' : null,
-  ].filter(Boolean).join(' / ');
   const inner = (
     <>
       <span>{name}</span>
       {isPaid && <span className={BADGE_CLS}>조합원</span>}
-      <span
-        className="inline-block w-2 h-2 rounded-full ml-1 align-middle"
-        style={dotStyle}
-        title={dotTitle}
-        aria-label={dotTitle}
-      />
+      <span className="relative inline-block ml-1 align-middle group/dot">
+        <span
+          className="block w-2 h-2 rounded-full"
+          style={dotStyle}
+          aria-label="회원 표시"
+        />
+        <span className="hidden group-hover/dot:block absolute z-[70] right-0 top-full mt-1 bg-navy text-white text-[10px] leading-relaxed shadow-xl w-[210px] p-3 whitespace-normal text-left">
+          <div className="text-cyan font-bold tracking-wider uppercase text-[9px] mb-2">회원 표시 안내</div>
+          <ul className="space-y-1.5">
+            <li className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
+              <span>블로그·SNS 등록</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ background: '#d4d4d4' }} />
+              <span>미등록</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ background: 'linear-gradient(to right, #22c55e 0 50%, #ec4899 50% 100%)' }} />
+              <span>등록 + 미혼 솔로</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ background: 'linear-gradient(to right, #d4d4d4 0 50%, #ec4899 50% 100%)' }} />
+              <span>미등록 + 미혼 솔로</span>
+            </li>
+          </ul>
+          <div className="mt-2.5 pt-2 border-t border-white/20 text-[9px] text-white/70 leading-snug">
+            마이페이지에서 내 표시를 수정할 수 있습니다.
+          </div>
+        </span>
+      </span>
     </>
   );
 
