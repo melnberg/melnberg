@@ -63,8 +63,10 @@ export default function Sidebar({ current, user }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[13px] font-bold text-text truncate">{user.name}</span>
-                  {user.isPaid && (
+                  {user.isPaid ? (
                     <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5 flex-shrink-0">정회원</span>
+                  ) : (
+                    <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5 flex-shrink-0">무료회원</span>
                   )}
                 </div>
                 <div className="text-[11px] text-muted flex items-center gap-1.5">
