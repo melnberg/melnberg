@@ -81,7 +81,7 @@ export default async function BlogPage() {
                           ) : null}
                         </Link>
                       </td>
-                      <td className="py-2.5 px-2 text-center text-navy font-semibold truncate">
+                      <td className="py-2.5 px-2 text-center text-navy font-semibold relative overflow-visible">
                         <Nickname info={{
                           name: p.author?.display_name ?? null,
                           link: p.author?.link_url ?? null,
