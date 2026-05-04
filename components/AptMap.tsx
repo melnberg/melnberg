@@ -73,6 +73,7 @@ export type AptPin = {
   kapt_code: string | null;
   geocoded_address: string | null;
   occupier_id: string | null;
+  occupied_at: string | null;
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
@@ -195,7 +196,29 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
     return `${d}일`;
   }
 
-  const occupied = useMemo(() => pins.filter((p) => p.occupier_id), [pins]);
+  // 점거 시간: 24시간 이내면 분/시간, 그 이후는 KST 날짜 (M.D)
+  function occupiedSinceLabel(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const ms = Date.now() - d.getTime();
+    const min = Math.floor(ms / 60000);
+    if (min < 1) return '방금 전';
+    if (min < 60) return `${min}분 전`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}시간 전`;
+    const parts = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' })
+      .formatToParts(d).reduce<Record<string, string>>((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+    return `${parts.month}.${parts.day}`;
+  }
+
+  const occupied = useMemo(
+    () => pins.filter((p) => p.occupier_id).sort((a, b) => {
+      const at = a.occupied_at ? new Date(a.occupied_at).getTime() : 0;
+      const bt = b.occupied_at ? new Date(b.occupied_at).getTime() : 0;
+      return bt - at; // 최신 점거 먼저
+    }),
+    [pins],
+  );
 
   // KST 기준 오늘 00:00 (UTC ISO)
   function todayKstStartUtcIso(): string {
@@ -546,8 +569,13 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                         <div className="text-[13px] font-bold text-navy truncate">{p.apt_nm}</div>
                         {p.dong && <div className="text-[10px] text-muted truncate">{p.dong}</div>}
                       </div>
-                      <div className="text-[11px] text-cyan font-bold flex-shrink-0">
-                        {p.occupier_id ? (occupierNames.get(p.occupier_id) ?? '...') : ''}
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-[11px] text-cyan font-bold truncate">
+                          {p.occupier_id ? (occupierNames.get(p.occupier_id) ?? '...') : ''}
+                        </div>
+                        {p.occupied_at && (
+                          <div className="text-[10px] text-muted mt-0.5">{occupiedSinceLabel(p.occupied_at)}</div>
+                        )}
                       </div>
                     </button>
                   </li>
