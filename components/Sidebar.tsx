@@ -29,6 +29,10 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
     }
   }, [open]);
 
+  // current 가 해당 섹션 아이템으로 바뀌면 자동으로 펼침 (네비게이션 후 하위메뉴 유지)
+  useEffect(() => { if (isConsultActive) setConsultOpen(true); }, [isConsultActive]);
+  useEffect(() => { if (isMembershipActive) setMembershipOpen(true); }, [isMembershipActive]);
+
   return (
     <>
       <aside
