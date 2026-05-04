@@ -39,14 +39,23 @@ export default function Nickname({
   const isPaid = !!info?.isPaid;
   const isSolo = !!info?.isSolo;
   const hasLink = !!info?.link;
-  const nameCls = isSolo ? 'text-pink-500' : '';
-  const dotTitle = hasLink ? '블로그·SNS 등록됨 — 클릭 시 새 탭에서 열림' : '블로그·SNS 미등록 — 클릭 시 등록 안내';
+  // dot: 좌(블로그) + 우(솔로). 솔로면 우반 분홍, 아니면 단색.
+  const linkColor = hasLink ? '#22c55e' /* green-500 */ : '#d4d4d4' /* gray */;
+  const soloColor = '#ec4899'; // pink-500
+  const dotStyle: React.CSSProperties = isSolo
+    ? { background: `linear-gradient(to right, ${linkColor} 0 50%, ${soloColor} 50% 100%)` }
+    : { background: linkColor };
+  const dotTitle = [
+    hasLink ? '블로그·SNS 등록됨 (초록)' : '블로그·SNS 미등록 (회색)',
+    isSolo ? '미혼 솔로 (분홍)' : null,
+  ].filter(Boolean).join(' / ');
   const inner = (
     <>
-      <span className={nameCls}>{name}</span>
+      <span>{name}</span>
       {isPaid && <span className={BADGE_CLS}>조합원</span>}
       <span
-        className={`inline-block w-2 h-2 rounded-full ml-1 align-middle ${hasLink ? 'bg-green-500' : 'bg-[#d4d4d4]'}`}
+        className="inline-block w-2 h-2 rounded-full ml-1 align-middle"
+        style={dotStyle}
         title={dotTitle}
         aria-label={dotTitle}
       />
