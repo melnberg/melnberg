@@ -156,6 +156,6 @@ export function formatBoardTime(iso: string): string {
   const dp = kstParts(d);
   const np = kstParts(now);
   const sameDay = dp.year === np.year && dp.month === np.month && dp.day === np.day;
-  if (sameDay) return `${dp.hour}:${dp.minute}:${dp.second}`;
+  if (sameDay) return `${dp.hour}:${dp.minute}`;
   return `${dp.year}.${dp.month}.${dp.day}`;
 }
