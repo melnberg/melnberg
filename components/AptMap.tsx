@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
@@ -247,7 +247,29 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [occupiedOpen, setOccupiedOpen] = useState(false);
   const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean }>>(new Map());
   const router = useRouter();
+  const searchParams = useSearchParams();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // ?apt={id} query 로 진입 시 해당 단지 패널 자동 열기 (알림 종 클릭 흐름)
+  useEffect(() => {
+    const aptParam = searchParams.get('apt');
+    if (!aptParam || pins.length === 0) return;
+    const aptId = Number(aptParam);
+    if (Number.isNaN(aptId)) return;
+    const pin = pins.find((p) => p.id === aptId);
+    if (pin) {
+      setSelected(pin);
+      // 지도 중심 이동 + 줌인
+      const inst = mapInstRef.current;
+      if (inst) {
+        const ll = new window.kakao.maps.LatLng(pin.lat, pin.lng);
+        inst.setLevel(3);
+        inst.panTo(ll);
+      }
+      // URL 정리 — query 제거 (뒤로가기/새로고침 시 다시 안 열리게)
+      router.replace('/', { scroll: false });
+    }
+  }, [searchParams, pins, router]);
 
   // 오늘의 강제집행
   type EvictEvent = { occurred_at: string; actor_name: string | null; prev_occupier_name: string | null; apt_id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null };
