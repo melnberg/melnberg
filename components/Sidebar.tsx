@@ -155,7 +155,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                     title={`${p.id} · ${p.title}${p.author_name ? ` · ${p.author_name}` : ''}`}
                   >
                     <span className="text-muted tabular-nums flex-shrink-0">{p.id}</span>
-                    <span className="text-muted">/</span>
+                    <span className="inline-block w-px h-3 bg-border flex-shrink-0" />
                     <span className="flex-1 min-w-0 truncate">{p.title}</span>
                     {p.author_name && (
                       <span className="text-cyan font-bold flex-shrink-0 max-w-[60px] truncate">{p.author_name}</span>
