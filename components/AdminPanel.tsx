@@ -417,6 +417,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                 </th>
                 <th className="py-2 px-2 font-semibold text-left">닉네임</th>
                 <th className="py-2 px-2 font-semibold text-left w-32">네이버 ID</th>
+                <th className="py-2 px-2 font-semibold text-left w-48">이메일</th>
                 <th className="py-2 px-2 font-semibold text-center w-20">등급</th>
                 <th className="py-2 px-2 font-semibold text-center w-28">만료일</th>
                 <th className="py-2 px-2 font-semibold text-center w-24">가입일</th>
@@ -445,6 +446,9 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                     <td className="py-2.5 px-2 text-[12px] text-text">
                       {p.naver_id ?? <span className="text-muted">—</span>}
                     </td>
+                    <td className="py-2.5 px-2 text-[12px] text-text truncate max-w-[200px]" title={(p as { email?: string | null }).email ?? ''}>
+                      {(p as { email?: string | null }).email ?? <span className="text-muted">—</span>}
+                    </td>
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-1 ${isActive ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy'}`}>
                         {isActive ? '조합원' : tierLabelKo(p.tier)}
@@ -461,7 +465,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-muted">검색 결과가 없습니다.</td>
+                  <td colSpan={7} className="py-8 text-center text-muted">검색 결과가 없습니다.</td>
                 </tr>
               )}
             </tbody>
