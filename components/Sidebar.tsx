@@ -5,13 +5,14 @@ import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 
 export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean };
+export type SidebarRecentPost = { id: number; title: string; created_at: string };
 
-type Props = { current?: string; user?: SidebarUser | null };
+type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[] };
 
 const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
 const memberships = products.filter((p) => p.id === 'new-membership' || p.id === 'renewal');
 
-export default function Sidebar({ current, user }: Props) {
+export default function Sidebar({ current, user, recentPosts = [] }: Props) {
   const [open, setOpen] = useState(false);
 
   // 현재 페이지가 해당 섹션의 아이템이면 자동 펼침. 이외엔 닫힘 상태로 시작.
@@ -101,7 +102,6 @@ export default function Sidebar({ current, user }: Props) {
           <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
           <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
           <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
           <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} />
 
           <SectionToggle
@@ -141,6 +141,25 @@ export default function Sidebar({ current, user }: Props) {
               sub
             />
           ))}
+
+          {/* 커뮤니티 — 메뉴 맨 아래 + 최신글 미리보기 */}
+          <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
+          {recentPosts.length > 0 && (
+            <ul className="bg-[#fafafa] py-1">
+              {recentPosts.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/community/${p.id}`}
+                    onClick={() => setOpen(false)}
+                    className="block pl-12 pr-5 py-1.5 text-[12px] text-text hover:text-navy hover:bg-navy-soft no-underline truncate"
+                    title={p.title}
+                  >
+                    {p.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </nav>
 
         <div className="border-t border-border px-6 pt-4 pb-3">

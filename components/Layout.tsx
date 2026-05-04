@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import Sidebar, { type SidebarUser } from './Sidebar';
+import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 
 export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
@@ -24,9 +24,22 @@ export default async function Layout({ current, children }: { current?: string; 
     };
   }
 
+  // 사이드바 커뮤니티 최신글 5개
+  const { data: recentRaw } = await supabase
+    .from('posts')
+    .select('id, title, created_at')
+    .eq('category', 'community')
+    .order('created_at', { ascending: false })
+    .limit(5);
+  const recentPosts: SidebarRecentPost[] = (recentRaw ?? []).map((p) => ({
+    id: p.id as number,
+    title: p.title as string,
+    created_at: p.created_at as string,
+  }));
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar current={current} user={sidebarUser} />
+      <Sidebar current={current} user={sidebarUser} recentPosts={recentPosts} />
       <main className="flex-1 min-w-0 flex flex-col">{children}</main>
       <FeedbackWidget />
     </div>
