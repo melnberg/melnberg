@@ -147,18 +147,39 @@ const CLUSTER_STYLES = [
 
 type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
 
+const PINS_CACHE_KEY = 'mlbg_pins_v1';
+const PINS_CACHE_TTL_MS = 5 * 60 * 1000; // 5분 — 서버 캐시와 동일
+
 export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
-  // 핀은 prop 으로 안 주면 클라이언트에서 /api/home-pins 비동기 fetch — 페이지 셸 먼저 보임
+  // 핀은 prop 으로 안 주면 localStorage 캐시 → 비동기 네트워크 fetch 순서로 로드.
+  // 두 번째 방문부터는 핀이 화면 표시 즉시 보임 (캐시 hit).
   const [pins, setPins] = useState<AptPin[]>(pinsFromProps ?? []);
   useEffect(() => {
-    if (pinsFromProps && pinsFromProps.length > 0) return; // SSR 로 받은 경우 그대로 사용
+    if (pinsFromProps && pinsFromProps.length > 0) return;
+
+    // 1) localStorage 즉시 read — 있으면 페인트 한 프레임 안에 표시
+    try {
+      const raw = localStorage.getItem(PINS_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw) as { ts: number; pins: AptPin[] };
+        if (cached.pins?.length > 0) {
+          setPins(cached.pins);
+          // TTL 안 지났으면 네트워크 fetch 도 생략
+          if (Date.now() - cached.ts < PINS_CACHE_TTL_MS) return;
+        }
+      }
+    } catch { /* corrupt cache → 무시하고 네트워크 fetch */ }
+
+    // 2) 네트워크 fetch — 캐시 만료 또는 캐시 없을 때
     let cancelled = false;
     (async () => {
       try {
         const r = await fetch('/api/home-pins');
         if (!r.ok) return;
         const json = (await r.json()) as { pins: AptPin[] };
-        if (!cancelled) setPins(json.pins);
+        if (cancelled) return;
+        setPins(json.pins);
+        try { localStorage.setItem(PINS_CACHE_KEY, JSON.stringify({ ts: Date.now(), pins: json.pins })); } catch { /* quota */ }
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
