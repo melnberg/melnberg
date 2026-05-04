@@ -3,10 +3,7 @@ import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import LogoutButton from '@/components/LogoutButton';
-import NicknameEditor from '@/components/NicknameEditor';
-import NaverIdEditor from '@/components/NaverIdEditor';
-import LinkUrlEditor from '@/components/LinkUrlEditor';
-import SoloEditor from '@/components/SoloEditor';
+import ProfileForm from '@/components/ProfileForm';
 import DeleteAccountButton from '@/components/DeleteAccountButton';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
@@ -68,32 +65,18 @@ export default async function MePage() {
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">마이페이지</h1>
           <p className="text-sm text-muted mb-8">계정 정보를 확인합니다.</p>
 
-          <div className="border border-border">
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">닉네임</span>
-              <NicknameEditor initial={displayName} />
-            </div>
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">네이버 ID<br/><span className="text-[10px] normal-case font-medium text-muted">카페 유료회원 인증</span></span>
-              <NaverIdEditor initial={profile?.naver_id ?? null} />
-            </div>
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">블로그·SNS<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 클릭 시 연결 · 조합원 전용</span></span>
-              {isActive ? (
-                <LinkUrlEditor initial={profile?.link_url ?? null} />
-              ) : (
-                <span className="text-[12px] text-muted">조합원만 등록할 수 있어요</span>
-              )}
-            </div>
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">미혼 솔로 표시<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 옆 분홍 점 · 조합원 전용</span></span>
-              {isActive ? (
-                <SoloEditor initial={!!(profile as { is_solo?: boolean | null } | null)?.is_solo} />
-              ) : (
-                <span className="text-[12px] text-muted">조합원만 사용할 수 있어요</span>
-              )}
-            </div>
-            <Row label="이메일" value={user.email ?? '-'} />
+          <ProfileForm
+            initial={{
+              display_name: displayName,
+              naver_id: profile?.naver_id ?? null,
+              link_url: profile?.link_url ?? null,
+              is_solo: !!profile?.is_solo,
+            }}
+            email={user.email ?? '-'}
+            isPaid={isActive}
+          />
+
+          <div className="mt-6 border border-border">
             <Row label="가입일" value={user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'} />
             <Row label="회원 등급" value={tierBadge} badge tone={isActive ? 'cyan' : 'muted'} />
             {isActive && (
