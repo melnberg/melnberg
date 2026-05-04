@@ -715,7 +715,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               const isCommentsOpen = openComments.has(d.id);
               return (
                 <li key={d.id} className="border border-navy/30 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.10)] hover:shadow-[0_2px_10px_rgba(0,32,96,0.14)] transition-shadow">
-                  <h3 className="text-[15px] font-extrabold text-navy leading-snug tracking-tight">{d.title}</h3>
+                  <h3 className="text-[15px] text-navy leading-snug tracking-tight [&::first-line]:font-extrabold">{d.title}</h3>
                   {d.content && (
                     <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap [&::first-line]:font-bold">{d.content}</p>
                   )}
