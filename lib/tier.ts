@@ -1,4 +1,5 @@
 import { createClient } from './supabase/server';
+import { getCurrentUser, getCurrentProfile as getCurrentProfileCached } from './auth';
 import {
   type Tier,
   type ProfileWithTier,
@@ -12,22 +13,13 @@ import {
 export type { Tier, ProfileWithTier, PaymentRecord };
 export { currentQuarter, tierLabelKo, isActivePaid, formatExpiry };
 
-export async function getCurrentProfile(): Promise<ProfileWithTier | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, display_name, is_admin, tier, tier_expires_at, created_at')
-    .eq('id', user.id)
-    .maybeSingle();
-  return data as ProfileWithTier | null;
-}
+// lib/auth.ts 의 cached 헬퍼 재사용 (요청 내 dedup)
+export const getCurrentProfile = getCurrentProfileCached;
 
 export async function listOwnPayments(): Promise<PaymentRecord[]> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return [];
+  const supabase = await createClient();
   const { data } = await supabase
     .from('payments')
     .select('*')

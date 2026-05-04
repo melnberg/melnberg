@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import { listPosts, formatBoardTime } from '@/lib/community';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import Nickname from '@/components/Nickname';
 
 export const metadata = {
@@ -13,9 +13,7 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function CommunityPage() {
-  const posts = await listPosts();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [posts, user] = await Promise.all([listPosts(), getCurrentUser()]);
 
   return (
     <Layout current="community">

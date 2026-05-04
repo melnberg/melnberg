@@ -1,4 +1,5 @@
 import { createClient } from './supabase/server';
+import { getCurrentUser, getCurrentProfile } from './auth';
 
 export type PostCategory = 'community' | 'blog';
 
@@ -61,15 +62,8 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
 }
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle();
-  return Boolean(data?.is_admin);
+  const profile = await getCurrentProfile();
+  return Boolean(profile?.is_admin);
 }
 
 export type CurrentUserAccess = {
@@ -80,25 +74,19 @@ export type CurrentUserAccess = {
 };
 
 export async function getCurrentUserAccess(): Promise<CurrentUserAccess> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
   if (!user) {
     return { user_id: null, is_admin: false, tier: 'free', tier_expires_at: null };
   }
-  const { data } = await supabase
-    .from('profiles')
-    .select('is_admin, tier, tier_expires_at')
-    .eq('id', user.id)
-    .maybeSingle();
-  const tier = (data?.tier === 'paid' ? 'paid' : 'free') as 'free' | 'paid';
-  const expires = data?.tier_expires_at as string | null | undefined;
+  const tier = (profile?.tier === 'paid' ? 'paid' : 'free') as 'free' | 'paid';
+  const expires = profile?.tier_expires_at ?? null;
   // 만료 지났으면 free로 취급 (DB cron으로 정리되기 전 안전망)
   const effectiveTier = tier === 'paid' && expires && new Date(expires) < new Date() ? 'free' : tier;
   return {
     user_id: user.id,
-    is_admin: Boolean(data?.is_admin),
+    is_admin: Boolean(profile?.is_admin),
     tier: effectiveTier,
-    tier_expires_at: expires ?? null,
+    tier_expires_at: expires,
   };
 }
 
