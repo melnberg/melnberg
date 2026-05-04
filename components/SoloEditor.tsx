@@ -35,9 +35,7 @@ export default function SoloEditor({ initial }: { initial: boolean }) {
           disabled={busy}
           className="w-4 h-4 accent-pink-500"
         />
-        <span className="text-[13px] text-text">
-          미혼 솔로일 경우 체크 — 닉네임이 <span className="text-pink-500 font-bold">분홍색</span>으로 표시됨
-        </span>
+        <span className="text-[13px] text-text">미혼 솔로일 경우 체크</span>
       </label>
       {err && <div className="text-[11px] text-red-700">{err}</div>}
     </div>
