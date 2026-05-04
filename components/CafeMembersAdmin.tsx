@@ -4,7 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-type Member = { naver_id: string; cafe_nickname: string | null; registered_at: string; note: string | null };
+type Member = {
+  naver_id: string;
+  cafe_nickname: string | null;
+  registered_at: string;
+  note: string | null;
+  member_display_name?: string | null;
+  member_tier?: string | null;
+};
 
 export default function CafeMembersAdmin({ initialMembers }: { initialMembers: Member[] }) {
   const router = useRouter();
@@ -39,7 +46,22 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
       all.push(...(data as Member[]));
       if (data.length < 1000) break;
     }
-    setMembers(all);
+    // 프로필 매칭 정보 재조회
+    const ids = all.map((m) => m.naver_id);
+    const matchMap = new Map<string, { display_name: string | null; tier: string | null }>();
+    for (let i = 0; i < ids.length; i += 200) {
+      const slice = ids.slice(i, i + 200);
+      const { data } = await supabase.from('profiles').select('naver_id, display_name, tier').in('naver_id', slice);
+      if (data) {
+        for (const p of data as Array<{ naver_id: string | null; display_name: string | null; tier: string | null }>) {
+          if (p.naver_id) matchMap.set(p.naver_id, { display_name: p.display_name, tier: p.tier });
+        }
+      }
+    }
+    setMembers(all.map((m) => {
+      const matched = matchMap.get(m.naver_id);
+      return { ...m, member_display_name: matched?.display_name ?? null, member_tier: matched?.tier ?? null };
+    }));
   }
 
   async function addOne() {
@@ -95,11 +117,28 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
     router.refresh();
   }
 
+  const [matchFilter, setMatchFilter] = useState<'all' | 'paid' | 'free' | 'nick_mismatch' | 'unsigned'>('all');
+
+  function matchStatus(m: Member): 'paid' | 'free' | 'nick_mismatch' | 'unsigned' {
+    if (m.member_display_name == null) return 'unsigned';
+    if (m.cafe_nickname && m.member_display_name !== m.cafe_nickname) return 'nick_mismatch';
+    if (m.member_tier === 'paid') return 'paid';
+    return 'free';
+  }
+
   const filtered = members.filter((m) => {
     if (quarter !== 'all' && dateToQuarter(m.registered_at) !== quarter) return false;
-    if (search && !m.naver_id.includes(search) && !(m.cafe_nickname ?? '').includes(search)) return false;
+    if (search && !m.naver_id.includes(search) && !(m.cafe_nickname ?? '').includes(search) && !(m.member_display_name ?? '').includes(search)) return false;
+    if (matchFilter !== 'all' && matchStatus(m) !== matchFilter) return false;
     return true;
   });
+
+  const counts = {
+    paid: members.filter((m) => matchStatus(m) === 'paid').length,
+    free: members.filter((m) => matchStatus(m) === 'free').length,
+    nick_mismatch: members.filter((m) => matchStatus(m) === 'nick_mismatch').length,
+    unsigned: members.filter((m) => matchStatus(m) === 'unsigned').length,
+  };
 
   return (
     <div className="space-y-8">
@@ -178,10 +217,35 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
         <div className="border border-border bg-navy-soft text-navy text-[13px] px-4 py-2.5">{msg}</div>
       )}
 
+      {/* 매칭 상태 요약 */}
+      <section className="border border-border p-4 grid grid-cols-4 gap-3 text-center">
+        <button type="button" onClick={() => setMatchFilter('paid')} className={`px-2 py-2 ${matchFilter === 'paid' ? 'bg-navy text-white' : 'bg-white hover:bg-navy-soft'}`}>
+          <div className="text-[11px] text-muted">정회원 ✓</div>
+          <div className="text-[18px] font-bold">{counts.paid.toLocaleString()}</div>
+        </button>
+        <button type="button" onClick={() => setMatchFilter('free')} className={`px-2 py-2 ${matchFilter === 'free' ? 'bg-navy text-white' : 'bg-white hover:bg-navy-soft'}`}>
+          <div className="text-[11px] text-muted">가입O · free</div>
+          <div className="text-[18px] font-bold">{counts.free.toLocaleString()}</div>
+        </button>
+        <button type="button" onClick={() => setMatchFilter('nick_mismatch')} className={`px-2 py-2 ${matchFilter === 'nick_mismatch' ? 'bg-navy text-white' : 'bg-white hover:bg-navy-soft'}`}>
+          <div className="text-[11px] text-muted">닉네임 불일치</div>
+          <div className="text-[18px] font-bold text-amber-600">{counts.nick_mismatch.toLocaleString()}</div>
+        </button>
+        <button type="button" onClick={() => setMatchFilter('unsigned')} className={`px-2 py-2 ${matchFilter === 'unsigned' ? 'bg-navy text-white' : 'bg-white hover:bg-navy-soft'}`}>
+          <div className="text-[11px] text-muted">미가입</div>
+          <div className="text-[18px] font-bold text-muted">{counts.unsigned.toLocaleString()}</div>
+        </button>
+      </section>
+
       {/* 목록 */}
       <section className="border border-border">
         <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
-          <h2 className="text-[14px] font-bold text-navy">전체 명부 ({filtered.length.toLocaleString()}/{members.length.toLocaleString()})</h2>
+          <h2 className="text-[14px] font-bold text-navy">
+            전체 명부 ({filtered.length.toLocaleString()}/{members.length.toLocaleString()})
+            {matchFilter !== 'all' && (
+              <button type="button" onClick={() => setMatchFilter('all')} className="ml-2 text-[11px] text-muted hover:text-navy underline">필터 해제</button>
+            )}
+          </h2>
           <div className="flex items-center gap-2">
             <select
               value={quarter}
@@ -198,29 +262,53 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="ID·닉네임 검색"
-              className="border border-border px-3 py-1.5 text-[12px] w-48 focus:outline-none focus:border-navy"
+              className="border border-border px-3 py-1.5 text-[12px] w-56 focus:outline-none focus:border-navy"
             />
           </div>
         </div>
+        {/* 헤더 행 */}
+        <div className="px-5 py-2 border-b border-border bg-navy-soft text-[11px] font-bold text-navy grid grid-cols-[1fr_1fr_1fr_100px_90px_50px] gap-3">
+          <div>네이버 ID</div>
+          <div>카페 닉네임</div>
+          <div>가입자 닉네임</div>
+          <div>매칭 상태</div>
+          <div>가입일</div>
+          <div></div>
+        </div>
         <ul className="divide-y divide-border">
-          {filtered.map((m) => (
-            <li key={m.naver_id} className="px-5 py-2.5 flex items-center justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-bold text-navy">{m.naver_id}</span>
-                  {m.cafe_nickname && <span className="text-[12px] text-text">— {m.cafe_nickname}</span>}
-                </div>
+          {filtered.map((m) => {
+            const status = matchStatus(m);
+            const statusLabel: Record<typeof status, string> = {
+              paid: '정회원 ✓',
+              free: '미동기화',
+              nick_mismatch: '닉네임 불일치',
+              unsigned: '미가입',
+            };
+            const statusColor: Record<typeof status, string> = {
+              paid: 'text-cyan',
+              free: 'text-amber-600',
+              nick_mismatch: 'text-red-600',
+              unsigned: 'text-muted',
+            };
+            return (
+              <li key={m.naver_id} className="px-5 py-2 grid grid-cols-[1fr_1fr_1fr_100px_90px_50px] gap-3 items-center text-[12px]">
+                <div className="font-bold text-navy truncate">{m.naver_id}</div>
+                <div className="truncate">{m.cafe_nickname ?? <span className="text-muted">—</span>}</div>
+                <div className="truncate">{m.member_display_name ?? <span className="text-muted">—</span>}</div>
+                <div className={`text-[11px] font-bold ${statusColor[status]}`}>{statusLabel[status]}</div>
                 <div className="text-[11px] text-muted">{m.registered_at?.slice(0, 10)}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeOne(m.naver_id)}
-                className="text-[11px] text-muted hover:text-red-600"
-              >
-                삭제
-              </button>
-            </li>
-          ))}
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => removeOne(m.naver_id)}
+                    className="text-[11px] text-muted hover:text-red-600"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </li>
+            );
+          })}
           {filtered.length === 0 && (
             <li className="px-5 py-8 text-center text-[13px] text-muted">결과 없음</li>
           )}

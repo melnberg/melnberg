@@ -42,10 +42,10 @@ export default function SignupForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
-      <Field label="네이버 아이디 (멜른버그 카페)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="카페 유료회원이면 자동 인식됨 (선택)" maxLength={50} />
+      <Field label="네이버 로그인 아이디 (닉네임 아님)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="예: rok22222 (영문/숫자, naver.com 앞부분)" maxLength={50} />
       <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
-        ⓘ 카페 유료회원 자동 인식: <b>네이버 아이디 + 닉네임</b> 둘 다 카페 정보와 정확히 일치해야 합니다.
-        닉네임은 카페에서 쓰는 별명을 그대로 입력하세요.
+        ⓘ 카페 유료회원 자동 인식: 네이버 <b>로그인 아이디</b>와 카페 닉네임이 명부와 일치해야 합니다.
+        닉네임을 아이디 칸에 넣지 마세요. (네이버 아이디는 보통 영문·숫자 조합)
       </p>
       <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />

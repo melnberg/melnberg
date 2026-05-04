@@ -29,7 +29,9 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
     const q = search.toLowerCase();
     return profiles.filter(
       (p) =>
-        (p.display_name ?? '').toLowerCase().includes(q) || p.id.toLowerCase().includes(q),
+        (p.display_name ?? '').toLowerCase().includes(q)
+        || (p.naver_id ?? '').toLowerCase().includes(q)
+        || p.id.toLowerCase().includes(q),
     );
   }, [profiles, search]);
 
@@ -267,6 +269,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
             <thead>
               <tr className="bg-bg/60 border-y border-navy text-muted">
                 <th className="py-2 px-2 font-semibold text-left">닉네임</th>
+                <th className="py-2 px-2 font-semibold text-left w-32">네이버 ID</th>
                 <th className="py-2 px-2 font-semibold text-center w-20">등급</th>
                 <th className="py-2 px-2 font-semibold text-center w-28">만료일</th>
                 <th className="py-2 px-2 font-semibold text-center w-24">가입일</th>
@@ -284,6 +287,9 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                         {p.is_admin && <span className="ml-2 text-[10px] font-bold text-cyan tracking-widest uppercase">admin</span>}
                       </div>
                       <div className="text-[10px] text-muted font-mono mt-0.5 truncate max-w-[280px]">{p.id}</div>
+                    </td>
+                    <td className="py-2.5 px-2 text-[12px] text-text">
+                      {p.naver_id ?? <span className="text-muted">—</span>}
                     </td>
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-1 ${isActive ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy'}`}>
@@ -304,7 +310,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-muted">검색 결과가 없습니다.</td>
+                  <td colSpan={6} className="py-8 text-center text-muted">검색 결과가 없습니다.</td>
                 </tr>
               )}
             </tbody>

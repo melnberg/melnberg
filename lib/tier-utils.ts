@@ -5,6 +5,7 @@ export type Tier = 'free' | 'paid';
 export type ProfileWithTier = {
   id: string;
   display_name: string | null;
+  naver_id: string | null;
   is_admin: boolean;
   tier: Tier;
   tier_expires_at: string | null;

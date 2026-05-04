@@ -328,26 +328,23 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         onSubmit={(e) => { e.preventDefault(); submitAi(); }}
         className="absolute bottom-1 left-1/2 -translate-x-1/2 w-[520px] max-w-[calc(100vw-200px)] z-20"
       >
-        <div className="relative">
-          <textarea
-            ref={aiTextareaRef}
+        <div className="flex h-[60px] border border-navy bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)]">
+          <input
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter') {
                 e.preventDefault();
                 submitAi();
               }
             }}
             placeholder="멜른버그AI 에게 질문하기 (mlbg DB기반)"
-            rows={1}
-            className="w-full border border-navy focus:border-navy-dark transition-colors px-5 py-4 pr-[68px] text-[15px] resize-none overflow-hidden outline-none bg-white shadow-[0_8px_24px_rgba(0,32,96,0.08),0_2px_6px_rgba(0,0,0,0.04)] leading-relaxed"
-            style={{ minHeight: '60px' }}
+            className="flex-1 min-w-0 h-full px-5 text-[15px] outline-none bg-transparent border-0 m-0"
           />
           <button
             type="submit"
             aria-label="질문하기"
-            className="absolute right-0 top-0 bottom-0 w-[60px] bg-navy text-white flex items-center justify-center hover:bg-navy-dark disabled:opacity-40"
+            className="flex-shrink-0 w-[60px] h-full bg-navy text-white flex items-center justify-center hover:bg-navy-dark disabled:opacity-40 border-0 p-0 m-0"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="square" />

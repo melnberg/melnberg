@@ -31,7 +31,7 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
     .eq('category', category)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -52,7 +52,7 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
   const supabase = await createClient();
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, created_at, updated_at, author:profiles!author_id(display_name)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
@@ -120,6 +120,23 @@ export async function listComments(postId: number): Promise<CommunityComment[]> 
   return (data ?? []) as unknown as CommunityComment[];
 }
 
+// 서버(Vercel UTC)·클라이언트 어디서 실행해도 KST 기준으로 표시
+// Intl.DateTimeFormat with timeZone 사용
+const KST_DATE = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
+const KST_TIME = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+
+function kstParts(d: Date) {
+  const dp = KST_DATE.formatToParts(d).reduce<Record<string, string>>((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+  const tp = KST_TIME.formatToParts(d).reduce<Record<string, string>>((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+  return { year: dp.year, month: dp.month, day: dp.day, hour: tp.hour, minute: tp.minute, second: tp.second };
+}
+
 export function formatRelativeKo(iso: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
@@ -128,18 +145,17 @@ export function formatRelativeKo(iso: string): string {
   if (sec < 3600) return `${Math.floor(sec / 60)}분 전`;
   if (sec < 86400) return `${Math.floor(sec / 3600)}시간 전`;
   if (sec < 604800) return `${Math.floor(sec / 86400)}일 전`;
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  const p = kstParts(d);
+  return `${p.year}.${p.month}.${p.day}`;
 }
 
-// SLRClub 스타일: 오늘이면 HH:MM:SS, 아니면 YYYY.MM.DD
+// SLRClub 스타일: 오늘이면 HH:MM:SS, 아니면 YYYY.MM.DD (KST 기준)
 export function formatBoardTime(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const sameDay =
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  if (sameDay) return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+  const dp = kstParts(d);
+  const np = kstParts(now);
+  const sameDay = dp.year === np.year && dp.month === np.month && dp.day === np.day;
+  if (sameDay) return `${dp.hour}:${dp.minute}:${dp.second}`;
+  return `${dp.year}.${dp.month}.${dp.day}`;
 }

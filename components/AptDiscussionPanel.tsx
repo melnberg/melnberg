@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { AptPin } from './AptMap';
@@ -39,6 +40,7 @@ function relativeTime(iso: string): string {
 }
 
 export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onClose: () => void }) {
+  const router = useRouter();
   const [discussions, setDiscussions] = useState<Discussion[] | null>(null);
   const [myVotes, setMyVotes] = useState<Map<number, 'up' | 'down'>>(new Map());
   const [authors, setAuthors] = useState<Map<string, string>>(new Map());
@@ -205,6 +207,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     }
 
     setLoading(false);
+    // 사이드바 score(서버 컴포넌트)도 갱신되도록 RSC 재요청
+    router.refresh();
   }
 
   async function claimApt() {

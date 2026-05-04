@@ -26,7 +26,30 @@ export default async function CafeMembersPage() {
     all.push(...(data as Array<{ naver_id: string; cafe_nickname: string | null; registered_at: string; note: string | null }>));
     if (data.length < 1000) break;
   }
-  const members = all;
+
+  // 가입자 매칭 상태 — 각 cafe_paid_members의 naver_id로 profiles 조회
+  const naverIds = all.map((m) => m.naver_id);
+  const matchMap = new Map<string, { display_name: string | null; tier: string | null }>();
+  if (naverIds.length > 0) {
+    const profs: Array<{ naver_id: string | null; display_name: string | null; tier: string | null }> = [];
+    for (let i = 0; i < naverIds.length; i += 200) {
+      const slice = naverIds.slice(i, i + 200);
+      const { data } = await supabase.from('profiles').select('naver_id, display_name, tier').in('naver_id', slice);
+      if (data) profs.push(...(data as Array<{ naver_id: string | null; display_name: string | null; tier: string | null }>));
+    }
+    for (const p of profs) {
+      if (p.naver_id) matchMap.set(p.naver_id, { display_name: p.display_name, tier: p.tier });
+    }
+  }
+
+  const members = all.map((m) => {
+    const matched = matchMap.get(m.naver_id);
+    return {
+      ...m,
+      member_display_name: matched?.display_name ?? null,
+      member_tier: matched?.tier ?? null,
+    };
+  });
   const count = all.length;
 
   return (

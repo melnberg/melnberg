@@ -20,7 +20,7 @@ export default async function AdminPage() {
   const [{ data: profilesRaw }, { data: paymentsRaw }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, display_name, is_admin, tier, tier_expires_at, created_at')
+      .select('id, display_name, naver_id, is_admin, tier, tier_expires_at, created_at')
       .order('created_at', { ascending: false }),
     supabase
       .from('payments')
