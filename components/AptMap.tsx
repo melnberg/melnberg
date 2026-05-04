@@ -386,11 +386,51 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 좌상단 정보 배지 */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5">
-        <div className="bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-          <span className="text-[12px] font-bold text-navy">{pins.length.toLocaleString()}개 단지</span>
+      {/* 좌상단 — 아파트 검색 + 정보 배지 스택 */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 w-[280px]">
+        <div className="bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-3 text-muted flex-shrink-0">
+            <circle cx={11} cy={11} r={7} />
+            <line x1={21} y1={21} x2={16.65} y2={16.65} />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchResults.length > 0) {
+                e.preventDefault();
+                jumpToApt(searchResults[0]);
+              }
+            }}
+            placeholder={`아파트 검색 (${pins.length.toLocaleString()}개 단지)`}
+            className="flex-1 min-w-0 px-2 py-1.5 text-[12px] focus:outline-none bg-transparent"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              aria-label="지우기"
+              className="px-2 py-1 text-muted hover:text-navy text-[12px]"
+            >
+              ✕
+            </button>
+          )}
         </div>
+        {searchResults.length > 0 && (
+          <ul className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[280px] overflow-y-auto">
+            {searchResults.map((p) => (
+              <li
+                key={p.id}
+                onClick={() => jumpToApt(p)}
+                className="px-3 py-2 border-b border-[#f0f0f0] last:border-b-0 cursor-pointer bg-white hover:bg-[#eef4fb]"
+              >
+                <div className="text-[12px] font-bold text-navy truncate">{p.apt_nm}</div>
+                {p.dong && <div className="text-[10px] text-muted truncate">{p.dong}</div>}
+              </li>
+            ))}
+          </ul>
+        )}
         <button
           type="button"
           onClick={toggleEvicts}
@@ -477,53 +517,6 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         )}
       </div>
 
-      {/* 가운데 상단 — 아파트 검색 (A 위치) */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[420px] max-w-[calc(100vw-200px)] z-20">
-        <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.12)] flex items-center">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-4 text-muted flex-shrink-0">
-            <circle cx={11} cy={11} r={7} />
-            <line x1={21} y1={21} x2={16.65} y2={16.65} />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && searchResults.length > 0) {
-                e.preventDefault();
-                jumpToApt(searchResults[0]);
-              }
-            }}
-            placeholder="아파트 검색..."
-            className="flex-1 px-3 py-3 text-sm focus:outline-none bg-transparent"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              aria-label="지우기"
-              className="px-3 py-1 text-muted hover:text-navy"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {searchResults.length > 0 && (
-          <ul className="mt-1 bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-h-[280px] overflow-y-auto">
-            {searchResults.map((p) => (
-              <li
-                key={p.id}
-                onClick={() => jumpToApt(p)}
-                className="px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 cursor-pointer hover:bg-navy-soft"
-              >
-                <div className="text-[13px] font-bold text-navy">{p.apt_nm}</div>
-                {p.dong && <div className="text-[11px] text-muted mt-0.5">{p.dong}</div>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
 
       {/* 가운데 하단 — AI 검색 (B 위치). /ai 페이지 디자인과 통일. */}
       <form
