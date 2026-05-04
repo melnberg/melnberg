@@ -56,7 +56,7 @@ export default function NaverIdEditor({ initial }: { initial: string | null }) {
               .from('profiles')
               .update({ tier: 'paid', tier_expires_at: '2099-12-31T00:00:00Z' })
               .eq('id', user.id);
-            if (!tErr) setTierMsg('카페 유료회원 인증 완료 — 정회원으로 전환됐습니다.');
+            if (!tErr) setTierMsg('카페 유료회원 인증 완료 — 조합원으로 전환됐습니다.');
           }
         }
       }

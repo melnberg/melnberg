@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import Sidebar, { type SidebarUser } from './Sidebar';
+import FeedbackWidget from './FeedbackWidget';
 
 export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
   const supabase = await createClient();
@@ -27,6 +28,7 @@ export default async function Layout({ current, children }: { current?: string; 
     <div className="flex min-h-screen">
       <Sidebar current={current} user={sidebarUser} />
       <main className="flex-1 min-w-0 flex flex-col">{children}</main>
+      <FeedbackWidget />
     </div>
   );
 }

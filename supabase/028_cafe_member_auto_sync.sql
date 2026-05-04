@@ -27,4 +27,4 @@ create trigger cafe_paid_member_added
   after insert or update of naver_id on public.cafe_paid_members
   for each row execute function public.auto_paid_on_cafe_member_add();
 
-comment on function public.auto_paid_on_cafe_member_add is '카페 유료회원 명부에 추가되는 즉시 매칭되는 가입자를 정회원으로 자동 전환.';
+comment on function public.auto_paid_on_cafe_member_add is '카페 유료회원 명부에 추가되는 즉시 매칭되는 가입자를 조합원으로 자동 전환.';

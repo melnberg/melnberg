@@ -112,7 +112,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
             className="w-4 h-4 accent-navy cursor-pointer"
           />
           <span>
-            <span className="font-bold text-navy">정회원 전용</span>
+            <span className="font-bold text-navy">조합원 전용</span>
             <span className="text-muted ml-2">— 멤버십 결제한 회원만 본문 열람 가능</span>
           </span>
         </label>

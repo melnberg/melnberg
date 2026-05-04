@@ -1,5 +1,5 @@
 -- ──────────────────────────────────────────────
--- 029: 정회원 자동 매칭 — 네이버ID + 닉네임 둘 다 일치할 때만
+-- 029: 조합원 자동 매칭 — 네이버ID + 닉네임 둘 다 일치할 때만
 -- 보안 강화: 네이버ID만 알면 도용 가능 → 닉네임도 함께 검증
 -- ──────────────────────────────────────────────
 
@@ -87,6 +87,6 @@ begin
 end;
 $$;
 
-comment on function public.handle_new_user is '가입 시 profiles 생성. 네이버ID+닉네임 카페 명부 매칭 시 자동 정회원.';
-comment on function public.sync_cafe_paid_tier is '기존 가입자 일괄 정회원 전환 — 네이버ID+닉네임 둘 다 일치 시.';
-comment on function public.auto_paid_on_cafe_member_add is '카페 명부 추가 즉시 자동 매칭 — 네이버ID+닉네임 둘 다 일치하는 가입자만 정회원.';
+comment on function public.handle_new_user is '가입 시 profiles 생성. 네이버ID+닉네임 카페 명부 매칭 시 자동 조합원.';
+comment on function public.sync_cafe_paid_tier is '기존 가입자 일괄 조합원 전환 — 네이버ID+닉네임 둘 다 일치 시.';
+comment on function public.auto_paid_on_cafe_member_add is '카페 명부 추가 즉시 자동 매칭 — 네이버ID+닉네임 둘 다 일치하는 가입자만 조합원.';

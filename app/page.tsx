@@ -41,16 +41,17 @@ async function fetchFeed(): Promise<FeedItem[]> {
   if (!discs || discs.length === 0) return [];
 
   const authorIds = Array.from(new Set(discs.map((d) => (d as Record<string, unknown>).author_id as string).filter(Boolean)));
-  const nameMap = new Map<string, string>();
+  const profileMap = new Map<string, { display_name: string | null; link_url: string | null }>();
   if (authorIds.length > 0) {
-    const { data: profs } = await supabase.from('profiles').select('id, display_name').in('id', authorIds);
-    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null }>) {
-      if (p.display_name) nameMap.set(p.id, p.display_name);
+    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url').in('id', authorIds);
+    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null }>) {
+      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url });
     }
   }
 
   return (discs as Array<Record<string, unknown>>).map((r) => {
     const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+    const prof = profileMap.get(r.author_id as string);
     return {
       id: r.id as number,
       apt_master_id: r.apt_master_id as number,
@@ -61,7 +62,8 @@ async function fetchFeed(): Promise<FeedItem[]> {
       dong: am?.dong ?? null,
       lat: am?.lat ?? null,
       lng: am?.lng ?? null,
-      author_name: nameMap.get(r.author_id as string) ?? null,
+      author_name: prof?.display_name ?? null,
+      author_link: prof?.link_url ?? null,
     };
   });
 }

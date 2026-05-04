@@ -69,9 +69,9 @@ export default async function BlogPage() {
                           {p.is_paid_only && (
                             <span
                               className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-1.5 py-0.5 mr-1.5 align-middle tracking-wide"
-                              title="정회원 전용 콘텐츠"
+                              title="조합원 전용 콘텐츠"
                             >
-                              정회원
+                              조합원
                             </span>
                           )}
                           {p.title}

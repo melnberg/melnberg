@@ -12,6 +12,7 @@ export default function SignupForm() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [naverId, setNaverId] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
 
@@ -33,12 +34,27 @@ export default function SignupForm() {
       return;
     }
 
+    // 링크 정규화 — https:// 자동 보정, javascript: 차단
+    let cleanLink: string | null = null;
+    const rawLink = linkUrl.trim();
+    if (rawLink) {
+      if (/^javascript:/i.test(rawLink)) {
+        setMsg({ type: 'error', text: '잘못된 링크 형식입니다.' });
+        return;
+      }
+      cleanLink = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
+      if (cleanLink.length > 500) {
+        setMsg({ type: 'error', text: '링크가 너무 깁니다 (500자 초과).' });
+        return;
+      }
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { display_name: name.trim(), naver_id: cleanNaverId || null },
+        data: { display_name: name.trim(), naver_id: cleanNaverId || null, link_url: cleanLink },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -59,6 +75,10 @@ export default function SignupForm() {
       <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
         ⓘ 카페 유료회원 자동 인식: 네이버 <b>로그인 아이디</b>와 카페 닉네임이 명부와 일치해야 합니다.
         ✗ 닉네임/이메일 풀주소 입력 금지. <code>jiroclinic@naver.com</code>이면 <b>jiroclinic</b>만.
+      </p>
+      <Field label="블로그·SNS 링크 (선택)" id="link_url" value={linkUrl} onChange={setLinkUrl} placeholder="https://blog.naver.com/..." maxLength={500} />
+      <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
+        다른 회원이 닉네임을 클릭하면 이 링크로 연결됩니다 (새 탭).
       </p>
       <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />

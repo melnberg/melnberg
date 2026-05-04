@@ -58,6 +58,7 @@ export type FeedItem = {
   lat: number | null;
   lng: number | null;
   author_name: string | null;
+  author_link: string | null;
 };
 
 export type AptPin = {
@@ -154,7 +155,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
-  const [occupierNames, setOccupierNames] = useState<Map<string, string>>(new Map());
+  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null }>>(new Map());
   const router = useRouter();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -286,12 +287,12 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name').in('id', ids);
-    const map = new Map<string, string>();
-    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null }>) {
-      if (r.display_name) map.set(r.id, r.display_name);
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url').in('id', ids);
+    const map = new Map<string, { name: string; link: string | null }>();
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null }>) {
+      if (r.display_name) map.set(r.id, { name: r.display_name, link: r.link_url });
     }
-    setOccupierNames(map);
+    setOccupierProfiles(map);
   }
 
   // textarea 자동 높이 조절 — 위쪽으로 늘어남 (bottom-anchored)
@@ -571,7 +572,19 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                       </div>
                       <div className="text-right flex-shrink-0">
                         <div className="text-[11px] text-cyan font-bold truncate">
-                          {p.occupier_id ? (occupierNames.get(p.occupier_id) ?? '...') : ''}
+                          {(() => {
+                            const prof = p.occupier_id ? occupierProfiles.get(p.occupier_id) : null;
+                            const name = prof?.name ?? (p.occupier_id ? '...' : '');
+                            return prof?.link ? (
+                              <a
+                                href={prof.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:underline"
+                              >{name}</a>
+                            ) : name;
+                          })()}
                         </div>
                         {p.occupied_at && (
                           <div className="text-[10px] text-muted mt-0.5">{occupiedSinceLabel(p.occupied_at)}</div>
@@ -617,7 +630,16 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                           >
                             {f.apt_nm ?? '(단지 정보 없음)'}
                           </button>
-                          <span className="text-[10px] text-cyan font-bold flex-shrink-0">{f.author_name ?? '익명'}</span>
+                          {f.author_link ? (
+                            <a
+                              href={f.author_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-cyan font-bold flex-shrink-0 hover:underline"
+                            >{f.author_name ?? '익명'}</a>
+                          ) : (
+                            <span className="text-[10px] text-cyan font-bold flex-shrink-0">{f.author_name ?? '익명'}</span>
+                          )}
                         </div>
                         <div className="text-[12px] text-text leading-snug mb-0.5">{f.title}</div>
                         {fullContent && (

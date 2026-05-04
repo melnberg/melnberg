@@ -108,12 +108,12 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
   }
 
   async function syncTier() {
-    if (!confirm('가입한 회원 중 명부 매칭되는 사람을 일괄 정회원 전환합니다. 진행할까요?')) return;
+    if (!confirm('가입한 회원 중 명부 매칭되는 사람을 일괄 조합원 전환합니다. 진행할까요?')) return;
     setBusy(true); setMsg(null);
     const { data, error } = await supabase.rpc('sync_cafe_paid_tier');
     setBusy(false);
     if (error) { setMsg(`실패: ${error.message}`); return; }
-    setMsg(`${data ?? 0}명 정회원으로 전환됨.`);
+    setMsg(`${data ?? 0}명 조합원으로 전환됨.`);
     router.refresh();
   }
 
@@ -200,7 +200,7 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
       {/* sync */}
       <section className="border border-border p-5 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-[14px] font-bold text-navy">기존 가입자 일괄 정회원 전환</h2>
+          <h2 className="text-[14px] font-bold text-navy">기존 가입자 일괄 조합원 전환</h2>
           <p className="text-[12px] text-muted mt-0.5">이미 가입한 회원 중 네이버 ID가 명부와 매칭되는 사람을 paid로 변경.</p>
         </div>
         <button
@@ -220,7 +220,7 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
       {/* 매칭 상태 요약 */}
       <section className="border border-border p-4 grid grid-cols-4 gap-3 text-center">
         <button type="button" onClick={() => setMatchFilter('paid')} className={`px-2 py-2 ${matchFilter === 'paid' ? 'bg-navy text-white' : 'bg-white hover:bg-navy-soft'}`}>
-          <div className="text-[11px] text-muted">정회원 ✓</div>
+          <div className="text-[11px] text-muted">조합원 ✓</div>
           <div className="text-[18px] font-bold">{counts.paid.toLocaleString()}</div>
         </button>
         <button type="button" onClick={() => setMatchFilter('free')} className={`px-2 py-2 ${matchFilter === 'free' ? 'bg-navy text-white' : 'bg-white hover:bg-navy-soft'}`}>
@@ -279,7 +279,7 @@ export default function CafeMembersAdmin({ initialMembers }: { initialMembers: M
           {filtered.map((m) => {
             const status = matchStatus(m);
             const statusLabel: Record<typeof status, string> = {
-              paid: '정회원 ✓',
+              paid: '조합원 ✓',
               free: '미동기화',
               nick_mismatch: '닉네임 불일치',
               unsigned: '미가입',

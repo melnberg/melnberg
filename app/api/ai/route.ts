@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
 
     // 한도 정책:
     //   - 관리자: 무제한
-    //   - 정회원 (paid + 만료 전): 7회/일
+    //   - 조합원 (paid + 만료 전): 7회/일
     //   - 그 외 (무료/비로그인): 2회/일
     dailyLimit = 2;
     limitLabel = '일일';

@@ -75,7 +75,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
             <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">
               {post.is_paid_only && (
                 <span className="inline-block bg-cyan/15 text-navy text-[12px] font-bold px-2 py-0.5 mr-2 align-middle tracking-wide">
-                  정회원
+                  조합원
                 </span>
               )}
               {post.title}
@@ -101,7 +101,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
 
           {locked ? (
             <div className="text-[13px] text-muted text-center py-16 mb-12 border-y border-border">
-              정회원 전용임.
+              조합원 전용임.
             </div>
           ) : (
             <>

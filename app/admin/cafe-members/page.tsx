@@ -64,7 +64,7 @@ export default async function CafeMembersPage() {
         <div className="max-w-content mx-auto px-10">
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">카페 유료회원 명부</h1>
           <p className="text-sm text-muted mb-8">
-            네이버ID 매칭으로 가입자 자동 정회원 처리. 총 <b>{count ?? 0}</b>명.
+            네이버ID 매칭으로 가입자 자동 조합원 처리. 총 <b>{count ?? 0}</b>명.
           </p>
 
           <CafeMembersAdmin initialMembers={members} />

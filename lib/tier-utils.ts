@@ -52,7 +52,7 @@ export function currentQuarter(date = new Date()): { label: string; startsAt: Da
 }
 
 export function tierLabelKo(tier: Tier): string {
-  return tier === 'paid' ? '정회원' : '무료회원';
+  return tier === 'paid' ? '조합원' : '무료회원';
 }
 
 export function isActivePaid(profile: { tier: Tier; tier_expires_at: string | null } | null): boolean {

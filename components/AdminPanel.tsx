@@ -293,7 +293,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                     </td>
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-1 ${isActive ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy'}`}>
-                        {isActive ? '정회원' : tierLabelKo(p.tier)}
+                        {isActive ? '조합원' : tierLabelKo(p.tier)}
                       </span>
                     </td>
                     <td className="py-2.5 px-2 text-center text-muted tabular-nums">
@@ -481,7 +481,7 @@ function UpgradeActions({
         disabled={busy}
         className="bg-navy text-white px-3 py-1 text-[11px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-50 border-none"
       >
-        {busy ? '...' : '정회원 등업'}
+        {busy ? '...' : '조합원 등업'}
       </button>
       <button
         type="button"

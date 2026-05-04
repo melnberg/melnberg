@@ -5,6 +5,7 @@ import MainTop from '@/components/MainTop';
 import LogoutButton from '@/components/LogoutButton';
 import NicknameEditor from '@/components/NicknameEditor';
 import NaverIdEditor from '@/components/NaverIdEditor';
+import LinkUrlEditor from '@/components/LinkUrlEditor';
 import DeleteAccountButton from '@/components/DeleteAccountButton';
 import { createClient } from '@/lib/supabase/server';
 import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
@@ -22,7 +23,7 @@ export default async function MePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, tier, tier_expires_at, is_admin, naver_id')
+    .select('display_name, tier, tier_expires_at, is_admin, naver_id, link_url')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -35,7 +36,7 @@ export default async function MePage() {
   const tier = (profile?.tier ?? 'free') as 'free' | 'paid';
   const expiresAt = profile?.tier_expires_at ?? null;
   const isActive = isActivePaid({ tier, tier_expires_at: expiresAt });
-  const tierBadge = isActive ? '정회원' : tierLabelKo(tier);
+  const tierBadge = isActive ? '조합원' : tierLabelKo(tier);
 
   const payments = await listOwnPayments();
 
@@ -64,6 +65,10 @@ export default async function MePage() {
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
               <span className="text-[12px] font-bold tracking-widest uppercase text-muted">네이버 ID<br/><span className="text-[10px] normal-case font-medium text-muted">카페 유료회원 인증</span></span>
               <NaverIdEditor initial={profile?.naver_id ?? null} />
+            </div>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
+              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">블로그·SNS<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 클릭 시 연결</span></span>
+              <LinkUrlEditor initial={(profile as { link_url?: string | null } | null)?.link_url ?? null} />
             </div>
             <Row label="이메일" value={user.email ?? '-'} />
             <Row label="가입일" value={user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'} />
