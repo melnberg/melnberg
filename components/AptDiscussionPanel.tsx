@@ -491,24 +491,27 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted text-muted text-[10px] font-bold cursor-help hover:border-navy hover:text-navy">?</span>
-                  <div className="hidden group-hover:block absolute z-50 left-1/2 -translate-x-1/2 top-6 w-[280px] bg-navy text-white text-[11px] leading-relaxed p-3 shadow-xl">
-                    <div className="font-bold text-cyan mb-2 tracking-wider uppercase text-[10px]">점거 규칙</div>
-                    <div className="mb-2.5">
-                      <div className="font-bold mb-0.5 text-cyan">— Score 산정</div>
-                      <div className="pl-2">작성글 1점 + 댓글 0.7점</div>
-                    </div>
-                    <div className="mb-2.5">
-                      <div className="font-bold mb-0.5 text-cyan">— 점거</div>
-                      <div className="pl-2">빈 단지 → 누구나 점거 가능</div>
-                    </div>
-                    <div className="mb-2.5">
-                      <div className="font-bold mb-0.5 text-cyan">— 강제집행 (박탈)</div>
-                      <div className="pl-2">조건: 내 score &gt; 점거인 score</div>
-                      <div className="pl-2">동점이면 박탈 불가</div>
-                    </div>
-                    <div>
-                      <div className="font-bold mb-0.5 text-cyan">— 점거 옮기기</div>
-                      <div className="pl-2">1인 1점거 — 새 단지 점거 시 기존 단지에서 자동 퇴거</div>
+                  <div className="hidden group-hover:block absolute z-50 left-1/2 -translate-x-1/2 top-6 w-[300px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
+                    <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">점거 규칙</div>
+                    <div className="px-4 py-3 space-y-3">
+                      <div>
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">Score 산정</div>
+                        <div className="flex justify-between text-[11px]"><span>작성글</span><b>1점</b></div>
+                        <div className="flex justify-between text-[11px]"><span>댓글</span><b>0.7점</b></div>
+                      </div>
+                      <div className="pt-3 border-t border-white/10">
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">점거</div>
+                        <div className="text-[11px]">빈 단지는 누구나 점거 가능</div>
+                      </div>
+                      <div className="pt-3 border-t border-white/10">
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">강제집행 (박탈)</div>
+                        <div className="text-[11px]">내 score &gt; 점거인 score 일 때만</div>
+                        <div className="text-[10px] text-white/60 mt-0.5">동점은 박탈 불가</div>
+                      </div>
+                      <div className="pt-3 border-t border-white/10">
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">점거 옮기기</div>
+                        <div className="text-[11px]">1인 1점거 — 새 단지 점거 시 기존 단지에서 자동 퇴거</div>
+                      </div>
                     </div>
                   </div>
                 </span>
@@ -529,19 +532,21 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     강제집행
                   </button>
                   {/* 호버 시 강제집행 조건 + 점수 비교 */}
-                  <div className="hidden group-hover:block absolute z-50 right-0 top-8 w-[240px] bg-navy text-white text-[11px] leading-relaxed p-3 shadow-xl">
-                    <div className="font-bold text-cyan mb-2 tracking-wider uppercase text-[10px]">강제집행 (박탈)</div>
-                    <div className="mb-0.5 pl-2">조건: 내 score &gt; 점거인 score</div>
-                    <div className="mb-2 pl-2">동점이면 박탈 불가</div>
-                    <div className="pt-2 border-t border-white/20 space-y-0.5">
+                  <div className="hidden group-hover:block absolute z-50 right-0 top-8 w-[260px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
+                    <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">강제집행 (박탈)</div>
+                    <div className="px-4 py-3 space-y-2">
+                      <div>내 score &gt; 점거인 score 일 때만</div>
+                      <div className="text-[10px] text-white/60">동점은 박탈 불가</div>
+                    </div>
+                    <div className="px-4 py-3 border-t border-white/10 space-y-1">
                       {myScore !== null && (
-                        <div className="flex justify-between"><span>내 score</span><b>{myScore}</b></div>
+                        <div className="flex justify-between"><span className="text-white/70">내 score</span><b>{myScore}</b></div>
                       )}
                       {occupierScore !== null && (
-                        <div className="flex justify-between"><span>점거인 score</span><b>{occupierScore}</b></div>
+                        <div className="flex justify-between"><span className="text-white/70">점거인 score</span><b>{occupierScore}</b></div>
                       )}
                       {myScore !== null && occupierScore !== null && myScore <= occupierScore && (
-                        <div className="text-[10px] text-cyan mt-1.5">글·댓글로 score 올린 후 다시 시도.</div>
+                        <div className="text-[10px] text-cyan mt-1.5">글·댓글로 score 올린 후 다시 시도</div>
                       )}
                     </div>
                   </div>
