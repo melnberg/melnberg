@@ -22,12 +22,30 @@ export const getCurrentProfile = cache(async (): Promise<FullProfile | null> => 
   const user = await getCurrentUser();
   if (!user) return null;
   const supabase = await createClient();
-  const { data } = await supabase
+
+  // 핵심 컬럼 — schema.sql + 초기 마이그레이션부터 항상 존재
+  const { data: base, error } = await supabase
     .from('profiles')
-    .select('id, display_name, is_admin, tier, tier_expires_at, created_at, naver_id, link_url, phone, is_solo')
+    .select('id, display_name, is_admin, tier, tier_expires_at, created_at')
     .eq('id', user.id)
     .maybeSingle();
-  return (data as FullProfile | null) ?? null;
+  if (error || !base) return null;
+
+  // 확장 컬럼 — best-effort. 일부 마이그레이션 미적용이어도 is_admin/tier 는 살림.
+  const { data: ext } = await supabase
+    .from('profiles')
+    .select('naver_id, link_url, phone, is_solo')
+    .eq('id', user.id)
+    .maybeSingle();
+  const e = (ext ?? {}) as { naver_id?: string | null; link_url?: string | null; phone?: string | null; is_solo?: boolean | null };
+
+  return {
+    ...(base as unknown as ProfileWithTier),
+    naver_id: e.naver_id ?? null,
+    link_url: e.link_url ?? null,
+    phone: e.phone ?? null,
+    is_solo: e.is_solo ?? false,
+  };
 });
 
 export const getCurrentScore = cache(async (): Promise<number> => {
