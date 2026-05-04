@@ -1,7 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import Layout from '@/components/Layout';
 import AptMap, { type AptPin, type FeedItem } from '@/components/AptMap';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/public';
 
 export const metadata = {
   title: '멜른버그 — 아파트 지도',
@@ -11,9 +11,10 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 // apt_master 는 거의 안 변함 (어드민이 수동 추가/수정). 5분 캐싱으로 충분.
+// unstable_cache 내부에서는 cookies() 못 씀 → anon 클라이언트
 const fetchAptPins = unstable_cache(
   async (): Promise<AptPin[]> => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const all: AptPin[] = [];
     for (let offset = 0; offset < 50000; offset += 1000) {
       const { data, error } = await supabase
@@ -38,7 +39,7 @@ const fetchAptPins = unstable_cache(
 // 피드 — 30초 캐싱. is_solo 분리 select 합쳐서 한 번만 호출.
 const fetchFeed = unstable_cache(
   async (): Promise<FeedItem[]> => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data: discs } = await supabase
       .from('apt_discussions')
       .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')

@@ -1,14 +1,15 @@
 import { unstable_cache } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/public';
 import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 import NotificationsBell from './NotificationsBell';
 
 // 사이드바 최신글 — 30초 캐싱. 모든 페이지 공통이라 cache hit 비율 매우 높음.
+// unstable_cache 내부에서는 cookies() 의존 클라이언트 못 씀 → public anon 클라이언트 사용
 const fetchRecentPosts = unstable_cache(
   async (): Promise<SidebarRecentPost[]> => {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data: recentRaw } = await supabase
       .from('posts')
       .select('id, title, created_at, author:profiles!author_id(display_name)')
