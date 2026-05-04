@@ -243,12 +243,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       try { localStorage.removeItem(PINS_CACHE_KEY_SMALL); } catch { /* ignore */ }
       (async () => {
         try {
-          // 1) 서버 캐시 무효화 (revalidateTag)
-          await fetch('/api/home-pins/invalidate', { method: 'POST', cache: 'no-store' });
-          // 2) big + small fresh fetch
+          // ?fresh=1 → 서버측 unstable_cache 우회. revalidateTag 보다 안정적.
           const [bigR, smallR] = await Promise.all([
-            fetch('/api/home-pins', { cache: 'no-store' }),
-            fetch('/api/home-pins?detail=1', { cache: 'no-store' }),
+            fetch('/api/home-pins?fresh=1', { cache: 'no-store' }),
+            fetch('/api/home-pins?detail=1&fresh=1', { cache: 'no-store' }),
           ]);
           if (!bigR.ok || !smallR.ok) return;
           const bigJson = (await bigR.json()) as { pins: AptPin[] };
