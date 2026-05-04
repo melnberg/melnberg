@@ -145,7 +145,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   async function toggleOccupied() {
     if (occupiedOpen) { setOccupiedOpen(false); return; }
     setOccupiedOpen(true);
-    if (occupierNames.size > 0) return;
+    // 매번 fresh fetch — 점거 변동 즉시 반영
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
