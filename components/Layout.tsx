@@ -1,38 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 import NotificationsBell from './NotificationsBell';
 
-export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
+async function fetchRecentPosts(): Promise<SidebarRecentPost[]> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let sidebarUser: SidebarUser | null = null;
-  if (user) {
-    const [{ data: scoreData }, { data: profile }] = await Promise.all([
-      supabase.rpc('get_user_score', { p_user_id: user.id }),
-      supabase.from('profiles').select('tier, tier_expires_at').eq('id', user.id).maybeSingle(),
-    ]);
-    const score = typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0);
-    const tier = (profile as { tier?: string | null } | null)?.tier;
-    const expiresAt = (profile as { tier_expires_at?: string | null } | null)?.tier_expires_at;
-    const isPaid = tier === 'paid' && (!expiresAt || new Date(expiresAt) > new Date());
-    sidebarUser = {
-      name: (user.user_metadata?.display_name as string | undefined) ?? user.email?.split('@')[0] ?? '회원',
-      email: user.email ?? '',
-      score,
-      isPaid,
-    };
-  }
-
-  // 사이드바 커뮤니티 최신글 5개 (작성자 닉네임 포함)
   const { data: recentRaw } = await supabase
     .from('posts')
     .select('id, title, created_at, author:profiles!author_id(display_name)')
     .eq('category', 'community')
     .order('created_at', { ascending: false })
     .limit(5);
-  const recentPosts: SidebarRecentPost[] = (recentRaw ?? []).map((p) => {
+  return (recentRaw ?? []).map((p) => {
     const author = (p as Record<string, unknown>).author as { display_name?: string | null } | null;
     return {
       id: p.id as number,
@@ -41,6 +21,28 @@ export default async function Layout({ current, children }: { current?: string; 
       author_name: author?.display_name ?? null,
     };
   });
+}
+
+export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
+  // 모두 독립적인 쿼리 — 병렬 실행. cached 헬퍼라 페이지에서 또 호출해도 dedupe됨.
+  const [user, profile, score, recentPosts] = await Promise.all([
+    getCurrentUser(),
+    getCurrentProfile(),
+    getCurrentScore(),
+    fetchRecentPosts(),
+  ]);
+
+  let sidebarUser: SidebarUser | null = null;
+  if (user) {
+    const expiresAt = profile?.tier_expires_at ?? null;
+    const isPaid = profile?.tier === 'paid' && (!expiresAt || new Date(expiresAt) > new Date());
+    sidebarUser = {
+      name: profile?.display_name ?? (user.user_metadata?.display_name as string | undefined) ?? user.email?.split('@')[0] ?? '회원',
+      email: user.email ?? '',
+      score,
+      isPaid,
+    };
+  }
 
   return (
     <div className="flex min-h-screen">

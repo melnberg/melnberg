@@ -3,7 +3,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import TossCheckout from '@/components/TossCheckout';
 import { products } from '@/lib/products';
-import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
 
 export const metadata = { title: '결제 — 멜른버그' };
 export const dynamic = 'force-dynamic';
@@ -13,15 +13,8 @@ export default async function PayPage({ params }: { params: Promise<{ productId:
   const product = products.find((p) => p.id === productId);
   if (!product) notFound();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [user, profile] = await Promise.all([getCurrentUser(), getCurrentProfile()]);
   if (!user) redirect(`/login?next=/pay/${productId}`);
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, phone')
-    .eq('id', user.id)
-    .maybeSingle();
 
   return (
     <Layout current={product.filename}>

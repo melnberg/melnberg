@@ -9,6 +9,7 @@ import LinkUrlEditor from '@/components/LinkUrlEditor';
 import SoloEditor from '@/components/SoloEditor';
 import DeleteAccountButton from '@/components/DeleteAccountButton';
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
 import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
 import { paymentStatusLabel } from '@/lib/tier-utils';
 
@@ -17,16 +18,29 @@ export const metadata = { title: '마이페이지 — 멜른버그' };
 export const dynamic = 'force-dynamic';
 
 export default async function MePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) redirect('/login?next=/me');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, tier, tier_expires_at, is_admin, naver_id, link_url')
-    .eq('id', user.id)
-    .maybeSingle();
+  const supabase = await createClient();
+
+  // 한 번에 다 병렬 — Layout 이 이미 호출한 user/profile/score 는 cached 라 재사용됨
+  const [
+    profile,
+    score,
+    payments,
+    { count: aptPostCount },
+    { count: aptCommentCount },
+    { count: communityPostCount },
+    { count: communityCommentCount },
+  ] = await Promise.all([
+    getCurrentProfile(),
+    getCurrentScore(),
+    listOwnPayments(),
+    supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
+    supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
+  ]);
 
   const displayName =
     profile?.display_name ??
@@ -39,28 +53,11 @@ export default async function MePage() {
   const isActive = isActivePaid({ tier, tier_expires_at: expiresAt });
   const tierBadge = isActive ? '조합원' : tierLabelKo(tier);
 
-  const payments = await listOwnPayments();
-
-  // 활동 통계 — 작성글·댓글·score (apt 토론 + 커뮤니티 합산)
-  const [
-    { count: aptPostCount },
-    { count: aptCommentCount },
-    { count: communityPostCount },
-    { count: communityCommentCount },
-    { data: scoreData },
-  ] = await Promise.all([
-    supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
-    supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
-    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
-    supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
-    supabase.rpc('get_user_score', { p_user_id: user.id }),
-  ]);
   const aptPosts = aptPostCount ?? 0;
   const communityPosts = communityPostCount ?? 0;
   const aptComments = aptCommentCount ?? 0;
   const communityComments = communityCommentCount ?? 0;
   const totalComments = aptComments + communityComments;
-  const score = typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0);
 
   return (
     <Layout>
