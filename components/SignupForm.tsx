@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import OAuthButtons from './OAuthButtons';
@@ -14,7 +13,6 @@ import OAuthButtons from './OAuthButtons';
 // OAuth(카카오/구글) 도 동일하게 /complete-signup 거침. 단일 폼 단일 검증.
 
 export default function SignupForm() {
-  const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -80,7 +78,6 @@ export default function SignupForm() {
       return;
     }
     setMsg({ type: 'info', text: '인증 메일이 발송되었습니다.\n메일함에서 링크를 클릭해주세요.\n(클릭하면 닉네임·휴대폰 등 추가 정보 입력 페이지로 이동합니다.)' });
-    setTimeout(() => router.push('/login'), 4000);
   }
 
   return (
