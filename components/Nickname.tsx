@@ -128,7 +128,7 @@ export default function Nickname({
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className={`hover:underline cursor-pointer ${className}`}
+        className={`inline-flex items-center hover:underline cursor-pointer whitespace-nowrap ${className}`}
       >
         {inner}
       </a>
@@ -169,7 +169,7 @@ export default function Nickname({
         ref={tipBtnRef}
         type="button"
         onClick={toggleTip}
-        className={`hover:underline cursor-pointer bg-transparent border-none p-0 m-0 inline ${className}`}
+        className={`inline-flex items-center hover:underline cursor-pointer bg-transparent border-none p-0 m-0 whitespace-nowrap ${className}`}
         style={{ font: 'inherit', color: 'inherit' }}
       >
         {inner}
