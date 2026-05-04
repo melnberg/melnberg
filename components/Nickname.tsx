@@ -70,7 +70,7 @@ export default function Nickname({
         {inner}
       </button>
       {tipOpen && (
-        <div className="absolute z-[60] left-0 top-full mt-1 bg-white border border-border shadow-[0_4px_16px_rgba(0,0,0,0.12)] w-[220px] p-3"
+        <div className="absolute z-[60] right-0 top-full mt-1 bg-white border border-border shadow-[0_4px_16px_rgba(0,0,0,0.12)] w-[220px] p-3"
           onClick={(e) => e.stopPropagation()}>
           <div className="text-[12px] text-text leading-snug mb-2">
             <b className="text-navy">{name}</b> 님은 아직 블로그·SNS를 등록하지 않았어요.
