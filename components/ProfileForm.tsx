@@ -103,21 +103,47 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     }
     const firstErr = errors.find((e) => e);
 
-    // 카페 유료회원 매칭 시도 (네이버ID 또는 닉네임 변경 시)
+    // 카페 유료회원 매칭 재평가 (닉네임 또는 네이버ID 변경 시)
+    // 매칭 → 조합원 승격
+    // 비매칭 → 카페 매칭으로 받은 등급(tier_expires_at = 2099-12-31)이면 강등.
+    //           토스 결제로 받은 등급(현실적 만료일)은 유지.
     let tierMsg: string | null = null;
-    if (!firstErr && (updates.display_name || updates.naver_id) && naverClean) {
-      const { data: matched } = await supabase
-        .from('cafe_paid_members')
-        .select('naver_id')
-        .eq('naver_id', naverClean)
-        .eq('cafe_nickname', nameT)
-        .maybeSingle();
-      if (matched) {
+    if (!firstErr && (updates.display_name || updates.naver_id !== undefined)) {
+      let isMatched = false;
+      if (naverClean) {
+        const { data: matched } = await supabase
+          .from('cafe_paid_members')
+          .select('naver_id')
+          .eq('naver_id', naverClean)
+          .eq('cafe_nickname', nameT)
+          .maybeSingle();
+        isMatched = !!matched;
+      }
+
+      if (isMatched) {
         const { error: tErr } = await supabase
           .from('profiles')
           .update({ tier: 'paid', tier_expires_at: '2099-12-31T00:00:00Z' })
           .eq('id', user.id);
         if (!tErr) tierMsg = ' · 카페 유료회원 인증 완료 → 조합원 전환';
+      } else {
+        // 비매칭 — 현재 카페 매칭으로 paid 였던 경우(만료일 = 2099-12-31)만 강등
+        const { data: cur } = await supabase
+          .from('profiles')
+          .select('tier, tier_expires_at')
+          .eq('id', user.id)
+          .maybeSingle();
+        const isPaidViaCafe =
+          cur?.tier === 'paid' &&
+          cur?.tier_expires_at &&
+          new Date(cur.tier_expires_at).getFullYear() >= 2099;
+        if (isPaidViaCafe) {
+          const { error: tErr } = await supabase
+            .from('profiles')
+            .update({ tier: 'free', tier_expires_at: null })
+            .eq('id', user.id);
+          if (!tErr) tierMsg = ' · 카페 매칭 깨짐 → 무료회원 강등';
+        }
       }
     }
 
