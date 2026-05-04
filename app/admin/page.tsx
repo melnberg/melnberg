@@ -94,6 +94,12 @@ export default async function AdminPage() {
               >
                 아파트 마스터 →
               </a>
+              <a
+                href="/admin/feedback"
+                className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase"
+              >
+                건의사항 →
+              </a>
             </div>
           </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>
