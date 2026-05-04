@@ -290,13 +290,21 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo').in('id', ids);
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', ids);
     const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean }>();
     const now = Date.now();
-    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
       if (r.display_name) {
         const isPaid = r.tier === 'paid' && (!r.tier_expires_at || new Date(r.tier_expires_at).getTime() > now);
-        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: !!r.is_solo });
+        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: false });
+      }
+    }
+    // is_solo 추가 (SQL 039 적용 후)
+    const { data: soloData } = await supabase.from('profiles').select('id, is_solo').in('id', ids);
+    if (soloData) {
+      for (const s of soloData as Array<{ id: string; is_solo: boolean | null }>) {
+        const cur = map.get(s.id);
+        if (cur) cur.isSolo = !!s.is_solo;
       }
     }
     setOccupierProfiles(map);

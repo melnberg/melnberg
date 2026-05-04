@@ -44,9 +44,18 @@ async function fetchFeed(): Promise<FeedItem[]> {
   type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null };
   const profileMap = new Map<string, ProfRow>();
   if (authorIds.length > 0) {
-    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo').in('id', authorIds);
-    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
-      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url, tier: p.tier, tier_expires_at: p.tier_expires_at, is_solo: p.is_solo });
+    // is_solo는 SQL 039 적용 후에만 존재. 우선 base 쿼리로 fetch.
+    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', authorIds);
+    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url, tier: p.tier, tier_expires_at: p.tier_expires_at, is_solo: null });
+    }
+    // is_solo 추가 select (없으면 무시)
+    const { data: solo } = await supabase.from('profiles').select('id, is_solo').in('id', authorIds);
+    if (solo) {
+      for (const s of solo as Array<{ id: string; is_solo: boolean | null }>) {
+        const cur = profileMap.get(s.id);
+        if (cur) cur.is_solo = s.is_solo;
+      }
     }
   }
   const now = Date.now();

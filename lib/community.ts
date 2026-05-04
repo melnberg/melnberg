@@ -31,7 +31,7 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo), comments(count)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at), comments(count)')
     .eq('category', category)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -52,7 +52,7 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
   const supabase = await createClient();
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
@@ -110,7 +110,7 @@ export async function listComments(postId: number): Promise<CommunityComment[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('comments')
-    .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo)')
+    .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
   if (error) {
