@@ -49,6 +49,23 @@ export default function SignupForm() {
       }
     }
 
+    // 닉네임·네이버ID 중복 사전 검사 (auth.users는 email unique 만 검사하므로)
+    const nameT = name.trim();
+    if (nameT) {
+      const { data: dupName } = await supabase.from('profiles').select('id').eq('display_name', nameT).limit(1);
+      if (dupName && dupName.length > 0) {
+        setMsg({ type: 'error', text: `이미 사용 중인 닉네임입니다: "${nameT}". 다른 닉네임을 선택해주세요.` });
+        return;
+      }
+    }
+    if (cleanNaverId) {
+      const { data: dupId } = await supabase.from('profiles').select('id').eq('naver_id', cleanNaverId).limit(1);
+      if (dupId && dupId.length > 0) {
+        setMsg({ type: 'error', text: `이미 가입된 네이버 ID입니다: "${cleanNaverId}". 본인 계정이라면 로그인해주세요.` });
+        return;
+      }
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,

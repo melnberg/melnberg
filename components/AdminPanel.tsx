@@ -35,6 +35,26 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
     );
   }, [profiles, search]);
 
+  async function deleteUser(profile: ProfileWithTier) {
+    const name = profile.display_name ?? profile.id.slice(0, 8);
+    if (!confirm(`정말로 "${name}" 회원을 강제 탈퇴시키겠습니까?\n\n이 작업은 되돌릴 수 없습니다 — 계정·작성글·댓글·점거 정보가 모두 삭제됩니다.`)) return;
+    if (!confirm(`마지막 확인. "${name}" 강제탈퇴 진행?`)) return;
+    setBusyId(`delete-${profile.id}`);
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: profile.id }),
+    });
+    setBusyId(null);
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({}));
+      alert(`삭제 실패: ${error ?? res.status}`);
+      return;
+    }
+    setProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+    router.refresh();
+  }
+
   async function setTier(profile: ProfileWithTier, opts: { tier: 'free' | 'paid'; expiresAt: Date | null; productId?: string; periodLabel?: string }) {
     if (busyId) return;
     setBusyId(profile.id);
@@ -282,11 +302,10 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                 return (
                   <tr key={p.id} className="border-b border-border align-top hover:bg-bg/40">
                     <td className="py-2.5 px-2">
-                      <div className="font-bold text-text">
+                      <div className="font-bold text-text" title={p.id}>
                         {p.display_name ?? '(이름 없음)'}
                         {p.is_admin && <span className="ml-2 text-[10px] font-bold text-cyan tracking-widest uppercase">admin</span>}
                       </div>
-                      <div className="text-[10px] text-muted font-mono mt-0.5 truncate max-w-[280px]">{p.id}</div>
                     </td>
                     <td className="py-2.5 px-2 text-[12px] text-text">
                       {p.naver_id ?? <span className="text-muted">—</span>}
@@ -303,7 +322,17 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                       {new Date(p.created_at).toLocaleDateString('ko-KR')}
                     </td>
                     <td className="py-2.5 px-2">
-                      <UpgradeActions profile={p} onUpgrade={setTier} busy={busyId === p.id} />
+                      <div className="space-y-1.5">
+                        <UpgradeActions profile={p} onUpgrade={setTier} busy={busyId === p.id} />
+                        <button
+                          type="button"
+                          onClick={() => deleteUser(p)}
+                          disabled={busyId === `delete-${p.id}`}
+                          className="text-[10px] text-red-600 hover:text-red-700 underline disabled:opacity-40 cursor-pointer bg-transparent border-none p-0"
+                        >
+                          {busyId === `delete-${p.id}` ? '탈퇴 처리 중...' : '강제탈퇴'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
