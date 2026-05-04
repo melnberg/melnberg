@@ -23,6 +23,10 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
   const [payments, setPayments] = useState(initialPayments);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProductId, setBulkProductId] = useState<string>(products[0]?.id ?? '');
+  const [bulkPeriod, setBulkPeriod] = useState<'current' | 'next'>('current');
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return profiles;
@@ -34,6 +38,73 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
         || p.id.toLowerCase().includes(q),
     );
   }, [profiles, search]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(visible: ProfileWithTier[]) {
+    setSelectedIds((prev) => {
+      const allSelected = visible.every((p) => prev.has(p.id));
+      const next = new Set(prev);
+      if (allSelected) {
+        for (const p of visible) next.delete(p.id);
+      } else {
+        for (const p of visible) next.add(p.id);
+      }
+      return next;
+    });
+  }
+
+  async function bulkUpgrade() {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    if (!confirm(`선택된 ${selectedIds.size}명을 조합원으로 등업합니다.`)) return;
+    setBulkBusy(true);
+    const q = bulkPeriod === 'current' ? currentQuarter() : nextQuarter();
+    for (const id of selectedIds) {
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) continue;
+      await setTier(profile, { tier: 'paid', expiresAt: q.endsAt, productId: bulkProductId, periodLabel: q.label });
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+  }
+
+  async function bulkDowngrade() {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    if (!confirm(`선택된 ${selectedIds.size}명을 무료회원으로 전환합니다.`)) return;
+    setBulkBusy(true);
+    for (const id of selectedIds) {
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) continue;
+      await setTier(profile, { tier: 'free', expiresAt: null });
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    if (!confirm(`선택된 ${selectedIds.size}명을 강제탈퇴 시킵니다.\n\n되돌릴 수 없습니다 (계정·글·댓글·점거 모두 삭제).`)) return;
+    if (!confirm(`마지막 확인. ${selectedIds.size}명 강제탈퇴 진행?`)) return;
+    setBulkBusy(true);
+    for (const id of selectedIds) {
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) continue;
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: id }),
+      });
+      if (res.ok) setProfiles((prev) => prev.filter((p) => p.id !== id));
+    }
+    setBulkBusy(false);
+    setSelectedIds(new Set());
+    router.refresh();
+  }
 
   async function deleteUser(profile: ProfileWithTier) {
     const name = profile.display_name ?? profile.id.slice(0, 8);
@@ -273,7 +344,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
 
       {/* 회원 목록 */}
       <section>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
           <h2 className="text-[18px] font-bold text-navy">회원 ({profiles.length}명)</h2>
           <input
             type="text"
@@ -284,23 +355,87 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
           />
         </div>
 
+        {/* 일괄 작업 toolbar */}
+        <div className="border border-border bg-navy-soft px-4 py-3 mb-2 flex items-center gap-2 flex-wrap">
+          <span className="text-[12px] font-bold text-navy mr-2">선택: {selectedIds.size}명</span>
+          <select
+            value={bulkProductId}
+            onChange={(e) => setBulkProductId(e.target.value)}
+            disabled={bulkBusy}
+            className="border border-border px-2 py-1 text-[12px] outline-none focus:border-navy rounded-none"
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <select
+            value={bulkPeriod}
+            onChange={(e) => setBulkPeriod(e.target.value as 'current' | 'next')}
+            disabled={bulkBusy}
+            className="border border-border px-2 py-1 text-[12px] outline-none focus:border-navy rounded-none"
+          >
+            <option value="current">현분기</option>
+            <option value="next">다음분기</option>
+          </select>
+          <button
+            type="button"
+            onClick={bulkUpgrade}
+            disabled={bulkBusy || selectedIds.size === 0}
+            className="bg-navy text-white px-3 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-30 disabled:cursor-not-allowed border-none"
+          >
+            조합원 등업
+          </button>
+          <button
+            type="button"
+            onClick={bulkDowngrade}
+            disabled={bulkBusy || selectedIds.size === 0}
+            className="bg-white border border-border text-text px-3 py-1.5 text-[12px] font-semibold tracking-wide cursor-pointer hover:border-navy hover:text-navy disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            무료 전환
+          </button>
+          <button
+            type="button"
+            onClick={bulkDelete}
+            disabled={bulkBusy || selectedIds.size === 0}
+            className="ml-auto bg-white border border-red-500 text-red-600 px-3 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            강제탈퇴
+          </button>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-[12px] border-collapse">
             <thead>
               <tr className="bg-bg/60 border-y border-navy text-muted">
+                <th className="py-2 px-2 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id))}
+                    onChange={() => toggleSelectAll(filtered)}
+                    className="w-4 h-4 accent-navy cursor-pointer"
+                  />
+                </th>
                 <th className="py-2 px-2 font-semibold text-left">닉네임</th>
                 <th className="py-2 px-2 font-semibold text-left w-32">네이버 ID</th>
                 <th className="py-2 px-2 font-semibold text-center w-20">등급</th>
                 <th className="py-2 px-2 font-semibold text-center w-28">만료일</th>
                 <th className="py-2 px-2 font-semibold text-center w-24">가입일</th>
-                <th className="py-2 px-2 font-semibold text-left">빠른 작업</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => {
                 const isActive = isActivePaid(p);
+                const checked = selectedIds.has(p.id);
                 return (
-                  <tr key={p.id} className="border-b border-border align-top hover:bg-bg/40">
+                  <tr key={p.id} className={`border-b border-border hover:bg-bg/40 ${checked ? 'bg-navy-soft/40' : ''}`}>
+                    <td className="py-2.5 px-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSelect(p.id)}
+                        className="w-4 h-4 accent-navy cursor-pointer"
+                      />
+                    </td>
                     <td className="py-2.5 px-2">
                       <div className="font-bold text-text" title={p.id}>
                         {p.display_name ?? '(이름 없음)'}
@@ -320,19 +455,6 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                     </td>
                     <td className="py-2.5 px-2 text-center text-muted tabular-nums">
                       {new Date(p.created_at).toLocaleDateString('ko-KR')}
-                    </td>
-                    <td className="py-2.5 px-2">
-                      <div className="space-y-1.5">
-                        <UpgradeActions profile={p} onUpgrade={setTier} busy={busyId === p.id} />
-                        <button
-                          type="button"
-                          onClick={() => deleteUser(p)}
-                          disabled={busyId === `delete-${p.id}`}
-                          className="text-[10px] text-red-600 hover:text-red-700 underline disabled:opacity-40 cursor-pointer bg-transparent border-none p-0"
-                        >
-                          {busyId === `delete-${p.id}` ? '탈퇴 처리 중...' : '강제탈퇴'}
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 );
