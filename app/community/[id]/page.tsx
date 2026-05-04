@@ -29,7 +29,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
   const supabase = await createClient();
   // 조회수 +1 (RLS 우회 RPC). 실패해도 페이지 렌더는 계속.
-  void supabase.rpc('increment_post_view', { p_post_id: numId }).catch(() => {});
+  void supabase.rpc('increment_post_view', { p_post_id: numId }).then(() => {}, () => {});
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthor = user?.id === post.author_id;
 
