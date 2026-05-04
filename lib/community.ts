@@ -11,7 +11,7 @@ export type CommunityPost = {
   is_paid_only: boolean;
   created_at: string;
   updated_at: string;
-  author: { display_name: string | null } | null;
+  author: { display_name: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null; is_solo?: boolean | null } | null;
   comment_count?: number;
   view_count?: number;
   like_count?: number;
@@ -31,7 +31,7 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name), comments(count)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo), comments(count)')
     .eq('category', category)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -52,7 +52,7 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
   const supabase = await createClient();
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
@@ -110,7 +110,7 @@ export async function listComments(postId: number): Promise<CommunityComment[]> 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('comments')
-    .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name)')
+    .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo)')
     .eq('post_id', postId)
     .order('created_at', { ascending: true });
   if (error) {

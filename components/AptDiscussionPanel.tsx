@@ -87,6 +87,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [occupierName, setOccupierName] = useState<string | null>(null);
   const [occupierLink, setOccupierLink] = useState<string | null>(null);
   const [occupierIsPaid, setOccupierIsPaid] = useState<boolean>(false);
+  const [occupierIsSolo, setOccupierIsSolo] = useState<boolean>(false);
   const [occupierScore, setOccupierScore] = useState<number | null>(null);
   const [myScore, setMyScore] = useState<number | null>(null);
   const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
@@ -135,18 +136,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     // 작가 표시명 + 링크 + 등급
     const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
     const nowMs = Date.now();
-    const toInfo = (p: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }): NicknameInfo => ({
+    const toInfo = (p: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }): NicknameInfo => ({
       name: p.display_name,
       link: p.link_url,
       isPaid: p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs),
+      isSolo: !!p.is_solo,
     });
     if (authorIds.length > 0) {
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, display_name, link_url, tier, tier_expires_at')
+        .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
         .in('id', authorIds);
       const aMap = new Map<string, NicknameInfo>();
-      for (const p of (profilesData ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+      for (const p of (profilesData ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
         if (p.display_name) aMap.set(p.id, toInfo(p));
       }
       setAuthors(aMap);
@@ -175,12 +177,12 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       if (commentAuthorIds.length > 0) {
         const { data: extra } = await supabase
           .from('profiles')
-          .select('id, display_name, link_url, tier, tier_expires_at')
+          .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
           .in('id', commentAuthorIds);
         if (extra) {
           setAuthors((prev) => {
             const m = new Map(prev);
-            for (const p of extra as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+            for (const p of extra as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
               if (p.display_name) m.set(p.id, toInfo(p));
             }
             return m;
@@ -217,19 +219,21 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       if (oid) {
         const { data: prof } = await supabase
           .from('profiles')
-          .select('display_name, link_url, tier, tier_expires_at')
+          .select('display_name, link_url, tier, tier_expires_at, is_solo')
           .eq('id', oid)
           .maybeSingle();
-        const p = prof as { display_name?: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null } | null;
+        const p = prof as { display_name?: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null; is_solo?: boolean | null } | null;
         setOccupierName(p?.display_name ?? null);
         setOccupierLink(p?.link_url ?? null);
         setOccupierIsPaid(p?.tier === 'paid' && (!p?.tier_expires_at || new Date(p.tier_expires_at).getTime() > Date.now()));
+        setOccupierIsSolo(!!p?.is_solo);
         const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: oid });
         setOccupierScore(typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0));
       } else {
         setOccupierName(null);
         setOccupierLink(null);
         setOccupierIsPaid(false);
+        setOccupierIsSolo(false);
         setOccupierScore(null);
       }
     }
@@ -502,7 +506,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                 <span className="text-[12px] text-[#666] font-medium flex-shrink-0">점거인</span>
                 <span className="text-[14px] font-bold text-black truncate">
-                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid }} />
+                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid, isSolo: occupierIsSolo }} />
                 </span>
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">

@@ -41,12 +41,12 @@ async function fetchFeed(): Promise<FeedItem[]> {
   if (!discs || discs.length === 0) return [];
 
   const authorIds = Array.from(new Set(discs.map((d) => (d as Record<string, unknown>).author_id as string).filter(Boolean)));
-  type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null };
+  type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null };
   const profileMap = new Map<string, ProfRow>();
   if (authorIds.length > 0) {
-    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', authorIds);
-    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
-      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url, tier: p.tier, tier_expires_at: p.tier_expires_at });
+    const { data: profs } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo').in('id', authorIds);
+    for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
+      profileMap.set(p.id, { display_name: p.display_name, link_url: p.link_url, tier: p.tier, tier_expires_at: p.tier_expires_at, is_solo: p.is_solo });
     }
   }
   const now = Date.now();
@@ -68,6 +68,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       author_name: prof?.display_name ?? null,
       author_link: prof?.link_url ?? null,
       author_is_paid: isActivePaid(prof),
+      author_is_solo: !!prof?.is_solo,
     };
   });
 }

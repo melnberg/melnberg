@@ -3,6 +3,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import { listPosts, formatBoardTime } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
+import Nickname from '@/components/Nickname';
 
 export const metadata = {
   title: '커뮤니티 — 멜른버그',
@@ -80,7 +81,12 @@ export default async function CommunityPage() {
                         </Link>
                       </td>
                       <td className="py-2.5 px-2 text-center text-navy font-semibold truncate">
-                        {p.author?.display_name ?? '익명'}
+                        <Nickname info={{
+                          name: p.author?.display_name ?? null,
+                          link: p.author?.link_url ?? null,
+                          isPaid: p.author?.tier === 'paid' && (!p.author?.tier_expires_at || new Date(p.author.tier_expires_at).getTime() > Date.now()),
+                          isSolo: !!p.author?.is_solo,
+                        }} />
                       </td>
                       <td className="py-2.5 px-2 text-center text-muted tabular-nums">
                         {formatBoardTime(p.created_at)}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import { listPosts, formatBoardTime, isCurrentUserAdmin } from '@/lib/community';
+import Nickname from '@/components/Nickname';
 
 export const metadata = {
   title: '블로그 — 멜른버그',
@@ -81,7 +82,12 @@ export default async function BlogPage() {
                         </Link>
                       </td>
                       <td className="py-2.5 px-2 text-center text-navy font-semibold truncate">
-                        {p.author?.display_name ?? '익명'}
+                        <Nickname info={{
+                          name: p.author?.display_name ?? null,
+                          link: p.author?.link_url ?? null,
+                          isPaid: p.author?.tier === 'paid' && (!p.author?.tier_expires_at || new Date(p.author.tier_expires_at).getTime() > Date.now()),
+                          isSolo: !!p.author?.is_solo,
+                        }} />
                       </td>
                       <td className="py-2.5 px-2 text-center text-muted tabular-nums">
                         {formatBoardTime(p.created_at)}

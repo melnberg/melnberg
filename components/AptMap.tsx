@@ -61,6 +61,7 @@ export type FeedItem = {
   author_name: string | null;
   author_link: string | null;
   author_is_paid: boolean;
+  author_is_solo: boolean;
 };
 
 export type AptPin = {
@@ -157,7 +158,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
-  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean }>>(new Map());
+  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean }>>(new Map());
   const router = useRouter();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -289,13 +290,13 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', ids);
-    const map = new Map<string, { name: string; link: string | null; isPaid: boolean }>();
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo').in('id', ids);
+    const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean }>();
     const now = Date.now();
-    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
       if (r.display_name) {
         const isPaid = r.tier === 'paid' && (!r.tier_expires_at || new Date(r.tier_expires_at).getTime() > now);
-        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid });
+        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: !!r.is_solo });
       }
     }
     setOccupierProfiles(map);
@@ -579,7 +580,10 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                       <div className="text-right flex-shrink-0">
                         <div className="text-[11px] text-cyan font-bold truncate">
                           {p.occupier_id ? (
-                            <Nickname info={occupierProfiles.get(p.occupier_id) ? { name: occupierProfiles.get(p.occupier_id)!.name, link: occupierProfiles.get(p.occupier_id)!.link, isPaid: occupierProfiles.get(p.occupier_id)!.isPaid } : { name: '...' }} />
+                            <Nickname info={(() => {
+                              const pf = occupierProfiles.get(p.occupier_id);
+                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo } : { name: '...' };
+                            })()} />
                           ) : ''}
                         </div>
                         {p.occupied_at && (
@@ -627,7 +631,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                             {f.apt_nm ?? '(단지 정보 없음)'}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid }} />
+                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo }} />
                           </span>
                         </div>
                         <div className="text-[12px] text-text leading-snug mb-0.5">{f.title}</div>

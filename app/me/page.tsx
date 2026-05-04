@@ -6,6 +6,7 @@ import LogoutButton from '@/components/LogoutButton';
 import NicknameEditor from '@/components/NicknameEditor';
 import NaverIdEditor from '@/components/NaverIdEditor';
 import LinkUrlEditor from '@/components/LinkUrlEditor';
+import SoloEditor from '@/components/SoloEditor';
 import DeleteAccountButton from '@/components/DeleteAccountButton';
 import { createClient } from '@/lib/supabase/server';
 import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
@@ -23,7 +24,7 @@ export default async function MePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, tier, tier_expires_at, is_admin, naver_id, link_url')
+    .select('display_name, tier, tier_expires_at, is_admin, naver_id, link_url, is_solo')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -77,8 +78,20 @@ export default async function MePage() {
               <NaverIdEditor initial={profile?.naver_id ?? null} />
             </div>
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">블로그·SNS<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 클릭 시 연결</span></span>
-              <LinkUrlEditor initial={(profile as { link_url?: string | null } | null)?.link_url ?? null} />
+              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">블로그·SNS<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 클릭 시 연결 · 조합원 전용</span></span>
+              {isActive ? (
+                <LinkUrlEditor initial={(profile as { link_url?: string | null } | null)?.link_url ?? null} />
+              ) : (
+                <span className="text-[12px] text-muted">조합원만 등록할 수 있어요</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
+              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">미혼 솔로 표시<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 분홍색 · 조합원 전용</span></span>
+              {isActive ? (
+                <SoloEditor initial={Boolean((profile as { is_solo?: boolean | null } | null)?.is_solo)} />
+              ) : (
+                <span className="text-[12px] text-muted">조합원만 사용할 수 있어요</span>
+              )}
             </div>
             <Row label="이메일" value={user.email ?? '-'} />
             <Row label="가입일" value={user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'} />

@@ -7,6 +7,7 @@ export type NicknameInfo = {
   name: string | null;
   link?: string | null;
   isPaid?: boolean;
+  isSolo?: boolean;
 };
 
 const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px ml-1 align-middle';
@@ -36,9 +37,11 @@ export default function Nickname({
   if (!name) return <span className={className}>{fallback}</span>;
 
   const isPaid = !!info?.isPaid;
+  const isSolo = !!info?.isSolo;
+  const nameCls = isSolo ? 'text-pink-500' : '';
   const inner = (
     <>
-      {name}
+      <span className={nameCls}>{name}</span>
       {isPaid && <span className={BADGE_CLS}>조합원</span>}
     </>
   );
