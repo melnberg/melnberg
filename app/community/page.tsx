@@ -59,7 +59,7 @@ export default async function CommunityPage() {
                   <tr className="bg-bg/60 border-y border-navy text-muted">
                     <th className="py-2.5 px-2 font-semibold text-center w-16">번호</th>
                     <th className="py-2.5 px-3 font-semibold text-left">제목</th>
-                    <th className="py-2.5 px-2 font-semibold text-center w-40">작성자</th>
+                    <th className="py-2.5 px-2 font-semibold text-left w-40">작성자</th>
                     <th className="py-2.5 px-2 font-semibold text-center w-24">작성일</th>
                     <th className="py-2.5 px-2 font-semibold text-center w-14">추천</th>
                     <th className="py-2.5 px-2 font-semibold text-center w-14">조회</th>
@@ -80,8 +80,8 @@ export default async function CommunityPage() {
                           ) : null}
                         </Link>
                       </td>
-                      <td className="py-2.5 px-2 text-center text-navy font-semibold relative overflow-visible">
-                        <span className="inline-flex justify-center">
+                      <td className="py-2.5 px-2 text-left text-navy font-semibold relative overflow-visible">
+                        <span className="inline-flex">
                         <Nickname info={{
                           name: p.author?.display_name ?? null,
                           link: p.author?.link_url ?? null,

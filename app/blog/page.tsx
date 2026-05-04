@@ -52,7 +52,7 @@ export default async function BlogPage() {
                   <tr className="bg-bg/60 border-y border-navy text-muted">
                     <th className="py-2.5 px-2 font-semibold text-center w-16">번호</th>
                     <th className="py-2.5 px-3 font-semibold text-left">제목</th>
-                    <th className="py-2.5 px-2 font-semibold text-center w-40">작성자</th>
+                    <th className="py-2.5 px-2 font-semibold text-left w-40">작성자</th>
                     <th className="py-2.5 px-2 font-semibold text-center w-24">작성일</th>
                     <th className="py-2.5 px-2 font-semibold text-center w-14">추천</th>
                     <th className="py-2.5 px-2 font-semibold text-center w-14">조회</th>

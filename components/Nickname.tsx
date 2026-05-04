@@ -13,6 +13,20 @@ export type NicknameInfo = {
 
 const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px ml-1 align-middle';
 
+// 두 반원으로 깔끔하게 합친 dot. right=null이면 단색.
+function SoloDot({ left, right, size = 10 }: { left: string; right: string | null; size?: number }) {
+  const half = size / 2;
+  if (!right) {
+    return <span style={{ display: 'inline-block', width: size, height: size, borderRadius: '50%', background: left, flexShrink: 0 }} />;
+  }
+  return (
+    <span style={{ display: 'inline-flex', width: size, height: size, flexShrink: 0, lineHeight: 0 }}>
+      <span style={{ width: half, height: size, background: left, borderTopLeftRadius: half, borderBottomLeftRadius: half }} />
+      <span style={{ width: half, height: size, background: right, borderTopRightRadius: half, borderBottomRightRadius: half }} />
+    </span>
+  );
+}
+
 type Pos = { top: number; left: number; right: number };
 
 // 트리거 요소 위치 → 화면 좌표 (fixed 기준)
@@ -63,9 +77,6 @@ export default function Nickname({
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';
   const soloColor = '#ec4899';
-  const dotStyle: React.CSSProperties = isSolo
-    ? { background: `linear-gradient(to right, ${linkColor} 0 50%, ${soloColor} 50% 100%)` }
-    : { background: linkColor };
 
   const dotEl = (
     <span
@@ -74,7 +85,7 @@ export default function Nickname({
       onMouseEnter={() => { if (dotRef.current) { setLegendPos(rectToPos(dotRef.current)); setLegendHover(true); } }}
       onMouseLeave={() => setLegendHover(false)}
     >
-      <span className="block w-2 h-2 rounded-full" style={dotStyle} aria-label="회원 표시" />
+      <SoloDot left={linkColor} right={isSolo ? soloColor : null} size={10} />
     </span>
   );
 
@@ -88,19 +99,19 @@ export default function Nickname({
       <div className="text-cyan font-bold tracking-wider uppercase text-[9px] mb-2">회원 표시 안내</div>
       <ul className="space-y-1.5">
         <li className="flex items-center gap-2">
-          <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#22c55e' }} />
+          <SoloDot left="#22c55e" right={null} />
           <span>블로그·SNS 등록</span>
         </li>
         <li className="flex items-center gap-2">
-          <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#d4d4d4' }} />
+          <SoloDot left="#d4d4d4" right={null} />
           <span>미등록</span>
         </li>
         <li className="flex items-center gap-2">
-          <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'linear-gradient(to right, #22c55e 0 50%, #ec4899 50% 100%)' }} />
+          <SoloDot left="#22c55e" right="#ec4899" />
           <span>등록 + 미혼 솔로</span>
         </li>
         <li className="flex items-center gap-2">
-          <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'linear-gradient(to right, #d4d4d4 0 50%, #ec4899 50% 100%)' }} />
+          <SoloDot left="#d4d4d4" right="#ec4899" />
           <span>미등록 + 미혼 솔로</span>
         </li>
       </ul>
