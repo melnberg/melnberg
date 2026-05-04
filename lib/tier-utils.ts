@@ -6,6 +6,9 @@ export type ProfileWithTier = {
   id: string;
   display_name: string | null;
   naver_id: string | null;
+  email?: string | null;
+  link_url?: string | null;
+  is_solo?: boolean;
   is_admin: boolean;
   tier: Tier;
   tier_expires_at: string | null;

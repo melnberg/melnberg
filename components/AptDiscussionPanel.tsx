@@ -531,8 +531,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     <div className="px-4 py-3 space-y-3">
                       <div>
                         <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">Score 산정</div>
-                        <div className="flex justify-between text-[11px]"><span>작성글</span><b>1점</b></div>
-                        <div className="flex justify-between text-[11px]"><span>댓글</span><b>0.7점</b></div>
+                        <div className="flex justify-between text-[11px]"><span>게시글</span><b>1점</b></div>
+                        <div className="flex justify-between text-[11px]"><span>게시글 댓글</span><b>0.7점</b></div>
+                        <div className="flex justify-between text-[11px]"><span>아파트글</span><b>1점</b></div>
+                        <div className="flex justify-between text-[11px]"><span>아파트 댓글</span><b>0.5점</b></div>
                       </div>
                       <div className="pt-3 border-t border-white/10">
                         <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">점거</div>
@@ -575,8 +577,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     </div>
                     <div className="px-4 py-3 border-t border-white/10">
                       <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">Score 산정</div>
-                      <div className="flex justify-between text-[11px]"><span>작성글</span><b>1점</b></div>
-                      <div className="flex justify-between text-[11px]"><span>댓글</span><b>0.7점</b></div>
+                      <div className="flex justify-between text-[11px]"><span>게시글</span><b>1점</b></div>
+                      <div className="flex justify-between text-[11px]"><span>게시글 댓글</span><b>0.7점</b></div>
+                      <div className="flex justify-between text-[11px]"><span>아파트글</span><b>1점</b></div>
+                      <div className="flex justify-between text-[11px]"><span>아파트 댓글</span><b>0.5점</b></div>
                     </div>
                     <div className="px-4 py-3 border-t border-white/10 space-y-1">
                       {myScore !== null && (

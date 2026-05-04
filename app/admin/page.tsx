@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { createClient as createAdminSb } from '@supabase/supabase-js';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AdminPanel from '@/components/AdminPanel';
@@ -20,7 +21,7 @@ export default async function AdminPage() {
   const [{ data: profilesRaw }, { data: paymentsRaw }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, display_name, naver_id, is_admin, tier, tier_expires_at, created_at')
+      .select('id, display_name, naver_id, is_admin, tier, tier_expires_at, created_at, link_url')
       .order('created_at', { ascending: false }),
     supabase
       .from('payments')
@@ -29,8 +30,35 @@ export default async function AdminPage() {
       .limit(100),
   ]);
 
-  // 이메일 가져오기는 어드민 권한 필요해서 — 사용자 ID만 노출
-  const profiles = (profilesRaw ?? []) as ProfileWithTier[];
+  // is_solo 별도 fetch (SQL 039 적용 후에만 존재)
+  let isSoloMap = new Map<string, boolean>();
+  try {
+    const { data } = await supabase.from('profiles').select('id, is_solo');
+    if (data) for (const r of data as Array<{ id: string; is_solo: boolean | null }>) isSoloMap.set(r.id, !!r.is_solo);
+  } catch { /* column 없음 */ }
+
+  // 이메일 (auth.users) — service_role admin API
+  const adminSb = createAdminSb(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+  const emailMap = new Map<string, string>();
+  try {
+    // listUsers 페이지네이션 (perPage=1000, 최대 5페이지)
+    for (let page = 1; page <= 5; page++) {
+      const { data } = await adminSb.auth.admin.listUsers({ page, perPage: 1000 });
+      if (!data?.users || data.users.length === 0) break;
+      for (const u of data.users) if (u.email) emailMap.set(u.id, u.email);
+      if (data.users.length < 1000) break;
+    }
+  } catch { /* ignore */ }
+
+  const profiles = ((profilesRaw ?? []) as Array<ProfileWithTier & { link_url?: string | null }>).map((p) => ({
+    ...p,
+    email: emailMap.get(p.id) ?? null,
+    is_solo: isSoloMap.get(p.id) ?? false,
+  }));
   const payments = (paymentsRaw ?? []) as PaymentRecord[];
 
   return (

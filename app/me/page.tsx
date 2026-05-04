@@ -55,8 +55,11 @@ export default async function MePage() {
     supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
     supabase.rpc('get_user_score', { p_user_id: user.id }),
   ]);
-  const postCount = (aptPostCount ?? 0) + (communityPostCount ?? 0);
-  const commentCount = (aptCommentCount ?? 0) + (communityCommentCount ?? 0);
+  const aptPosts = aptPostCount ?? 0;
+  const communityPosts = communityPostCount ?? 0;
+  const aptComments = aptCommentCount ?? 0;
+  const communityComments = communityCommentCount ?? 0;
+  const totalComments = aptComments + communityComments;
   const score = typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0);
 
   return (
@@ -104,12 +107,20 @@ export default async function MePage() {
           {/* 활동 통계 */}
           <div className="mt-8">
             <h2 className="text-[15px] font-bold text-navy mb-3">활동</h2>
-            <div className="grid grid-cols-3 border border-border">
-              <Stat label="작성글" value={(postCount ?? 0).toLocaleString()} suffix="개" />
-              <Stat label="댓글" value={(commentCount ?? 0).toLocaleString()} suffix="개" border />
+            <div className="grid grid-cols-4 border border-border">
+              <Stat label="게시글" value={communityPosts.toLocaleString()} suffix="개" />
+              <Stat label="아파트글" value={aptPosts.toLocaleString()} suffix="개" border />
+              <Stat label="댓글" value={totalComments.toLocaleString()} suffix="개" border />
               <Stat label="Score" value={String(score)} accent border />
             </div>
-            <p className="text-[11px] text-muted mt-2">Score = 작성글 1점 + 댓글 0.7점. 단지 점거·강제집행 시 사용됩니다.</p>
+            <div className="mt-3 px-4 py-3 border border-border bg-navy-soft text-[11px] leading-relaxed">
+              <div className="text-navy font-bold mb-1.5 tracking-wider uppercase text-[10px]">Score 산정 기준</div>
+              <ul className="space-y-0.5 text-text">
+                <li>· 게시글 <b className="text-navy">1점</b> / 게시글 댓글 <b className="text-navy">0.7점</b></li>
+                <li>· 아파트글 <b className="text-navy">1점</b> / 아파트 댓글 <b className="text-navy">0.5점</b></li>
+              </ul>
+              <p className="text-muted mt-1.5">단지 점거·강제집행 시 사용됩니다.</p>
+            </div>
           </div>
 
           {/* 결제 내역 */}
