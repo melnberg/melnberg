@@ -147,7 +147,23 @@ const CLUSTER_STYLES = [
 
 type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
 
-export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: FeedItem[] }) {
+export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
+  // 핀은 prop 으로 안 주면 클라이언트에서 /api/home-pins 비동기 fetch — 페이지 셸 먼저 보임
+  const [pins, setPins] = useState<AptPin[]>(pinsFromProps ?? []);
+  useEffect(() => {
+    if (pinsFromProps && pinsFromProps.length > 0) return; // SSR 로 받은 경우 그대로 사용
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/home-pins');
+        if (!r.ok) return;
+        const json = (await r.json()) as { pins: AptPin[] };
+        if (!cancelled) setPins(json.pins);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [pinsFromProps]);
+
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
   const markersRef = useRef<MarkerTier[]>([]);

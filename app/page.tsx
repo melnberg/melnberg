@@ -1,42 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import Layout from '@/components/Layout';
-import AptMap, { type AptPin, type FeedItem } from '@/components/AptMap';
+import AptMap, { type FeedItem } from '@/components/AptMap';
 import { createPublicClient } from '@/lib/supabase/public';
-
-export const metadata = {
-  title: '멜른버그 — 아파트 지도',
-  description: '단지별 토론·평가가 모이는 곳. 지도에서 단지 핀을 눌러 시작합니다.',
-};
-
-export const dynamic = 'force-dynamic';
-
-// apt_master 는 거의 안 변함 (어드민이 수동 추가/수정). 5분 캐싱으로 충분.
-// unstable_cache 내부에서는 cookies() 못 씀 → anon 클라이언트
-const fetchAptPins = unstable_cache(
-  async (): Promise<AptPin[]> => {
-    const supabase = createPublicClient();
-    const all: AptPin[] = [];
-    for (let offset = 0; offset < 50000; offset += 1000) {
-      const { data, error } = await supabase
-        .from('apt_master')
-        .select('id, apt_nm, dong, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at')
-        .not('lat', 'is', null)
-        // 빌라/오피스텔 등 비아파트 제거: K-apt 등록(kapt_code) 또는 100세대 이상만
-        .or('kapt_code.not.is.null,household_count.gte.100')
-        .range(offset, offset + 999);
-      if (error) {
-        console.warn('apt_master fetch error at offset', offset, error.message);
-        break;
-      }
-      if (!data || data.length === 0) break;
-      all.push(...(data as unknown as AptPin[]));
-      if (data.length < 1000) break;
-    }
-    return all;
-  },
-  ['home-apt-pins'],
-  { revalidate: 300, tags: ['apt-master'] },
-);
 
 // 피드 — 30초 캐싱. 글(apt_discussions) + 댓글(apt_discussion_comments) 합쳐 시간순.
 const fetchFeed = unstable_cache(
@@ -130,11 +95,12 @@ const fetchFeed = unstable_cache(
 );
 
 export default async function HomePage() {
-  const [pins, feed] = await Promise.all([fetchAptPins(), fetchFeed()]);
+  // 핀은 클라이언트에서 /api/home-pins 로 비동기 fetch — 페이지 셸 먼저 보여서 체감 빠름
+  const feed = await fetchFeed();
 
   return (
     <Layout current="home">
-      <AptMap pins={pins} feed={feed} />
+      <AptMap feed={feed} />
     </Layout>
   );
 }
