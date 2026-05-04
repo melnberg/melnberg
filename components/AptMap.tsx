@@ -300,7 +300,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           type="button"
           onClick={toggleOccupied}
           disabled={occupied.length === 0}
-          className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-navy-soft disabled:opacity-50 flex items-center gap-1.5"
+          className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#eef4fb] hover:border-navy disabled:opacity-50 flex items-center gap-1.5"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#00B0F0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" /></svg>
           <span>점거된 아파트 : {occupied.length.toLocaleString()}개단지</span>
@@ -319,7 +319,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
                     <button
                       type="button"
                       onClick={() => { jumpToApt(p); setOccupiedOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 hover:bg-navy-soft flex items-center justify-between gap-2"
+                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 bg-white hover:bg-[#eef4fb] flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="text-[13px] font-bold text-navy truncate">{p.apt_nm}</div>
