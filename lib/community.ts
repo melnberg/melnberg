@@ -24,7 +24,7 @@ export type CommunityComment = {
   parent_id: number | null;
   content: string;
   created_at: string;
-  author: { display_name: string | null } | null;
+  author: { display_name: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null; is_solo?: boolean | null } | null;
 };
 
 export async function listPosts(category: PostCategory = 'community', limit = 50): Promise<CommunityPost[]> {

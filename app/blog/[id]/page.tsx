@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
+import Nickname from '@/components/Nickname';
 import {
   getPost,
   listComments,
@@ -81,7 +82,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
               {post.title}
             </h1>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
-              <span className="font-bold text-navy">{post.author?.display_name ?? '익명'}</span>
+              <span className="font-bold text-navy">
+                <Nickname info={{
+                  name: post.author?.display_name ?? null,
+                  link: post.author?.link_url ?? null,
+                  isPaid: post.author?.tier === 'paid' && (!post.author?.tier_expires_at || new Date(post.author.tier_expires_at).getTime() > Date.now()),
+                  isSolo: !!post.author?.is_solo,
+                }} />
+              </span>
               <span>·</span>
               <span>{formatRelativeKo(post.created_at)}</span>
               {post.updated_at !== post.created_at && (

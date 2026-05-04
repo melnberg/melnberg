@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
+import Nickname from './Nickname';
 
 type Props = {
   postId: number;
@@ -62,7 +63,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: postId, author_id: currentUserId, content: content.trim(), parent_id: null })
-      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name)')
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at)')
       .single();
     setLoading(false);
     if (error || !data) {
@@ -79,7 +80,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: postId, author_id: currentUserId, content: replyContent.trim(), parent_id: parentId })
-      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name)')
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at)')
       .single();
     if (error || !data) {
       alert(error?.message ?? '저장 실패');
@@ -211,7 +212,14 @@ function CommentRow({
     <div className={compact ? '' : 'py-2.5'}>
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-2 text-[12px]">
-          <span className="font-bold text-navy">{comment.author?.display_name ?? '익명'}</span>
+          <span className="font-bold text-navy">
+            <Nickname info={{
+              name: comment.author?.display_name ?? null,
+              link: comment.author?.link_url ?? null,
+              isPaid: comment.author?.tier === 'paid' && (!comment.author?.tier_expires_at || new Date(comment.author.tier_expires_at).getTime() > Date.now()),
+              isSolo: !!comment.author?.is_solo,
+            }} />
+          </span>
           <span className="text-muted">·</span>
           <span className="text-muted">{formatRelativeKo(comment.created_at)}</span>
         </div>
