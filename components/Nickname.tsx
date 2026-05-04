@@ -91,31 +91,31 @@ export default function Nickname({
 
   const legendPopup = mounted && legendHover && legendPos && createPortal(
     <div
-      className="fixed z-[100] bg-navy text-white text-[10px] leading-relaxed shadow-xl w-[210px] p-3"
+      className="fixed z-[100] bg-navy text-white text-[11px] leading-relaxed shadow-xl w-[240px]"
       style={{ top: legendPos.top, right: legendPos.right }}
       onMouseEnter={() => setLegendHover(true)}
       onMouseLeave={() => setLegendHover(false)}
     >
-      <div className="text-cyan font-bold tracking-wider uppercase text-[9px] mb-2">회원 표시 안내</div>
-      <ul className="space-y-1.5">
-        <li className="flex items-center gap-2">
-          <SoloDot left="#22c55e" right={null} />
+      <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">회원 표시 안내</div>
+      <ul className="px-4 py-3 space-y-2">
+        <li className="flex items-center gap-2.5">
+          <SoloDot left="#22c55e" right={null} size={11} />
           <span>블로그·SNS 등록</span>
         </li>
-        <li className="flex items-center gap-2">
-          <SoloDot left="#d4d4d4" right={null} />
+        <li className="flex items-center gap-2.5">
+          <SoloDot left="#d4d4d4" right={null} size={11} />
           <span>미등록</span>
         </li>
-        <li className="flex items-center gap-2">
-          <SoloDot left="#22c55e" right="#ec4899" />
+        <li className="flex items-center gap-2.5">
+          <SoloDot left="#22c55e" right="#ec4899" size={11} />
           <span>등록 + 미혼 솔로</span>
         </li>
-        <li className="flex items-center gap-2">
-          <SoloDot left="#d4d4d4" right="#ec4899" />
+        <li className="flex items-center gap-2.5">
+          <SoloDot left="#d4d4d4" right="#ec4899" size={11} />
           <span>미등록 + 미혼 솔로</span>
         </li>
       </ul>
-      <div className="mt-2.5 pt-2 border-t border-white/20 text-[9px] text-white/70 leading-snug">
+      <div className="px-4 py-2.5 border-t border-white/15 text-[10px] text-white/70 leading-snug">
         마이페이지에서 내 표시를 수정할 수 있습니다.
       </div>
     </div>,
