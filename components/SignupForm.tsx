@@ -11,8 +11,6 @@ export default function SignupForm() {
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [naverId, setNaverId] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -20,14 +18,8 @@ export default function SignupForm() {
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
   const [emailFormOpen, setEmailFormOpen] = useState(false);
 
-  // 폰 인증 상태
-  const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [sendingSms, setSendingSms] = useState(false);
-  const [verifyingCode, setVerifyingCode] = useState(false);
-
   // 이메일 중복 확인
-  const [emailChecked, setEmailChecked] = useState<boolean | null>(null); // true=사용가능, false=중복, null=미확인
+  const [emailChecked, setEmailChecked] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
 
   async function checkEmail() {
@@ -55,53 +47,6 @@ export default function SignupForm() {
     }
   }
 
-  async function sendCode() {
-    if (sendingSms) return;
-    const digits = phone.replace(/\D/g, '');
-    if (!/^010\d{8}$/.test(digits)) {
-      setMsg({ type: 'error', text: '폰번호 형식이 올바르지 않습니다 (010xxxxxxxx).' });
-      return;
-    }
-    setMsg(null);
-    setSendingSms(true);
-    const r = await fetch('/api/sms/send-code', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: digits }),
-    });
-    const json = await r.json().catch(() => ({}));
-    setSendingSms(false);
-    if (!r.ok || !json.ok) {
-      setMsg({ type: 'error', text: json.error ?? '인증번호 발송 실패' });
-      return;
-    }
-    setVerificationId(json.verification_id);
-    setPhoneVerified(false);
-    setCode('');
-    setMsg({ type: 'info', text: `인증번호가 발송되었습니다. ${json.ttl_min}분 내에 입력해주세요.` });
-  }
-
-  async function verifyCode() {
-    if (verifyingCode || !verificationId) return;
-    if (!/^\d{6}$/.test(code.trim())) {
-      setMsg({ type: 'error', text: '6자리 숫자 인증번호를 입력해주세요.' });
-      return;
-    }
-    setMsg(null);
-    setVerifyingCode(true);
-    const r = await fetch('/api/sms/verify-code', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ verification_id: verificationId, code: code.trim(), phone: phone.replace(/\D/g, '') }),
-    });
-    const json = await r.json().catch(() => ({}));
-    setVerifyingCode(false);
-    if (!r.ok || !json.ok) {
-      setMsg({ type: 'error', text: json.error ?? '인증번호 확인 실패' });
-      return;
-    }
-    setPhoneVerified(true);
-    setMsg({ type: 'info', text: '폰 인증 완료 ✓' });
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
@@ -111,67 +56,59 @@ export default function SignupForm() {
       setMsg({ type: 'error', text: '이메일 중복 확인을 먼저 해주세요.' });
       return;
     }
-    if (!phoneVerified || !verificationId) {
-      setMsg({ type: 'error', text: '폰 인증을 먼저 완료해주세요.' });
-      return;
-    }
 
-    // 사용자가 풀 이메일을 입력해도 앞부분만 저장
     const cleanNaverId = naverId.trim().split('@')[0];
     if (cleanNaverId && /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(cleanNaverId)) {
-      setMsg({ type: 'error', text: '네이버 로그인 아이디에 한글을 넣을 수 없습니다.\n닉네임이 아니라 영문·숫자로 된 네이버 로그인 ID를 입력해주세요. (예: hodol9876)' });
+      setMsg({ type: 'error', text: '네이버 ID에 한글을 넣을 수 없습니다.' });
       return;
     }
     if (cleanNaverId && !/^[a-z0-9_-]+$/i.test(cleanNaverId)) {
-      setMsg({ type: 'error', text: '네이버 로그인 아이디는 영문·숫자·_·- 만 가능합니다.' });
+      setMsg({ type: 'error', text: '네이버 ID는 영문·숫자·_·- 만 가능합니다.' });
       return;
     }
 
     let cleanLink: string | null = null;
     const rawLink = linkUrl.trim();
     if (rawLink) {
-      if (/^javascript:/i.test(rawLink)) {
-        setMsg({ type: 'error', text: '잘못된 링크 형식입니다.' });
+      if (/^javascript:/i.test(rawLink)) { setMsg({ type: 'error', text: '잘못된 링크 형식입니다.' }); return; }
+      cleanLink = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
+      if (cleanLink.length > 500) { setMsg({ type: 'error', text: '링크가 너무 깁니다 (500자 초과).' }); return; }
+    }
+
+    const nameT = name.trim();
+    if (nameT) {
+      const { data: dupName } = await supabase.from('profiles').select('id').eq('display_name', nameT).limit(1);
+      if (dupName && dupName.length > 0) {
+        setMsg({ type: 'error', text: `이미 사용 중인 닉네임입니다: "${nameT}"` });
         return;
       }
-      cleanLink = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
-      if (cleanLink.length > 500) {
-        setMsg({ type: 'error', text: '링크가 너무 깁니다 (500자 초과).' });
+    }
+    if (cleanNaverId) {
+      const { data: dupId } = await supabase.from('profiles').select('id').eq('naver_id', cleanNaverId).limit(1);
+      if (dupId && dupId.length > 0) {
+        setMsg({ type: 'error', text: `이미 가입된 네이버 ID입니다: "${cleanNaverId}"` });
         return;
       }
     }
 
     setLoading(true);
-    // 가입 — 서버 라우트가 폰 인증·중복 검사·생성 모두 수행
-    const r = await fetch('/api/auth/signup-email', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password,
-        phone: phone.replace(/\D/g, ''),
-        verification_id: verificationId,
-        display_name: name.trim(),
-        naver_id: cleanNaverId || null,
-        link_url: cleanLink,
-      }),
+    // Supabase 기본 이메일 인증 흐름 — 인증 메일 발송, 사용자가 메일 링크 클릭하면 가입 완료
+    const { error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: { display_name: nameT, naver_id: cleanNaverId || null, link_url: cleanLink, mlbg_signup: true },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
-    const json = await r.json().catch(() => ({}));
-    if (!r.ok || !json.ok) {
-      setLoading(false);
-      setMsg({ type: 'error', text: json.error ?? '가입 실패' });
-      return;
-    }
 
-    // 가입 성공 → 자동 로그인
-    const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     setLoading(false);
-    if (signInErr) {
-      setMsg({ type: 'info', text: '가입은 완료됐지만 자동 로그인 실패. 로그인 페이지에서 로그인해주세요.' });
-      setTimeout(() => router.push('/login'), 2000);
+    if (error) {
+      setMsg({ type: 'error', text: error.message });
       return;
     }
-    setMsg({ type: 'info', text: '가입 완료. 환영합니다!' });
-    setTimeout(() => router.push('/'), 800);
+    setMsg({ type: 'info', text: '가입이 완료되었습니다.\n이메일로 발송된 인증 링크를 클릭해주세요.' });
+    setTimeout(() => router.push('/login'), 3000);
   }
 
   return (
@@ -216,36 +153,6 @@ export default function SignupForm() {
             <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" required minLength={8} className={inputCls} />
           </Row>
 
-          <Row label="휴대폰">
-            <input
-              id="phone" type="tel" inputMode="numeric" value={phone}
-              onChange={(e) => { setPhone(e.target.value); setPhoneVerified(false); setVerificationId(null); }}
-              placeholder="01012345678" required maxLength={13} disabled={phoneVerified}
-              className={`${inputCls} disabled:bg-[#f5f5f5]`}
-            />
-            <button type="button" onClick={sendCode} disabled={sendingSms || phoneVerified} className={btnGhost}>
-              {sendingSms ? '발송...' : verificationId ? '재발송' : '인증번호 받기'}
-            </button>
-          </Row>
-
-          {verificationId && !phoneVerified && (
-            <Row label="인증번호">
-              <input
-                id="code" type="text" inputMode="numeric" value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="6자리 숫자" maxLength={6}
-                className={`${inputCls} tabular-nums`}
-              />
-              <button type="button" onClick={verifyCode} disabled={verifyingCode} className={btnNavy}>
-                {verifyingCode ? '확인...' : '확인'}
-              </button>
-            </Row>
-          )}
-
-          {phoneVerified && (
-            <div className="text-[12px] text-cyan font-bold pl-[80px]">✓ 폰 인증 완료</div>
-          )}
-
           <Row label="네이버 ID">
             <input id="naver_id" type="text" value={naverId} onChange={(e) => setNaverId(e.target.value)} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} className={inputCls} />
           </Row>
@@ -288,10 +195,8 @@ export default function SignupForm() {
   );
 }
 
-// 한 줄 row — 라벨 80px + input + (옵션) trailing 버튼
 const inputCls = 'flex-1 min-w-0 border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none';
 const btnGhost = 'px-3 py-2 bg-white border border-border text-text text-[12px] font-bold whitespace-nowrap hover:border-navy disabled:opacity-50 cursor-pointer';
-const btnNavy = 'px-3 py-2 bg-navy text-white text-[12px] font-bold whitespace-nowrap hover:bg-navy-dark disabled:opacity-50 cursor-pointer';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
