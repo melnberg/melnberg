@@ -6,10 +6,11 @@ import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
+  apt_name: string | null;
   comment_excerpt: string | null;
   actor_name: string | null;
   created_at: string;
@@ -128,7 +129,10 @@ export default function NotificationsBell() {
             {!loading && items && items.length > 0 && (
               <ul>
                 {items.map((n) => {
-                  const cat = n.type === 'community_comment' ? '커뮤니티' : '아파트';
+                  const cat =
+                    n.type === 'community_comment' ? '커뮤니티' :
+                    n.type === 'apt_comment' ? '아파트' :
+                    '강제집행';
                   return (
                     <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
                       <Link
@@ -145,7 +149,11 @@ export default function NotificationsBell() {
                           {!n.read_at && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />}
                         </div>
                         <div className="text-[12px] text-text leading-snug line-clamp-2">
-                          댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span>
+                          {n.type === 'apt_evicted' ? (
+                            <span><span className="font-bold text-navy">{n.apt_name ?? '아파트'}</span> 에서 강제집행 되었습니다.</span>
+                          ) : (
+                            <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
+                          )}
                         </div>
                       </Link>
                     </li>
