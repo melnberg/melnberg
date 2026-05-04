@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 function normalize(input: string): string | null {
   const t = input.trim();
   if (!t) return null;
-  if (/^javascript:/i.test(t)) return null; // XSS 방지
+  if (/^javascript:/i.test(t)) return null;
   if (/^https?:\/\//i.test(t)) return t;
   return `https://${t}`;
 }
@@ -15,10 +15,12 @@ function normalize(input: string): string | null {
 export default function LinkUrlEditor({ initial }: { initial: string | null }) {
   const router = useRouter();
   const supabase = createClient();
-  const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initial ?? '');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const dirty = (value.trim() || null) !== (initial?.trim() || null);
 
   async function handleSave() {
     if (loading) return;
@@ -35,7 +37,7 @@ export default function LinkUrlEditor({ initial }: { initial: string | null }) {
         .update({ link_url: url })
         .eq('id', user.id);
       if (pErr) { setErr(`저장 실패: ${pErr.message}`); return; }
-      setEditing(false);
+      setSavedAt(Date.now());
       router.refresh();
     } catch (e) {
       setErr(`예외: ${e instanceof Error ? e.message : String(e)}`);
@@ -44,48 +46,28 @@ export default function LinkUrlEditor({ initial }: { initial: string | null }) {
     }
   }
 
-  if (!editing) {
-    return (
-      <div className="flex items-center gap-3 min-w-0">
-        {initial ? (
-          <a href={initial} target="_blank" rel="noopener noreferrer"
-            className="text-[14px] text-navy underline truncate max-w-[260px]">{initial}</a>
-        ) : (
-          <span className="text-[14px] text-muted">미입력</span>
-        )}
-        <button
-          type="button"
-          onClick={() => { setValue(initial ?? ''); setErr(null); setEditing(true); }}
-          className="text-[11px] font-semibold text-muted hover:text-navy cursor-pointer bg-transparent border-none flex-shrink-0"
-        >
-          수정
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-2 items-end">
+    <div className="flex flex-col gap-1 items-end">
       <div className="flex items-center gap-2">
         <input
           type="url"
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => { setValue(e.target.value); setErr(null); setSavedAt(null); }}
           maxLength={500}
           placeholder="https://blog.naver.com/..."
-          autoFocus
-          className="border border-border border-b-2 border-b-navy px-3 py-1.5 text-[14px] outline-none focus:border-b-cyan rounded-none w-64"
+          className="border border-border px-3 py-1.5 text-[14px] outline-none focus:border-navy rounded-none w-64 text-right"
         />
-        <button type="button" onClick={handleSave} disabled={loading}
-          className="bg-navy text-white px-3 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-50 border-none">
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={loading || !dirty}
+          className="bg-navy text-white px-3 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-30 disabled:cursor-not-allowed border-none whitespace-nowrap"
+        >
           {loading ? '저장 중...' : '저장'}
-        </button>
-        <button type="button" onClick={() => setEditing(false)}
-          className="text-[12px] text-muted hover:text-text cursor-pointer bg-transparent border-none">
-          취소
         </button>
       </div>
       {err && <div className="text-[11px] text-red-700">{err}</div>}
+      {savedAt && !dirty && !err && <div className="text-[11px] text-cyan font-bold">✓ 저장됨</div>}
     </div>
   );
 }

@@ -80,15 +80,15 @@ export default async function MePage() {
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
               <span className="text-[12px] font-bold tracking-widest uppercase text-muted">블로그·SNS<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 클릭 시 연결 · 조합원 전용</span></span>
               {isActive ? (
-                <LinkUrlEditor initial={(profile as { link_url?: string | null } | null)?.link_url ?? null} />
+                <LinkUrlEditor initial={profile?.link_url ?? null} />
               ) : (
                 <span className="text-[12px] text-muted">조합원만 등록할 수 있어요</span>
               )}
             </div>
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
-              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">미혼 솔로 표시<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 분홍색 · 조합원 전용</span></span>
+              <span className="text-[12px] font-bold tracking-widest uppercase text-muted">미혼 솔로 표시<br/><span className="text-[10px] normal-case font-medium text-muted">닉네임 옆 분홍 점 · 조합원 전용</span></span>
               {isActive ? (
-                <SoloEditor initial={false} />
+                <SoloEditor initial={!!(profile as { is_solo?: boolean | null } | null)?.is_solo} />
               ) : (
                 <span className="text-[12px] text-muted">조합원만 사용할 수 있어요</span>
               )}

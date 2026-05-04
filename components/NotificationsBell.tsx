@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
@@ -35,7 +36,13 @@ export default function NotificationsBell() {
   const [items, setItems] = useState<Notification[] | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // 안 읽은 카운트만 주기적으로 가져옴 (30s)
   useEffect(() => {
@@ -57,14 +64,39 @@ export default function NotificationsBell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 외부 클릭 시 닫기
+  // 외부 클릭 시 닫기 — wrap (버튼) 또는 panel 안 클릭은 보존
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const inWrap = wrapRef.current?.contains(e.target as Node);
+      const inPanel = panelRef.current?.contains(e.target as Node);
+      if (!inWrap && !inPanel) setOpen(false);
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  // 패널 위치 — 버튼 아래 + 좌측 정렬, 화면 밖 넘치면 우측 정렬
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    function recalc() {
+      if (!buttonRef.current) return;
+      const r = buttonRef.current.getBoundingClientRect();
+      const PANEL_W = 380;
+      const margin = 12;
+      let left = r.left;
+      if (left + PANEL_W > window.innerWidth - margin) {
+        left = Math.max(margin, window.innerWidth - PANEL_W - margin);
+      }
+      setPanelPos({ top: r.bottom + 8, left });
+    }
+    recalc();
+    window.addEventListener('resize', recalc);
+    window.addEventListener('scroll', recalc, true);
+    return () => {
+      window.removeEventListener('resize', recalc);
+      window.removeEventListener('scroll', recalc, true);
+    };
   }, [open]);
 
   async function loadList() {
@@ -90,14 +122,79 @@ export default function NotificationsBell() {
   function hrefFor(n: Notification): string {
     if (n.type === 'community_comment' && n.post_id) return `/community/${n.post_id}`;
     if (n.type === 'feedback_reply') return '/me/feedback';
+    // apt_comment, apt_evicted: 홈으로 가서 단지 패널 자동 열도록 query 전달
+    if ((n.type === 'apt_comment' || n.type === 'apt_evicted') && n.apt_master_id) {
+      return `/?apt=${n.apt_master_id}`;
+    }
     return '/';
   }
 
   if (!signedIn) return null;
 
+  const panel = open && panelPos && mounted ? createPortal(
+    <div
+      ref={panelRef}
+      style={{ position: 'fixed', top: panelPos.top, left: panelPos.left, width: 380, maxWidth: 'calc(100vw - 24px)', maxHeight: '70vh', zIndex: 100 }}
+      className="bg-white border border-border shadow-[0_8px_32px_rgba(0,0,0,0.15)] flex flex-col"
+    >
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-border">
+        <h3 className="text-[15px] font-bold text-navy">알림센터</h3>
+        <button type="button" onClick={() => setOpen(false)} className="text-muted hover:text-navy text-[18px] leading-none">✕</button>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {loading && <div className="px-5 py-12 text-center text-[12px] text-muted">불러오는 중...</div>}
+        {!loading && items && items.length === 0 && (
+          <div className="px-5 py-12 text-center text-[12px] text-muted leading-relaxed">
+            아직 알림이 없어요.<br />내 글에 댓글이 달리면 여기 표시됩니다.
+          </div>
+        )}
+        {!loading && items && items.length > 0 && (
+          <ul>
+            {items.map((n) => {
+              const cat =
+                n.type === 'community_comment' ? '커뮤니티' :
+                n.type === 'apt_comment' ? '아파트' :
+                n.type === 'apt_evicted' ? '강제집행' :
+                '건의 답글';
+              return (
+                <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
+                  <Link
+                    href={hrefFor(n)}
+                    onClick={() => setOpen(false)}
+                    className="block px-5 py-3 hover:bg-[#eef4fb] no-underline"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[12px] font-bold text-navy">{n.actor_name ?? '익명'}</span>
+                      <span className="text-[10px] text-muted">·</span>
+                      <span className="text-[10px] text-muted">{cat}</span>
+                      <span className="text-[10px] text-muted">·</span>
+                      <span className="text-[10px] text-muted">{relTime(n.created_at)}</span>
+                      {!n.read_at && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />}
+                    </div>
+                    <div className="text-[12px] text-text leading-snug line-clamp-2">
+                      {n.type === 'apt_evicted' ? (
+                        <span><span className="font-bold text-navy">{n.apt_name ?? '아파트'}</span> 에서 강제집행 되었습니다.</span>
+                      ) : n.type === 'feedback_reply' ? (
+                        <>건의사항 답글: <span className="text-muted">{n.comment_excerpt ?? ''}</span></>
+                      ) : (
+                        <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>,
+    document.body,
+  ) : null;
+
   return (
     <div ref={wrapRef} className="relative inline-flex flex-shrink-0">
       <button
+        ref={buttonRef}
         type="button"
         onClick={toggle}
         aria-label={`알림 ${unread}건`}
@@ -113,61 +210,7 @@ export default function NotificationsBell() {
           </span>
         )}
       </button>
-
-      {open && (
-        <div className="absolute top-11 left-0 w-[380px] max-w-[calc(100vw-32px)] max-h-[70vh] bg-white border border-border shadow-[0_8px_32px_rgba(0,0,0,0.15)] flex flex-col z-50">
-          <div className="px-5 py-3.5 flex items-center justify-between border-b border-border">
-            <h3 className="text-[15px] font-bold text-navy">알림센터</h3>
-            <button type="button" onClick={() => setOpen(false)} className="text-muted hover:text-navy text-[18px] leading-none">✕</button>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {loading && <div className="px-5 py-12 text-center text-[12px] text-muted">불러오는 중...</div>}
-            {!loading && items && items.length === 0 && (
-              <div className="px-5 py-12 text-center text-[12px] text-muted leading-relaxed">
-                아직 알림이 없어요.<br />내 글에 댓글이 달리면 여기 표시됩니다.
-              </div>
-            )}
-            {!loading && items && items.length > 0 && (
-              <ul>
-                {items.map((n) => {
-                  const cat =
-                    n.type === 'community_comment' ? '커뮤니티' :
-                    n.type === 'apt_comment' ? '아파트' :
-                    n.type === 'apt_evicted' ? '강제집행' :
-                    '건의 답글';
-                  return (
-                    <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
-                      <Link
-                        href={hrefFor(n)}
-                        onClick={() => setOpen(false)}
-                        className="block px-5 py-3 hover:bg-[#eef4fb] no-underline"
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[12px] font-bold text-navy">{n.actor_name ?? '익명'}</span>
-                          <span className="text-[10px] text-muted">·</span>
-                          <span className="text-[10px] text-muted">{cat}</span>
-                          <span className="text-[10px] text-muted">·</span>
-                          <span className="text-[10px] text-muted">{relTime(n.created_at)}</span>
-                          {!n.read_at && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />}
-                        </div>
-                        <div className="text-[12px] text-text leading-snug line-clamp-2">
-                          {n.type === 'apt_evicted' ? (
-                            <span><span className="font-bold text-navy">{n.apt_name ?? '아파트'}</span> 에서 강제집행 되었습니다.</span>
-                          ) : n.type === 'feedback_reply' ? (
-                            <>건의사항 답글: <span className="text-muted">{n.comment_excerpt ?? ''}</span></>
-                          ) : (
-                            <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
-                          )}
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
+      {panel}
     </div>
   );
 }
