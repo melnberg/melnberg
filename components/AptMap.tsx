@@ -527,7 +527,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                       <div className="flex items-center justify-between gap-2">
                         <div className="text-[13px] font-bold text-navy truncate">{e.apt_nm ?? '(단지 정보 없음)'}</div>
                         <div className="text-[10px] text-muted tabular-nums flex-shrink-0">
-                          {new Date(e.occurred_at).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false })}
+                          {occupiedSinceLabel(e.occurred_at)}
                         </div>
                       </div>
                       <div className="text-[11px] flex items-center gap-1">
