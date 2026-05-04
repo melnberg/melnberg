@@ -99,14 +99,14 @@ export default function NotificationsBell() {
         type="button"
         onClick={toggle}
         aria-label={`알림 ${unread}건`}
-        className="relative w-9 h-9 rounded-full border border-border bg-white hover:border-navy flex items-center justify-center"
+        className="relative w-6 h-6 flex items-center justify-center text-muted hover:text-navy"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="text-navy">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
             {unread > 99 ? '99+' : unread}
           </span>
         )}

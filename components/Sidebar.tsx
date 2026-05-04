@@ -58,11 +58,11 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
 
         <div className="px-5 pt-4 pb-2">
           {user ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-2.5 border border-border hover:border-navy transition-colors">
               <Link
                 href="/me"
                 onClick={() => setOpen(false)}
-                className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 border border-border no-underline hover:border-navy transition-colors"
+                className="flex-1 min-w-0 flex items-center gap-3 no-underline"
               >
                 <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
                   {(user.name[0] ?? '').toUpperCase()}
