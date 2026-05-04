@@ -16,6 +16,7 @@ export default function SignupForm() {
   const [linkUrl, setLinkUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
+  const [emailFormOpen, setEmailFormOpen] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,45 +103,64 @@ export default function SignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <OAuthButtons next="/" />
-      <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-[11px] text-muted">또는 이메일로 가입</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
-      <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
-      <Field label="네이버 로그인 아이디 (닉네임·이메일 아님)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} />
-      <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
-        ⓘ 카페 유료회원 자동 인식: 네이버 <b>로그인 아이디</b>와 카페 닉네임이 명부와 일치해야 합니다.
-        ✗ 닉네임/이메일 풀주소 입력 금지. <code>jiroclinic@naver.com</code>이면 <b>jiroclinic</b>만.
-      </p>
-      <Field label="블로그·SNS 링크 (선택)" id="link_url" value={linkUrl} onChange={setLinkUrl} placeholder="https://blog.naver.com/..." maxLength={500} />
-      <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
-        다른 회원이 닉네임을 클릭하면 이 링크로 연결됩니다 (새 탭).
-      </p>
-      <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
-      <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
 
-      {msg && (
-        <div className={`text-sm px-4 py-3 break-keep leading-relaxed whitespace-pre-line ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
-          {msg.text}
-        </div>
+      {!emailFormOpen ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setEmailFormOpen(true)}
+            className="w-full bg-white border border-border text-text py-3 text-[13px] font-bold flex items-center justify-center gap-2 hover:border-navy cursor-pointer"
+          >
+            이메일로 가입하기
+          </button>
+          <p className="text-sm text-muted text-center mt-2">
+            이미 계정이 있나요?{' '}
+            <Link href="/login" className="text-navy font-semibold no-underline hover:underline">로그인</Link>
+          </p>
+        </>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 my-1">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-muted">이메일로 가입</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
+          <Field label="네이버 로그인 아이디 (닉네임·이메일 아님)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} />
+          <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
+            ⓘ 카페 유료회원 자동 인식: 네이버 <b>로그인 아이디</b>와 카페 닉네임이 명부와 일치해야 합니다.
+            ✗ 닉네임/이메일 풀주소 입력 금지. <code>jiroclinic@naver.com</code>이면 <b>jiroclinic</b>만.
+          </p>
+          <Field label="블로그·SNS 링크 (선택)" id="link_url" value={linkUrl} onChange={setLinkUrl} placeholder="https://blog.naver.com/..." maxLength={500} />
+          <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
+            다른 회원이 닉네임을 클릭하면 이 링크로 연결됩니다 (새 탭).
+          </p>
+          <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
+          <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
+
+          {msg && (
+            <div className={`text-sm px-4 py-3 break-keep leading-relaxed whitespace-pre-line ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
+              {msg.text}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-navy text-white border-none px-6 py-3.5 text-[13px] font-bold tracking-wider uppercase cursor-pointer mt-2 hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? '가입 중...' : '가입하기 →'}
+          </button>
+
+          <p className="text-sm text-muted text-center mt-2">
+            이미 계정이 있나요?{' '}
+            <Link href="/login" className="text-navy font-semibold no-underline hover:underline">로그인</Link>
+          </p>
+        </form>
       )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-navy text-white border-none px-6 py-3.5 text-[13px] font-bold tracking-wider uppercase cursor-pointer mt-2 hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? '가입 중...' : '가입하기 →'}
-      </button>
-
-      <p className="text-sm text-muted text-center mt-6">
-        이미 계정이 있나요?{' '}
-        <Link href="/login" className="text-navy font-semibold no-underline hover:underline">로그인</Link>
-      </p>
-    </form>
+    </div>
   );
 }
 
