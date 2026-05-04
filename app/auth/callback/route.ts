@@ -10,6 +10,19 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // OAuth 가입자가 보충 폼 미작성이면 /complete-signup 으로 우회
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('profile_completed_at')
+          .eq('id', user.id)
+          .maybeSingle();
+        const completed = !!(prof as { profile_completed_at?: string | null } | null)?.profile_completed_at;
+        if (!completed) {
+          return NextResponse.redirect(`${origin}/complete-signup?next=${encodeURIComponent(next)}`);
+        }
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

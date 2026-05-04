@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import OAuthButtons from './OAuthButtons';
 
 export default function SignupForm() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function SignupForm() {
       email,
       password,
       options: {
-        data: { display_name: name.trim(), naver_id: cleanNaverId || null, link_url: cleanLink },
+        data: { display_name: name.trim(), naver_id: cleanNaverId || null, link_url: cleanLink, mlbg_signup: true },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
@@ -87,6 +88,12 @@ export default function SignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <OAuthButtons next="/" />
+      <div className="flex items-center gap-3 my-1">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[11px] text-muted">또는 이메일로 가입</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
       <Field label="네이버 로그인 아이디 (닉네임·이메일 아님)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} />
       <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">

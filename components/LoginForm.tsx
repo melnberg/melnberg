@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import OAuthButtons from './OAuthButtons';
 
 export default function LoginForm() {
   return (
@@ -43,6 +44,12 @@ function Inner() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <OAuthButtons next={next} />
+      <div className="flex items-center gap-3 my-1">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[11px] text-muted">또는 이메일로</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
       <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
       <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} required />
 
