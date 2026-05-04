@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-type Provider = 'kakao' | 'google';
+type Provider = 'kakao' | 'google' | 'naver';
 
 export default function OAuthButtons({ next = '/' }: { next?: string }) {
   const supabase = createClient();
   const [busy, setBusy] = useState<Provider | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  async function start(provider: Provider) {
+  async function startSupabase(provider: 'kakao' | 'google') {
     if (busy) return;
     setBusy(provider);
     setErr(null);
@@ -26,11 +26,18 @@ export default function OAuthButtons({ next = '/' }: { next?: string }) {
     }
   }
 
+  function startNaver() {
+    if (busy) return;
+    setBusy('naver');
+    // 네이버는 Supabase 미지원 → 우리 라우트로 이동, 거기서 네이버 authorize 로 redirect
+    window.location.href = `/api/auth/naver/start?next=${encodeURIComponent(next)}`;
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <button
         type="button"
-        onClick={() => start('kakao')}
+        onClick={() => startSupabase('kakao')}
         disabled={!!busy}
         className="w-full bg-[#FEE500] text-[#191919] py-3 text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#FDD835] disabled:opacity-60 border-none cursor-pointer"
       >
@@ -39,7 +46,16 @@ export default function OAuthButtons({ next = '/' }: { next?: string }) {
       </button>
       <button
         type="button"
-        onClick={() => start('google')}
+        onClick={startNaver}
+        disabled={!!busy}
+        className="w-full bg-[#03C75A] text-white py-3 text-[13px] font-bold flex items-center justify-center gap-2 hover:bg-[#02b350] disabled:opacity-60 border-none cursor-pointer"
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.5 8.85L6.18 3.99H3.5v8.02h3v-4.86l3.32 4.86H12.5V3.99h-3z"/></svg>
+        {busy === 'naver' ? '네이버 연결 중...' : '네이버로 시작하기'}
+      </button>
+      <button
+        type="button"
+        onClick={() => startSupabase('google')}
         disabled={!!busy}
         className="w-full bg-white border border-border text-text py-3 text-[13px] font-bold flex items-center justify-center gap-2 hover:border-navy disabled:opacity-60 cursor-pointer"
       >
