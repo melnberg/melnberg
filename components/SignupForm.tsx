@@ -127,18 +127,18 @@ export default function SignupForm() {
             <span className="text-[11px] text-muted">이메일로 가입</span>
             <div className="flex-1 h-px bg-border" />
           </div>
-          <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
-          <Field label="네이버 로그인 아이디 (닉네임·이메일 아님)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} />
+          <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
+          <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
+          <Field label="네이버 ID (카페 유료회원 인증용)" id="naver_id" value={naverId} onChange={setNaverId} placeholder="예: rok22222 (@naver.com 앞부분만)" maxLength={50} />
           <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
             ⓘ 카페 유료회원 자동 인식: 네이버 <b>로그인 아이디</b>와 카페 닉네임이 명부와 일치해야 합니다.
             ✗ 닉네임/이메일 풀주소 입력 금지. <code>jiroclinic@naver.com</code>이면 <b>jiroclinic</b>만.
           </p>
+          <Field label="닉네임" id="name" value={name} onChange={setName} placeholder="공개 닉네임 (실명 X)" required minLength={2} maxLength={20} />
           <Field label="블로그·SNS 링크 (선택)" id="link_url" value={linkUrl} onChange={setLinkUrl} placeholder="https://blog.naver.com/..." maxLength={500} />
           <p className="text-[11px] text-muted leading-relaxed -mt-2 px-0.5">
             다른 회원이 닉네임을 클릭하면 이 링크로 연결됩니다 (새 탭).
           </p>
-          <Field label="이메일" id="email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" required />
-          <Field label="비밀번호" id="password" type="password" value={password} onChange={setPassword} placeholder="8자 이상" required minLength={8} />
 
           {msg && (
             <div className={`text-sm px-4 py-3 break-keep leading-relaxed whitespace-pre-line ${msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-navy text-white'}`}>
