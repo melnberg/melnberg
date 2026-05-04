@@ -38,19 +38,29 @@ export default function TossCheckout({ product, customer }: Props) {
         const tossPayments = await loadTossPayments(CLIENT_KEY);
         if (cancelled) return;
         const widgets = tossPayments.widgets({ customerKey: customer.userId });
-        widgetsRef.current = widgets;
+        if (cancelled) return;
         await widgets.setAmount({ currency: 'KRW', value: product.price });
+        if (cancelled) return;
         await Promise.all([
           widgets.renderPaymentMethods({ selector: '#toss-payment-method', variantKey: 'DEFAULT' }),
           widgets.renderAgreement({ selector: '#toss-agreement', variantKey: 'AGREEMENT' }),
         ]);
-        if (!cancelled) setReady(true);
+        if (cancelled) return;
+        widgetsRef.current = widgets;
+        setReady(true);
       } catch (e) {
-        setErr(e instanceof Error ? e.message : String(e));
+        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
       }
     })();
-    return () => { cancelled = true; };
-  }, [CLIENT_KEY, customer.userId, product.price]);
+    return () => {
+      cancelled = true;
+      setReady(false);
+      widgetsRef.current = null;
+      // 토스 SDK는 selector 안에 iframe을 주입함. 재마운트 시 같은 노드에 또 주입되면 실패하므로 비워줌.
+      if (paymentMethodRef.current) paymentMethodRef.current.innerHTML = '';
+      if (agreementRef.current) agreementRef.current.innerHTML = '';
+    };
+  }, [customer.userId, product.price]);
 
   async function pay() {
     if (busy || !ready || !widgetsRef.current) return;

@@ -24,7 +24,7 @@ export default async function PayPage({ params }: { params: Promise<{ productId:
     .maybeSingle();
 
   return (
-    <Layout>
+    <Layout current={product.filename}>
       <MainTop crumbs={[
         { href: '/', label: '멜른버그' },
         { href: `/pay/${productId}`, label: product.name, bold: true },
