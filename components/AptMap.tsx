@@ -591,7 +591,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">{f.author_name ?? '익명'}</span>
                         </div>
-                        <div className="text-[12px] text-text leading-snug font-bold mb-0.5">{f.title}</div>
+                        <div className="text-[12px] text-text leading-snug mb-0.5">{f.title}</div>
                         {fullContent && (
                           <>
                             <div className={`text-[12px] text-text leading-snug whitespace-pre-wrap ${expanded ? '' : 'line-clamp-2'}`}>
