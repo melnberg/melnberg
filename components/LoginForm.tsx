@@ -60,7 +60,10 @@ function Inner() {
         {loading ? '로그인 중...' : '로그인 →'}
       </button>
 
-      <p className="text-sm text-muted text-center mt-6">
+      <p className="text-[12px] text-muted text-center mt-4">
+        <Link href="/find-account" className="text-muted hover:text-navy no-underline hover:underline">아이디·비밀번호 찾기</Link>
+      </p>
+      <p className="text-sm text-muted text-center mt-2">
         계정이 없나요?{' '}
         <Link href="/signup" className="text-navy font-semibold no-underline hover:underline">회원가입</Link>
       </p>
