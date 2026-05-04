@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AptDiscussionPanel from './AptDiscussionPanel';
+import { createClient } from '@/lib/supabase/client';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { __latlng: never };
@@ -134,8 +135,27 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
+  const [occupiedOpen, setOccupiedOpen] = useState(false);
+  const [occupierNames, setOccupierNames] = useState<Map<string, string>>(new Map());
   const router = useRouter();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const occupied = useMemo(() => pins.filter((p) => p.occupier_id), [pins]);
+
+  async function toggleOccupied() {
+    if (occupiedOpen) { setOccupiedOpen(false); return; }
+    setOccupiedOpen(true);
+    if (occupierNames.size > 0) return;
+    const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
+    if (ids.length === 0) return;
+    const supabase = createClient();
+    const { data } = await supabase.from('profiles').select('id, display_name').in('id', ids);
+    const map = new Map<string, string>();
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null }>) {
+      if (r.display_name) map.set(r.id, r.display_name);
+    }
+    setOccupierNames(map);
+  }
 
   // textarea 자동 높이 조절 — 위쪽으로 늘어남 (bottom-anchored)
   useEffect(() => {
@@ -226,7 +246,8 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         //   tier 1 (1000~1999, 초록): 줌 ≤7
         //   tier 2 (300~999, 파랑 핀): 줌 ≤5
         //   tier 3 (≤299/미수집, 파란 점): 줌 ≤4 (100m 스케일에서 보임)
-        type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3 };
+        // 점거된 단지: tier 무관 항상 표시
+        type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
         const allMarkers: MarkerTier[] = pins.map((p) => {
           const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
           const marker = new window.kakao.maps.Marker({
@@ -239,13 +260,13 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
           window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
           const hh = p.household_count ?? 0;
           const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
-          return { marker, tier };
+          return { marker, tier, occupied: !!p.occupier_id };
         });
 
         function applyVisibility() {
           const level = map.getLevel();
-          for (const { marker, tier } of allMarkers) {
-            if (tier === 0) continue;
+          for (const { marker, tier, occupied } of allMarkers) {
+            if (tier === 0 || occupied) continue;
             const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
             marker.setMap(visible ? map : null);
           }
@@ -270,9 +291,50 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 좌상단 작은 정보 배지 */}
-      <div className="absolute top-4 left-4 bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] z-20">
-        <span className="text-[12px] font-bold text-navy">{pins.length.toLocaleString()}개 단지</span>
+      {/* 좌상단 정보 배지 */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5">
+        <div className="bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+          <span className="text-[12px] font-bold text-navy">{pins.length.toLocaleString()}개 단지</span>
+        </div>
+        <button
+          type="button"
+          onClick={toggleOccupied}
+          disabled={occupied.length === 0}
+          className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-navy-soft disabled:opacity-50 flex items-center gap-1.5"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#00B0F0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" /></svg>
+          <span>점거된 아파트 : {occupied.length.toLocaleString()}개단지</span>
+          <svg width="9" height="9" viewBox="0 0 10 10" className={`transition-transform ${occupiedOpen ? 'rotate-180' : ''}`}>
+            <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </svg>
+        </button>
+        {occupiedOpen && (
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-[280px] max-h-[60vh] overflow-y-auto">
+            {occupied.length === 0 ? (
+              <div className="px-4 py-6 text-[12px] text-muted text-center">점거된 단지 없음</div>
+            ) : (
+              <ul>
+                {occupied.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => { jumpToApt(p); setOccupiedOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 hover:bg-navy-soft flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-bold text-navy truncate">{p.apt_nm}</div>
+                        {p.dong && <div className="text-[10px] text-muted truncate">{p.dong}</div>}
+                      </div>
+                      <div className="text-[11px] text-cyan font-bold flex-shrink-0">
+                        {p.occupier_id ? (occupierNames.get(p.occupier_id) ?? '...') : ''}
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 가운데 상단 — 아파트 검색 (A 위치) */}

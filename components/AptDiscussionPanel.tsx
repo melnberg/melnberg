@@ -26,6 +26,20 @@ type Comment = {
 
 type MyVote = { discussion_id: number; vote_type: 'up' | 'down' };
 
+type HistoryEvent = {
+  occurred_at: string;
+  event: 'claim' | 'evict' | 'vacate';
+  actor_name: string | null;
+  prev_occupier_name: string | null;
+  actor_score: number | null;
+  prev_score: number | null;
+};
+
+function fmtHistoryTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
@@ -75,7 +89,23 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
   const [claiming, setClaiming] = useState(false);
 
+  // 점거 히스토리
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<HistoryEvent[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   const supabase = createClient();
+
+  async function toggleHistory() {
+    if (historyOpen) { setHistoryOpen(false); return; }
+    setHistoryOpen(true);
+    if (history !== null) return;
+    setHistoryLoading(true);
+    const { data, error } = await supabase.rpc('get_apt_history', { p_apt_id: apt.id });
+    setHistoryLoading(false);
+    if (error) { setHistory([]); return; }
+    setHistory((data ?? []) as HistoryEvent[]);
+  }
 
   async function reload() {
     setLoading(true);
@@ -235,6 +265,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setOccupierName(row.out_occupier_name ?? null);
     setOccupierScore(row.out_occupier_score ?? null);
     setMyCurrentApt(null);
+    setHistory(null); // 다음 열기 시 재fetch
   }
 
   async function forceEvict() {
@@ -268,6 +299,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setOccupierName(row.out_occupier_name ?? null);
     setOccupierScore(row.out_occupier_score ?? null);
     setMyCurrentApt(null);
+    setHistory(null);
   }
 
   useEffect(() => {
@@ -284,6 +316,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setOccupierName(null);
     setOccupierScore(null);
     setMyScore(null);
+    setHistoryOpen(false);
+    setHistory(null);
     reload().finally(() => { if (cancelled) return; });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -535,6 +569,61 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
             >
               로그인하고 점거하기
             </Link>
+          )}
+
+          {/* 히스토리 토글 */}
+          <button
+            type="button"
+            onClick={toggleHistory}
+            className="mt-2 w-full text-[11px] text-muted hover:text-navy py-1 flex items-center justify-center gap-1"
+          >
+            <span>점거 히스토리</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" className={`transition-transform ${historyOpen ? 'rotate-180' : ''}`}>
+              <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          {historyOpen && (
+            <div className="mt-1 border border-[#f0f0f0] bg-[#fafafa] p-3 max-h-[280px] overflow-y-auto">
+              {historyLoading && <div className="text-[11px] text-muted text-center py-4">불러오는 중...</div>}
+              {!historyLoading && history && history.length === 0 && (
+                <div className="text-[11px] text-muted text-center py-4 leading-relaxed">
+                  히스토리 없음.<br />
+                  <span className="text-[10px]">SQL 적용 이전 점거 기록은 누락됨</span>
+                </div>
+              )}
+              {!historyLoading && history && history.length > 0 && (
+                <ol className="space-y-2">
+                  {history.map((h, i) => (
+                    <li key={i} className="flex gap-2 text-[12px] leading-snug">
+                      <span className="text-[10px] text-muted tabular-nums flex-shrink-0 mt-0.5 w-[68px]">{fmtHistoryTime(h.occurred_at)}</span>
+                      <span className="flex-1 min-w-0">
+                        {h.event === 'claim' && (
+                          <span><b className="text-cyan">{h.actor_name ?? '익명'}</b> 점거</span>
+                        )}
+                        {h.event === 'evict' && (
+                          <span>
+                            <b className="text-muted line-through">{h.prev_occupier_name ?? '익명'}</b>
+                            {' → '}
+                            <b className="text-cyan">{h.actor_name ?? '익명'}</b>
+                            <span className="text-red-500 text-[10px] ml-1">강제집행</span>
+                            <div className="text-[10px] text-muted mt-0.5">
+                              score {h.prev_score ?? '?'} → {h.actor_score ?? '?'}
+                            </div>
+                          </span>
+                        )}
+                        {h.event === 'vacate' && (
+                          <span>
+                            <b className="text-muted">{h.actor_name ?? '익명'}</b> 이사감
+                            <span className="text-muted text-[10px] ml-1">(점거없음)</span>
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
           )}
         </div>
       </div>
