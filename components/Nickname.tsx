@@ -62,19 +62,19 @@ export default function Nickname({
           <div className="text-cyan font-bold tracking-wider uppercase text-[9px] mb-2">회원 표시 안내</div>
           <ul className="space-y-1.5">
             <li className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
+              <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#22c55e' }} />
               <span>블로그·SNS 등록</span>
             </li>
             <li className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full" style={{ background: '#d4d4d4' }} />
+              <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#d4d4d4' }} />
               <span>미등록</span>
             </li>
             <li className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full" style={{ background: 'linear-gradient(to right, #22c55e 0 50%, #ec4899 50% 100%)' }} />
+              <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'linear-gradient(to right, #22c55e 0 50%, #ec4899 50% 100%)' }} />
               <span>등록 + 미혼 솔로</span>
             </li>
             <li className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full" style={{ background: 'linear-gradient(to right, #d4d4d4 0 50%, #ec4899 50% 100%)' }} />
+              <span className="block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'linear-gradient(to right, #d4d4d4 0 50%, #ec4899 50% 100%)' }} />
               <span>미등록 + 미혼 솔로</span>
             </li>
           </ul>
