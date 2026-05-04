@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment' | 'apt_evicted';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
@@ -89,6 +89,7 @@ export default function NotificationsBell() {
 
   function hrefFor(n: Notification): string {
     if (n.type === 'community_comment' && n.post_id) return `/community/${n.post_id}`;
+    if (n.type === 'feedback_reply') return '/me/feedback';
     return '/';
   }
 
@@ -132,7 +133,8 @@ export default function NotificationsBell() {
                   const cat =
                     n.type === 'community_comment' ? '커뮤니티' :
                     n.type === 'apt_comment' ? '아파트' :
-                    '강제집행';
+                    n.type === 'apt_evicted' ? '강제집행' :
+                    '건의 답글';
                   return (
                     <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
                       <Link
@@ -151,6 +153,8 @@ export default function NotificationsBell() {
                         <div className="text-[12px] text-text leading-snug line-clamp-2">
                           {n.type === 'apt_evicted' ? (
                             <span><span className="font-bold text-navy">{n.apt_name ?? '아파트'}</span> 에서 강제집행 되었습니다.</span>
+                          ) : n.type === 'feedback_reply' ? (
+                            <>건의사항 답글: <span className="text-muted">{n.comment_excerpt ?? ''}</span></>
                           ) : (
                             <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
                           )}

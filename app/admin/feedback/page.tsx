@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
+import FeedbackReplyForm from '@/components/FeedbackReplyForm';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 
@@ -18,6 +19,8 @@ type FeedbackRow = {
   page_url: string | null;
   created_at: string;
   resolved_at: string | null;
+  admin_reply: string | null;
+  replied_at: string | null;
 };
 
 function fmtDate(iso: string): string {
@@ -34,12 +37,12 @@ export default async function AdminFeedbackPage() {
 
   const { data, error } = await supabase
     .from('feedback')
-    .select('id, user_id, display_name, email, message, user_agent, page_url, created_at, resolved_at')
+    .select('id, user_id, display_name, email, message, user_agent, page_url, created_at, resolved_at, admin_reply, replied_at')
     .order('created_at', { ascending: false })
     .limit(200);
 
   const items = (data ?? []) as FeedbackRow[];
-  const unresolvedCount = items.filter((r) => !r.resolved_at).length;
+  const unrepliedCount = items.filter((r) => !r.admin_reply).length;
 
   return (
     <Layout>
@@ -55,7 +58,7 @@ export default async function AdminFeedbackPage() {
             <h1 className="text-[28px] font-bold text-navy tracking-tight">건의사항</h1>
             <Link href="/admin" className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase">← 어드민</Link>
           </div>
-          <p className="text-sm text-muted mb-8">우측 하단 위젯으로 받은 사용자 피드백. 미해결 {unresolvedCount}건 / 전체 {items.length}건.</p>
+          <p className="text-sm text-muted mb-8">우측 하단 위젯으로 받은 사용자 피드백. 답글 안 단 거 {unrepliedCount}건 / 전체 {items.length}건.</p>
 
           {error && <div className="text-sm text-red-700 mb-4">{error.message}</div>}
 
@@ -64,15 +67,15 @@ export default async function AdminFeedbackPage() {
           ) : (
             <ul className="space-y-3">
               {items.map((r) => (
-                <li key={r.id} className={`border ${r.resolved_at ? 'border-border bg-[#fafafa] opacity-70' : 'border-navy/30 bg-white'} px-5 py-4`}>
+                <li key={r.id} className={`border ${r.admin_reply ? 'border-border bg-[#fafafa]' : 'border-navy/30 bg-white'} px-5 py-4`}>
                   <div className="flex items-start justify-between gap-4 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[13px] font-bold text-navy">{r.display_name ?? '익명'}</span>
                       {r.email && <span className="text-[11px] text-muted">{r.email}</span>}
                       <span className="text-[11px] text-muted">·</span>
                       <span className="text-[11px] text-muted">{fmtDate(r.created_at)}</span>
-                      {r.resolved_at && (
-                        <span className="text-[10px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5">해결됨</span>
+                      {r.admin_reply && (
+                        <span className="text-[10px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5">답글 완료</span>
                       )}
                     </div>
                     <span className="text-[10px] text-muted tabular-nums">#{r.id}</span>
@@ -83,6 +86,12 @@ export default async function AdminFeedbackPage() {
                   )}
                   {r.user_agent && (
                     <div className="text-[10px] text-muted truncate mt-0.5">UA: {r.user_agent}</div>
+                  )}
+
+                  {r.user_id ? (
+                    <FeedbackReplyForm feedbackId={r.id} initialReply={r.admin_reply} repliedAt={r.replied_at} />
+                  ) : (
+                    <div className="mt-3 pt-3 border-t border-[#e5e7eb] text-[11px] text-muted">비로그인 사용자 피드백 — 답글 알림 발송 불가</div>
                   )}
                 </li>
               ))}
