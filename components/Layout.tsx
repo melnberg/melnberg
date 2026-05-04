@@ -3,7 +3,6 @@ import { createPublicClient } from '@/lib/supabase/public';
 import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
-import NotificationsBell from './NotificationsBell';
 
 // 사이드바 최신글 — 30초 캐싱. 모든 페이지 공통이라 cache hit 비율 매우 높음.
 // unstable_cache 내부에서는 cookies() 의존 클라이언트 못 씀 → public anon 클라이언트 사용
@@ -55,7 +54,6 @@ export default async function Layout({ current, children }: { current?: string; 
     <div className="flex min-h-screen">
       <Sidebar current={current} user={sidebarUser} recentPosts={recentPosts} />
       <main className="flex-1 min-w-0 flex flex-col">{children}</main>
-      <NotificationsBell />
       <FeedbackWidget />
     </div>
   );

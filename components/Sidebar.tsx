@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
+import NotificationsBell from './NotificationsBell';
 
 export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean };
 export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
@@ -57,31 +58,34 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
 
         <div className="px-5 pt-4 pb-2">
           {user ? (
-            <Link
-              href="/me"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 border border-border no-underline hover:border-navy transition-colors"
-            >
-              <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                {(user.name[0] ?? '').toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-bold text-text truncate">{user.name}</span>
-                  {user.isPaid ? (
-                    <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5 flex-shrink-0">조합원</span>
-                  ) : (
-                    <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5 flex-shrink-0">무료회원</span>
-                  )}
+            <div className="flex items-center gap-2">
+              <Link
+                href="/me"
+                onClick={() => setOpen(false)}
+                className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 border border-border no-underline hover:border-navy transition-colors"
+              >
+                <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                  {(user.name[0] ?? '').toUpperCase()}
                 </div>
-                <div className="text-[11px] text-muted flex items-center gap-1.5">
-                  {typeof user.score === 'number' && (
-                    <span className="text-cyan font-bold">⚡ {user.score}</span>
-                  )}
-                  <span>마이페이지 →</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-bold text-text truncate">{user.name}</span>
+                    {user.isPaid ? (
+                      <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5 flex-shrink-0">조합원</span>
+                    ) : (
+                      <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5 flex-shrink-0">무료회원</span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-muted flex items-center gap-1.5">
+                    {typeof user.score === 'number' && (
+                      <span className="text-cyan font-bold">⚡ {user.score}</span>
+                    )}
+                    <span>마이페이지 →</span>
+                  </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+              <NotificationsBell />
+            </div>
           ) : (
             <div className="flex gap-2">
               <Link

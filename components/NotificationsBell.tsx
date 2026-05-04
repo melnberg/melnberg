@@ -94,26 +94,26 @@ export default function NotificationsBell() {
   if (!signedIn) return null;
 
   return (
-    <div ref={wrapRef} className="fixed top-4 right-4 z-50">
+    <div ref={wrapRef} className="relative inline-flex flex-shrink-0">
       <button
         type="button"
         onClick={toggle}
         aria-label={`알림 ${unread}건`}
-        className="relative w-11 h-11 rounded-full bg-white border border-border shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:border-navy flex items-center justify-center"
+        className="relative w-9 h-9 rounded-full border border-border bg-white hover:border-navy flex items-center justify-center"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="text-navy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="text-navy">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+          <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute top-12 right-0 w-[380px] max-w-[calc(100vw-32px)] max-h-[70vh] bg-white border border-border shadow-[0_8px_32px_rgba(0,0,0,0.15)] flex flex-col">
+        <div className="absolute top-11 left-0 w-[380px] max-w-[calc(100vw-32px)] max-h-[70vh] bg-white border border-border shadow-[0_8px_32px_rgba(0,0,0,0.15)] flex flex-col z-50">
           <div className="px-5 py-3.5 flex items-center justify-between border-b border-border">
             <h3 className="text-[15px] font-bold text-navy">알림센터</h3>
             <button type="button" onClick={() => setOpen(false)} className="text-muted hover:text-navy text-[18px] leading-none">✕</button>
