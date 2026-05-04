@@ -23,6 +23,7 @@ type Comment = {
   content: string;
   created_at: string;
   author_id: string;
+  parent_id: number | null;
 };
 
 type MyVote = { discussion_id: number; vote_type: 'up' | 'down' };
@@ -81,6 +82,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   // 댓글 입력 (글 단위)
   const [commentBody, setCommentBody] = useState<Map<number, string>>(new Map());
   const [openComments, setOpenComments] = useState<Set<number>>(new Set());
+  // 답글 입력 — 부모 댓글 id 기준으로 본문/열림 상태 관리
+  const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [replyBody, setReplyBody] = useState('');
 
   // 점거 상태
   const [occupierId, setOccupierId] = useState<string | null>(null);
@@ -168,7 +172,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (ids.length > 0) {
       const { data: cData } = await supabase
         .from('apt_discussion_comments')
-        .select('id, discussion_id, content, created_at, author_id')
+        .select('id, discussion_id, content, created_at, author_id, parent_id')
         .in('discussion_id', ids)
         .is('deleted_at', null)
         .order('created_at', { ascending: true });
@@ -443,6 +447,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     });
     if (error) { alert(error.message); return; }
     setCommentBody((prev) => { const m = new Map(prev); m.set(discussionId, ''); return m; });
+    await reload();
+  }
+
+  async function submitReply(discussionId: number, parentId: number) {
+    if (!userId) { alert('로그인이 필요해요.'); return; }
+    const text = replyBody.trim();
+    if (!text) return;
+    const { error } = await supabase.from('apt_discussion_comments').insert({
+      discussion_id: discussionId, author_id: userId, content: text, parent_id: parentId,
+    });
+    if (error) { alert(error.message); return; }
+    setReplyBody('');
+    setReplyTo(null);
     await reload();
   }
 
@@ -735,11 +752,16 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   </div>
 
                   {/* 댓글 목록 + 입력 */}
-                  {isCommentsOpen && (
+                  {isCommentsOpen && (() => {
+                    const topLevel = dComments.filter((c) => c.parent_id === null);
+                    const repliesOf = (parentId: number) => dComments.filter((c) => c.parent_id === parentId);
+                    return (
                     <div className="mt-3 pt-3 border-t border-[#f0f0f0] space-y-2">
-                      {dComments.map((c) => {
+                      {topLevel.map((c) => {
                         const cAuthor = authors.get(c.author_id) ?? { name: c.author_id.slice(0, 6) };
                         const cIsMine = userId === c.author_id;
+                        const replies = repliesOf(c.id);
+                        const isReplying = replyTo === c.id;
                         return (
                           <div key={c.id} className="text-[12px]">
                             <p className="text-text whitespace-pre-wrap leading-snug">{c.content}</p>
@@ -747,6 +769,14 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                               <Nickname info={cAuthor} className="text-muted" />
                               <span>·</span>
                               <span>{relativeTime(c.created_at)}</span>
+                              {userId && (
+                                <>
+                                  <span>·</span>
+                                  <button type="button" onClick={() => { setReplyTo(isReplying ? null : c.id); setReplyBody(''); }} className="hover:text-navy">
+                                    {isReplying ? '취소' : '답글'}
+                                  </button>
+                                </>
+                              )}
                               {cIsMine && (
                                 <>
                                   <span>·</span>
@@ -754,6 +784,50 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                 </>
                               )}
                             </div>
+                            {/* 대댓글 목록 */}
+                            {replies.length > 0 && (
+                              <div className="mt-1.5 ml-3 pl-2.5 border-l-2 border-[#e5e5e5] space-y-1.5">
+                                {replies.map((r) => {
+                                  const rAuthor = authors.get(r.author_id) ?? { name: r.author_id.slice(0, 6) };
+                                  const rIsMine = userId === r.author_id;
+                                  return (
+                                    <div key={r.id} className="text-[12px]">
+                                      <p className="text-text whitespace-pre-wrap leading-snug">{r.content}</p>
+                                      <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
+                                        <Nickname info={rAuthor} className="text-muted" />
+                                        <span>·</span>
+                                        <span>{relativeTime(r.created_at)}</span>
+                                        {rIsMine && (
+                                          <>
+                                            <span>·</span>
+                                            <button type="button" onClick={() => deleteComment(r.id)} className="hover:text-red-500">삭제</button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {/* 답글 입력 폼 */}
+                            {isReplying && userId && (
+                              <div className="mt-1.5 ml-3 pl-2.5 border-l-2 border-navy/30 flex gap-1.5">
+                                <input
+                                  type="text"
+                                  value={replyBody}
+                                  onChange={(e) => setReplyBody(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitReply(d.id, c.id); } }}
+                                  placeholder="답글을 입력..."
+                                  maxLength={500}
+                                  autoFocus
+                                  className="flex-1 px-2.5 py-1.5 border border-border bg-white text-[12px] focus:outline-none focus:border-navy"
+                                />
+                                <button type="button" onClick={() => submitReply(d.id, c.id)}
+                                  className="px-3 py-1.5 bg-navy text-white text-[12px] font-bold hover:bg-navy-dark">
+                                  등록
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -779,7 +853,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                         </Link>
                       )}
                     </div>
-                  )}
+                    );
+                  })()}
                 </li>
               );
             })}
