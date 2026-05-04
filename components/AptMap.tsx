@@ -236,27 +236,34 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; clearTimeout(smallTimer); };
   }, [pinsFromProps]);
 
-  // 점거/강제집행 액션 후 big 캐시 무효화 + refetch (이벤트 기반)
+  // 점거/강제집행 액션 후 핀 갱신 — 서버 unstable_cache + localStorage 모두 무효화 후 refetch
   useEffect(() => {
     function onPinsChanged() {
       try { localStorage.removeItem(PINS_CACHE_KEY_BIG); } catch { /* ignore */ }
+      try { localStorage.removeItem(PINS_CACHE_KEY_SMALL); } catch { /* ignore */ }
       (async () => {
         try {
-          const r = await fetch('/api/home-pins', { cache: 'no-store' });
-          if (!r.ok) return;
-          const json = (await r.json()) as { pins: AptPin[] };
-          writePinCache(PINS_CACHE_KEY_BIG, json.pins);
-          // 기존 small 은 그대로 유지하면서 big 만 갱신
-          setPins((prev) => {
-            const seen = new Set<number>();
-            const merged: AptPin[] = [];
-            for (const p of [...json.pins, ...prev]) {
-              if (seen.has(p.id)) continue;
-              seen.add(p.id);
-              merged.push(p);
-            }
-            return merged;
-          });
+          // 1) 서버 캐시 무효화 (revalidateTag)
+          await fetch('/api/home-pins/invalidate', { method: 'POST', cache: 'no-store' });
+          // 2) big + small fresh fetch
+          const [bigR, smallR] = await Promise.all([
+            fetch('/api/home-pins', { cache: 'no-store' }),
+            fetch('/api/home-pins?detail=1', { cache: 'no-store' }),
+          ]);
+          if (!bigR.ok || !smallR.ok) return;
+          const bigJson = (await bigR.json()) as { pins: AptPin[] };
+          const smallJson = (await smallR.json()) as { pins: AptPin[] };
+          writePinCache(PINS_CACHE_KEY_BIG, bigJson.pins);
+          writePinCache(PINS_CACHE_KEY_SMALL, smallJson.pins);
+          // big 우선으로 머지 (점거 정보가 정확)
+          const seen = new Set<number>();
+          const merged: AptPin[] = [];
+          for (const p of [...bigJson.pins, ...smallJson.pins]) {
+            if (seen.has(p.id)) continue;
+            seen.add(p.id);
+            merged.push(p);
+          }
+          setPins(merged);
         } catch { /* ignore */ }
       })();
     }
