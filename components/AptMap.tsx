@@ -620,8 +620,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         <button
           type="button"
           onClick={toggleEvicts}
-          disabled={evictCount === 0}
-          className="bg-white border border-red-500 px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#fdf0ee] hover:border-red-600 disabled:cursor-default flex items-center gap-1.5"
+          className="bg-white border border-red-500 px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#fdf0ee] hover:border-red-600 flex items-center gap-1.5"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2L4 7v6c0 5 4 9 8 10 4-1 8-5 8-10V7l-8-5z"/></svg>
           <span>오늘의 강제집행 : {evictCount}건</span>
