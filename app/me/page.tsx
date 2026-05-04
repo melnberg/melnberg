@@ -40,12 +40,22 @@ export default async function MePage() {
 
   const payments = await listOwnPayments();
 
-  // 활동 통계 — 작성글·댓글·score
-  const [{ count: postCount }, { count: commentCount }, { data: scoreData }] = await Promise.all([
+  // 활동 통계 — 작성글·댓글·score (apt 토론 + 커뮤니티 합산)
+  const [
+    { count: aptPostCount },
+    { count: aptCommentCount },
+    { count: communityPostCount },
+    { count: communityCommentCount },
+    { data: scoreData },
+  ] = await Promise.all([
     supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
     supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
+    supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
     supabase.rpc('get_user_score', { p_user_id: user.id }),
   ]);
+  const postCount = (aptPostCount ?? 0) + (communityPostCount ?? 0);
+  const commentCount = (aptCommentCount ?? 0) + (communityCommentCount ?? 0);
   const score = typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0);
 
   return (
