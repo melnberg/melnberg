@@ -176,7 +176,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
             <button
               type="submit"
               disabled={loading || !content.trim()}
-              className="text-[13px] font-bold text-navy hover:text-navy-dark cursor-pointer disabled:text-muted disabled:cursor-not-allowed bg-transparent border-none p-0"
+              className="bg-navy text-white px-4 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-40 disabled:cursor-not-allowed border-none"
             >
               {loading ? '등록 중...' : '등록'}
             </button>
@@ -291,7 +291,7 @@ function ReplyForm({
         <button
           type="submit"
           disabled={loading || !text.trim()}
-          className="text-[12px] font-bold text-navy hover:text-navy-dark cursor-pointer disabled:text-muted disabled:cursor-not-allowed bg-transparent border-none p-0"
+          className="bg-navy text-white px-4 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-40 disabled:cursor-not-allowed border-none"
         >
           {loading ? '등록 중...' : '등록'}
         </button>

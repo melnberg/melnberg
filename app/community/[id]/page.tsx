@@ -111,14 +111,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             >
               ← 목록으로
             </Link>
-            {user && (
-              <Link
-                href="/community/new"
-                className="bg-navy text-white px-4 py-2 text-[12px] font-bold tracking-wider no-underline hover:bg-navy-dark"
-              >
-                글쓰기 →
-              </Link>
-            )}
           </div>
         </div>
       </article>

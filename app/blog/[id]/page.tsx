@@ -130,11 +130,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
             <Link href="/blog" className="text-[13px] font-bold text-navy no-underline hover:underline">
               ← 목록으로
             </Link>
-            {isAdmin && (
-              <Link href="/blog/new" className="bg-navy text-white px-4 py-2 text-[12px] font-bold tracking-wider no-underline hover:bg-navy-dark">
-                글쓰기 →
-              </Link>
-            )}
           </div>
         </div>
       </article>
