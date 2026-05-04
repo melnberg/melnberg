@@ -409,15 +409,16 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   }, []);
 
   // 2) 마커 갱신 — pins 변경 시 기존 제거 후 재생성. 지도 view는 그대로.
+  // 1만개 마커 생성을 setTimeout 으로 청크 분할 → 메인 스레드 차단 최소화.
   useEffect(() => {
     if (!mapReady || !mapInstRef.current) return;
+    if (pins.length === 0) return;
     const map = mapInstRef.current;
 
     // 기존 마커 제거
     for (const { marker } of markersRef.current) marker.setMap(null);
     markersRef.current = [];
 
-    // SVG 핀 8종 = 4색 × {기본/점거}.
     const PIN_W = 32, PIN_H = 45;
     const makeImg = (color: string, occ: boolean) => new window.kakao.maps.MarkerImage(
       buildPinSvg(color, occ),
@@ -444,25 +445,39 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     }
 
     const level = map.getLevel();
-    const allMarkers: MarkerTier[] = pins.map((p) => {
-      const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
-      const hh = p.household_count ?? 0;
-      const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
-      const occupied = !!p.occupier_id;
-      const visible = tier === 0 || occupied
-        || (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
-      const marker = new window.kakao.maps.Marker({
-        position: pos,
-        title: p.apt_nm,
-        clickable: true,
-        image: pickPin(p.household_count, occupied),
-        map: visible ? map : undefined,
-      }) as KakaoMarkerInst;
-      window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
-      return { marker, tier, occupied };
-    });
+    const allMarkers: MarkerTier[] = [];
+    let cancelled = false;
 
-    markersRef.current = allMarkers;
+    // 청크 처리 — 1000개씩 setTimeout(0) 으로 yield. 메인 스레드 1프레임 이상 안 잡음.
+    const CHUNK = 1000;
+    let i = 0;
+    function processChunk() {
+      if (cancelled) return;
+      const end = Math.min(i + CHUNK, pins.length);
+      for (; i < end; i++) {
+        const p = pins[i];
+        const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
+        const hh = p.household_count ?? 0;
+        const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
+        const occupied = !!p.occupier_id;
+        const visible = tier === 0 || occupied
+          || (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
+        const marker = new window.kakao.maps.Marker({
+          position: pos,
+          title: p.apt_nm,
+          clickable: true,
+          image: pickPin(p.household_count, occupied),
+          map: visible ? map : undefined,
+        }) as KakaoMarkerInst;
+        window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
+        allMarkers.push({ marker, tier, occupied });
+      }
+      markersRef.current = allMarkers;
+      if (i < pins.length) setTimeout(processChunk, 0);
+    }
+    processChunk();
+
+    return () => { cancelled = true; };
   }, [pins, mapReady]);
 
   if (error) {
