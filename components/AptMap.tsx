@@ -643,18 +643,20 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 상단 가로 바 — 실시간 스코어 랭킹 TOP 5 */}
+      {/* 상단 가로 바 — 실시간 스코어 랭킹 TOP 5 (우→좌 마퀴) */}
       {ranking.length > 0 && (
-        <div className="absolute top-4 left-[300px] right-4 z-20 bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-3 py-1.5 text-[11px] flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+        <div className="absolute top-4 left-[300px] right-4 z-20 bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-3 py-1.5 text-[11px] flex items-center gap-3">
           <span className="font-bold text-navy flex-shrink-0">🏆 실시간 스코어 랭킹 TOP 5</span>
-          <div className="flex items-center gap-3 flex-1">
-            {ranking.map((r, i) => (
-              <span key={r.user_id} className="flex-shrink-0">
-                <span className="text-cyan font-bold">{i + 1}위</span>{' '}
-                <span className="text-text font-semibold">{r.display_name}</span>
-                <span className="text-muted"> ({r.score})</span>
-              </span>
-            ))}
+          <div className="marquee-mask flex-1 overflow-hidden">
+            <div className="marquee-track flex w-max gap-6">
+              {[...ranking, ...ranking].map((r, i) => (
+                <span key={`${r.user_id}-${i}`} className="flex-shrink-0">
+                  <span className="text-cyan font-bold">{(i % ranking.length) + 1}위</span>{' '}
+                  <span className="text-text font-semibold">{r.display_name}</span>
+                  <span className="text-muted"> ({r.score})</span>
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       )}
