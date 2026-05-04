@@ -1,5 +1,5 @@
 import Layout from '@/components/Layout';
-import AptMap, { type AptPin } from '@/components/AptMap';
+import AptMap, { type AptPin, type FeedItem } from '@/components/AptMap';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = {
@@ -29,12 +29,38 @@ async function fetchAptPins(): Promise<AptPin[]> {
   return all;
 }
 
+async function fetchFeed(): Promise<FeedItem[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('apt_discussions')
+    .select('id, apt_master_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng), author:profiles!author_id(display_name)')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  return ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+    const author = r.author as { display_name: string | null } | null;
+    return {
+      id: r.id as number,
+      apt_master_id: r.apt_master_id as number,
+      title: r.title as string,
+      content: r.content as string | null,
+      created_at: r.created_at as string,
+      apt_nm: am?.apt_nm ?? null,
+      dong: am?.dong ?? null,
+      lat: am?.lat ?? null,
+      lng: am?.lng ?? null,
+      author_name: author?.display_name ?? null,
+    };
+  });
+}
+
 export default async function HomePage() {
-  const pins = await fetchAptPins();
+  const [pins, feed] = await Promise.all([fetchAptPins(), fetchFeed()]);
 
   return (
     <Layout current="home">
-      <AptMap pins={pins} />
+      <AptMap pins={pins} feed={feed} />
     </Layout>
   );
 }

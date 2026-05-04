@@ -47,6 +47,19 @@ declare global {
   }
 }
 
+export type FeedItem = {
+  id: number;
+  apt_master_id: number;
+  title: string;
+  content: string | null;
+  created_at: string;
+  apt_nm: string | null;
+  dong: string | null;
+  lat: number | null;
+  lng: number | null;
+  author_name: string | null;
+};
+
 export type AptPin = {
   id: number;
   apt_nm: string;
@@ -130,7 +143,7 @@ const CLUSTER_STYLES = [
 
 type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
 
-export default function AptMap({ pins }: { pins: AptPin[] }) {
+export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: FeedItem[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
   const markersRef = useRef<MarkerTier[]>([]);
@@ -149,6 +162,38 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const [evictsOpen, setEvictsOpen] = useState(false);
   const [evicts, setEvicts] = useState<EvictEvent[] | null>(null);
   const [evictCount, setEvictCount] = useState(0);
+
+  // 피드 (단지별 글 최신순). 기본 펼침.
+  const [feedOpen, setFeedOpen] = useState(true);
+  const [expandedFeed, setExpandedFeed] = useState<Set<number>>(new Set());
+  function toggleFeedExpand(id: number) {
+    setExpandedFeed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function jumpToFeedItem(item: FeedItem) {
+    if (item.lat == null || item.lng == null) return;
+    const inst = mapInstRef.current;
+    if (inst) {
+      const ll = new window.kakao.maps.LatLng(item.lat, item.lng);
+      inst.setLevel(2);
+      inst.panTo(ll);
+    }
+    const pin = pins.find((p) => p.id === item.apt_master_id);
+    if (pin) setSelected(pin);
+  }
+  function feedRelTime(iso: string): string {
+    const ms = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(ms / 60000);
+    if (m < 1) return '방금';
+    if (m < 60) return `${m}분`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}시간`;
+    const d = Math.floor(h / 24);
+    return `${d}일`;
+  }
 
   const occupied = useMemo(() => pins.filter((p) => p.occupier_id), [pins]);
 
@@ -439,9 +484,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2L4 7v6c0 5 4 9 8 10 4-1 8-5 8-10V7l-8-5z"/></svg>
           <span>오늘의 강제집행 : {evictCount}건</span>
-          <svg width="9" height="9" viewBox="0 0 10 10" className={`transition-transform ${evictsOpen ? 'rotate-180' : ''}`}>
-            <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          </svg>
+          <span className="ml-auto text-[11px] text-muted">{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {evictsOpen && (
           <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-[300px] max-h-[60vh] overflow-y-auto">
@@ -484,9 +527,7 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="#00B0F0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" /></svg>
           <span>점거된 아파트 : {occupied.length.toLocaleString()}개단지</span>
-          <svg width="9" height="9" viewBox="0 0 10 10" className={`transition-transform ${occupiedOpen ? 'rotate-180' : ''}`}>
-            <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          </svg>
+          <span className="ml-auto text-[11px] text-muted">{occupiedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {occupiedOpen && (
           <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-[280px] max-h-[60vh] overflow-y-auto">
@@ -511,6 +552,67 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
                     </button>
                   </li>
                 ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* 피드 — 단지별 글 최신순. 기본 펼침. */}
+        <button
+          type="button"
+          onClick={() => setFeedOpen((v) => !v)}
+          className="bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#eef4fb] hover:border-navy flex items-center gap-1.5"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+          <span>피드 : {feed.length}개</span>
+          <span className="ml-auto text-[11px] text-muted">{feedOpen ? '접기 ^' : '펼치기 v'}</span>
+        </button>
+        {feedOpen && (
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[60vh] overflow-y-auto">
+            {feed.length === 0 ? (
+              <div className="px-4 py-6 text-[12px] text-muted text-center">아직 작성된 글 없음</div>
+            ) : (
+              <ul>
+                {feed.map((f) => {
+                  const expanded = expandedFeed.has(f.id);
+                  const fullContent = (f.content ?? '').trim();
+                  return (
+                    <li key={f.id} className="border-b border-[#f0f0f0] last:border-b-0">
+                      <div className="px-3 py-2.5 bg-white hover:bg-[#fafbfc]">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <button
+                            type="button"
+                            onClick={() => jumpToFeedItem(f)}
+                            className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1"
+                          >
+                            {f.apt_nm ?? '(단지 정보 없음)'}
+                          </button>
+                          <span className="text-[10px] text-cyan font-bold flex-shrink-0">{f.author_name ?? '익명'}</span>
+                        </div>
+                        <div className="text-[12px] text-text leading-snug font-bold mb-0.5">{f.title}</div>
+                        {fullContent && (
+                          <>
+                            <div className={`text-[12px] text-text leading-snug whitespace-pre-wrap ${expanded ? '' : 'line-clamp-2'}`}>
+                              {fullContent}
+                            </div>
+                            {fullContent.length > 50 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleFeedExpand(f.id)}
+                                className="mt-1 text-[10px] text-muted hover:text-navy font-bold"
+                              >
+                                {expanded ? '접기 ^' : '펼치기 v'}
+                              </button>
+                            )}
+                          </>
+                        )}
+                        <div className="text-[10px] text-muted mt-1">{feedRelTime(f.created_at)} 전</div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

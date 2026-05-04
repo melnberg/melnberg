@@ -19,15 +19,26 @@ export default function SignupForm() {
     e.preventDefault();
     if (loading) return;
     setMsg(null);
-    setLoading(true);
 
     // 사용자가 풀 이메일을 입력해도 앞부분만 저장
-    const cleanNaverId = naverId.trim().split('@')[0] || null;
+    const cleanNaverId = naverId.trim().split('@')[0];
+    // 한글 차단 — 네이버 ID는 항상 영문/숫자/언더바
+    if (cleanNaverId && /[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(cleanNaverId)) {
+      setMsg({ type: 'error', text: '네이버 로그인 아이디에 한글을 넣을 수 없습니다.\n닉네임이 아니라 영문·숫자로 된 네이버 로그인 ID를 입력해주세요. (예: hodol9876)' });
+      return;
+    }
+    // ASCII·숫자·언더바·하이픈만 (네이버 규칙)
+    if (cleanNaverId && !/^[a-z0-9_-]+$/i.test(cleanNaverId)) {
+      setMsg({ type: 'error', text: '네이버 로그인 아이디는 영문·숫자·_·- 만 가능합니다.' });
+      return;
+    }
+
+    setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { display_name: name.trim(), naver_id: cleanNaverId },
+        data: { display_name: name.trim(), naver_id: cleanNaverId || null },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
