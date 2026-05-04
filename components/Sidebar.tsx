@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 
 export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean };
-export type SidebarRecentPost = { id: number; title: string; created_at: string };
+export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
 
 type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[] };
 
@@ -145,16 +145,21 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 커뮤니티 — 메뉴 맨 아래 + 최신글 미리보기 */}
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
           {recentPosts.length > 0 && (
-            <ul className="bg-[#fafafa] py-1">
+            <ul className="bg-[#fafafa]">
               {recentPosts.map((p) => (
-                <li key={p.id}>
+                <li key={p.id} className="border-b border-[#ececec] last:border-b-0">
                   <Link
                     href={`/community/${p.id}`}
                     onClick={() => setOpen(false)}
-                    className="block pl-12 pr-5 py-1.5 text-[12px] text-text hover:text-navy hover:bg-navy-soft no-underline truncate"
-                    title={p.title}
+                    className="flex items-center gap-1.5 pl-12 pr-4 py-2 text-[12px] text-text hover:text-navy hover:bg-navy-soft no-underline"
+                    title={`${p.id} · ${p.title}${p.author_name ? ` · ${p.author_name}` : ''}`}
                   >
-                    {p.title}
+                    <span className="text-muted tabular-nums flex-shrink-0">{p.id}</span>
+                    <span className="text-muted">/</span>
+                    <span className="flex-1 min-w-0 truncate">{p.title}</span>
+                    {p.author_name && (
+                      <span className="text-cyan font-bold flex-shrink-0 max-w-[60px] truncate">{p.author_name}</span>
+                    )}
                   </Link>
                 </li>
               ))}

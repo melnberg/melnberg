@@ -24,18 +24,22 @@ export default async function Layout({ current, children }: { current?: string; 
     };
   }
 
-  // 사이드바 커뮤니티 최신글 5개
+  // 사이드바 커뮤니티 최신글 5개 (작성자 닉네임 포함)
   const { data: recentRaw } = await supabase
     .from('posts')
-    .select('id, title, created_at')
+    .select('id, title, created_at, author:profiles!author_id(display_name)')
     .eq('category', 'community')
     .order('created_at', { ascending: false })
     .limit(5);
-  const recentPosts: SidebarRecentPost[] = (recentRaw ?? []).map((p) => ({
-    id: p.id as number,
-    title: p.title as string,
-    created_at: p.created_at as string,
-  }));
+  const recentPosts: SidebarRecentPost[] = (recentRaw ?? []).map((p) => {
+    const author = (p as Record<string, unknown>).author as { display_name?: string | null } | null;
+    return {
+      id: p.id as number,
+      title: p.title as string,
+      created_at: p.created_at as string,
+      author_name: author?.display_name ?? null,
+    };
+  });
 
   return (
     <div className="flex min-h-screen">
