@@ -643,18 +643,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 상단 가로 바 — 실시간 스코어 랭킹 TOP 5 (우→좌 마퀴) */}
+      {/* 상단 전광판 — 실시간 스코어 랭킹 TOP 10 (우→좌 마퀴) */}
       {ranking.length > 0 && (
-        <div className="absolute top-4 left-[300px] right-4 z-20 bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] px-3 py-1.5 text-[11px] flex items-center gap-3">
-          <span className="font-bold text-navy flex-shrink-0">🏆 실시간 스코어 랭킹 TOP 5</span>
+        <div className="absolute top-4 left-[300px] right-4 z-20 bg-black border border-black shadow-[0_2px_8px_rgba(0,0,0,0.4)] px-3 py-2 text-[12px] flex items-center gap-3 tabular-nums tracking-wide">
+          <span className="font-bold text-yellow-300 flex-shrink-0 [text-shadow:0_0_6px_rgba(253,224,71,0.6)]">🏆 실시간 스코어 랭킹 TOP 10</span>
           <div className="marquee-mask flex-1 overflow-hidden">
-            <div className="marquee-track flex w-max gap-6">
-              {[...ranking, ...ranking].map((r, i) => (
-                <span key={`${r.user_id}-${i}`} className="flex-shrink-0">
-                  <span className="text-cyan font-bold">{(i % ranking.length) + 1}위</span>{' '}
-                  <span className="text-text font-semibold">{r.display_name}</span>
-                  <span className="text-muted"> ({r.score})</span>
-                </span>
+            <div className="marquee-track flex w-max">
+              {[0, 1].map((copy) => (
+                <div key={copy} aria-hidden={copy === 1} className="flex gap-8 pr-8">
+                  {ranking.map((r, i) => (
+                    <span key={`${copy}-${r.user_id}`} className="flex-shrink-0">
+                      <span className="text-yellow-300 font-bold [text-shadow:0_0_4px_rgba(253,224,71,0.5)]">{i + 1}위</span>{' '}
+                      <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{r.display_name}</span>
+                      <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {r.score}</span>
+                    </span>
+                  ))}
+                </div>
               ))}
             </div>
           </div>

@@ -6,10 +6,10 @@ import { createPublicClient } from '@/lib/supabase/public';
 const fetchRanking = unstable_cache(
   async () => {
     const supabase = createPublicClient();
-    const { data } = await supabase.rpc('get_top_scorers', { p_limit: 5 });
+    const { data } = await supabase.rpc('get_top_scorers', { p_limit: 10 });
     return (data ?? []) as Array<{ user_id: string; display_name: string; score: number }>;
   },
-  ['score-ranking-top5'],
+  ['score-ranking-top10'],
   { revalidate: 30, tags: ['profiles', 'apt-discussions', 'posts'] },
 );
 

@@ -31,7 +31,7 @@
   100% { transform: translateX(-50%); }
 }
 .marquee-track {
-  animation: marqueeRtl 30s linear infinite;
+  animation: marqueeRtl 18s linear infinite;
 }
 .marquee-mask:hover .marquee-track {
   animation-play-state: paused;
