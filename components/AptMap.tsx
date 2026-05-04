@@ -487,7 +487,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
           <span className="ml-auto text-[11px] text-muted">{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {evictsOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-[300px] max-h-[60vh] overflow-y-auto">
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-full max-h-[60vh] overflow-y-auto">
             {evicts === null ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">불러오는 중...</div>
             ) : evicts.length === 0 ? (
@@ -530,7 +530,7 @@ export default function AptMap({ pins, feed = [] }: { pins: AptPin[]; feed?: Fee
           <span className="ml-auto text-[11px] text-muted">{occupiedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {occupiedOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-[280px] max-h-[60vh] overflow-y-auto">
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-full max-h-[60vh] overflow-y-auto">
             {occupied.length === 0 ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">점거된 단지 없음</div>
             ) : (
