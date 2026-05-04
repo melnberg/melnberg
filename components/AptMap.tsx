@@ -147,42 +147,93 @@ const CLUSTER_STYLES = [
 
 type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
 
-const PINS_CACHE_KEY = 'mlbg_pins_v1';
+const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v1';
+const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v1';
 const PINS_CACHE_TTL_MS = 5 * 60 * 1000; // 5분 — 서버 캐시와 동일
 
+function readPinCache(key: string): { ts: number; pins: AptPin[] } | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as { ts: number; pins: AptPin[] };
+  } catch { return null; }
+}
+function writePinCache(key: string, pins: AptPin[]) {
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), pins })); } catch { /* quota */ }
+}
+
 export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
-  // 핀은 prop 으로 안 주면 localStorage 캐시 → 비동기 네트워크 fetch 순서로 로드.
-  // 두 번째 방문부터는 핀이 화면 표시 즉시 보임 (캐시 hit).
+  // 핀은 두 단계로 로드:
+  //   1단계 (즉시): 큰 단지 + 점거 단지 — 작아서 빠름
+  //   2단계 (1초 후): 100~999세대 중소형 — 화면이 응답성 갖춘 뒤 백그라운드
+  // localStorage 캐시 → 두 번째 방문부터 거의 즉시 표시.
   const [pins, setPins] = useState<AptPin[]>(pinsFromProps ?? []);
   useEffect(() => {
     if (pinsFromProps && pinsFromProps.length > 0) return;
 
-    // 1) localStorage 즉시 read — 있으면 페인트 한 프레임 안에 표시
-    try {
-      const raw = localStorage.getItem(PINS_CACHE_KEY);
-      if (raw) {
-        const cached = JSON.parse(raw) as { ts: number; pins: AptPin[] };
-        if (cached.pins?.length > 0) {
-          setPins(cached.pins);
-          // TTL 안 지났으면 네트워크 fetch 도 생략
-          if (Date.now() - cached.ts < PINS_CACHE_TTL_MS) return;
-        }
-      }
-    } catch { /* corrupt cache → 무시하고 네트워크 fetch */ }
-
-    // 2) 네트워크 fetch — 캐시 만료 또는 캐시 없을 때
     let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch('/api/home-pins');
-        if (!r.ok) return;
-        const json = (await r.json()) as { pins: AptPin[] };
-        if (cancelled) return;
-        setPins(json.pins);
-        try { localStorage.setItem(PINS_CACHE_KEY, JSON.stringify({ ts: Date.now(), pins: json.pins })); } catch { /* quota */ }
-      } catch { /* ignore */ }
-    })();
-    return () => { cancelled = true; };
+    const bigPins: AptPin[] = [];
+    const smallPins: AptPin[] = [];
+
+    function applyPins() {
+      if (cancelled) return;
+      // 중복 제거 (id 기준)
+      const seen = new Set<number>();
+      const merged: AptPin[] = [];
+      for (const p of [...bigPins, ...smallPins]) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        merged.push(p);
+      }
+      setPins(merged);
+    }
+
+    // 1단계: 큰 단지·점거 단지 — 캐시 우선
+    const cachedBig = readPinCache(PINS_CACHE_KEY_BIG);
+    if (cachedBig?.pins?.length) {
+      bigPins.push(...cachedBig.pins);
+      applyPins();
+    }
+    if (!cachedBig || Date.now() - cachedBig.ts >= PINS_CACHE_TTL_MS) {
+      (async () => {
+        try {
+          const r = await fetch('/api/home-pins');
+          if (!r.ok) return;
+          const json = (await r.json()) as { pins: AptPin[] };
+          if (cancelled) return;
+          bigPins.length = 0;
+          bigPins.push(...json.pins);
+          writePinCache(PINS_CACHE_KEY_BIG, json.pins);
+          applyPins();
+        } catch { /* ignore */ }
+      })();
+    }
+
+    // 2단계: 1초 뒤 중소형 — 캐시 우선
+    const smallTimer = setTimeout(() => {
+      if (cancelled) return;
+      const cachedSmall = readPinCache(PINS_CACHE_KEY_SMALL);
+      if (cachedSmall?.pins?.length) {
+        smallPins.push(...cachedSmall.pins);
+        applyPins();
+      }
+      if (!cachedSmall || Date.now() - cachedSmall.ts >= PINS_CACHE_TTL_MS) {
+        (async () => {
+          try {
+            const r = await fetch('/api/home-pins?detail=1');
+            if (!r.ok) return;
+            const json = (await r.json()) as { pins: AptPin[] };
+            if (cancelled) return;
+            smallPins.length = 0;
+            smallPins.push(...json.pins);
+            writePinCache(PINS_CACHE_KEY_SMALL, json.pins);
+            applyPins();
+          } catch { /* ignore */ }
+        })();
+      }
+    }, 1000);
+
+    return () => { cancelled = true; clearTimeout(smallTimer); };
   }, [pinsFromProps]);
 
   const mapRef = useRef<HTMLDivElement>(null);
