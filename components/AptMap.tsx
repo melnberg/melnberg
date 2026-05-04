@@ -144,7 +144,72 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
   const router = useRouter();
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // 오늘의 강제집행
+  type EvictEvent = { occurred_at: string; actor_name: string | null; prev_occupier_name: string | null; apt_id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null };
+  const [evictsOpen, setEvictsOpen] = useState(false);
+  const [evicts, setEvicts] = useState<EvictEvent[] | null>(null);
+  const [evictCount, setEvictCount] = useState(0);
+
   const occupied = useMemo(() => pins.filter((p) => p.occupier_id), [pins]);
+
+  // KST 기준 오늘 00:00 (UTC ISO)
+  function todayKstStartUtcIso(): string {
+    const now = new Date();
+    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const y = kstNow.getUTCFullYear(), m = kstNow.getUTCMonth(), d = kstNow.getUTCDate();
+    const kstMidnightUtc = Date.UTC(y, m, d) - 9 * 60 * 60 * 1000;
+    return new Date(kstMidnightUtc).toISOString();
+  }
+
+  // 카운트만 미리 fetch
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('apt_occupier_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('event', 'evict')
+      .gte('occurred_at', todayKstStartUtcIso())
+      .then(({ count }) => setEvictCount(count ?? 0));
+  }, [pins]);
+
+  async function toggleEvicts() {
+    if (evictsOpen) { setEvictsOpen(false); return; }
+    setEvictsOpen(true);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('apt_occupier_events')
+      .select('occurred_at, actor_name, prev_occupier_name, apt_id, apt_master(apt_nm, dong, lat, lng)')
+      .eq('event', 'evict')
+      .gte('occurred_at', todayKstStartUtcIso())
+      .order('occurred_at', { ascending: false });
+    const list: EvictEvent[] = (data ?? []).map((r: Record<string, unknown>) => {
+      const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+      return {
+        occurred_at: r.occurred_at as string,
+        actor_name: r.actor_name as string | null,
+        prev_occupier_name: r.prev_occupier_name as string | null,
+        apt_id: r.apt_id as number,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+      };
+    });
+    setEvicts(list);
+  }
+
+  function jumpToEvict(e: EvictEvent) {
+    if (e.lat == null || e.lng == null) return;
+    const inst = mapInstRef.current;
+    if (inst) {
+      const ll = new window.kakao.maps.LatLng(e.lat, e.lng);
+      inst.setLevel(2);
+      inst.panTo(ll);
+    }
+    const pin = pins.find((p) => p.id === e.apt_id);
+    if (pin) setSelected(pin);
+    setEvictsOpen(false);
+  }
 
   async function toggleOccupied() {
     if (occupiedOpen) { setOccupiedOpen(false); return; }
@@ -326,6 +391,51 @@ export default function AptMap({ pins }: { pins: AptPin[] }) {
         <div className="bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <span className="text-[12px] font-bold text-navy">{pins.length.toLocaleString()}개 단지</span>
         </div>
+        <button
+          type="button"
+          onClick={toggleEvicts}
+          disabled={evictCount === 0}
+          className="bg-white border border-red-500 px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#fdf0ee] hover:border-red-600 disabled:opacity-50 flex items-center gap-1.5"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2L4 7v6c0 5 4 9 8 10 4-1 8-5 8-10V7l-8-5z"/></svg>
+          <span>오늘의 강제집행 : {evictCount}건</span>
+          <svg width="9" height="9" viewBox="0 0 10 10" className={`transition-transform ${evictsOpen ? 'rotate-180' : ''}`}>
+            <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          </svg>
+        </button>
+        {evictsOpen && (
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-[300px] max-h-[60vh] overflow-y-auto">
+            {evicts === null ? (
+              <div className="px-4 py-6 text-[12px] text-muted text-center">불러오는 중...</div>
+            ) : evicts.length === 0 ? (
+              <div className="px-4 py-6 text-[12px] text-muted text-center">오늘 강제집행 내역 없음</div>
+            ) : (
+              <ul>
+                {evicts.map((e, i) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => jumpToEvict(e)}
+                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 bg-white hover:bg-[#fdf0ee] flex flex-col gap-0.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[13px] font-bold text-navy truncate">{e.apt_nm ?? '(단지 정보 없음)'}</div>
+                        <div className="text-[10px] text-muted tabular-nums flex-shrink-0">
+                          {new Date(e.occurred_at).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false })}
+                        </div>
+                      </div>
+                      <div className="text-[11px] flex items-center gap-1">
+                        <span className="text-muted line-through">{e.prev_occupier_name ?? '익명'}</span>
+                        <span className="text-muted">→</span>
+                        <span className="text-cyan font-bold">{e.actor_name ?? '익명'}</span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={toggleOccupied}
