@@ -427,7 +427,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                 const isActive = isActivePaid(p);
                 const checked = selectedIds.has(p.id);
                 return (
-                  <tr key={p.id} className={`border-b border-border hover:bg-bg/40 ${checked ? 'bg-navy-soft/40' : ''}`}>
+                  <tr key={p.id} className={`border-b border-border hover:bg-bg/40 ${checked ? 'bg-[#f5f9ff]' : ''}`}>
                     <td className="py-2.5 px-2 text-center">
                       <input
                         type="checkbox"
