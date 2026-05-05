@@ -594,7 +594,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <Layout current="home">
       {/* 데스크톱 (lg+) — 항상 지도. 그 미만은 forceMap 시에만 지도(미니멀 모드). */}
-      <div className={`flex-1 min-w-0 ${forceMap ? 'lg:[&]:contents max-lg:map-minimal' : 'hidden lg:flex lg:flex-col'}`}>
+      <div className={`flex-1 min-w-0 ${forceMap ? 'map-minimal' : 'hidden lg:flex lg:flex-col'}`}>
         <AptMap feed={feed} />
       </div>
       {/* 모바일 forceMap 시 우상단 '← 피드' 플로팅 링크 (햄버거는 좌측 Sidebar) */}
