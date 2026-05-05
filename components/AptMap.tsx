@@ -39,6 +39,12 @@ type KakaoMaps = {
     calculator?: number[];
     styles?: Array<Record<string, string>>;
   }) => { addMarkers: (m: KakaoMarker[]) => void };
+  services: {
+    Places: new () => {
+      keywordSearch: (keyword: string, callback: (data: Array<{ id: string; place_name: string; address_name: string; road_address_name: string; x: string; y: string }>, status: string, pagination: { hasNextPage: boolean; nextPage: () => void; current: number; totalCount: number }) => void, opts?: { page?: number; size?: number; useMapBounds?: boolean }) => void;
+    };
+    Status: { OK: string; ZERO_RESULT: string; ERROR: string };
+  };
 };
 type KakaoMapInst = KakaoMap & {
   getLevel: () => number;
@@ -101,7 +107,7 @@ export type AptPin = {
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
-const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=clusterer`;
+const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=clusterer,services`;
 
 function loadKakaoSdk(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -342,6 +348,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
+
+  // 이마트 — 분양 가능한 새 대상 (5 mlbg, 1인 1점포)
+  type EmartItem = { id: number; kakao_place_id: string; name: string; address: string | null; lat: number; lng: number; occupier_id: string | null; occupier_name: string | null };
+  const [emartList, setEmartList] = useState<EmartItem[]>([]);
+  const [selectedEmart, setSelectedEmart] = useState<EmartItem | null>(null);
+  const emartMarkersRef = useRef<KakaoMarkerInst[]>([]);
+
+  async function refetchEmart() {
+    try {
+      const r = await fetch('/api/emart-list', { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      setEmartList((j.items ?? []) as EmartItem[]);
+    } catch { /* silent */ }
+  }
+
   // 진행중 경매 — 60초 폴링, 좌측 LIVE 배너 표시용
   const [liveAuctions, setLiveAuctions] = useState<Array<{ id: number; apt_nm: string | null; current_bid: number | null; min_bid: number; ends_at: string }>>([]);
   useEffect(() => {
@@ -861,10 +883,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           return hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
         }
         function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
-          if (tier === 0 || occupied || listed) return true;
-          if (tier === 1 && lvl <= 7) return true;   // green (1000+) — 4km 까지
-          if (tier === 2 && lvl <= 5) return true;   // blue (300+) — 500m 까지
-          if (tier === 3 && lvl <= 4) return true;   // dot (<300) — 250m 까지
+          if (occupied || listed) return true;       // 점거·매물은 어떤 줌이든 항상 노출
+          if (tier === 0) return true;                // red/orange (2000+) — 항상
+          if (tier === 1 && lvl <= 7) return true;    // green (1000+) — 4km 까지
+          if (tier === 2 && lvl <= 4) return true;    // blue (300+) — 250m 까지 (500m·1km 줌에선 숨김)
+          if (tier === 3 && lvl <= 4) return true;    // dot (<300) — 250m 까지
           return false;
         }
         const updateVisibility = () => {
@@ -907,6 +930,112 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 이마트 — 발견 + 렌더 (어느 줌 레벨이든 항상 표시)
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    let cancelled = false;
+
+    // 발견 — sessionStorage 로 1회만 (page 새로고침 시 한 번)
+    const discoveryKey = 'mlbg_emart_discovered_v1';
+    async function discover() {
+      if (typeof window === 'undefined') return;
+      if (sessionStorage.getItem(discoveryKey)) return;
+      try {
+        const ps = new window.kakao.maps.services.Places();
+        // 서울 + 인접 — 약 45건씩 3 페이지 = 최대 135건
+        const supabase = createClient();
+        const seen = new Set<string>();
+        for (let page = 1; page <= 3; page++) {
+          await new Promise<void>((resolve) => {
+            ps.keywordSearch('이마트', async (data, status) => {
+              if (cancelled) { resolve(); return; }
+              if (status !== window.kakao.maps.services.Status.OK) { resolve(); return; }
+              for (const r of data) {
+                if (seen.has(r.id)) continue;
+                seen.add(r.id);
+                const lng = Number(r.x); const lat = Number(r.y);
+                // 수도권 영역 필터 (대략)
+                if (lat < 37.0 || lat > 38.0 || lng < 126.5 || lng > 127.7) continue;
+                if (!/이마트/.test(r.place_name)) continue;
+                await supabase.rpc('upsert_emart_location', {
+                  p_kakao_place_id: r.id,
+                  p_name: r.place_name,
+                  p_address: r.road_address_name || r.address_name || '',
+                  p_lat: lat,
+                  p_lng: lng,
+                }).then((x) => x, () => null);
+              }
+              resolve();
+            }, { page, size: 15 });
+          });
+        }
+        sessionStorage.setItem(discoveryKey, '1');
+      } catch { /* silent */ }
+    }
+
+    (async () => {
+      await refetchEmart();
+      // discovery 비동기 — 끝나면 다시 fetch
+      void (async () => {
+        await discover();
+        if (!cancelled) await refetchEmart();
+      })();
+    })();
+
+    // 마커 렌더는 emartList useEffect 에서 별도 처리
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady]);
+
+  // 이마트 마커 렌더 — emartList 변경 시 갱신
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    // 기존 마커 제거
+    for (const m of emartMarkersRef.current) m.setMap(null);
+    emartMarkersRef.current = [];
+
+    if (emartList.length === 0) return;
+    const SIZE = 36;
+    const img = new window.kakao.maps.MarkerImage(
+      '/pins/emart.svg',
+      new window.kakao.maps.Size(SIZE, SIZE),
+      { offset: new window.kakao.maps.Point(SIZE / 2, SIZE / 2) },
+    );
+    for (const e of emartList) {
+      const pos = new window.kakao.maps.LatLng(e.lat, e.lng);
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: e.occupier_id ? `${e.name} — ${e.occupier_name ?? '점거됨'} 보유` : `${e.name} (5 mlbg 분양 가능)`,
+        clickable: true,
+        image: img,
+        map,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => setSelectedEmart(e));
+      emartMarkersRef.current.push(marker);
+    }
+    return () => {
+      for (const m of emartMarkersRef.current) m.setMap(null);
+      emartMarkersRef.current = [];
+    };
+  }, [emartList, mapReady]);
+
+  // 이마트 점거 액션
+  async function occupyEmart(emart: EmartItem) {
+    if (emart.occupier_id) { alert(`이미 ${emart.occupier_name ?? '다른 사람'} 님이 보유 중`); return; }
+    if (!confirm(`${emart.name}\n5 mlbg 로 분양받습니다. (1인 1점포 — 다른 이마트 보유 시 거절됨)`)) return;
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('occupy_emart', { p_emart_id: emart.id });
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '분양 실패'); return; }
+    alert(`${emart.name} 분양 완료. 5 mlbg 차감됨.`);
+    setSelectedEmart(null);
+    await refetchEmart();
+    router.refresh();
+  }
 
   // 2) 마커 갱신 — pins 변경 시 기존 제거 후 재생성. 지도 view는 그대로.
   // 1만개 마커 생성을 setTimeout 으로 청크 분할 → 메인 스레드 차단 최소화.
@@ -1484,6 +1613,52 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       </div>
 
       {selected && <AptDiscussionPanel apt={selected} onClose={() => setSelected(null)} />}
+
+      {selectedEmart && (
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/50" onClick={() => setSelectedEmart(null)}>
+          <div className="w-[360px] bg-white border-2 border-[#F5C518] shadow-[0_8px_40px_rgba(0,0,0,0.25)] p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/pins/emart.svg" alt="" className="w-10 h-10" />
+              <div className="flex-1 min-w-0">
+                <div className="text-[16px] font-bold text-navy truncate">{selectedEmart.name}</div>
+                {selectedEmart.address && <div className="text-[11px] text-muted truncate">{selectedEmart.address}</div>}
+              </div>
+            </div>
+            <div className="border-t border-border pt-3 mb-4">
+              {selectedEmart.occupier_id ? (
+                <div className="text-[13px] text-text">
+                  <span className="text-muted">보유자: </span>
+                  <b className="text-navy">{selectedEmart.occupier_name ?? '익명'}</b> 님
+                </div>
+              ) : (
+                <div className="text-[13px] text-text">
+                  <span className="text-muted">분양가: </span>
+                  <b className="text-cyan tabular-nums">5 mlbg</b>
+                  <div className="text-[11px] text-muted mt-1">1인 1점포 — 다른 이마트 보유 중이면 거절됨</div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedEmart(null)}
+                className="flex-1 bg-white border border-border text-text px-4 py-2 text-[13px] font-bold tracking-wide hover:border-navy hover:text-navy cursor-pointer"
+              >
+                닫기
+              </button>
+              {!selectedEmart.occupier_id && (
+                <button
+                  type="button"
+                  onClick={() => occupyEmart(selectedEmart)}
+                  className="flex-1 bg-[#F5C518] text-navy border-none px-4 py-2 text-[13px] font-black tracking-wide hover:bg-[#e8b815] cursor-pointer"
+                >
+                  분양받기 (5 mlbg)
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
