@@ -1659,11 +1659,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             <span>{feedRelTime(f.created_at)} 전</span>
                             {typeof f.earned_mlbg === 'number' && (
                               f.earned_mlbg > 0 ? (
-                                <span className="text-cyan font-bold tabular-nums" title="이 글·댓글을 작성하여 획득한 mlbg">
+                                <span className="text-cyan font-bold tabular-nums" title="적립 기준&#10;· 커뮤·핫딜 글: +2&#10;· 단지 토론 글: 1줄(20자+) 0 / 2~4줄 +2 / 5~9줄 +3 / 10줄+ +5&#10;· 모든 댓글: +1">
                                   +{f.earned_mlbg}
                                 </span>
                               ) : (
-                                <span className="text-muted tabular-nums" title="단지 토론 1줄(20자 미만) 글은 미지급">+0</span>
+                                <span className="text-muted tabular-nums" title="단지 토론 적립 기준 (20자=1줄 환산)&#10;· 1줄(20자+): 0 (미지급)&#10;· 2~4줄(40자+): +2&#10;· 5~9줄(100자+): +3&#10;· 10줄+(200자+): +5&#10;· 댓글: +1">+0</span>
                               )
                             )}
                           </div>
