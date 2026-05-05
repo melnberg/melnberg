@@ -7,7 +7,7 @@ import { createPublicClient } from '@/lib/supabase/public';
 const fetchFeed = unstable_cache(
   async (): Promise<FeedItem[]> => {
     const supabase = createPublicClient();
-    const [{ data: discs }, { data: cmts }] = await Promise.all([
+    const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }] = await Promise.all([
       supabase
         .from('apt_discussions')
         .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
@@ -20,11 +20,24 @@ const fetchFeed = unstable_cache(
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50),
+      supabase
+        .from('posts')
+        .select('id, author_id, title, content, created_at')
+        .eq('category', 'community')
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('comments')
+        .select('id, post_id, author_id, content, created_at, post:posts!post_id(title, category)')
+        .order('created_at', { ascending: false })
+        .limit(50),
     ]);
 
     const allAuthorIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).author_id as string)),
       ...((cmts ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
+      ...((posts ?? []).map((p) => (p as Record<string, unknown>).author_id as string)),
+      ...((postComments ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null };
@@ -49,6 +62,7 @@ const fetchFeed = unstable_cache(
         kind: 'discussion',
         id: row.id as number,
         apt_master_id: row.apt_master_id as number,
+        post_id: null,
         title: row.title as string,
         content: row.content as string | null,
         created_at: row.created_at as string,
@@ -72,6 +86,7 @@ const fetchFeed = unstable_cache(
         kind: 'comment',
         id: row.id as number,
         apt_master_id: (disc?.apt_master_id ?? 0) as number,
+        post_id: null,
         title: disc?.title ?? '(삭제된 글)',
         content: row.content as string | null,
         created_at: row.created_at as string,
@@ -86,12 +101,56 @@ const fetchFeed = unstable_cache(
       };
     });
 
-    return [...discussionItems, ...commentItems]
+    const postItems: FeedItem[] = (posts ?? []).map((r) => {
+      const row = r as Record<string, unknown>;
+      const prof = profileMap.get(row.author_id as string);
+      return {
+        kind: 'post',
+        id: row.id as number,
+        apt_master_id: 0,
+        post_id: row.id as number,
+        title: row.title as string,
+        content: row.content as string | null,
+        created_at: row.created_at as string,
+        apt_nm: null, dong: null, lat: null, lng: null,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+      };
+    });
+
+    const postCommentItems: FeedItem[] = (postComments ?? [])
+      .filter((r) => {
+        const post = (r as Record<string, unknown>).post as { category?: string | null } | null;
+        return post?.category === 'community';
+      })
+      .map((r) => {
+        const row = r as Record<string, unknown>;
+        const post = row.post as { title: string | null; category: string | null } | null;
+        const prof = profileMap.get(row.author_id as string);
+        return {
+          kind: 'post_comment' as const,
+          id: row.id as number,
+          apt_master_id: 0,
+          post_id: row.post_id as number,
+          title: post?.title ?? '(삭제된 글)',
+          content: row.content as string | null,
+          created_at: row.created_at as string,
+          apt_nm: null, dong: null, lat: null, lng: null,
+          author_name: prof?.display_name ?? null,
+          author_link: prof?.link_url ?? null,
+          author_is_paid: isActivePaid(prof),
+          author_is_solo: !!prof?.is_solo,
+        };
+      });
+
+    return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 50);
   },
   ['home-feed'],
-  { revalidate: 30, tags: ['apt-discussions', 'apt-discussion-comments', 'profiles'] },
+  { revalidate: 30, tags: ['apt-discussions', 'apt-discussion-comments', 'posts', 'comments', 'profiles'] },
 );
 
 export default async function HomePage() {

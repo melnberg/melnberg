@@ -49,11 +49,12 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment';
   id: number;
-  apt_master_id: number;
-  title: string;          // discussion: 글 제목 / comment: 부모 글 제목
-  content: string | null; // discussion: 본문 / comment: 댓글 내용
+  apt_master_id: number;     // post/post_comment 일 땐 0
+  post_id: number | null;    // post: 자기 id / post_comment: 부모 post id / 그 외 null
+  title: string;             // discussion: 글 제목 / comment: 부모 글 제목 / post: 글 제목 / post_comment: 부모 글 제목
+  content: string | null;
   created_at: string;
   apt_nm: string | null;
   dong: string | null;
@@ -329,6 +330,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
   function jumpToFeedItem(item: FeedItem) {
+    // 커뮤니티 글/댓글 → /community/{post_id} 로 이동
+    if ((item.kind === 'post' || item.kind === 'post_comment') && item.post_id) {
+      router.push(`/community/${item.post_id}`);
+      return;
+    }
+    // 아파트 토론/댓글 → 지도 + 단지 패널
     if (item.lat == null || item.lng == null) return;
     const inst = mapInstRef.current;
     if (inst) {
@@ -821,7 +828,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                 {feed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
                   const fullContent = (f.content ?? '').trim();
-                  const isComment = f.kind === 'comment';
+                  const isComment = f.kind === 'comment' || f.kind === 'post_comment';
+                  const isCommunity = f.kind === 'post' || f.kind === 'post_comment';
+                  const headLabel = isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
                       <div className="px-3 py-2.5 bg-white hover:bg-[#fafbfc]">
@@ -831,7 +840,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             onClick={() => jumpToFeedItem(f)}
                             className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1"
                           >
-                            {f.apt_nm ?? '(단지 정보 없음)'}
+                            {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
                             <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo }} />
