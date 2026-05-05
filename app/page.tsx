@@ -3,6 +3,10 @@ import Layout from '@/components/Layout';
 import AptMap, { type FeedItem } from '@/components/AptMap';
 import { createPublicClient } from '@/lib/supabase/public';
 
+// 정적 캐시 방지 — 피드는 매 요청마다 unstable_cache (30s) 거쳐 신선한 데이터 반환
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // 피드 — 30초 캐싱. 글(apt_discussions) + 댓글(apt_discussion_comments) 합쳐 시간순.
 const fetchFeed = unstable_cache(
   async (): Promise<FeedItem[]> => {
@@ -277,8 +281,9 @@ const fetchFeed = unstable_cache(
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 50);
   },
-  ['home-feed'],
-  { revalidate: 30, tags: ['apt-discussions', 'apt-discussion-comments', 'posts', 'comments', 'profiles'] },
+  // v2: 빈/stale 응답이 캐시에 박혀있을 가능성 → 키 bump 으로 즉시 fresh fetch
+  ['home-feed-v2'],
+  { revalidate: 30, tags: ['apt-discussions', 'apt-discussion-comments', 'posts', 'comments', 'profiles', 'home-feed'] },
 );
 
 export default async function HomePage() {
