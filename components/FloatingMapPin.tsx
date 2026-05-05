@@ -20,9 +20,10 @@ export default function FloatingMapPin() {
       className="fixed bottom-5 right-5 z-50 w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center no-underline"
     >
       {isMap ? (
-        // 집(홈=피드) 아이콘
+        // 집(홈=피드) 아이콘 — 외곽 + 문 모두 stroke 로 그림
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" />
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       ) : (
         // 지도핀

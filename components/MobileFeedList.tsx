@@ -175,7 +175,7 @@ export default function MobileFeedList({ items }: Props) {
           const cnt = counts[itemKey] ?? f.comment_count ?? 0;
           const isExpanded = expandedKey === itemKey;
           return (
-            <li key={itemKey} className={`border-b border-[#f0f0f0] ${isAuctionLive ? 'bg-[#fef2f2] border-l-4 border-l-[#dc2626]' : isLastClicked ? 'bg-[#eef4fb]' : ''}`}>
+            <li key={itemKey} className={`border-b border-border ${isAuctionLive ? 'bg-[#fef2f2] border-l-4 border-l-[#dc2626]' : isLastClicked ? 'bg-[#eef4fb]' : ''}`}>
               <div className="flex items-stretch">
                 <Wrapper {...wrapperProps} onClick={onItemClick} className="flex-1 min-w-0 px-4 py-3 no-underline active:bg-[#f5f7fa]">
                   {/* 헤더 — 헤드라벨 + 작성자 */}
