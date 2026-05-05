@@ -79,8 +79,7 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
     if (!row?.out_success) { alert(row?.out_message ?? '분양 실패'); return; }
     alert(`${emart.name} 분양 완료. 5 mlbg 차감.`);
     notifyTelegram('emart_occupy', emart.id);
-    onChanged();
-    onClose();
+    onChanged();   // 패널 즉시 사장 정보로 갱신
     router.refresh();
   }
 

@@ -152,7 +152,8 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
     if (!row?.out_success) { alert(row?.out_message ?? '매수 실패'); return; }
     alert(`매수 완료: ${row.out_price.toLocaleString()} mlbg`);
     notifyTelegram('factory_occupy', factory.id);
-    onChanged(); onClose(); router.refresh();
+    onChanged();
+    router.refresh();
   }
 
   async function postComment() {

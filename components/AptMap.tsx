@@ -371,7 +371,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       const r = await fetch('/api/factory-list', { cache: 'no-store' });
       if (!r.ok) return;
       const j = await r.json();
-      setFactoryList((j.items ?? []) as FactoryItem[]);
+      const items = (j.items ?? []) as FactoryItem[];
+      setFactoryList(items);
+      // 현재 열려있는 패널의 데이터도 같이 갱신 — 점거/매도 직후 stale 표시 방지
+      setSelectedFactory((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
     } catch { /* silent */ }
   }
   useEffect(() => { refetchFactory(); }, []);
@@ -415,7 +418,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       const r = await fetch('/api/emart-list', { cache: 'no-store' });
       if (!r.ok) return;
       const j = await r.json();
-      setEmartList((j.items ?? []) as EmartItem[]);
+      const items = (j.items ?? []) as EmartItem[];
+      setEmartList(items);
+      setSelectedEmart((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
     } catch { /* silent */ }
   }
 
