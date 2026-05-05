@@ -82,7 +82,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setList([...list, data as unknown as CommunityComment]);
     setContent('');
     const insertedId = (data as { id: number }).id;
-    void awardMlbg(commentAwardKind, insertedId, content.trim());
+    await awardMlbg(commentAwardKind, insertedId, content.trim());
     notifyTelegram(commentAwardKind, insertedId);
     router.refresh();
   }
@@ -101,7 +101,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setList([...list, data as unknown as CommunityComment]);
     setReplyingTo(null);
     const insertedId = (data as { id: number }).id;
-    void awardMlbg(commentAwardKind, insertedId, replyContent.trim());
+    await awardMlbg(commentAwardKind, insertedId, replyContent.trim());
     notifyTelegram(commentAwardKind, insertedId);
     router.refresh();
   }
