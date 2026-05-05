@@ -26,17 +26,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const supabase = await createClient();
   const { data } = await supabase
     .from('apt_discussions')
-    .select('title, content, apt_master(apt_nm)')
+    .select('title, content')
     .eq('id', Number(id))
     .maybeSingle();
   if (!data) return {};
-  const am = (Array.isArray((data as Record<string, unknown>).apt_master)
-    ? ((data as Record<string, unknown>).apt_master as Array<{ apt_nm?: string }>)[0]
-    : ((data as Record<string, unknown>).apt_master as { apt_nm?: string } | null));
-  const apt_nm = am?.apt_nm ?? '';
   const title = (data as { title?: string }).title ?? '단지 토론';
   return {
-    title: `${apt_nm ? `${apt_nm} — ` : ''}${title} — 멜른버그`,
+    title: `${title} — 멜른버그`,
     description: ((data as { content?: string }).content ?? '').slice(0, 140),
   };
 }
@@ -48,33 +44,44 @@ export default async function AptDiscussionDetailPage({ params }: { params: Prom
 
   const supabase = await createClient();
 
+  // 임베드 없이 단순 select — 임베드 실패 시 통째로 null 되는 것 방지
   const [{ data: post }, { data: { user } }] = await Promise.all([
     supabase
       .from('apt_discussions')
-      .select(`
-        id, apt_master_id, author_id, title, content, created_at, updated_at, deleted_at,
-        apt_master(apt_nm, dong, lat, lng),
-        author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)
-      `)
+      .select('id, apt_master_id, author_id, title, content, created_at, updated_at, deleted_at')
       .eq('id', numId)
       .maybeSingle(),
     supabase.auth.getUser(),
   ]);
   if (!post) notFound();
 
-  const am = Array.isArray((post as Record<string, unknown>).apt_master)
-    ? ((post as Record<string, unknown>).apt_master as Array<{ apt_nm?: string; dong?: string }>)[0]
-    : ((post as Record<string, unknown>).apt_master as { apt_nm?: string; dong?: string } | null);
-  const author = Array.isArray((post as Record<string, unknown>).author)
-    ? ((post as Record<string, unknown>).author as Array<Record<string, unknown>>)[0]
-    : ((post as Record<string, unknown>).author as Record<string, unknown> | null);
+  const aptMasterIdRaw = (post as { apt_master_id: number }).apt_master_id;
+  const authorIdRaw = (post as { author_id: string }).author_id;
+  const [{ data: am }, { data: author }] = await Promise.all([
+    supabase.from('apt_master').select('apt_nm, dong, lat, lng').eq('id', aptMasterIdRaw).maybeSingle(),
+    supabase.from('profiles').select('display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').eq('id', authorIdRaw).maybeSingle(),
+  ]);
 
-  const { data: comments } = await supabase
+  // 댓글도 임베드 없이 단순 fetch + 작성자 별도 조회
+  const { data: rawComments } = await supabase
     .from('apt_discussion_comments')
-    .select('id, discussion_id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
+    .select('id, discussion_id, author_id, content, created_at')
     .eq('discussion_id', numId)
     .is('deleted_at', null)
     .order('created_at', { ascending: true });
+  const commentList = (rawComments ?? []) as Array<{ id: number; discussion_id: number; author_id: string; content: string; created_at: string }>;
+  const authorIds = Array.from(new Set(commentList.map((c) => c.author_id)));
+  let profMap = new Map<string, Record<string, unknown>>();
+  if (authorIds.length > 0) {
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
+      .in('id', authorIds);
+    for (const p of (profs ?? []) as Array<{ id: string }>) {
+      profMap.set(p.id, p as unknown as Record<string, unknown>);
+    }
+  }
+  const comments = commentList.map((c) => ({ ...c, author: profMap.get(c.author_id) ?? null }));
 
   // 적립 매핑 — 본글 + 댓글
   const commentIds = (comments ?? []).map((c) => (c as { id: number }).id);
