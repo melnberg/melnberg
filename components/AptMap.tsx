@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AptDiscussionPanel from './AptDiscussionPanel';
+import EmartPanel from './EmartPanel';
 import Countdown from './Countdown';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
@@ -1653,89 +1654,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
       {selected && <AptDiscussionPanel apt={selected} onClose={() => setSelected(null)} />}
 
-      {selectedEmart && (() => {
-        const isMine = !!selectedEmart.occupier_id && selectedEmart.occupier_id === emartCurrentUid;
-        const lastClaimMs = selectedEmart.last_claimed_at
-          ? new Date(selectedEmart.last_claimed_at).getTime()
-          : (selectedEmart.occupied_at ? new Date(selectedEmart.occupied_at).getTime() : null);
-        const daysOwed = lastClaimMs ? Math.floor((Date.now() - lastClaimMs) / 86400000) : 0;
-        return (
-          <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/50" onClick={() => setSelectedEmart(null)}>
-            <div className="w-[400px] bg-white border-2 border-[#F5C518] shadow-[0_8px_40px_rgba(0,0,0,0.25)]" onClick={(e) => e.stopPropagation()}>
-              {/* 헤더 */}
-              <div className="bg-[#F5C518] px-5 py-4 flex items-center gap-3">
-                <img src="/pins/emart.svg" alt="" className="w-10 h-14" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-[#92400e] mb-0.5">EMART · 이마트 분양</div>
-                  <div className="text-[16px] font-bold text-navy truncate">{selectedEmart.name}</div>
-                  {selectedEmart.address && <div className="text-[11px] text-navy/70 truncate">{selectedEmart.address}</div>}
-                </div>
-                <button type="button" onClick={() => setSelectedEmart(null)} className="text-navy/70 hover:text-navy text-[18px] leading-none px-1 cursor-pointer bg-transparent border-none">✕</button>
-              </div>
-
-              {/* 본문 */}
-              <div className="px-5 py-4">
-                {/* 분양가 카드 */}
-                <div className="border border-border bg-bg/40 px-4 py-3 mb-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[11px] tracking-widest uppercase text-muted">분양가</span>
-                    <span className="text-[24px] font-black tabular-nums text-navy">5 <span className="text-[12px] text-muted ml-0.5">mlbg</span></span>
-                  </div>
-                </div>
-
-                {/* 수익 안내 */}
-                <div className="border-l-4 border-cyan bg-cyan/5 px-4 py-3 mb-3">
-                  <div className="text-[12px] font-bold text-navy mb-1">💰 보유 시 매일 1 mlbg 자동 수익</div>
-                  <div className="text-[11px] text-muted leading-relaxed">
-                    24시간마다 청구 가능 · <b className="text-navy">5일이면 분양가 회수</b> · 이후엔 순수 수익
-                  </div>
-                </div>
-
-                {/* 보유자/내 소유 */}
-                {selectedEmart.occupier_id ? (
-                  <div className="border border-border px-4 py-3 mb-3">
-                    <div className="text-[11px] tracking-widest uppercase text-muted mb-1">현 보유자</div>
-                    <div className="text-[14px] font-bold text-navy">{selectedEmart.occupier_name ?? '익명'} 님</div>
-                    {isMine && (
-                      <div className="text-[11px] text-muted mt-1">
-                        쌓인 수익: <b className="text-cyan tabular-nums">{daysOwed} mlbg</b> ({daysOwed}일 분)
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-muted px-1 mb-3">
-                    1인 1점포 제한 — 이미 다른 이마트 보유 시 분양 거절됨
-                  </div>
-                )}
-
-                {/* 액션 */}
-                <div className="flex gap-2">
-                  {isMine ? (
-                    <button
-                      type="button"
-                      onClick={claimEmartIncome}
-                      disabled={daysOwed < 1}
-                      className="flex-1 bg-cyan text-navy border-none px-4 py-2.5 text-[13px] font-black tracking-wide hover:bg-cyan/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {daysOwed >= 1 ? `수익 청구 (${daysOwed} mlbg)` : '아직 24시간 안 지남'}
-                    </button>
-                  ) : !selectedEmart.occupier_id ? (
-                    <button
-                      type="button"
-                      onClick={() => occupyEmart(selectedEmart)}
-                      className="flex-1 bg-[#F5C518] text-navy border-none px-4 py-2.5 text-[13px] font-black tracking-wide hover:bg-[#e8b815] cursor-pointer"
-                    >
-                      분양받기 (5 mlbg)
-                    </button>
-                  ) : (
-                    <div className="flex-1 text-center text-[12px] text-muted py-2.5">분양 마감</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {selectedEmart && <EmartPanel emart={selectedEmart} onClose={() => setSelectedEmart(null)} onChanged={refetchEmart} />}
     </div>
   );
 }
