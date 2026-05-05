@@ -24,7 +24,9 @@ export default function RewardTooltip({ earned }: Props) {
         +{earned} mlbg
       </span>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-[260px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
+        <div className="absolute left-0 top-full pt-1 z-50 w-[260px] text-[11px] leading-relaxed">
+          {/* 갭 브릿지 — pt-1 로 마우스 이동 시 mouseleave 안 터지게 */}
+          <div className="bg-navy text-white shadow-xl">
           <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">
             보상 지급 기준
           </div>
@@ -62,6 +64,7 @@ export default function RewardTooltip({ earned }: Props) {
           </ul>
           <div className="px-4 py-2.5 border-t border-white/15 text-[10px] text-white/70 leading-snug">
             작성 시 작성자에게 자동 적립됩니다.
+          </div>
           </div>
         </div>
       )}
