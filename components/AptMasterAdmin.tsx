@@ -26,7 +26,7 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
   const [rows, setRows] = useState<Apt[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
-  const [edits, setEdits] = useState<Map<number, { apt_nm?: string; household_count?: number | null }>>(new Map());
+  const [edits, setEdits] = useState<Map<number, { apt_nm?: string; household_count?: number | null; building_count?: number | null; kapt_build_year?: number | null }>>(new Map());
 
   async function load() {
     setLoading(true);
@@ -52,7 +52,7 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, search, page]);
 
-  function setEdit(id: number, field: 'apt_nm' | 'household_count', value: string) {
+  function setEdit(id: number, field: 'apt_nm' | 'household_count' | 'building_count' | 'kapt_build_year', value: string) {
     setEdits((prev) => {
       const m = new Map(prev);
       const cur = m.get(id) ?? {};
@@ -60,7 +60,8 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
         m.set(id, { ...cur, apt_nm: value });
       } else {
         const n = value.trim() === '' ? null : Number(value);
-        m.set(id, { ...cur, household_count: Number.isFinite(n as number) ? n : null });
+        const v = Number.isFinite(n as number) ? n : null;
+        m.set(id, { ...cur, [field]: v });
       }
       return m;
     });
@@ -73,6 +74,8 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
     const update: Record<string, unknown> = {};
     if (e.apt_nm !== undefined) update.apt_nm = e.apt_nm.trim();
     if (e.household_count !== undefined) update.household_count = e.household_count;
+    if (e.building_count !== undefined) update.building_count = e.building_count;
+    if (e.kapt_build_year !== undefined) update.kapt_build_year = e.kapt_build_year;
     const { error } = await supabase.from('apt_master').update(update).eq('id', id);
     setSavingId(null);
     if (error) { alert(error.message); return; }
@@ -122,10 +125,10 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
         </form>
       </div>
 
-      {/* 헤더 */}
-      <div className="grid grid-cols-[60px_1fr_120px_1fr_100px_70px_80px_70px] gap-3 px-3 py-2 text-[11px] font-bold text-navy bg-navy-soft border-b border-navy">
+      {/* 헤더 — 단지명·세대수·동수·준공년도 모두 편집 가능 */}
+      <div className="grid grid-cols-[60px_1fr_120px_1fr_100px_80px_90px_70px] gap-3 px-3 py-2 text-[11px] font-bold text-navy bg-navy-soft border-b border-navy">
         <div>ID</div>
-        <div>단지명 (편집 가능)</div>
+        <div>단지명</div>
         <div>동</div>
         <div className="truncate">주소 / Kakao 이름</div>
         <div className="text-center">세대수</div>
@@ -142,8 +145,10 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
         const isDirty = !!edit;
         const aptNmVal = edit?.apt_nm ?? r.apt_nm;
         const hhVal = edit?.household_count !== undefined ? (edit.household_count ?? '') : (r.household_count ?? '');
+        const bcVal = edit?.building_count !== undefined ? (edit.building_count ?? '') : (r.building_count ?? '');
+        const yrVal = edit?.kapt_build_year !== undefined ? (edit.kapt_build_year ?? '') : (r.kapt_build_year ?? '');
         return (
-          <div key={r.id} className={`grid grid-cols-[60px_1fr_120px_1fr_100px_70px_80px_70px] gap-3 px-3 py-2 items-center text-[12px] border-b border-[#f0f0f0] ${isDirty ? 'bg-amber-50' : 'bg-white'}`}>
+          <div key={r.id} className={`grid grid-cols-[60px_1fr_120px_1fr_100px_80px_90px_70px] gap-3 px-3 py-2 items-center text-[12px] border-b border-[#f0f0f0] ${isDirty ? 'bg-amber-50' : 'bg-white'}`}>
             <div className="text-muted tabular-nums">{r.id}</div>
             <div>
               <input
@@ -169,8 +174,24 @@ export default function AptMasterAdmin({ nullCount, tinyCount }: { nullCount: nu
                 className="w-full border border-border px-2 py-1 text-[12px] text-right tabular-nums focus:outline-none focus:border-navy bg-white"
               />
             </div>
-            <div className="text-center text-muted tabular-nums">{r.building_count ?? '—'}</div>
-            <div className="text-center text-muted tabular-nums">{r.kapt_build_year ?? '—'}</div>
+            <div>
+              <input
+                type="number"
+                value={bcVal}
+                onChange={(e) => setEdit(r.id, 'building_count', e.target.value)}
+                placeholder="—"
+                className="w-full border border-border px-2 py-1 text-[12px] text-right tabular-nums focus:outline-none focus:border-navy bg-white"
+              />
+            </div>
+            <div>
+              <input
+                type="number"
+                value={yrVal}
+                onChange={(e) => setEdit(r.id, 'kapt_build_year', e.target.value)}
+                placeholder="—"
+                className="w-full border border-border px-2 py-1 text-[12px] text-right tabular-nums focus:outline-none focus:border-navy bg-white"
+              />
+            </div>
             <div className="text-center">
               <button
                 type="button"
