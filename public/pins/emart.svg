@@ -1,10 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#F5C518"/>
-  <path d="M0 0 L64 0 L64 18 L40 14 L18 16 L0 14 Z" fill="#A05A2C"/>
-  <circle cx="22" cy="10" r="6" fill="#39A95E"/>
-  <circle cx="34" cy="8" r="7" fill="#F39B36"/>
-  <circle cx="46" cy="11" r="6" fill="#D6342B"/>
-  <rect x="8" y="2" width="10" height="14" rx="2" fill="#F8F2E1"/>
-  <rect x="9.5" y="0" width="7" height="3" rx="1" fill="#1F4E9C"/>
-  <text x="32" y="48" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="900" fill="white" text-anchor="middle" font-style="italic">e</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+  <defs>
+    <radialGradient id="emartGloss" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/>
+  <path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#F5C518" stroke="#1a1d22" stroke-width="2"/>
+  <path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#emartGloss)" stroke="none"/>
+  <text x="16" y="24" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" font-style="italic" fill="white" text-anchor="middle">e</text>
 </svg>

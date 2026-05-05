@@ -998,11 +998,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     emartMarkersRef.current = [];
 
     if (emartList.length === 0) return;
-    const SIZE = 36;
+    // 물방울 모양 (32x45) — bottom 정점에 anchor
+    const PIN_W = 32, PIN_H = 45;
     const img = new window.kakao.maps.MarkerImage(
       '/pins/emart.svg',
-      new window.kakao.maps.Size(SIZE, SIZE),
-      { offset: new window.kakao.maps.Point(SIZE / 2, SIZE / 2) },
+      new window.kakao.maps.Size(PIN_W, PIN_H),
+      { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
     );
     for (const e of emartList) {
       const pos = new window.kakao.maps.LatLng(e.lat, e.lng);
