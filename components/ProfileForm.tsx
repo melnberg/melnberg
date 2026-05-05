@@ -10,9 +10,10 @@ type Props = {
     naver_id: string | null;
     link_url: string | null;
     is_solo: boolean;
+    bio: string;
   };
   email: string;
-  isPaid: boolean; // 조합원만 is_solo 토글 노출
+  isPaid: boolean;
 };
 
 function normalizeUrl(input: string): string | null {
@@ -42,6 +43,7 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
   const [naverId, setNaverId] = useState(initial.naver_id ?? '');
   const [linkUrl, setLinkUrl] = useState(initial.link_url ?? '');
   const [isSolo, setIsSolo] = useState(initial.is_solo);
+  const [bio, setBio] = useState(initial.bio);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
 
@@ -49,7 +51,8 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     name.trim() !== initial.display_name ||
     (naverId.trim() || null) !== (initial.naver_id?.trim() || null) ||
     (linkUrl.trim() || null) !== (initial.link_url?.trim() || null) ||
-    isSolo !== initial.is_solo;
+    isSolo !== initial.is_solo ||
+    bio.trim() !== initial.bio.trim();
 
   async function handleSave() {
     if (saving || !dirty) return;
@@ -91,6 +94,7 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     if ((naverClean || null) !== (initial.naver_id || null)) updates.naver_id = naverClean || null;
     if (linkClean !== (initial.link_url || null)) updates.link_url = linkClean;
     if (isSolo !== initial.is_solo) updates.is_solo = isSolo;
+    if (bio.trim() !== initial.bio.trim()) updates.bio = bio.trim() || null;
 
     const errors: Array<{ message: string } | null> = [];
     if (Object.keys(updates).length > 0) {
@@ -183,6 +187,20 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
         <Row label="이메일">
           <span className="text-[14px] text-text">{email}</span>
         </Row>
+        <div className="flex flex-col px-5 py-4 gap-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[12px] font-bold tracking-widest uppercase text-muted">자기소개</span>
+            <span className="text-[10px] text-muted">{bio.length}/500</span>
+          </div>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={500}
+            rows={4}
+            placeholder="다른 회원이 닉네임을 통해 들어왔을 때 보여줄 자기소개. 비워두면 표시 안 됨."
+            className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none w-full resize-y leading-relaxed"
+          />
+        </div>
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">

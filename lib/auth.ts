@@ -16,6 +16,7 @@ export type FullProfile = ProfileWithTier & {
   link_url: string | null;
   phone: string | null;
   is_solo: boolean | null;
+  bio: string | null;
 };
 
 export const getCurrentProfile = cache(async (): Promise<FullProfile | null> => {
@@ -34,10 +35,10 @@ export const getCurrentProfile = cache(async (): Promise<FullProfile | null> => 
   // 확장 컬럼 — best-effort. 일부 마이그레이션 미적용이어도 is_admin/tier 는 살림.
   const { data: ext } = await supabase
     .from('profiles')
-    .select('naver_id, link_url, phone, is_solo')
+    .select('naver_id, link_url, phone, is_solo, bio')
     .eq('id', user.id)
     .maybeSingle();
-  const e = (ext ?? {}) as { naver_id?: string | null; link_url?: string | null; phone?: string | null; is_solo?: boolean | null };
+  const e = (ext ?? {}) as { naver_id?: string | null; link_url?: string | null; phone?: string | null; is_solo?: boolean | null; bio?: string | null };
 
   return {
     ...(base as unknown as ProfileWithTier),
@@ -45,6 +46,7 @@ export const getCurrentProfile = cache(async (): Promise<FullProfile | null> => 
     link_url: e.link_url ?? null,
     phone: e.phone ?? null,
     is_solo: e.is_solo ?? false,
+    bio: e.bio ?? null,
   };
 });
 

@@ -9,6 +9,7 @@ export type NicknameInfo = {
   link?: string | null;
   isPaid?: boolean;
   isSolo?: boolean;
+  userId?: string | null;
 };
 
 const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px ml-1 align-middle';
@@ -72,8 +73,19 @@ export default function Nickname({
   const isPaid = !!info?.isPaid;
   const isSolo = !!info?.isSolo;
   const hasLink = !!info?.link;
+  const userId = info?.userId ?? null;
 
-  if (!isPaid) return <span className={className}>{name}</span>;
+  if (!isPaid) {
+    // 무료회원도 userId 있으면 닉네임 자체에 프로필 링크
+    if (userId) {
+      return (
+        <Link href={`/u/${userId}`} onClick={(e) => e.stopPropagation()} className={`hover:underline no-underline ${className}`}>
+          {name}
+        </Link>
+      );
+    }
+    return <span className={className}>{name}</span>;
+  }
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';
   const soloColor = '#ec4899';
@@ -122,37 +134,52 @@ export default function Nickname({
     document.body,
   );
 
-  const inner = (
-    <>
-      <span>{name}</span>
-      <span className={BADGE_CLS}>조합원</span>
-      {dotEl}
-      {legendPopup}
-    </>
-  );
-
-  // 링크 있음 → 새 탭으로 직행
-  if (hasLink && info?.link) {
+  // 닉네임 자체 — 링크 있으면 SNS, 없으면 안내 팝업, 그리고 userId 만 있으면 프로필
+  const nameNode = (() => {
+    if (hasLink && info?.link) {
+      return (
+        <a
+          href={info.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="hover:underline cursor-pointer"
+        >
+          {name}
+        </a>
+      );
+    }
+    // 링크 없음 → 클릭 시 안내 팝업
     return (
-      <a
-        href={info.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className={`inline-flex items-center hover:underline cursor-pointer whitespace-nowrap ${className}`}
+      <button
+        ref={tipBtnRef}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (!tipOpen && tipBtnRef.current) setTipPos(rectToPos(tipBtnRef.current));
+          setTipOpen((v) => !v);
+        }}
+        className="hover:underline cursor-pointer bg-transparent border-none p-0 m-0"
+        style={{ font: 'inherit', color: 'inherit' }}
       >
-        {inner}
-      </a>
+        {name}
+      </button>
     );
-  }
+  })();
 
-  // 링크 없음 → 클릭 시 안내 팝업 + 마이페이지 유도
-  function toggleTip(e: React.MouseEvent) {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!tipOpen && tipBtnRef.current) setTipPos(rectToPos(tipBtnRef.current));
-    setTipOpen((v) => !v);
-  }
+  // 조합원 배지 — userId 있으면 프로필 페이지로, 없으면 그냥 표시
+  const badgeNode = userId ? (
+    <Link
+      href={`/u/${userId}`}
+      onClick={(e) => e.stopPropagation()}
+      className={`${BADGE_CLS} no-underline hover:bg-cyan/80 cursor-pointer`}
+    >
+      조합원
+    </Link>
+  ) : (
+    <span className={BADGE_CLS}>조합원</span>
+  );
 
   const tipPopup = mounted && tipOpen && tipPos && createPortal(
     <div
@@ -175,17 +202,12 @@ export default function Nickname({
   );
 
   return (
-    <>
-      <button
-        ref={tipBtnRef}
-        type="button"
-        onClick={toggleTip}
-        className={`inline-flex items-center hover:underline cursor-pointer bg-transparent border-none p-0 m-0 whitespace-nowrap ${className}`}
-        style={{ font: 'inherit', color: 'inherit' }}
-      >
-        {inner}
-      </button>
+    <span className={`inline-flex items-center whitespace-nowrap ${className}`}>
+      {nameNode}
+      {badgeNode}
+      {dotEl}
+      {legendPopup}
       {tipPopup}
-    </>
+    </span>
   );
 }

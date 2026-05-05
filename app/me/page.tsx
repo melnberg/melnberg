@@ -89,6 +89,7 @@ export default async function MePage() {
               naver_id: profile?.naver_id ?? null,
               link_url: profile?.link_url ?? null,
               is_solo: !!profile?.is_solo,
+              bio: profile?.bio ?? '',
             }}
             email={user.email ?? '-'}
             isPaid={isActive}
