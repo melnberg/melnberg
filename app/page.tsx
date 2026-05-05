@@ -635,8 +635,20 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <div className={`flex-1 min-w-0 ${forceMap ? 'map-minimal' : 'hidden lg:flex lg:flex-col'}`}>
         <AptMap feed={feed} />
       </div>
-      {/* 모바일 forceMap 시 미니멀 모드 부수 효과 (외부 floating widgets 숨김 + relayout) */}
-      {forceMap && <MapMinimalEffects />}
+      {/* 모바일 forceMap 시 — 상단에 멜른버그 타이틀 띠 (탭하면 피드로) + 미니멀 모드 효과 */}
+      {forceMap && (
+        <>
+          <Link
+            href="/"
+            className="lg:hidden fixed top-0 left-0 right-0 z-30 h-[52px] bg-white/85 backdrop-blur-sm border-b border-border flex items-center justify-center gap-2 no-underline"
+            aria-label="피드로 돌아가기"
+          >
+            <img src="/logo.svg" alt="" className="w-7 h-7 flex-shrink-0" />
+            <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
+          </Link>
+          <MapMinimalEffects />
+        </>
+      )}
       {/* lg 미만 — forceMap 아닐 때 피드 풀스크린 */}
       {!forceMap && (
         <div className="lg:hidden flex-1 min-w-0">
