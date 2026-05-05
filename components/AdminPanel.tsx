@@ -525,10 +525,11 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                           <button
                             type="button"
                             onClick={() => clearLink(p)}
-                            className={`text-[10px] font-bold bg-transparent border-none p-0 flex-shrink-0 ${linkStatus.get(p.id) === 'dead' ? 'text-red-600 hover:text-red-800' : 'text-muted hover:text-red-600'}`}
+                            className="flex-shrink-0 w-5 h-5 flex items-center justify-center text-[12px] font-bold leading-none bg-red-50 text-red-600 border border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer rounded-sm transition-colors"
                             title="이 링크 강제 삭제 (link_url = null)"
+                            aria-label="링크 삭제"
                           >
-                            삭제
+                            ✕
                           </button>
                         </div>
                       ) : (
