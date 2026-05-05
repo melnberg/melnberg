@@ -137,6 +137,8 @@ export default async function MePage() {
                 글·댓글을 작성하면 <b className="text-navy">AI 가 정보가치를 판단</b>해 기준 mlbg 의 <b className="text-navy">0.1배 ~ 1.5배</b> 사이로 차등 지급함.
               </p>
               <ul className="space-y-0.5 text-text">
+                <li>· <b className="text-[#92400e]">핫딜 글 5 mlbg</b> 기준 → 실제 <span className="text-muted">0.5 ~ 7.5</span></li>
+                <li>· 핫딜 댓글 <b className="text-navy">1 mlbg</b> 기준 → 실제 <span className="text-muted">0.1 ~ 1.5</span></li>
                 <li>· 커뮤니티 글 <b className="text-navy">2 mlbg</b> 기준 → 실제 <span className="text-muted">0.2 ~ 3.0</span></li>
                 <li>· 커뮤니티 댓글 <b className="text-navy">0.3 mlbg</b> 기준 → 실제 <span className="text-muted">0.03 ~ 0.45</span></li>
                 <li>· 아파트글 <b className="text-navy">1 mlbg</b> 기준 → 실제 <span className="text-muted">0.1 ~ 1.5</span></li>
