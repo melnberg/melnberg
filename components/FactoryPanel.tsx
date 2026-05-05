@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { awardMlbg } from '@/lib/mlbg-award';
 
 export type FactoryItem = {
   id: number;
@@ -160,10 +161,11 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
     const txt = commentInput.trim();
     if (!txt || busy) return;
     setBusy(true);
-    const { error } = await supabase.from('factory_comments').insert({ factory_id: factory.id, author_id: currentUid, content: txt });
+    const { data: ins, error } = await supabase.from('factory_comments').insert({ factory_id: factory.id, author_id: currentUid, content: txt }).select('id').single();
     setBusy(false);
     if (error) { alert(error.message); return; }
     setCommentInput('');
+    if (ins?.id) await awardMlbg('factory_comment', ins.id, txt);
     const { data } = await supabase.rpc('list_factory_comments', { p_factory_id: factory.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
     setComments((data ?? []) as FactoryComment[]);
   }

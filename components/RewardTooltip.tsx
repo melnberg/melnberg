@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 // +N mlbg 뱃지 + hover 시 보상 지급 기준 박스 표시 (portal — overflow:hidden 컨테이너 무시)
 type Props = {
   earned: number;
-  kind?: 'apt_post' | 'apt_comment' | 'community_post' | 'hotdeal_post' | 'community_comment' | 'hotdeal_comment';
+  kind?: 'apt_post' | 'apt_comment' | 'community_post' | 'hotdeal_post' | 'community_comment' | 'hotdeal_comment' | 'factory_comment' | 'emart_comment';
 };
 
 type Pos = { top: number; left: number };

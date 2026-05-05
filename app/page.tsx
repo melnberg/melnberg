@@ -191,6 +191,8 @@ async function fetchFeed(): Promise<FeedItem[]> {
       ...((cmts ?? []).map((c) => (c as Record<string, unknown>).id as number)),
       ...((posts ?? []).map((p) => (p as Record<string, unknown>).id as number)),
       ...((postComments ?? []).map((c) => (c as Record<string, unknown>).id as number)),
+      ...emartCommRows.map((c) => c.id),
+      ...factoryCommRows.map((c) => c.id),
     ]));
     const awardMap = new Map<string, number>();
     if (awardRefIds.length > 0) {
@@ -542,6 +544,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
           author_is_solo: !!prof?.is_solo,
           author_avatar_url: prof?.avatar_url ?? null,
           author_apt_count: prof?.apt_count ?? null,
+          earned_mlbg: earnedFor('emart_comment', c.id),
         } as FeedItem;
       }),
       ...factoryCommRows.map((c) => {
@@ -567,6 +570,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
           author_is_solo: !!prof?.is_solo,
           author_avatar_url: prof?.avatar_url ?? null,
           author_apt_count: prof?.apt_count ?? null,
+          earned_mlbg: earnedFor('factory_comment', c.id),
         } as FeedItem;
       }),
     ];

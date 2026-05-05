@@ -1659,7 +1659,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
                             <span>{feedRelTime(f.created_at)} 전</span>
                             {typeof f.earned_mlbg === 'number' && (
-                              <RewardTooltip earned={f.earned_mlbg} kind={f.kind === 'discussion' ? 'apt_post' : f.kind === 'comment' ? 'apt_comment' : f.kind === 'post' ? 'community_post' : f.kind === 'post_comment' ? 'community_comment' : undefined} />
+                              <RewardTooltip earned={f.earned_mlbg} kind={f.kind === 'discussion' ? 'apt_post' : f.kind === 'comment' ? 'apt_comment' : f.kind === 'post' ? 'community_post' : f.kind === 'post_comment' ? 'community_comment' : f.kind === 'factory_comment' ? 'factory_comment' : f.kind === 'emart_comment' ? 'emart_comment' : undefined} />
                             )}
                           </div>
                         </div>

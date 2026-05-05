@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { awardMlbg } from '@/lib/mlbg-award';
 
 export type EmartItem = {
   id: number;
@@ -163,10 +164,11 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
     const txt = commentInput.trim();
     if (!txt || busy) return;
     setBusy(true);
-    const { error } = await supabase.from('emart_comments').insert({ emart_id: emart.id, author_id: currentUid, content: txt });
+    const { data: ins, error } = await supabase.from('emart_comments').insert({ emart_id: emart.id, author_id: currentUid, content: txt }).select('id').single();
     setBusy(false);
     if (error) { alert(error.message); return; }
     setCommentInput('');
+    if (ins?.id) await awardMlbg('emart_comment', ins.id, txt);
     const { data } = await supabase.rpc('list_emart_comments', { p_emart_id: emart.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
     setComments((data ?? []) as EmartComment[]);
   }

@@ -4,9 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment' | 'factory_comment' | 'emart_comment';
 
-const VALID_KINDS: Kind[] = ['apt_post', 'apt_comment', 'community_post', 'community_comment', 'hotdeal_post', 'hotdeal_comment'];
+const VALID_KINDS: Kind[] = ['apt_post', 'apt_comment', 'community_post', 'community_comment', 'hotdeal_post', 'hotdeal_comment', 'factory_comment', 'emart_comment'];
 
 // 결정론적 정책 — AI 평가 제거. 줄 수 기반 고정 지급.
 //   글 (community/hotdeal): 기본 2 mlbg
@@ -72,6 +72,8 @@ export async function POST(req: NextRequest) {
     community_comment: 'comments',
     hotdeal_post: 'posts',
     hotdeal_comment: 'comments',
+    factory_comment: 'factory_comments',
+    emart_comment: 'emart_comments',
   };
   const table = tableMap[kind];
   const { data: row, error: rowErr } = await admin.from(table).select('author_id').eq('id', refId).maybeSingle();
