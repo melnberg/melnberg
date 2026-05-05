@@ -171,11 +171,12 @@ const CLUSTER_STYLES = [
   boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 }));
 
-// 마커·오버레이 메타 — 뷰포트 culling + top-N cap 에 사용.
-// occupied / listed 인 핀은 cap 무시하고 항상 노출 (점거·매물은 게임 정보라 중요)
+// 마커 메타 — 오버레이는 lazy create (성능)
 type MarkerEntry = {
   marker: KakaoMarkerInst;
-  overlay: KakaoOverlayInst | null;
+  overlay: KakaoOverlayInst | null;  // 줌 레벨 도달 시 lazy 생성
+  pyeongPrice: number | null;        // 라벨 표시할 평당가 (없으면 null — overlay 안 만듦)
+  pos: KakaoLatLng;
   lat: number;
   lng: number;
   hh: number;
@@ -868,17 +869,32 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         }
         const updateVisibility = () => {
           const lvl = map.getLevel();
-          // 평당가 라벨: 줌 ≤ 3 (~100m) 모두 / 줌 == 4 (~250m) 300세대 이상 / 줌 ≥ 5 안 노출
+          // 평당가 라벨 — level <= 3 모두 / 4 는 hh>=300. lazy create 로 DOM 폭주 방지.
+          const labelLevelOk = lvl <= 4;
           for (const e of markersRef.current) {
             const tier = tierFor(e.hh);
             const v = isVisibleForTier(tier, lvl, e.occupied, e.listed);
             e.marker.setMap(v ? map : null);
-            if (e.overlay) {
-              let showLabel = false;
-              if (lvl <= 3) showLabel = true;
-              else if (lvl === 4) showLabel = e.hh >= 300;
-              e.overlay.setMap(v && showLabel ? map : null);
+
+            if (!e.pyeongPrice || !labelLevelOk || !v) {
+              if (e.overlay) e.overlay.setMap(null);
+              continue;
             }
+            const sizeOk = lvl <= 3 || (lvl === 4 && e.hh >= 300);
+            if (!sizeOk) {
+              if (e.overlay) e.overlay.setMap(null);
+              continue;
+            }
+            if (!e.overlay) {
+              e.overlay = new window.kakao.maps.CustomOverlay({
+                position: e.pos,
+                content: `<div class="apt-pyeong-label">${e.pyeongPrice >= 10000 ? `${(e.pyeongPrice / 10000).toFixed(1)}억/평` : `${e.pyeongPrice.toLocaleString()}만/평`}</div>`,
+                yAnchor: 2.4,
+                zIndex: 3,
+                clickable: false,
+              }) as KakaoOverlayInst;
+            }
+            e.overlay.setMap(map);
           }
         };
         window.kakao.maps.event.addListener(map, 'zoom_changed', updateVisibility);
@@ -982,20 +998,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
 
-        // 평당가 라벨 — 어차피 level <= 4 에서만 노출되며 작은 단지(<300세대)는 level 3 이하만.
-        // 모든 pin 에 CustomOverlay 만들면 DOM 수천개 → pan 끊김 유발. hh>=300 만 생성.
-        let overlay: KakaoOverlayInst | null = null;
-        if (p.pyeong_price && p.pyeong_price > 0 && hh >= 300) {
-          overlay = new window.kakao.maps.CustomOverlay({
-            position: pos,
-            content: `<div class="apt-pyeong-label">${formatPyeong(p.pyeong_price)}</div>`,
-            yAnchor: 2.4,
-            zIndex: 3,
-            clickable: false,
-          }) as KakaoOverlayInst;
-        }
-
-        allMarkers.push({ marker, overlay, lat: p.lat, lng: p.lng, hh, occupied, listed });
+        // 오버레이는 lazy 생성 — 줌 레벨이 라벨 노출 임계 도달했을 때만 createCustomOverlay.
+        // DOM 수천개 영구 생성 방지. updateVisibility() 안에서 처리됨.
+        const pyeongPrice = (p.pyeong_price && p.pyeong_price > 0) ? Number(p.pyeong_price) : null;
+        allMarkers.push({ marker, overlay: null, pyeongPrice, pos, lat: p.lat, lng: p.lng, hh, occupied, listed });
       }
       markersRef.current = allMarkers;
       // 첫 chunk (큰 단지·점거·매물 우선순위) 끝나면 한 번 노출, 그 이후는 마지막 chunk 끝에서만.
