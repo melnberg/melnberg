@@ -17,7 +17,7 @@ export default function FloatingMapPin() {
     <Link
       href={isMap ? '/' : '/?view=map'}
       aria-label={isMap ? '피드로' : '지도로'}
-      className="fixed bottom-5 right-5 z-50 w-12 h-12 rounded-full bg-white border border-border text-navy hover:border-navy hover:bg-navy-soft shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center no-underline"
+      className="fixed bottom-5 right-5 z-50 w-12 h-12 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center no-underline"
     >
       {isMap ? (
         // 피드 아이콘 (목록)
