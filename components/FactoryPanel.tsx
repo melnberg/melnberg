@@ -67,14 +67,12 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
       const list = (data ?? []) as FactoryComment[];
       if (cancelled) return;
       setComments(list);
-      // 적립 매핑
-      const ids = list.map((c) => c.id);
+      const ids = list.map((c) => Number(c.id)).filter((n) => Number.isFinite(n));
       if (ids.length > 0) {
         const { data: aw } = await supabase.from('mlbg_award_log').select('ref_id, earned')
-          .eq('kind', 'factory_comment').in('ref_id', ids)
-          .then((r) => r, () => ({ data: null }));
+          .eq('kind', 'factory_comment').in('ref_id', ids);
         const m: Record<number, number> = {};
-        for (const r of (aw ?? []) as Array<{ ref_id: number; earned: number }>) m[r.ref_id] = Number(r.earned);
+        for (const r of (aw ?? []) as Array<{ ref_id: number | string; earned: number | string }>) m[Number(r.ref_id)] = Number(r.earned);
         if (!cancelled) setEarnedMap(m);
       }
     })();
@@ -308,9 +306,10 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
                       <div className="flex items-baseline justify-between gap-2 mb-0.5">
                         <span className="text-[12px] font-bold text-navy">{c.author_name ?? '익명'}</span>
                         <span className="text-[10px] text-muted tabular-nums flex items-center gap-2">
-                          {typeof earnedMap[c.id] === 'number' && earnedMap[c.id] > 0 && (
-                            <RewardTooltip earned={earnedMap[c.id]} kind="factory_comment" />
-                          )}
+                          {(() => {
+                            const e = earnedMap[Number(c.id)];
+                            return typeof e === 'number' && e > 0 ? <RewardTooltip earned={e} kind="factory_comment" /> : null;
+                          })()}
                           <span>{fmtKstShort(c.created_at)}</span>
                         </span>
                       </div>
