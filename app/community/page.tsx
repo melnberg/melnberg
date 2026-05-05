@@ -20,9 +20,9 @@ export default async function CommunityPage() {
     <Layout current="community">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/community', label: '커뮤니티', bold: true }]} meta="Community" />
 
-      <section className="pt-8 lg:pt-14 pb-6 border-b border-border">
+      <section className="pt-8 lg:pt-14 pb-2">
         <div className="max-w-content mx-auto px-4 lg:px-10">
-          <div className="flex items-center justify-between gap-4 pb-3 border-b-2 border-navy">
+          <div className="flex items-center justify-between gap-4">
             <h1 className="text-[24px] lg:text-[32px] font-bold text-navy tracking-tight">커뮤니티</h1>
             {user && (
               <Link
@@ -36,7 +36,7 @@ export default async function CommunityPage() {
         </div>
       </section>
 
-      <section className="py-6">
+      <section className="pb-6">
         <div className="max-w-content mx-auto px-4 lg:px-10">
           {posts.length === 0 ? (
             <div className="text-center py-20">
