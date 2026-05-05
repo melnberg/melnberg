@@ -48,37 +48,43 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
 
         <div className="px-5 pt-4 pb-2">
           {user ? (
-            <div className="flex items-center gap-2 px-3 py-2.5 border border-border hover:border-navy transition-colors">
-              <Link
-                href="/me"
-                onClick={() => setOpen(false)}
-                className="flex-1 min-w-0 flex items-center gap-3 no-underline"
-              >
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-border" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                    {(user.name[0] ?? '').toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
+            <div className="border border-border hover:border-navy transition-colors">
+              {/* Row 1: 아바타 · 이름 + 배지 · 알림 종 */}
+              <div className="flex items-center gap-2.5 px-3 pt-2.5 pb-1.5">
+                <Link
+                  href="/me"
+                  onClick={() => setOpen(false)}
+                  className="flex-1 min-w-0 flex items-center gap-2.5 no-underline"
+                >
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-border" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                      {(user.name[0] ?? '').toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
                     <span className="text-[13px] font-bold text-text truncate">{user.name}</span>
                     {user.isPaid ? (
                       <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5 flex-shrink-0">조합원</span>
                     ) : (
-                      <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5 flex-shrink-0">무료회원</span>
+                      <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5 flex-shrink-0">무료</span>
                     )}
                   </div>
-                  <div className="text-[11px] text-muted flex items-center gap-1.5">
-                    {typeof user.score === 'number' && (
-                      <span className="text-cyan font-bold">💰 {user.score} mlbg</span>
-                    )}
-                    <span>마이페이지 →</span>
-                  </div>
-                </div>
+                </Link>
+                <NotificationsBell />
+              </div>
+              {/* Row 2: mlbg 잔액 · 마이페이지 링크 */}
+              <Link
+                href="/me"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between gap-2 px-3 pb-2 pt-0.5 text-[11px] no-underline border-t border-[#f3f3f3] mx-3"
+              >
+                {typeof user.score === 'number' ? (
+                  <span className="text-cyan font-bold tabular-nums">💰 {user.score} mlbg</span>
+                ) : <span />}
+                <span className="text-muted hover:text-navy">마이페이지 →</span>
               </Link>
-              <NotificationsBell />
             </div>
           ) : (
             <div className="flex gap-2">

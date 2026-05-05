@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
+import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
@@ -75,6 +76,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
       const award = await awardMlbg('community_post', data.id, content.trim());
       const msg = awardToastMessage(award);
       if (msg) alert(msg);
+      // 텔레그램 채널 알림 (fire-and-forget)
+      notifyTelegram('community_post', data.id);
       router.push(`${redirectBase}/${data.id}`);
       router.refresh();
     }

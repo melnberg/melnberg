@@ -8,6 +8,7 @@ import Nickname, { type NicknameInfo } from './Nickname';
 import type { AptPin } from './AptMap';
 import { getAptListingPrice } from '@/lib/listing-price';
 import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
+import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Discussion = {
   id: number;
@@ -448,6 +449,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       const award = await awardMlbg('apt_post', insertedId, [titleLine, restLines ?? ''].join('\n').trim());
       const msg = awardToastMessage(award);
       if (msg) alert(msg);
+      notifyTelegram('apt_post', insertedId);
     }
     setSubmitting(false);
     setWriting(false);
@@ -515,6 +517,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         const msg = awardToastMessage(r);
         if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
       });
+      notifyTelegram('apt_comment', cid);
     }
     await reload();
   }
@@ -535,6 +538,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         const msg = awardToastMessage(r);
         if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
       });
+      notifyTelegram('apt_comment', cid);
     }
     await reload();
   }

@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
 import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
+import { notifyTelegram } from '@/lib/telegram-notify';
 import Nickname from './Nickname';
 
 type Props = {
@@ -78,6 +79,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
       const msg = awardToastMessage(r);
       if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
     });
+    notifyTelegram('community_comment', insertedId);
     router.refresh();
   }
 
@@ -99,6 +101,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
       const msg = awardToastMessage(r);
       if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
     });
+    notifyTelegram('community_comment', insertedId);
     router.refresh();
   }
 
