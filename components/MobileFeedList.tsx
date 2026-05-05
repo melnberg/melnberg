@@ -34,10 +34,15 @@ function hrefFor(f: FeedItem): string | null {
   return null;
 }
 
-// 지도 마커 외부 링크 (카카오맵)
-function kakaoMapLink(name: string | null, lat: number, lng: number): string {
-  const q = encodeURIComponent(name ?? '위치');
-  return `https://map.kakao.com/link/map/${q},${lat},${lng}`;
+// 멜른버그 내부 지도 핀으로 이동 (kind 별 query param 매핑)
+function internalMapHref(f: FeedItem): string | null {
+  if (
+    f.kind === 'discussion' || f.kind === 'comment' ||
+    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch'
+  ) return f.apt_master_id ? `/?apt=${f.apt_master_id}` : null;
+  if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/?emart=${f.apt_master_id}`;
+  if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/?factory=${f.apt_master_id}`;
+  return null;
 }
 
 function rewardKind(k: FeedItem['kind']): React.ComponentProps<typeof RewardTooltip>['kind'] {
@@ -91,7 +96,7 @@ export default function MobileFeedList({ items }: Props) {
             : (f.kind === 'post' || f.kind === 'post_comment') ? '커뮤니티'
             : (f.apt_nm ?? '');
           const fullContent = (f.content ?? '').trim();
-          const hasGeo = f.lat != null && f.lng != null;
+          const mapHref = internalMapHref(f);
           const isAuctionLive = f.kind === 'auction';
 
           const Wrapper: React.ElementType = href ? Link : 'div';
@@ -136,12 +141,10 @@ export default function MobileFeedList({ items }: Props) {
                     )}
                   </div>
                 </Wrapper>
-                {/* 우측 — 지도 마커 (lat/lng 있을 때만) */}
-                {hasGeo && (
-                  <a
-                    href={kakaoMapLink(f.apt_nm, f.lat as number, f.lng as number)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {/* 우측 — 지도 마커: 내부 지도(핀) 로 이동 */}
+                {mapHref && (
+                  <Link
+                    href={mapHref}
                     aria-label="지도에서 보기"
                     className="flex-shrink-0 px-3 flex items-center justify-center text-navy border-l border-[#f0f0f0] active:bg-[#f5f7fa] no-underline"
                     onClick={(e) => e.stopPropagation()}
@@ -150,7 +153,7 @@ export default function MobileFeedList({ items }: Props) {
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                       <circle cx="12" cy="10" r="3"/>
                     </svg>
-                  </a>
+                  </Link>
                 )}
               </div>
             </li>
