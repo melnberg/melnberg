@@ -27,6 +27,45 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
   const [bulkProductId, setBulkProductId] = useState<string>(products[0]?.id ?? '');
   const [bulkPeriod, setBulkPeriod] = useState<'current' | 'next'>('current');
   const [bulkBusy, setBulkBusy] = useState(false);
+  // SNS 링크 검사 결과: userId → 'ok' | 'dead' | 'checking'
+  const [linkStatus, setLinkStatus] = useState<Map<string, 'ok' | 'dead' | 'checking'>>(new Map());
+  const [checkingLinks, setCheckingLinks] = useState(false);
+
+  async function checkAllLinks() {
+    if (checkingLinks) return;
+    const targets = profiles.filter((p) => !!p.link_url).map((p) => ({ id: p.id, url: p.link_url as string }));
+    if (targets.length === 0) { alert('SNS 링크 등록된 회원이 없습니다.'); return; }
+    if (!confirm(`SNS 링크 ${targets.length}건 검사 시작 (1~2분). 진행할까요?`)) return;
+    setCheckingLinks(true);
+    const next = new Map<string, 'ok' | 'dead' | 'checking'>();
+    for (const t of targets) next.set(t.id, 'checking');
+    setLinkStatus(next);
+    try {
+      const res = await fetch('/api/admin/check-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targets }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(json?.error ?? '검사 실패'); setCheckingLinks(false); return; }
+      const map = new Map<string, 'ok' | 'dead' | 'checking'>();
+      for (const r of (json.results ?? []) as Array<{ id: string; status: 'ok' | 'dead' }>) {
+        map.set(r.id, r.status);
+      }
+      setLinkStatus(map);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '검사 실패');
+    }
+    setCheckingLinks(false);
+  }
+
+  async function clearLink(profile: ProfileWithTier) {
+    if (!confirm(`${profile.display_name ?? profile.id.slice(0, 8)} 의 SNS 링크를 삭제할까요?`)) return;
+    const { error } = await supabase.from('profiles').update({ link_url: null }).eq('id', profile.id);
+    if (error) { alert(error.message); return; }
+    setProfiles((prev) => prev.map((p) => p.id === profile.id ? { ...p, link_url: null } : p));
+    setLinkStatus((prev) => { const n = new Map(prev); n.delete(profile.id); return n; });
+  }
 
   const filtered = useMemo(() => {
     if (!search.trim()) return profiles;
@@ -401,6 +440,15 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
           >
             강제탈퇴
           </button>
+          <button
+            type="button"
+            onClick={checkAllLinks}
+            disabled={checkingLinks}
+            className="bg-white border border-navy text-navy px-3 py-1.5 text-[12px] font-bold tracking-wide cursor-pointer hover:bg-navy hover:text-white disabled:opacity-40"
+            title="등록된 모든 SNS 링크를 서버에서 fetch 해서 깨진 링크 표시"
+          >
+            {checkingLinks ? 'SNS 검사중...' : 'SNS 링크 일괄 검사'}
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -418,6 +466,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                 <th className="py-2 px-2 font-semibold text-left">닉네임</th>
                 <th className="py-2 px-2 font-semibold text-left w-32">네이버 ID</th>
                 <th className="py-2 px-2 font-semibold text-left w-48">이메일</th>
+                <th className="py-2 px-2 font-semibold text-left w-[280px]">SNS 링크</th>
                 <th className="py-2 px-2 font-semibold text-center w-20">등급</th>
                 <th className="py-2 px-2 font-semibold text-center w-28">만료일</th>
                 <th className="py-2 px-2 font-semibold text-center w-24">가입일</th>
@@ -449,6 +498,40 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                     <td className="py-2.5 px-2 text-[12px] text-text truncate max-w-[200px]" title={(p as { email?: string | null }).email ?? ''}>
                       {(p as { email?: string | null }).email ?? <span className="text-muted">—</span>}
                     </td>
+                    <td className="py-2.5 px-2 text-[11px]">
+                      {p.link_url ? (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {(() => {
+                            const st = linkStatus.get(p.id);
+                            if (st === 'checking') return <span className="text-[10px] text-muted">●</span>;
+                            if (st === 'dead') return <span className="text-[10px] text-red-600" title="404·접속불가">●</span>;
+                            if (st === 'ok') return <span className="text-[10px] text-green-600" title="정상">●</span>;
+                            return <span className="text-[10px] text-muted/30">○</span>;
+                          })()}
+                          <a
+                            href={p.link_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-navy hover:underline truncate min-w-0 flex-1"
+                            title={p.link_url}
+                          >
+                            {p.link_url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                          </a>
+                          {linkStatus.get(p.id) === 'dead' && (
+                            <button
+                              type="button"
+                              onClick={() => clearLink(p)}
+                              className="text-[10px] font-bold text-red-600 hover:text-red-800 bg-transparent border-none p-0 flex-shrink-0"
+                              title="이 링크 삭제 (link_url = null)"
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
                     <td className="py-2.5 px-2 text-center">
                       <span className={`inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-1 ${isActive ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy'}`}>
                         {isActive ? '조합원' : tierLabelKo(p.tier)}
@@ -465,7 +548,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-muted">검색 결과가 없습니다.</td>
+                  <td colSpan={8} className="py-8 text-center text-muted">검색 결과가 없습니다.</td>
                 </tr>
               )}
             </tbody>
