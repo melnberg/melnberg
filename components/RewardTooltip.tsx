@@ -2,17 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// +N mlbg 뱃지 + hover 시 보상 기준 박스 표시
+// +N mlbg 뱃지 + 클릭 시 보상 지급 기준 박스 표시
 type Props = {
   earned: number;
   kind?: 'apt_post' | 'apt_comment' | 'community_post' | 'hotdeal_post' | 'community_comment' | 'hotdeal_comment';
 };
 
-export default function RewardTooltip({ earned, kind }: Props) {
+export default function RewardTooltip({ earned }: Props) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
 
-  // 외부 클릭 닫기
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
@@ -22,51 +21,68 @@ export default function RewardTooltip({ earned, kind }: Props) {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const isComment = kind?.endsWith('_comment');
-  const isAptPost = kind === 'apt_post';
-
   return (
     <span ref={wrapRef} className="relative inline-block">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`tabular-nums bg-transparent border-none p-0 cursor-pointer ${earned > 0 ? 'text-cyan font-bold' : 'text-muted'}`}
+        className="tabular-nums bg-transparent border-none p-0 cursor-pointer text-text"
+        style={{ font: 'inherit', color: 'inherit' }}
       >
-        +{earned}{kind ? ' mlbg' : ''}
+        +{earned} mlbg
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 w-[260px] bg-navy text-white shadow-[0_8px_24px_rgba(0,32,96,0.25)] border border-navy-dark">
-          <div className="px-4 pt-3 pb-2 text-[11px] font-bold tracking-widest uppercase border-b border-white/15">
+        <div className="absolute left-0 top-full mt-1 z-50 w-[260px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
+          <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">
             보상 지급 기준
           </div>
-          <ul className="px-4 py-3 space-y-1.5 text-[12px]">
-            {isAptPost ? (
-              <>
-                <li className="flex justify-between gap-3"><span className="text-white/80">1~20자</span><span className="font-bold tabular-nums">+0</span></li>
-                <li className="flex justify-between gap-3"><span className="text-white/80">21~99자 (2~4줄)</span><span className="font-bold tabular-nums text-cyan">+2</span></li>
-                <li className="flex justify-between gap-3"><span className="text-white/80">100~199자 (5~9줄)</span><span className="font-bold tabular-nums text-cyan">+3</span></li>
-                <li className="flex justify-between gap-3"><span className="text-white/80">200자+ (10줄+)</span><span className="font-bold tabular-nums text-cyan">+5</span></li>
-                <li className="border-t border-white/15 pt-2 mt-2 flex justify-between gap-3 text-[11px]"><span className="text-white/60">댓글</span><span className="text-white/60 tabular-nums">+1</span></li>
-              </>
-            ) : isComment ? (
-              <>
-                <li className="flex justify-between gap-3"><span className="text-white/80">댓글 (어디든)</span><span className="font-bold tabular-nums text-cyan">+1</span></li>
-                <li className="border-t border-white/15 pt-2 mt-2 flex justify-between gap-3 text-[11px]"><span className="text-white/60">커뮤·핫딜 글</span><span className="text-white/60 tabular-nums">+2</span></li>
-                <li className="flex justify-between gap-3 text-[11px]"><span className="text-white/60">단지 토론 글 (20자+)</span><span className="text-white/60 tabular-nums">+2~5</span></li>
-              </>
-            ) : (
-              <>
-                <li className="flex justify-between gap-3"><span className="text-white/80">커뮤·핫딜 글</span><span className="font-bold tabular-nums text-cyan">+2</span></li>
-                <li className="flex justify-between gap-3"><span className="text-white/80">단지 토론 글 (20자=1줄)</span><span className="font-bold tabular-nums text-cyan">+2~5</span></li>
-                <li className="flex justify-between gap-3"><span className="text-white/80">모든 댓글</span><span className="font-bold tabular-nums text-cyan">+1</span></li>
-              </>
-            )}
+          <ul className="px-4 py-3 space-y-2">
+            <li className="flex items-center gap-2.5">
+              <Dot color="#00B0F0" />
+              <span className="flex-1">단지 토론 1~20자</span>
+              <span className="tabular-nums text-white/80">+0</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Dot color="#00B0F0" />
+              <span className="flex-1">단지 토론 21~99자</span>
+              <span className="tabular-nums text-white/80">+2</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Dot color="#00B0F0" />
+              <span className="flex-1">단지 토론 100~199자</span>
+              <span className="tabular-nums text-white/80">+3</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Dot color="#00B0F0" />
+              <span className="flex-1">단지 토론 200자+</span>
+              <span className="tabular-nums text-white/80">+5</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Dot color="#0070C0" />
+              <span className="flex-1">커뮤·핫딜 글</span>
+              <span className="tabular-nums text-white/80">+2</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Dot color="#d4d4d4" />
+              <span className="flex-1">댓글 (어디든)</span>
+              <span className="tabular-nums text-white/80">+1</span>
+            </li>
           </ul>
-          <div className="px-4 pb-3 text-[10px] text-white/60 leading-relaxed">
-            클릭해서 닫기
+          <div className="px-4 py-2.5 border-t border-white/15 text-[10px] text-white/70 leading-snug">
+            작성하면 작성자에게 자동 적립됩니다.
           </div>
         </div>
       )}
     </span>
+  );
+}
+
+function Dot({ color }: { color: string }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block rounded-full"
+      style={{ width: 11, height: 11, backgroundColor: color, flexShrink: 0 }}
+    />
   );
 }
