@@ -234,7 +234,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
         type="button"
         aria-label="메뉴 열기"
         onClick={() => setOpen(true)}
-        className="lg:hidden fixed top-2 left-2 z-30 w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy flex items-center justify-center p-0"
+        className="lg:hidden fixed top-2 left-2 z-40 w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy flex items-center justify-center p-0"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <line x1={3} y1={6} x2={21} y2={6} />
