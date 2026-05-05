@@ -7,6 +7,8 @@
 --   0.1%  : 500 mlbg (잭팟)
 -- ──────────────────────────────────────────────
 
+-- 기존 함수와 반환 타입 충돌 — DROP 후 재생성
+drop function if exists public.daily_checkin();
 create or replace function public.daily_checkin()
 returns table(
   out_success boolean,
