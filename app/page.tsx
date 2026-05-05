@@ -457,13 +457,17 @@ async function fetchFeed(): Promise<FeedItem[]> {
         '전국금속노조 본부·경기지부·인천지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 진남색 금속 핀 클릭 → 분양받기.'),
       noticeBase(6, LAUNCH_TS, '화물연대 분양 시작',
         '화물연대 본부·경기지부·부산지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 초록 화물 핀 클릭 → 분양받기.'),
+      noticeBase(7, LAUNCH_TS, '터미널 분양 시작',
+        '동서울·센트럴시티·남부터미널이 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 보라 터 핀 클릭 → 분양받기.'),
+      noticeBase(8, LAUNCH_TS, '기차역 분양 시작',
+        '서울역·수서역·용산역·청량리역이 분양 대상으로 추가됐습니다.\n분양가 30 mlbg, 매일 2 mlbg 자동 수익. 15일이면 회수.\n지도 진청 역 핀 클릭 → 분양받기.'),
     ];
 
     // 공장 분양 → FeedItem (factory_occupy)
     const factoryItems: FeedItem[] = factoryRows.map((r) => {
       const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null; lat?: number | null; lng?: number | null } | null;
       const prof = profileMap.get(r.user_id);
-      const brandLabel = f?.brand === 'hynix' ? 'SK하이닉스' : f?.brand === 'samsung' ? '삼성전자' : f?.brand === 'costco' ? '코스트코' : f?.brand === 'union' ? '금속노조' : f?.brand === 'cargo' ? '화물연대' : '공장';
+      const brandLabel = f?.brand === 'hynix' ? 'SK하이닉스' : f?.brand === 'samsung' ? '삼성전자' : f?.brand === 'costco' ? '코스트코' : f?.brand === 'union' ? '금속노조' : f?.brand === 'cargo' ? '화물연대' : f?.brand === 'terminal' ? '터미널' : f?.brand === 'station' ? '기차역' : '시설';
       return {
         kind: 'factory_occupy' as const,
         id: 100000 + r.id,

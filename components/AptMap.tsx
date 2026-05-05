@@ -388,7 +388,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       samsung: new window.kakao.maps.MarkerImage('/pins/factory-samsung.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       costco:  new window.kakao.maps.MarkerImage('/pins/factory-costco.svg',  new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       union:   new window.kakao.maps.MarkerImage('/pins/factory-union.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
-      cargo:   new window.kakao.maps.MarkerImage('/pins/factory-cargo.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      cargo:    new window.kakao.maps.MarkerImage('/pins/factory-cargo.svg',    new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      terminal: new window.kakao.maps.MarkerImage('/pins/factory-terminal.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      station:  new window.kakao.maps.MarkerImage('/pins/factory-station.svg',  new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
     };
     for (const f of factoryList) {
       const pos = new window.kakao.maps.LatLng(f.lat, f.lng);

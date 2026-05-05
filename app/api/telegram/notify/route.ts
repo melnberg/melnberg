@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     if (!r) return NextResponse.json({ error: 'factory not occupied' }, { status: 404 });
     if (r.user_id !== user.id) return NextResponse.json({ error: 'not occupier' }, { status: 403 });
     const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null } | null;
-    const labels: Record<string, string> = { hynix: '🏭 SK하이닉스', samsung: '🏭 삼성전자', costco: '🛒 코스트코', union: '🚩 금속노조', cargo: '🚛 화물연대' };
+    const labels: Record<string, string> = { hynix: '🏭 SK하이닉스', samsung: '🏭 삼성전자', costco: '🛒 코스트코', union: '🚩 금속노조', cargo: '🚛 화물연대', terminal: '🚌 터미널', station: '🚉 기차역' };
     tag = labels[f?.brand ?? ''] ?? '🏭 공장';
     main = `${f?.name ?? '공장'} 분양받음`;
   } else if (kind === 'emart_occupy') {

@@ -7,7 +7,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 
 export type FactoryItem = {
   id: number;
-  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo';
+  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station';
   name: string;
   address: string | null;
   lat: number;
@@ -32,6 +32,8 @@ const BRAND_META: Record<FactoryItem['brand'], { label: string; bg: string; icon
   costco:  { label: '코스트코',         bg: '#005DAA', iconBg: '#dbeafe', pin: '/pins/factory-costco.svg' },
   union:   { label: '전국금속노조',     bg: '#0F3D8E', iconBg: '#dbeafe', pin: '/pins/factory-union.svg' },
   cargo:   { label: '화물연대',         bg: '#1F8A4C', iconBg: '#dcfce7', pin: '/pins/factory-cargo.svg' },
+  terminal:{ label: '버스터미널',       bg: '#7C3AED', iconBg: '#ede9fe', pin: '/pins/factory-terminal.svg' },
+  station: { label: '기차역',           bg: '#0F766E', iconBg: '#ccfbf1', pin: '/pins/factory-station.svg' },
 };
 
 function fmtKstShort(iso: string): string {
@@ -65,6 +67,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
   }, [factory.id, supabase]);
 
   const isMine = !!factory.occupier_id && factory.occupier_id === currentUid;
+  const ownerLabel = (factory.brand === 'union' || factory.brand === 'cargo') ? '위원장' : '사장';
   const lastClaimMs = factory.last_claimed_at ? new Date(factory.last_claimed_at).getTime()
     : (factory.occupied_at ? new Date(factory.occupied_at).getTime() : null);
   const daysOwed = lastClaimMs ? Math.floor((Date.now() - lastClaimMs) / 86400000) : 0;
@@ -190,7 +193,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
             {factory.occupier_id ? (
               <>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
-                  <span className="text-[10px] tracking-widest uppercase text-muted">사장</span>
+                  <span className="text-[10px] tracking-widest uppercase text-muted">{ownerLabel}</span>
                   <span className="text-[18px] font-bold text-navy truncate">{factory.occupier_name ?? '익명'} 님</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
@@ -216,7 +219,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
 
           <div className="border-l-4 border-cyan bg-cyan/5 px-4 py-3 mb-4">
             <div className="text-[12px] font-bold text-navy mb-1">💰 매일 {factory.daily_income} mlbg 자동 수익</div>
-            <div className="text-[11px] text-muted leading-relaxed">24시간마다 +{factory.daily_income} 누적. 사장이 직접 청구. 1인 1공장 제한.</div>
+            <div className="text-[11px] text-muted leading-relaxed">24시간마다 +{factory.daily_income} 누적. {ownerLabel}이 직접 청구. 1인 1보유 제한.</div>
           </div>
 
           <div className="grid gap-2 mb-4">
