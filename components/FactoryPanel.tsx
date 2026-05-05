@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { awardMlbg } from '@/lib/mlbg-award';
+import { revalidateHome } from '@/lib/revalidate-home';
 import RewardTooltip from './RewardTooltip';
 
 export type FactoryItem = {
@@ -101,6 +102,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     if (!row?.out_success) { alert(row?.out_message ?? '분양 실패'); return; }
     alert(`${factory.name} 분양 완료. ${factory.occupy_price.toLocaleString()} mlbg 차감.`);
     notifyTelegram('factory_occupy', factory.id);
+    revalidateHome();
     onChanged(); onClose(); router.refresh();
   }
 
@@ -113,6 +115,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_earned: number; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '청구 실패'); return; }
     alert(`+${row.out_earned} mlbg 수익 청구 완료.`);
+    revalidateHome();
     onChanged(); router.refresh();
   }
 
@@ -126,6 +129,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null; out_refund: number } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '해제 실패'); return; }
     alert(`해제 완료. ${row.out_refund.toLocaleString()} mlbg 환불.`);
+    revalidateHome();
     onChanged(); onClose(); router.refresh();
   }
 
@@ -140,6 +144,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     if (!row?.out_success) { alert(row?.out_message ?? '매도 등록 실패'); return; }
     alert(`매도 등록: ${price.toLocaleString()} mlbg`);
     setSellPanelOpen(false); setSellPriceInput(''); setSellDescInput('');
+    revalidateHome();
     onChanged(); router.refresh();
   }
 
@@ -151,6 +156,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '해제 실패'); return; }
+    revalidateHome();
     onChanged(); router.refresh();
   }
 
@@ -165,6 +171,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     if (!row?.out_success) { alert(row?.out_message ?? '매수 실패'); return; }
     alert(`매수 완료: ${row.out_price.toLocaleString()} mlbg`);
     notifyTelegram('factory_occupy', factory.id);
+    revalidateHome();
     onChanged();
     router.refresh();
   }
@@ -180,6 +187,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     if (ins?.id) await awardMlbg('factory_comment', ins.id, txt);
     const { data } = await supabase.rpc('list_factory_comments', { p_factory_id: factory.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
     setComments((data ?? []) as FactoryComment[]);
+    revalidateHome();
   }
 
   async function deleteComment(id: number) {
@@ -187,6 +195,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
     const { error } = await supabase.from('factory_comments').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     setComments((prev) => prev.filter((c) => c.id !== id));
+    revalidateHome();
   }
 
   return (

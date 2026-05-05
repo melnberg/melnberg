@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { revalidateHome } from '@/lib/revalidate-home';
 
 export default function PostActions({ postId, basePath = '/community' }: { postId: number; basePath?: string }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function PostActions({ postId, basePath = '/community' }: { postI
       alert(error.message);
       return;
     }
+    revalidateHome();
     router.push(basePath);
     router.refresh();
   }

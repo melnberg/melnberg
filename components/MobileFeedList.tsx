@@ -148,12 +148,7 @@ export default function MobileFeedList({ items }: Props) {
 
   return (
     <div className="bg-white">
-      <div className="sticky top-0 z-10 bg-white border-b border-border h-[52px] flex items-center justify-center">
-        <Link href="/" className="flex items-center gap-2 no-underline">
-          <img src="/logo.svg" alt="" className="w-7 h-7 flex-shrink-0" />
-          <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
-        </Link>
-      </div>
+      {/* 상단 멜른버그 바는 Layout 의 MobileTopBar 가 모든 화면 공통으로 처리 — 여기선 제거 */}
       <ul>
         {items.map((f) => {
           const href = hrefFor(f);

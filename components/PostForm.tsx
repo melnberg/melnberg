@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { revalidateHome } from '@/lib/revalidate-home';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
@@ -53,6 +54,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
         setErr(error.message);
         return;
       }
+      revalidateHome();
       router.push(`${redirectBase}/${initial.id}`);
       router.refresh();
     } else {
@@ -76,6 +78,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
       const awardKind = category === 'hotdeal' ? 'hotdeal_post' : 'community_post';
       await awardMlbg(awardKind, data.id, content.trim());
       notifyTelegram(awardKind, data.id);
+      revalidateHome();
       router.push(`${redirectBase}/${data.id}`);
       router.refresh();
     }

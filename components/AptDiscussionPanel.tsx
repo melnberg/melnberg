@@ -9,6 +9,7 @@ import type { AptPin } from './AptMap';
 import { getAptListingPrice } from '@/lib/listing-price';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { revalidateHome } from '@/lib/revalidate-home';
 import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
@@ -444,6 +445,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     setWriting(false);
     setEditingId(null);
     setBody('');
+    revalidateHome();
     await reload();
   }
 
@@ -457,6 +459,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     if (!confirm('이 글을 삭제하시겠어요?')) return;
     const { error } = await supabase.rpc('delete_apt_discussion', { p_id: id });
     if (error) { alert(error.message); return; }
+    revalidateHome();
     await reload();
   }
 
@@ -505,6 +508,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
       void awardMlbg('apt_comment', cid, text);
       notifyTelegram('apt_comment', cid);
     }
+    revalidateHome();
     await reload();
   }
 
@@ -523,6 +527,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
       void awardMlbg('apt_comment', cid, text);
       notifyTelegram('apt_comment', cid);
     }
+    revalidateHome();
     await reload();
   }
 
@@ -530,6 +535,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     if (!confirm('이 댓글을 삭제하시겠어요?')) return;
     const { error } = await supabase.rpc('delete_apt_discussion_comment', { p_id: commentId });
     if (error) { alert(error.message); return; }
+    revalidateHome();
     await reload();
   }
 

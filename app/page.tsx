@@ -1,16 +1,15 @@
-import Link from 'next/link';
 import Layout from '@/components/Layout';
-import AptMap, { type FeedItem } from '@/components/AptMap';
-import MobileFeedList from '@/components/MobileFeedList';
-import MapMinimalEffects from '@/components/MapMinimalEffects';
+import { type FeedItem } from '@/components/AptMap';
+import HomeMobileSwitcher from '@/components/HomeMobileSwitcher';
+import { unstable_cache } from 'next/cache';
 import { createPublicClient } from '@/lib/supabase/public';
 
-// 매 요청마다 fresh fetch — 피드 즉시 반영 위해 캐시 제거
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// fetchFeed 는 unstable_cache 로 30초 캐싱 + 'home-feed' 태그.
+// 글/댓글/매물 등 mutation 직후 클라이언트에서 /api/revalidate-home 호출 → 즉시 무효화.
+// Layout 이 cookies() 를 쓰므로 페이지 자체는 dynamic 렌더, fetchFeed 만 캐싱됨.
 
 // 피드 — 글(apt_discussions) + 댓글(apt_discussion_comments) + 커뮤니티 글/댓글 + 매물/호가 합쳐 시간순.
-async function fetchFeed(): Promise<FeedItem[]> {
+async function fetchFeedRaw(): Promise<FeedItem[]> {
     const supabase = createPublicClient();
     const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp] = await Promise.all([
       supabase
@@ -623,38 +622,18 @@ async function fetchFeed(): Promise<FeedItem[]> {
     return [...auctionItems, ...others];
 }
 
+// 30초 캐싱. mutation (글/댓글/매물 등) 시 클라이언트가 /api/revalidate-home 호출 → revalidateTag('home-feed') 로 즉시 무효화.
+const fetchFeed = unstable_cache(fetchFeedRaw, ['home-feed-v1'], { revalidate: 30, tags: ['home-feed'] });
+
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ view?: string; apt?: string; emart?: string; factory?: string }> }) {
   const sp = await searchParams;
-  // 모바일 기본 = 피드. ?view=map 또는 단지/시설 쿼리 있으면 지도 강제 노출.
-  const forceMap = sp.view === 'map' || !!sp.apt || !!sp.emart || !!sp.factory;
+  // 모바일 초기 뷰. URL 쿼리로 결정. 토글은 클라이언트에서 pushState + popstate (서버 RTT 0).
+  const initialView = (sp.view === 'map' || !!sp.apt || !!sp.emart || !!sp.factory) ? 'map' : 'feed';
   const feed = await fetchFeed();
 
   return (
     <Layout current="home">
-      {/* 데스크톱 (lg+) — 항상 지도. 그 미만은 forceMap 시에만 지도(미니멀 모드). */}
-      <div className={`flex-1 min-w-0 ${forceMap ? 'map-minimal' : 'hidden lg:flex lg:flex-col'}`}>
-        <AptMap feed={feed} />
-      </div>
-      {/* 모바일 forceMap 시 — 상단에 멜른버그 타이틀 띠 (탭하면 피드로) + 미니멀 모드 효과 */}
-      {forceMap && (
-        <>
-          <Link
-            href="/"
-            className="lg:hidden fixed top-0 left-0 right-0 z-30 h-[52px] bg-white/85 backdrop-blur-sm border-b border-border flex items-center justify-center gap-2 no-underline"
-            aria-label="피드로 돌아가기"
-          >
-            <img src="/logo.svg" alt="" className="w-7 h-7 flex-shrink-0" />
-            <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
-          </Link>
-          <MapMinimalEffects />
-        </>
-      )}
-      {/* lg 미만 — forceMap 아닐 때 피드 풀스크린 */}
-      {!forceMap && (
-        <div className="lg:hidden flex-1 min-w-0">
-          <MobileFeedList items={feed} />
-        </div>
-      )}
+      <HomeMobileSwitcher feed={feed} initialView={initialView} />
     </Layout>
   );
 }

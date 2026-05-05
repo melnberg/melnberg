@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { awardMlbg } from '@/lib/mlbg-award';
+import { revalidateHome } from '@/lib/revalidate-home';
 import RewardTooltip from './RewardTooltip';
 
 export type EmartItem = {
@@ -94,6 +95,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     alert(`${emart.name} 분양 완료. 5 mlbg 차감.`);
     notifyTelegram('emart_occupy', emart.id);
     onChanged();   // 패널 즉시 사장 정보로 갱신
+    revalidateHome();
     router.refresh();
   }
 
@@ -107,6 +109,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     if (!row?.out_success) { alert(row?.out_message ?? '청구 실패'); return; }
     alert(`+${row.out_earned} mlbg 수익 청구 완료.`);
     onChanged();
+    revalidateHome();
     router.refresh();
   }
 
@@ -122,6 +125,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     alert('해제 완료. 5 mlbg 환불.');
     onChanged();
     onClose();
+    revalidateHome();
     router.refresh();
   }
 
@@ -140,6 +144,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     setSellPriceInput('');
     setSellDescInput('');
     onChanged();
+    revalidateHome();
     router.refresh();
   }
 
@@ -153,6 +158,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '해제 실패'); return; }
     onChanged();
+    revalidateHome();
     router.refresh();
   }
 
@@ -170,6 +176,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     notifyTelegram('emart_occupy', emart.id);
     onChanged();
     onClose();
+    revalidateHome();
     router.refresh();
   }
 
@@ -184,6 +191,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     if (ins?.id) await awardMlbg('emart_comment', ins.id, txt);
     const { data } = await supabase.rpc('list_emart_comments', { p_emart_id: emart.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
     setComments((data ?? []) as EmartComment[]);
+    revalidateHome();
   }
 
   async function deleteComment(id: number) {
@@ -191,6 +199,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
     const { error } = await supabase.from('emart_comments').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     setComments((prev) => prev.filter((c) => c.id !== id));
+    revalidateHome();
   }
 
   return (

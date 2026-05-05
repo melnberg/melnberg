@@ -1,21 +1,50 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-// 우측 하단 c 버튼 — 컨텍스트별로 지도/피드 토글.
-// 지도화면(/?view=map | /?apt= 등) → 피드 아이콘 + / 로 이동
-// 그 외 → 지도핀 아이콘 + /?view=map 로 이동
+// 우측 하단 토글 — 컨텍스트별로 지도/피드 전환.
+// - 홈(/) 안에서: pushState 로 URL 만 갱신 + popstate 디스패치 → HomeMobileSwitcher 가 받아 클라이언트 전환 (서버 RTT 0)
+// - 다른 페이지: router.push('/?view=map') 로 정상 navigate
+function urlIsMap(): boolean {
+  if (typeof window === 'undefined') return false;
+  const sp = new URLSearchParams(window.location.search);
+  return window.location.pathname === '/' && (
+    sp.get('view') === 'map' || sp.has('apt') || sp.has('emart') || sp.has('factory')
+  );
+}
+
 export default function FloatingMapPin() {
+  const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  const isMap = pathname === '/' && (
+  // useSearchParams 가 pushState 를 추적 못하므로 popstate 로 직접 동기화
+  const initialIsMap = pathname === '/' && (
     sp.get('view') === 'map' || !!sp.get('apt') || !!sp.get('emart') || !!sp.get('factory')
   );
+  const [isMap, setIsMap] = useState(initialIsMap);
+  useEffect(() => { setIsMap(initialIsMap); }, [initialIsMap]);
+  useEffect(() => {
+    function sync() { setIsMap(urlIsMap()); }
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  function onClick(e: React.MouseEvent) {
+    e.preventDefault();
+    if (pathname === '/') {
+      const next = isMap ? '/' : '/?view=map';
+      window.history.pushState({}, '', next);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else {
+      router.push('/?view=map');
+    }
+  }
 
   return (
-    <Link
+    <a
       href={isMap ? '/' : '/?view=map'}
+      onClick={onClick}
       aria-label={isMap ? '피드로' : '지도로'}
       className="fixed bottom-5 right-5 z-50 w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center no-underline"
     >
@@ -32,6 +61,6 @@ export default function FloatingMapPin() {
           <circle cx="12" cy="10" r="3" />
         </svg>
       )}
-    </Link>
+    </a>
   );
 }

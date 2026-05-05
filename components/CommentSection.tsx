@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { revalidateHome } from '@/lib/revalidate-home';
 import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 import Nickname from './Nickname';
@@ -85,6 +86,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const insertedId = (data as { id: number }).id;
     await awardMlbg(commentAwardKind, insertedId, content.trim());
     notifyTelegram(commentAwardKind, insertedId);
+    revalidateHome();
     router.refresh();
   }
 
@@ -104,6 +106,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const insertedId = (data as { id: number }).id;
     await awardMlbg(commentAwardKind, insertedId, replyContent.trim());
     notifyTelegram(commentAwardKind, insertedId);
+    revalidateHome();
     router.refresh();
   }
 
@@ -116,6 +119,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
       return;
     }
     setList(list.filter((c) => c.id !== commentId));
+    revalidateHome();
     router.refresh();
   }
 

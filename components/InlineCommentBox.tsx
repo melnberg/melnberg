@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg, type MlbgAwardKind } from '@/lib/mlbg-award';
+import { revalidateHome } from '@/lib/revalidate-home';
 
 // 피드 카드 안에서 댓글 미리보기 + 작성. kind 별로 테이블/컬럼 분기.
 export type InlineKind = 'discussion' | 'post' | 'emart_occupy' | 'factory_occupy';
@@ -97,6 +98,7 @@ export default function InlineCommentBox({
     });
     setText('');
     await awardMlbg(cfg.awardKind, row.id, row.content);
+    revalidateHome();
   }
 
   return (
