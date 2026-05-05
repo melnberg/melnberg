@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import EmartPanel from './EmartPanel';
+import FactoryPanel, { type FactoryItem } from './FactoryPanel';
 import Countdown from './Countdown';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
@@ -360,6 +361,51 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [emartList, setEmartList] = useState<EmartItem[]>([]);
   const [selectedEmart, setSelectedEmart] = useState<EmartItem | null>(null);
   const emartMarkersRef = useRef<KakaoMarkerInst[]>([]);
+
+  // 공장 (하이닉스/삼성/코스트코/금속노조)
+  const [factoryList, setFactoryList] = useState<FactoryItem[]>([]);
+  const [selectedFactory, setSelectedFactory] = useState<FactoryItem | null>(null);
+  const factoryMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  async function refetchFactory() {
+    try {
+      const r = await fetch('/api/factory-list', { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      setFactoryList((j.items ?? []) as FactoryItem[]);
+    } catch { /* silent */ }
+  }
+  useEffect(() => { refetchFactory(); }, []);
+
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    for (const m of factoryMarkersRef.current) m.setMap(null);
+    factoryMarkersRef.current = [];
+    if (factoryList.length === 0) return;
+    const PIN_W = 32, PIN_H = 45;
+    const imgs: Record<string, KakaoMarkerImage> = {
+      hynix:   new window.kakao.maps.MarkerImage('/pins/factory-hynix.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      samsung: new window.kakao.maps.MarkerImage('/pins/factory-samsung.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      costco:  new window.kakao.maps.MarkerImage('/pins/factory-costco.svg',  new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      union:   new window.kakao.maps.MarkerImage('/pins/factory-union.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+    };
+    for (const f of factoryList) {
+      const pos = new window.kakao.maps.LatLng(f.lat, f.lng);
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: f.occupier_id ? `${f.name} — ${f.occupier_name ?? '점거됨'} 보유` : `${f.name} (${f.occupy_price.toLocaleString()} mlbg 분양)`,
+        clickable: true,
+        image: imgs[f.brand] ?? imgs.hynix,
+        map,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => setSelectedFactory(f));
+      factoryMarkersRef.current.push(marker);
+    }
+    return () => {
+      for (const m of factoryMarkersRef.current) m.setMap(null);
+      factoryMarkersRef.current = [];
+    };
+  }, [factoryList, mapReady]);
 
   async function refetchEmart() {
     try {
@@ -1655,6 +1701,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {selected && <AptDiscussionPanel apt={selected} onClose={() => setSelected(null)} />}
 
       {selectedEmart && <EmartPanel emart={selectedEmart} onClose={() => setSelectedEmart(null)} onChanged={refetchEmart} />}
+      {selectedFactory && <FactoryPanel factory={selectedFactory} onClose={() => setSelectedFactory(null)} onChanged={refetchFactory} />}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'emart_occupy';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'emart_occupy' | 'factory_occupy';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'emart_occupy'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'emart_occupy', 'factory_occupy'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -93,6 +93,20 @@ export async function POST(req: NextRequest) {
     const aptName = r.apt_master?.apt_nm ?? '단지';
     const endsKr = new Date(r.ends_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
     main = `${aptName} 시작가 ${Number(r.min_bid).toLocaleString()} mlbg · ${endsKr} 종료`;
+  } else if (kind === 'factory_occupy') {
+    // refId = factory_locations.id. 본인 occupier 검증.
+    const { data: occ } = await admin
+      .from('factory_occupations')
+      .select('user_id, factory_id, factory:factory_locations!factory_id(name, brand)')
+      .eq('factory_id', refId)
+      .maybeSingle();
+    const r = occ as { user_id: string; factory_id: number; factory: unknown } | null;
+    if (!r) return NextResponse.json({ error: 'factory not occupied' }, { status: 404 });
+    if (r.user_id !== user.id) return NextResponse.json({ error: 'not occupier' }, { status: 403 });
+    const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null } | null;
+    const labels: Record<string, string> = { hynix: '🏭 SK하이닉스', samsung: '🏭 삼성전자', costco: '🛒 코스트코', union: '🚩 금속노조' };
+    tag = labels[f?.brand ?? ''] ?? '🏭 공장';
+    main = `${f?.name ?? '공장'} 분양받음`;
   } else if (kind === 'emart_occupy') {
     // refId = emart_locations.id. 분양받은 본인만 발송 가능 (검증).
     const { data: occ } = await admin
