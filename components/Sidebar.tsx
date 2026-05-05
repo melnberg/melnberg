@@ -72,7 +72,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                   </div>
                   <div className="text-[11px] text-muted flex items-center gap-1.5">
                     {typeof user.score === 'number' && (
-                      <span className="text-cyan font-bold">⚡ {user.score}</span>
+                      <span className="text-cyan font-bold">💰 {user.score} mlbg</span>
                     )}
                     <span>마이페이지 →</span>
                   </div>

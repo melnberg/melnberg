@@ -64,25 +64,18 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
       const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) { setMsg({ type: 'error', text: `업로드 실패: ${upErr.message}` }); return; }
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
-      // 캐시 buster
       const finalUrl = `${publicUrl}?v=${Date.now()}`;
-      const { error: pErr } = await supabase.from('profiles').update({ avatar_url: finalUrl }).eq('id', user.id);
-      if (pErr) { setMsg({ type: 'error', text: `저장 실패: ${pErr.message}` }); return; }
+      // profile row 는 즉시 저장하지 않음 — 저장 버튼 누를 때 commit
       setAvatarUrl(finalUrl);
-      setMsg({ type: 'info', text: '✓ 사진 업로드 완료' });
-      router.refresh();
+      setMsg({ type: 'info', text: '✓ 미리보기 적용. 하단 "변경사항 저장" 버튼을 눌러 저장하세요.' });
     } finally {
       setUploadingAvatar(false);
     }
   }
 
-  async function removeAvatar() {
-    if (!confirm('프로필 사진을 제거할까요?')) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
+  function removeAvatar() {
     setAvatarUrl(null);
-    router.refresh();
+    setMsg({ type: 'info', text: '✓ 제거 미리보기 — "변경사항 저장" 버튼을 눌러 적용하세요.' });
   }
 
   const dirty =
@@ -90,7 +83,8 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     (naverId.trim() || null) !== (initial.naver_id?.trim() || null) ||
     (linkUrl.trim() || null) !== (initial.link_url?.trim() || null) ||
     isSolo !== initial.is_solo ||
-    bio.trim() !== initial.bio.trim();
+    bio.trim() !== initial.bio.trim() ||
+    avatarUrl !== initial.avatar_url;
 
   async function handleSave() {
     if (saving || !dirty) return;
@@ -133,6 +127,7 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     if (linkClean !== (initial.link_url || null)) updates.link_url = linkClean;
     if (isSolo !== initial.is_solo) updates.is_solo = isSolo;
     if (bio.trim() !== initial.bio.trim()) updates.bio = bio.trim() || null;
+    if (avatarUrl !== initial.avatar_url) updates.avatar_url = avatarUrl;
 
     const errors: Array<{ message: string } | null> = [];
     if (Object.keys(updates).length > 0) {

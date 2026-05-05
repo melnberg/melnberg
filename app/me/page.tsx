@@ -111,15 +111,15 @@ export default async function MePage() {
               <Stat label="게시글" value={communityPosts.toLocaleString()} suffix="개" />
               <Stat label="아파트글" value={aptPosts.toLocaleString()} suffix="개" border />
               <Stat label="댓글" value={totalComments.toLocaleString()} suffix="개" border />
-              <Stat label="Score" value={String(score)} accent border />
+              <Stat label="mlbg" value={String(score)} accent border />
             </div>
             <div className="mt-3 px-4 py-3 border border-border bg-navy-soft text-[11px] leading-relaxed">
-              <div className="text-navy font-bold mb-1.5 tracking-wider uppercase text-[10px]">Score 산정 기준</div>
+              <div className="text-navy font-bold mb-1.5 tracking-wider uppercase text-[10px]">mlbg 적립 기준</div>
               <ul className="space-y-0.5 text-text">
-                <li>· 게시글 <b className="text-navy">1점</b> / 게시글 댓글 <b className="text-navy">0.7점</b></li>
-                <li>· 아파트글 <b className="text-navy">1점</b> / 아파트 댓글 <b className="text-navy">0.5점</b></li>
+                <li>· 커뮤니티 글 <b className="text-navy">2 mlbg</b> / 커뮤니티 댓글 <b className="text-navy">0.3 mlbg</b></li>
+                <li>· 아파트글 <b className="text-navy">1 mlbg</b> / 아파트 댓글 <b className="text-navy">0.5 mlbg</b></li>
               </ul>
-              <p className="text-muted mt-1.5">단지 점거·강제집행 시 사용됩니다.</p>
+              <p className="text-muted mt-1.5">단지 분양·매매 시 사용되는 화폐 단위입니다.</p>
             </div>
           </div>
 

@@ -78,7 +78,11 @@ export default function Nickname({
   const avatarUrl = info?.avatarUrl ?? null;
   const avatarNode = avatarUrl ? (
     <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover mr-1 align-middle inline-block flex-shrink-0" />
-  ) : null;
+  ) : (
+    <span className="w-4 h-4 rounded-full bg-[#d4d4d4] mr-1 align-middle inline-flex items-center justify-center flex-shrink-0 text-white">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    </span>
+  );
 
   if (!isPaid) {
     // 무료회원은 그냥 텍스트 (프로필 페이지 X)
