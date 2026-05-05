@@ -195,7 +195,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
               <>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
                   <span className="text-[13px] font-bold text-muted">{ownerLabel}</span>
-                  <span className="text-[20px] font-bold text-navy truncate">{factory.occupier_name ?? '익명'} 님</span>
+                  <span className="text-[20px] font-bold text-navy truncate">{factory.occupier_name ?? '익명'}</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
                   <span className="text-[13px] font-bold text-muted">누적 수익</span>
