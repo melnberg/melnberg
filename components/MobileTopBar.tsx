@@ -53,9 +53,9 @@ export default function MobileTopBar() {
       href="/"
       onClick={onClick}
       aria-label="홈으로"
-      // display:flex 명시 + flex-shrink-0 으로 레이아웃 안전. block 도 display:flex 가 덮어써서 OK.
-      style={{ display: 'flex' }}
-      className="lg:hidden sticky top-0 z-30 h-[52px] w-full bg-white/85 backdrop-blur-sm border-b border-border items-center justify-center gap-2 no-underline flex-shrink-0"
+      // 주의: inline style 로 display 주입 금지. lg:hidden (@media display:none) 이 인라인 스타일에 specificity 패배 → 데스크톱에서도 노출되는 버그.
+      // className 의 flex 만 사용 — lg+ 에서는 lg:hidden 이 display:none 으로 덮어쓰는 게 정상 동작.
+      className="flex lg:hidden sticky top-0 z-30 h-[52px] w-full bg-white/85 backdrop-blur-sm border-b border-border items-center justify-center gap-2 no-underline flex-shrink-0"
     >
       <img src="/logo.svg" alt="" className="w-7 h-7 flex-shrink-0" />
       <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
