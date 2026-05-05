@@ -911,7 +911,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                         const isReplying = replyTo === c.id;
                         return (
                           <div key={c.id} className="text-[12px]">
-                            <p className="text-text whitespace-pre-wrap leading-snug">{c.content}</p>
+                            <p className="text-text whitespace-pre-wrap leading-snug">{linkify(c.content)}</p>
                             <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
                               <Nickname info={{ ...cAuthor, userId: c.author_id }} className="text-muted" />
                               <span>·</span>
@@ -939,7 +939,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                   const rIsMine = userId === r.author_id;
                                   return (
                                     <div key={r.id} className="text-[12px]">
-                                      <p className="text-text whitespace-pre-wrap leading-snug">{r.content}</p>
+                                      <p className="text-text whitespace-pre-wrap leading-snug">{linkify(r.content)}</p>
                                       <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
                                         <Nickname info={{ ...rAuthor, userId: r.author_id }} className="text-muted" />
                                         <span>·</span>

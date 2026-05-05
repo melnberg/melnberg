@@ -14,6 +14,7 @@ import {
   canViewPaidContent,
 } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
+import { linkify } from '@/lib/linkify';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,27 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
     getCurrentUserAccess(),
   ]);
   if (!post) notFound();
+  if (post.deleted_at) {
+    return (
+      <Layout current="blog">
+        <MainTop crumbs={[
+          { href: '/', label: '멜른버그' },
+          { href: '/blog', label: '블로그' },
+          { label: '삭제된 글', bold: true },
+        ]} meta="Deleted" />
+        <article className="py-24">
+          <div className="max-w-[520px] mx-auto px-6 text-center">
+            <div className="text-[14px] font-bold tracking-wider uppercase text-muted mb-4">DELETED</div>
+            <h1 className="text-[22px] font-bold text-navy mb-3">게시글이 삭제되었습니다</h1>
+            <p className="text-[13px] text-muted leading-relaxed mb-8">작성자가 이 글을 삭제했어요.</p>
+            <Link href="/blog" className="inline-block bg-navy text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-navy-dark">
+              ← 블로그 목록
+            </Link>
+          </div>
+        </article>
+      </Layout>
+    );
+  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -116,7 +138,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
           ) : (
             <>
               <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
-                {post.content}
+                {linkify(post.content)}
               </div>
 
               <CommentSection
