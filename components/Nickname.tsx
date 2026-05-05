@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { createClient } from '@/lib/supabase/client';
 
 export type NicknameInfo = {
   name: string | null;
@@ -15,7 +16,9 @@ export type NicknameInfo = {
   aptCount?: number | null;
 };
 
-function HousingTag({ n }: { n: number }) {
+type OwnedApt = { id: number; apt_nm: string | null; dong: string | null; listing_price?: number | string | null };
+
+function HousingTag({ n, userId }: { n: number; userId?: string | null }) {
   // 0 = 무주택 (회색), 1 = 1주택 (시안), 2+ = N주택 (네이비)
   const cls = n === 0
     ? 'bg-[#e5e7eb] text-[#6b7280]'
@@ -23,13 +26,113 @@ function HousingTag({ n }: { n: number }) {
     ? 'bg-cyan/15 text-cyan'
     : 'bg-navy text-white';
   const label = n === 0 ? '무주택' : `${n}주택`;
+
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<Pos | null>(null);
+  const [apts, setApts] = useState<OwnedApt[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const tagRef = useRef<HTMLSpanElement>(null);
+  const closeTimer = useRef<number | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // 무주택이거나 userId 없으면 hover 비활성화 — 단순 라벨
+  const interactive = n > 0 && !!userId;
+
+  async function loadApts() {
+    if (apts !== null || !userId) return;
+    setLoading(true);
+    const supabase = createClient();
+    // listing_price 는 apt_master 와 별도 테이블 — best-effort 로 join 시도, 실패 시 fallback
+    const { data, error } = await supabase
+      .from('apt_master_with_listing')
+      .select('id, apt_nm, dong, listing_price')
+      .eq('occupier_id', userId)
+      .order('occupied_at', { ascending: false });
+    if (error || !data) {
+      // view 없으면 (SQL 060 미실행) plain apt_master 로 재시도
+      const { data: fallback } = await supabase
+        .from('apt_master')
+        .select('id, apt_nm, dong')
+        .eq('occupier_id', userId)
+        .order('occupied_at', { ascending: false });
+      setApts((fallback ?? []) as OwnedApt[]);
+    } else {
+      setApts(data as OwnedApt[]);
+    }
+    setLoading(false);
+  }
+
+  function handleEnter() {
+    if (!interactive) return;
+    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
+    if (tagRef.current) setPos(rectToPos(tagRef.current));
+    setOpen(true);
+    loadApts();
+  }
+  function handleLeave() {
+    closeTimer.current = window.setTimeout(() => setOpen(false), 180);
+  }
+  function handlePopupEnter() {
+    if (closeTimer.current) { window.clearTimeout(closeTimer.current); closeTimer.current = null; }
+  }
+
   return (
-    <span
-      className={`text-[9px] font-bold tracking-wider px-1 py-px mr-1 align-middle leading-none ${cls}`}
-      title={`보유 단지 ${n}개`}
-    >
-      {label}
-    </span>
+    <>
+      <span
+        ref={tagRef}
+        className={`text-[9px] font-bold tracking-wider px-1 py-px ml-1 align-middle leading-none ${cls} ${interactive ? 'cursor-pointer' : ''}`}
+        title={interactive ? `보유 단지 ${n}개 — 클릭/호버로 목록` : `보유 단지 ${n}개`}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        onClick={(e) => { e.stopPropagation(); handleEnter(); }}
+      >
+        {label}
+      </span>
+      {interactive && mounted && open && pos && createPortal(
+        <div
+          className="fixed z-[100] bg-white border border-navy/30 shadow-[0_4px_20px_rgba(0,32,96,0.18)] w-[260px] max-h-[320px] overflow-y-auto"
+          style={{ top: pos.top, left: pos.left }}
+          onMouseEnter={handlePopupEnter}
+          onMouseLeave={handleLeave}
+        >
+          <div className="px-3 py-2 border-b border-border bg-navy text-white text-[11px] font-bold tracking-wider uppercase flex items-center justify-between">
+            <span>보유 단지</span>
+            <span className="text-cyan tabular-nums">{n}개</span>
+          </div>
+          {loading ? (
+            <div className="px-3 py-4 text-[11px] text-muted text-center">불러오는 중...</div>
+          ) : !apts || apts.length === 0 ? (
+            <div className="px-3 py-4 text-[11px] text-muted text-center">보유 단지 없음</div>
+          ) : (
+            <ul>
+              {apts.map((a) => {
+                const lp = a.listing_price == null ? null : Number(a.listing_price);
+                return (
+                  <li key={a.id} className="border-b border-border last:border-b-0">
+                    <Link
+                      href={`/?apt=${a.id}`}
+                      onClick={(e) => { e.stopPropagation(); setOpen(false); }}
+                      className="block px-3 py-2 text-[12px] no-underline hover:bg-navy-soft"
+                    >
+                      <div className="font-bold text-navy truncate">{a.apt_nm ?? '(이름 없음)'}</div>
+                      <div className="flex items-center justify-between text-[10px] text-muted mt-0.5">
+                        <span className="truncate">{a.dong ?? ''}</span>
+                        {lp != null && (
+                          <span className="text-cyan font-bold flex-shrink-0 ml-2">매물 {lp.toLocaleString()} mlbg</span>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
@@ -92,7 +195,7 @@ export default function Nickname({
   if (!name) return <span className={className}>{fallback}</span>;
 
   const aptCount = info?.aptCount;
-  const housingTag = typeof aptCount === 'number' ? <HousingTag n={aptCount} /> : null;
+  const housingTag = typeof aptCount === 'number' ? <HousingTag n={aptCount} userId={info?.userId ?? null} /> : null;
 
   const isPaid = !!info?.isPaid;
   const isSolo = !!info?.isSolo;
@@ -113,7 +216,8 @@ export default function Nickname({
 
   if (!isPaid) {
     // 무료회원은 그냥 텍스트 (프로필 페이지 X)
-    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{housingTag}{name}</span>;
+    // 무료회원: 사진 / 닉네임 / 주택수 (조합원 배지 없음)
+    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}{housingTag}</span>;
   }
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';
@@ -230,11 +334,12 @@ export default function Nickname({
     document.body,
   );
 
+  // 표기 순서: 사진 / 닉네임 / 주택수 / 조합원 / SNS dot
   return (
     <span className={`inline-flex items-center whitespace-nowrap ${className}`}>
       {avatarNode}
-      {housingTag}
       {nameNode}
+      {housingTag}
       {badgeNode}
       {dotEl}
       {legendPopup}
