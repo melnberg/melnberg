@@ -70,6 +70,8 @@ export type FeedItem = {
   author_apt_count: number | null;
   /** 매물(listing) 전용 — 호가 mlbg */
   listing_price?: number | null;
+  /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
+  earned_mlbg?: number | null;
 };
 
 export type AptPin = {
@@ -909,7 +911,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                               )}
                             </>
                           )}
-                          <div className="text-[10px] text-muted mt-1">{feedRelTime(f.created_at)} 전</div>
+                          <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
+                            <span>{feedRelTime(f.created_at)} 전</span>
+                            {typeof f.earned_mlbg === 'number' && f.earned_mlbg > 0 && (
+                              <span className="text-cyan font-bold tabular-nums" title="AI 평가로 적립된 mlbg">
+                                +{f.earned_mlbg} mlbg
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </li>

@@ -56,6 +56,10 @@ async function evaluateQuality(kind: Kind, content: string): Promise<{ multiplie
 - 여러 관점·근거·데이터 종합
 
 [하드룰 — 무조건 지킴]
+- 1줄 + 50자 이하 (한 문장 정도)는 무조건 0.1
+  · 예: "평택 원주민의 워너비 배다리공원뷰가 멋짐니다"
+  · 예: "역세권이라 좋아요"
+  · 예: "10억이하 저렴한 동2"
 - 줄바꿈 기준 2줄 이하 (한두 문장)는 절대 0.3 초과 금지
 - 100자 미만 글은 절대 0.5 초과 금지
 - 200자 미만 글은 절대 0.9 초과 금지
@@ -64,7 +68,7 @@ async function evaluateQuality(kind: Kind, content: string): Promise<{ multiplie
 - 길이만 길고 내용 빈약하면 (반복·횡설수설) 200자 단위로 0.1씩 차감
 
 평가 시 글자 수와 줄 수 직접 세서 하드룰 어기지 마라.
-짧은 글은 정보가치 높아도 0.3~0.5 범위로 강제. 길게 정성껏 써야 보상.`;
+짧은 글은 정보가치 있어 보여도 그냥 0.1. 정성껏 써야 보상.`;
 
   const user = `${KIND_LABEL[kind]}을 평가해.
 

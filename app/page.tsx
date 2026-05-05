@@ -76,12 +76,32 @@ const fetchFeed = unstable_cache(
     const now = Date.now();
     const isActivePaid = (p: ProfRow | undefined) => !!p && p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > now);
 
+    // 각 글·댓글의 AI 평가 mlbg 적립 정보 조회 (kind, ref_id 매칭)
+    const awardRefIds = Array.from(new Set([
+      ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
+      ...((cmts ?? []).map((c) => (c as Record<string, unknown>).id as number)),
+      ...((posts ?? []).map((p) => (p as Record<string, unknown>).id as number)),
+      ...((postComments ?? []).map((c) => (c as Record<string, unknown>).id as number)),
+    ]));
+    const awardMap = new Map<string, number>();
+    if (awardRefIds.length > 0) {
+      const { data: awardRows } = await supabase
+        .from('mlbg_award_log')
+        .select('kind, ref_id, earned')
+        .in('ref_id', awardRefIds)
+        .then((r) => r, () => ({ data: null }));
+      for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
+        awardMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
+      }
+    }
+    const earnedFor = (kind: string, refId: number): number | null => awardMap.get(`${kind}:${refId}`) ?? null;
+
     const discussionItems: FeedItem[] = (discs ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const am = row.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
       const prof = profileMap.get(row.author_id as string);
       return {
-        kind: 'discussion',
+        kind: 'discussion' as const,
         id: row.id as number,
         apt_master_id: row.apt_master_id as number,
         post_id: null,
@@ -99,6 +119,7 @@ const fetchFeed = unstable_cache(
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
+        earned_mlbg: earnedFor('apt_post', row.id as number),
       };
     });
 
@@ -126,6 +147,7 @@ const fetchFeed = unstable_cache(
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
+        earned_mlbg: earnedFor('apt_comment', row.id as number),
       };
     });
 
@@ -148,6 +170,7 @@ const fetchFeed = unstable_cache(
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
+        earned_mlbg: earnedFor('community_post', row.id as number),
       };
     });
 
@@ -176,6 +199,7 @@ const fetchFeed = unstable_cache(
           author_is_solo: !!prof?.is_solo,
           author_avatar_url: prof?.avatar_url ?? null,
           author_apt_count: prof?.apt_count ?? null,
+          earned_mlbg: earnedFor('community_comment', row.id as number),
         };
       });
 

@@ -62,6 +62,8 @@ function relativeTime(iso: string): string {
 export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onClose: () => void }) {
   const router = useRouter();
   const [discussions, setDiscussions] = useState<Discussion[] | null>(null);
+  // 글·댓글 별 AI 평가 적립 mlbg (kind:ref_id → earned)
+  const [awardMap, setAwardMap] = useState<Map<string, number>>(new Map());
   const [myVotes, setMyVotes] = useState<Map<number, 'up' | 'down'>>(new Map());
   const [authors, setAuthors] = useState<Map<string, NicknameInfo>>(new Map());
   const [comments, setComments] = useState<Map<number, Comment[]>>(new Map());
@@ -280,6 +282,22 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     } else {
       setOccupierMlbg(null);
     }
+
+    // mlbg_award_log 에서 글·댓글 적립 정보 조회 — AI 평가 결과 표시용
+    const allRefIds = Array.from(new Set([
+      ...ds.map((d) => d.id),
+      ...((cData ?? []) as Comment[]).map((c) => c.id),
+    ]));
+    const aMapAward = new Map<string, number>();
+    if (allRefIds.length > 0) {
+      const { data: awardRows } = await supabase
+        .from('mlbg_award_log').select('kind, ref_id, earned').in('ref_id', allRefIds)
+        .then((r) => r, () => ({ data: null }));
+      for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
+        aMapAward.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
+      }
+    }
+    setAwardMap(aMapAward);
 
     setLoading(false);
     // 사이드바 score(서버 컴포넌트)도 갱신되도록 RSC 재요청
@@ -805,11 +823,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   {d.content && (
                     <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap [&::first-line]:font-bold">{linkify(d.content)}</p>
                   )}
-                  <div className="text-[11px] text-muted mt-2 flex items-center gap-2">
+                  <div className="text-[11px] text-muted mt-2 flex items-center gap-2 flex-wrap">
                     <Nickname info={{ ...author, userId: d.author_id }} className="text-muted" />
-
                     <span>·</span>
                     <span>{relativeTime(d.created_at)}</span>
+                    {(() => {
+                      const earned = awardMap.get(`apt_post:${d.id}`);
+                      return typeof earned === 'number' && earned > 0 ? (
+                        <>
+                          <span>·</span>
+                          <span className="text-cyan font-bold tabular-nums" title="AI 평가 적립 mlbg">+{earned} mlbg</span>
+                        </>
+                      ) : null;
+                    })()}
                     {isMine && (
                       <>
                         <span>·</span>
@@ -851,10 +877,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                         return (
                           <div key={c.id} className="text-[12px]">
                             <p className="text-text whitespace-pre-wrap leading-snug">{linkify(c.content)}</p>
-                            <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
+                            <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
                               <Nickname info={{ ...cAuthor, userId: c.author_id }} className="text-muted" />
                               <span>·</span>
                               <span>{relativeTime(c.created_at)}</span>
+                              {(() => {
+                                const earned = awardMap.get(`apt_comment:${c.id}`);
+                                return typeof earned === 'number' && earned > 0 ? (
+                                  <>
+                                    <span>·</span>
+                                    <span className="text-cyan font-bold tabular-nums" title="AI 평가 적립 mlbg">+{earned} mlbg</span>
+                                  </>
+                                ) : null;
+                              })()}
                               {userId && (
                                 <>
                                   <span>·</span>
@@ -879,10 +914,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                   return (
                                     <div key={r.id} className="text-[12px]">
                                       <p className="text-text whitespace-pre-wrap leading-snug">{linkify(r.content)}</p>
-                                      <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
+                                      <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
                                         <Nickname info={{ ...rAuthor, userId: r.author_id }} className="text-muted" />
                                         <span>·</span>
                                         <span>{relativeTime(r.created_at)}</span>
+                                        {(() => {
+                                          const earned = awardMap.get(`apt_comment:${r.id}`);
+                                          return typeof earned === 'number' && earned > 0 ? (
+                                            <>
+                                              <span>·</span>
+                                              <span className="text-cyan font-bold tabular-nums" title="AI 평가 적립 mlbg">+{earned} mlbg</span>
+                                            </>
+                                          ) : null;
+                                        })()}
                                         {rIsMine && (
                                           <>
                                             <span>·</span>
