@@ -816,11 +816,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           const level = map.getLevel();
           for (const { marker, tier, occupied } of markersRef.current) {
             if (tier === 0 || occupied) continue;
-            const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
+            const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 6) || (tier === 3 && level <= 4);
             marker.setMap(visible ? map : null);
           }
-          // 평당가 라벨은 어느 정도 가까이 줌 했을 때만 (level <= 5)
-          const showLabels = level <= 5;
+          // 평당가 라벨은 어느 정도 가까이 줌 했을 때만 (level <= 6)
+          const showLabels = level <= 6;
           for (const ov of overlaysRef.current) ov.setMap(showLabels ? map : null);
         });
 
@@ -914,7 +914,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         const occupied = !!p.occupier_id;
         const listed = p.listing_price != null;
         const visible = tier === 0 || occupied || listed
-          || (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
+          || (tier === 1 && level <= 7) || (tier === 2 && level <= 6) || (tier === 3 && level <= 4);
         const marker = new window.kakao.maps.Marker({
           position: pos,
           title: listed ? `${p.apt_nm} — 매물 ${Number(p.listing_price).toLocaleString()} mlbg` : p.apt_nm,
@@ -925,7 +925,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
         allMarkers.push({ marker, tier, occupied });
 
-        // 평당가 라벨 — 데이터 있는 단지만, 줌 level <= 5 일 때 노출
+        // 평당가 라벨 — 데이터 있는 단지만, 줌 level <= 6 일 때 노출
         if (p.pyeong_price && p.pyeong_price > 0) {
           const overlay = new window.kakao.maps.CustomOverlay({
             position: pos,
@@ -933,7 +933,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             yAnchor: 2.4,
             zIndex: 3,
             clickable: false,
-            map: level <= 5 ? map : undefined,
+            map: level <= 6 ? map : undefined,
           }) as KakaoOverlayInst;
           overlaysRef.current.push(overlay);
         }

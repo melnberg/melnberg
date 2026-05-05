@@ -522,16 +522,14 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                           >
                             {p.link_url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
                           </a>
-                          {linkStatus.get(p.id) === 'dead' && (
-                            <button
-                              type="button"
-                              onClick={() => clearLink(p)}
-                              className="text-[10px] font-bold text-red-600 hover:text-red-800 bg-transparent border-none p-0 flex-shrink-0"
-                              title="이 링크 삭제 (link_url = null)"
-                            >
-                              삭제
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => clearLink(p)}
+                            className={`text-[10px] font-bold bg-transparent border-none p-0 flex-shrink-0 ${linkStatus.get(p.id) === 'dead' ? 'text-red-600 hover:text-red-800' : 'text-muted hover:text-red-600'}`}
+                            title="이 링크 강제 삭제 (link_url = null)"
+                          >
+                            삭제
+                          </button>
                         </div>
                       ) : (
                         <span className="text-muted">—</span>

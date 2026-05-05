@@ -17,12 +17,25 @@ type Props = {
   isPaid: boolean;
 };
 
+// SNS 링크 검증 — 영문 URL 형식만 허용
 function normalizeUrl(input: string): string | null {
   const t = input.trim();
   if (!t) return null;
   if (/^javascript:/i.test(t)) return null;
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
+  // 한글·CJK 차단 (텍스트가 그대로 들어가는 케이스 방지)
+  if (/[ㄱ-ㆎ가-힣一-鿿]/.test(t)) return null;
+  const url = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  try {
+    const u = new URL(url);
+    // 호스트는 영문·숫자·하이픈·점만, 그리고 점이 최소 1개 (도메인 형식)
+    if (!/^[a-z0-9.\-]+$/i.test(u.hostname)) return null;
+    if (!u.hostname.includes('.')) return null;
+    // 빈 path/query 도 허용. 다만 host 가 너무 짧으면 거부 (a.b 같은 거)
+    if (u.hostname.length < 4) return null;
+    return url;
+  } catch {
+    return null;
+  }
 }
 
 function Row({ label, sublabel, children }: { label: string; sublabel?: string; children: React.ReactNode }) {
@@ -107,8 +120,16 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     }
     let linkClean: string | null = null;
     if (linkUrl.trim()) {
+      // 한글 등 비영문 즉시 거절 (정상 SNS 링크는 모두 영문 URL)
+      if (/[ㄱ-ㆎ가-힣一-鿿]/.test(linkUrl)) {
+        setMsg({ type: 'error', text: 'SNS 링크는 영문 URL 만 입력 가능합니다 (예: https://blog.naver.com/your-id).' });
+        return;
+      }
       linkClean = normalizeUrl(linkUrl);
-      if (!linkClean) { setMsg({ type: 'error', text: '잘못된 URL 형식입니다.' }); return; }
+      if (!linkClean) {
+        setMsg({ type: 'error', text: 'URL 형식이 잘못되었습니다 (예: https://blog.naver.com/your-id).' });
+        return;
+      }
       if (linkClean.length > 500) { setMsg({ type: 'error', text: 'URL이 너무 깁니다 (500자 초과).' }); return; }
     }
 
