@@ -201,21 +201,21 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
             {emart.occupier_id ? (
               <>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
-                  <span className="text-[10px] tracking-widest uppercase text-muted">사장</span>
-                  <span className="text-[18px] font-bold text-navy truncate">{emart.occupier_name ?? '익명'} 님</span>
+                  <span className="text-[13px] font-bold text-muted">사장</span>
+                  <span className="text-[20px] font-bold text-navy truncate">{emart.occupier_name ?? '익명'} 님</span>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
-                  <span className="text-[10px] tracking-widest uppercase text-muted">누적 수익</span>
-                  <span className="text-[20px] font-black text-cyan tabular-nums">{totalDays} <span className="text-[12px] text-muted">mlbg</span></span>
+                  <span className="text-[13px] font-bold text-muted">누적 수익</span>
+                  <span className="text-[22px] font-black text-cyan tabular-nums">{totalDays} <span className="text-[13px] text-muted">mlbg</span></span>
                 </div>
                 {isMine && (
                   <div className="flex items-baseline justify-between gap-3 pt-2 border-t border-[#F5A623]/30">
-                    <span className="text-[10px] tracking-widest uppercase text-[#dc2626]">청구 가능</span>
-                    <span className="text-[18px] font-black text-[#dc2626] tabular-nums">{daysOwed} <span className="text-[12px]">mlbg</span></span>
+                    <span className="text-[13px] font-bold text-[#dc2626]">청구 가능</span>
+                    <span className="text-[20px] font-black text-[#dc2626] tabular-nums">{daysOwed} <span className="text-[13px]">mlbg</span></span>
                   </div>
                 )}
                 {emart.occupied_at && (
-                  <div className="text-[10px] text-muted mt-2">
+                  <div className="text-[13px] text-muted mt-2">
                     분양일: {fmtKstShort(emart.occupied_at)}
                   </div>
                 )}
