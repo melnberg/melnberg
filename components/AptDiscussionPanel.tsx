@@ -119,7 +119,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setLoading(true);
     setErr(null);
 
-    const [{ data: dData, error: dErr }, { data: { user } }] = await Promise.all([
+    // Round 1: 글 + 사용자 + 점거인 정보 + apt_master 동시 fetch
+    const [{ data: dData, error: dErr }, { data: { user } }, { data: occData }] = await Promise.all([
       supabase
         .from('apt_discussions')
         .select('id, title, content, vote_up_count, vote_down_count, created_at, author_id')
@@ -128,16 +129,17 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         .order('created_at', { ascending: false })
         .limit(50),
       supabase.auth.getUser(),
+      supabase.from('apt_master').select('occupier_id, occupied_at').eq('id', apt.id).maybeSingle(),
     ]);
 
     if (dErr) { setErr(dErr.message); setLoading(false); return; }
     const ds = (dData ?? []) as unknown as Discussion[];
     setDiscussions(ds);
     setUserId(user?.id ?? null);
+    const oid = (occData as { occupier_id?: string | null } | null)?.occupier_id ?? null;
+    setOccupierId(oid);
 
     const ids = ds.map((d) => d.id);
-
-    // 작가 표시명 + 링크 + 등급
     const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
     const nowMs = Date.now();
     const toInfo = (p: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo?: boolean | null }): NicknameInfo => ({
@@ -146,132 +148,97 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       isPaid: p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs),
       isSolo: !!p.is_solo,
     });
-    if (authorIds.length > 0) {
-      const { data: profilesData } = await supabase
+
+    // Round 2: 댓글 + 글 작성자 프로필 + 본인 점수·점거·vote + 점거인 점수 모두 병렬
+    const [
+      { data: cData },
+      { data: discAuthorProfs },
+      { data: myScoreData },
+      { data: myOccsData },
+      { data: myVotesData },
+      { data: occScoreData },
+    ] = await Promise.all([
+      ids.length > 0
+        ? supabase.from('apt_discussion_comments').select('id, discussion_id, content, created_at, author_id, parent_id').in('discussion_id', ids).is('deleted_at', null).order('created_at', { ascending: true })
+        : Promise.resolve({ data: [] as Comment[] | null }),
+      authorIds.length > 0
+        ? supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo').in('id', authorIds)
+        : Promise.resolve({ data: [] as unknown[] | null }),
+      user ? supabase.rpc('get_user_score', { p_user_id: user.id }) : Promise.resolve({ data: null }),
+      user ? supabase.from('apt_master').select('id, apt_nm').eq('occupier_id', user.id).neq('id', apt.id).limit(1) : Promise.resolve({ data: null }),
+      user && ids.length > 0
+        ? supabase.from('apt_discussion_votes').select('discussion_id, vote_type').eq('user_id', user.id).in('discussion_id', ids)
+        : Promise.resolve({ data: null }),
+      oid ? supabase.rpc('get_user_score', { p_user_id: oid }) : Promise.resolve({ data: null }),
+    ]);
+
+    // 댓글 처리
+    const cList = (cData ?? []) as Comment[];
+    const cMap = new Map<number, Comment[]>();
+    for (const c of cList) {
+      const list = cMap.get(c.discussion_id) ?? [];
+      list.push(c);
+      cMap.set(c.discussion_id, list);
+    }
+    setComments(cMap);
+
+    // 글 작성자 프로필 처리
+    const aMap = new Map<string, NicknameInfo>();
+    for (const p of (discAuthorProfs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
+      if (p.display_name) aMap.set(p.id, toInfo(p));
+    }
+
+    // 댓글 작성자 중 글 작성자에 없는 사람들 — 추가 round
+    const commentAuthorIds = Array.from(new Set(cList.map((c) => c.author_id))).filter((id) => !authorIds.includes(id));
+    // 점거인이 글 작성자/댓글 작성자에 없으면 같이 가져옴
+    const occNeedFetch = oid && !authorIds.includes(oid) && !commentAuthorIds.includes(oid);
+    const extraIds = [...commentAuthorIds];
+    if (occNeedFetch && oid) extraIds.push(oid);
+
+    if (extraIds.length > 0) {
+      const { data: extra } = await supabase
         .from('profiles')
-        .select('id, display_name, link_url, tier, tier_expires_at')
-        .in('id', authorIds);
-      const aMap = new Map<string, NicknameInfo>();
-      for (const p of (profilesData ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+        .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
+        .in('id', extraIds);
+      for (const p of (extra ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
         if (p.display_name) aMap.set(p.id, toInfo(p));
-      }
-      // is_solo (SQL 039 적용 후)
-      const { data: soloData } = await supabase.from('profiles').select('id, is_solo').in('id', authorIds);
-      if (soloData) {
-        for (const s of soloData as Array<{ id: string; is_solo: boolean | null }>) {
-          const cur = aMap.get(s.id);
-          if (cur) cur.isSolo = !!s.is_solo;
+        // 점거인이면 별도 state 도 set
+        if (p.id === oid) {
+          setOccupierName(p.display_name ?? null);
+          setOccupierLink(p.link_url ?? null);
+          setOccupierIsPaid(p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs));
+          setOccupierIsSolo(!!p.is_solo);
         }
       }
-      setAuthors(aMap);
-    } else {
-      setAuthors(new Map());
     }
 
-    // 댓글 (글 ID 묶음으로 한 번에 fetch)
-    if (ids.length > 0) {
-      const { data: cData } = await supabase
-        .from('apt_discussion_comments')
-        .select('id, discussion_id, content, created_at, author_id, parent_id')
-        .in('discussion_id', ids)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: true });
-      const cMap = new Map<number, Comment[]>();
-      for (const c of (cData ?? []) as Comment[]) {
-        const list = cMap.get(c.discussion_id) ?? [];
-        list.push(c);
-        cMap.set(c.discussion_id, list);
+    // 점거인이 작성자 목록에 이미 있으면 거기서 가져옴
+    if (oid && !occNeedFetch) {
+      const occInfo = aMap.get(oid);
+      if (occInfo) {
+        setOccupierName(occInfo.name ?? null);
+        setOccupierLink(occInfo.link ?? null);
+        setOccupierIsPaid(!!occInfo.isPaid);
+        setOccupierIsSolo(!!occInfo.isSolo);
       }
-      setComments(cMap);
+    } else if (!oid) {
+      setOccupierName(null);
+      setOccupierLink(null);
+      setOccupierIsPaid(false);
+      setOccupierIsSolo(false);
+    }
+    setOccupierScore(typeof occScoreData === 'number' ? occScoreData : occScoreData != null ? Number(occScoreData) : null);
+    setAuthors(aMap);
 
-      // 댓글 작가도 authors map에 합침
-      const commentAuthorIds = Array.from(new Set((cData ?? []).map((c: Comment) => c.author_id))).filter((id) => !authorIds.includes(id));
-      if (commentAuthorIds.length > 0) {
-        const { data: extra } = await supabase
-          .from('profiles')
-          .select('id, display_name, link_url, tier, tier_expires_at')
-          .in('id', commentAuthorIds);
-        const { data: extraSolo } = await supabase
-          .from('profiles')
-          .select('id, is_solo')
-          .in('id', commentAuthorIds);
-        const soloMap = new Map<string, boolean>();
-        if (extraSolo) for (const s of extraSolo as Array<{ id: string; is_solo: boolean | null }>) soloMap.set(s.id, !!s.is_solo);
-        if (extra) {
-          setAuthors((prev) => {
-            const m = new Map(prev);
-            for (const p of extra as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
-              if (p.display_name) m.set(p.id, toInfo({ ...p, is_solo: soloMap.get(p.id) ?? false }));
-            }
-            return m;
-          });
-        }
-      }
-    } else {
-      setComments(new Map());
-    }
+    // 내 vote map
+    const vMap = new Map<number, 'up' | 'down'>();
+    for (const v of (myVotesData ?? []) as MyVote[]) vMap.set(v.discussion_id, v.vote_type);
+    setMyVotes(vMap);
 
-    // 내 vote
-    if (user && ids.length > 0) {
-      const { data: vData } = await supabase
-        .from('apt_discussion_votes')
-        .select('discussion_id, vote_type')
-        .eq('user_id', user.id)
-        .in('discussion_id', ids);
-      const map = new Map<number, 'up' | 'down'>();
-      for (const v of (vData ?? []) as MyVote[]) map.set(v.discussion_id, v.vote_type);
-      setMyVotes(map);
-    } else {
-      setMyVotes(new Map());
-    }
-
-    // 점거인 + score + 내 현재 점거 fetch
-    {
-      const { data: occ } = await supabase
-        .from('apt_master')
-        .select('occupier_id, occupied_at')
-        .eq('id', apt.id)
-        .maybeSingle();
-      const oid = (occ as { occupier_id?: string | null } | null)?.occupier_id ?? null;
-      setOccupierId(oid);
-      if (oid) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('display_name, link_url, tier, tier_expires_at')
-          .eq('id', oid)
-          .maybeSingle();
-        const p = prof as { display_name?: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null } | null;
-        setOccupierName(p?.display_name ?? null);
-        setOccupierLink(p?.link_url ?? null);
-        setOccupierIsPaid(p?.tier === 'paid' && (!p?.tier_expires_at || new Date(p.tier_expires_at).getTime() > Date.now()));
-        const { data: soloRow } = await supabase.from('profiles').select('is_solo').eq('id', oid).maybeSingle();
-        setOccupierIsSolo(!!(soloRow as { is_solo?: boolean | null } | null)?.is_solo);
-        const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: oid });
-        setOccupierScore(typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0));
-      } else {
-        setOccupierName(null);
-        setOccupierLink(null);
-        setOccupierIsPaid(false);
-        setOccupierIsSolo(false);
-        setOccupierScore(null);
-      }
-    }
-    // 본인 점수 + 다른 곳 점거중인지
-    if (user) {
-      const { data: scoreData } = await supabase.rpc('get_user_score', { p_user_id: user.id });
-      setMyScore(typeof scoreData === 'number' ? scoreData : Number(scoreData ?? 0));
-      const { data: myOccs } = await supabase
-        .from('apt_master')
-        .select('id, apt_nm')
-        .eq('occupier_id', user.id)
-        .neq('id', apt.id)
-        .limit(1);
-      const o = (myOccs as Array<{ id: number; apt_nm: string }> | null)?.[0];
-      setMyCurrentApt(o ?? null);
-    } else {
-      setMyScore(null);
-      setMyCurrentApt(null);
-    }
+    // 본인 score / 다른 곳 점거
+    setMyScore(typeof myScoreData === 'number' ? myScoreData : myScoreData != null ? Number(myScoreData) : null);
+    const myOccs = (myOccsData as Array<{ id: number; apt_nm: string }> | null)?.[0] ?? null;
+    setMyCurrentApt(myOccs);
 
     setLoading(false);
     // 사이드바 score(서버 컴포넌트)도 갱신되도록 RSC 재요청
