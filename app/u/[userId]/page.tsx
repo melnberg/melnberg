@@ -11,7 +11,7 @@ import { isActivePaid } from '@/lib/tier-utils';
 
 export const dynamic = 'force-dynamic';
 
-type Tab = 'posts' | 'comments' | 'occupier' | 'bio' | 'apts';
+type Tab = 'posts' | 'comments' | 'occupier' | 'bio' | 'apts' | 'assets';
 
 type ProfileRow = {
   id: string;
@@ -56,7 +56,7 @@ export default async function UserProfilePage({
 }) {
   const { userId } = await params;
   const { tab: tabParam } = await searchParams;
-  const tab: Tab = (['bio', 'posts', 'comments', 'occupier', 'apts'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'bio';
+  const tab: Tab = (['bio', 'posts', 'comments', 'occupier', 'apts', 'assets'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'bio';
 
   const supabase = await createClient();
   // base — schema.sql 부터 항상 존재
@@ -121,6 +121,12 @@ export default async function UserProfilePage({
   let aptCmtRows: Array<AptCommentRow & { kind: 'apt' }> = [];
   let eventRows: EvictEvent[] = [];
   let ownedApts: Array<{ id: number; apt_nm: string; dong: string | null; listing_price: number | string | null; occupied_at: string | null }> = [];
+  let assetsData: {
+    cash: number;
+    emarts: Array<{ id: number; name: string; cost: number }>;
+    factories: Array<{ id: number; name: string; brand: string; cost: number }>;
+    apts: Array<{ id: number; apt_nm: string; dong: string | null; value: number | null }>;
+  } | null = null;
 
   if (tab === 'posts') {
     const [{ data: cp }, { data: ap }] = await Promise.all([
@@ -146,6 +152,27 @@ export default async function UserProfilePage({
       .order('occupied_at', { ascending: false })
       .limit(200);
     ownedApts = (data ?? []) as typeof ownedApts;
+  } else if (tab === 'assets') {
+    const [{ data: bal }, { data: emartRows }, { data: factoryRows }, { data: aptRows }] = await Promise.all([
+      supabase.from('profiles').select('mlbg_balance').eq('id', userId).maybeSingle(),
+      supabase.from('emart_occupations').select('emart_id, emart:emart_locations!emart_id(id, name)').eq('user_id', userId),
+      supabase.from('factory_occupations').select('factory_id, factory:factory_locations!factory_id(id, name, brand, occupy_price)').eq('user_id', userId),
+      supabase.from('apt_master_with_listing').select('id, apt_nm, dong, listing_price').eq('occupier_id', userId),
+    ]);
+    const cash = Number((bal as { mlbg_balance?: number | string | null } | null)?.mlbg_balance ?? 0);
+    const emarts = ((emartRows ?? []) as Array<{ emart: { id?: number; name?: string } | { id?: number; name?: string }[] | null }>).map((r) => {
+      const e = Array.isArray(r.emart) ? r.emart[0] : r.emart;
+      return { id: Number(e?.id ?? 0), name: e?.name ?? '이마트', cost: 5 };
+    }).filter((x) => x.id > 0);
+    const factories = ((factoryRows ?? []) as Array<{ factory: { id?: number; name?: string; brand?: string; occupy_price?: number | string } | { id?: number; name?: string; brand?: string; occupy_price?: number | string }[] | null }>).map((r) => {
+      const f = Array.isArray(r.factory) ? r.factory[0] : r.factory;
+      return { id: Number(f?.id ?? 0), name: f?.name ?? '시설', brand: f?.brand ?? '', cost: Number(f?.occupy_price ?? 0) };
+    }).filter((x) => x.id > 0);
+    const apts = ((aptRows ?? []) as Array<{ id: number; apt_nm: string; dong: string | null; listing_price: number | string | null }>).map((r) => ({
+      id: r.id, apt_nm: r.apt_nm, dong: r.dong,
+      value: r.listing_price == null ? null : Number(r.listing_price),
+    }));
+    assetsData = { cash, emarts, factories, apts };
   } else if (tab === 'occupier') {
     const { data } = await supabase
       .from('apt_occupier_events')
@@ -233,6 +260,7 @@ export default async function UserProfilePage({
             <TabLink href={`/u/${userId}?tab=posts`} active={tab === 'posts'}>글 ({totalPosts})</TabLink>
             <TabLink href={`/u/${userId}?tab=comments`} active={tab === 'comments'}>댓글 ({totalComments})</TabLink>
             <TabLink href={`/u/${userId}?tab=apts`} active={tab === 'apts'}>보유 단지 ({ownedAptCount ?? 0})</TabLink>
+            <TabLink href={`/u/${userId}?tab=assets`} active={tab === 'assets'}>자산</TabLink>
             <TabLink href={`/u/${userId}?tab=occupier`} active={tab === 'occupier'}>점거·퇴거 ({eventCount ?? 0})</TabLink>
           </div>
 
@@ -307,6 +335,57 @@ export default async function UserProfilePage({
             )
           )}
 
+          {tab === 'assets' && assetsData && (() => {
+            const aptValueSum = assetsData.apts.reduce((s, a) => s + (a.value ?? 0), 0);
+            const commercialSum = assetsData.emarts.reduce((s, e) => s + e.cost, 0)
+                                + assetsData.factories.reduce((s, f) => s + f.cost, 0);
+            const total = assetsData.cash + commercialSum + aptValueSum;
+            return (
+              <div className="border border-border bg-white">
+                <table className="w-full text-[13px] tabular-nums">
+                  <thead>
+                    <tr className="bg-navy-soft text-[11px] tracking-wider uppercase text-navy">
+                      <th className="text-left px-4 py-2 font-bold w-[100px]">분류</th>
+                      <th className="text-left px-4 py-2 font-bold">항목</th>
+                      <th className="text-right px-4 py-2 font-bold w-[120px]">평가액 (mlbg)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AssetRow cat="현금성" name={`현금 / ${assetsData.cash.toLocaleString()} mlbg`} value={assetsData.cash} />
+                    {assetsData.emarts.length === 0 && assetsData.factories.length === 0 ? (
+                      <AssetRow cat="상업용" name="(보유 없음)" value={null} />
+                    ) : (
+                      <>
+                        {assetsData.emarts.map((e) => (
+                          <AssetRow key={`em-${e.id}`} cat="상업용" name={`이마트 ${e.name}`} value={e.cost} />
+                        ))}
+                        {assetsData.factories.map((f) => (
+                          <AssetRow key={`fc-${f.id}`} cat="상업용" name={f.name} value={f.cost} />
+                        ))}
+                      </>
+                    )}
+                    {assetsData.apts.length === 0 ? (
+                      <AssetRow cat="주거용" name="(보유 없음)" value={null} />
+                    ) : (
+                      assetsData.apts.map((a) => (
+                        <AssetRow key={`ap-${a.id}`} cat="주거용" name={`${a.apt_nm}${a.dong ? ` (${a.dong})` : ''}`} value={a.value} mutedValue={a.value == null} />
+                      ))
+                    )}
+                    <tr className="border-t-2 border-navy bg-navy-soft">
+                      <td className="px-4 py-3 font-bold text-navy">합계</td>
+                      <td className="px-4 py-3 text-muted text-[11px]">
+                        주거용은 매물 등록된 단지만 합산
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-cyan text-[15px]">
+                        {total.toLocaleString()} mlbg
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+
           {tab === 'occupier' && (
             eventRows.length === 0 ? (
               <p className="text-center py-12 text-muted text-[13px]">점거·퇴거 이력이 없습니다.</p>
@@ -380,6 +459,18 @@ export default async function UserProfilePage({
         </div>
       </section>
     </Layout>
+  );
+}
+
+function AssetRow({ cat, name, value, mutedValue }: { cat: string; name: string; value: number | null; mutedValue?: boolean }) {
+  return (
+    <tr className="border-b border-border last:border-b-0">
+      <td className="px-4 py-2.5 text-[12px] text-muted whitespace-nowrap">{cat}</td>
+      <td className="px-4 py-2.5 text-text break-words">{name}</td>
+      <td className={`px-4 py-2.5 text-right ${mutedValue ? 'text-muted' : 'text-text'}`}>
+        {value == null ? '—' : value.toLocaleString()}
+      </td>
+    </tr>
   );
 }
 
