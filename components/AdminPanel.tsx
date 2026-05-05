@@ -455,7 +455,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
           <table className="w-full text-[12px] border-collapse">
             <thead>
               <tr className="bg-bg/60 border-y border-navy text-muted">
-                <th className="py-2 px-2 w-10 text-center">
+                <th className="py-1 px-2 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id))}
@@ -463,13 +463,13 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                     className="w-4 h-4 accent-navy cursor-pointer"
                   />
                 </th>
-                <th className="py-2 px-2 font-semibold text-left">닉네임</th>
-                <th className="py-2 px-2 font-semibold text-left w-32">네이버 ID</th>
-                <th className="py-2 px-2 font-semibold text-left w-48">이메일</th>
-                <th className="py-2 px-2 font-semibold text-left w-[280px]">SNS 링크</th>
-                <th className="py-2 px-2 font-semibold text-center w-20">등급</th>
-                <th className="py-2 px-2 font-semibold text-center w-28">만료일</th>
-                <th className="py-2 px-2 font-semibold text-center w-24">가입일</th>
+                <th className="py-1 px-2 font-semibold text-center w-20">조합원</th>
+                <th className="py-1 px-2 font-semibold text-left">닉네임</th>
+                <th className="py-1 px-2 font-semibold text-left w-32">네이버 ID</th>
+                <th className="py-1 px-2 font-semibold text-left w-48">이메일</th>
+                <th className="py-1 px-2 font-semibold text-left w-[220px]">SNS 링크</th>
+                <th className="py-1 px-2 font-semibold text-center w-24">만료일</th>
+                <th className="py-1 px-2 font-semibold text-center w-24">가입일</th>
               </tr>
             </thead>
             <tbody>
@@ -478,7 +478,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                 const checked = selectedIds.has(p.id);
                 return (
                   <tr key={p.id} className={`border-b border-border hover:bg-bg/40 ${checked ? 'bg-[#f5f9ff]' : ''}`}>
-                    <td className="py-2.5 px-2 text-center">
+                    <td className="py-1 px-2 text-center">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -486,19 +486,24 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                         className="w-4 h-4 accent-navy cursor-pointer"
                       />
                     </td>
-                    <td className="py-2.5 px-2">
+                    <td className="py-1 px-2 text-center">
+                      <span className={`inline-block text-[10px] font-bold tracking-widest uppercase px-1.5 py-0.5 ${isActive ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy/60'}`}>
+                        {isActive ? '조합원' : tierLabelKo(p.tier)}
+                      </span>
+                    </td>
+                    <td className="py-1 px-2">
                       <div className="font-bold text-text" title={p.id}>
                         {p.display_name ?? '(이름 없음)'}
                         {p.is_admin && <span className="ml-2 text-[10px] font-bold text-cyan tracking-widest uppercase">admin</span>}
                       </div>
                     </td>
-                    <td className="py-2.5 px-2 text-[12px] text-text">
+                    <td className="py-1 px-2 text-[12px] text-text">
                       {p.naver_id ?? <span className="text-muted">—</span>}
                     </td>
-                    <td className="py-2.5 px-2 text-[12px] text-text truncate max-w-[200px]" title={(p as { email?: string | null }).email ?? ''}>
+                    <td className="py-1 px-2 text-[12px] text-text truncate max-w-[200px]" title={(p as { email?: string | null }).email ?? ''}>
                       {(p as { email?: string | null }).email ?? <span className="text-muted">—</span>}
                     </td>
-                    <td className="py-2.5 px-2 text-[11px]">
+                    <td className="py-1 px-2 text-[11px]">
                       {p.link_url ? (
                         <div className="flex items-center gap-1.5 min-w-0">
                           {(() => {
@@ -532,15 +537,10 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-2 text-center">
-                      <span className={`inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-1 ${isActive ? 'bg-cyan text-navy' : 'bg-navy-soft text-navy'}`}>
-                        {isActive ? '조합원' : tierLabelKo(p.tier)}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                    <td className="py-1 px-2 text-center text-muted tabular-nums">
                       {formatExpiry(p.tier_expires_at)}
                     </td>
-                    <td className="py-2.5 px-2 text-center text-muted tabular-nums">
+                    <td className="py-1 px-2 text-center text-muted tabular-nums">
                       {new Date(p.created_at).toLocaleDateString('ko-KR')}
                     </td>
                   </tr>
