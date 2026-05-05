@@ -408,31 +408,33 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 시스템 공지 — 자동 작성된 일반 커뮤니티 글처럼 노출 (티 안 나게).
-    const noticeBase = (id: number, title: string, content: string): FeedItem => ({
+    // 시스템 공지 — 자동 작성된 일반 커뮤니티 글처럼 노출.
+    // created_at 을 고정 시점 (분양 개시 시각) 으로 박아서 시간순 정렬에 합류 → 신규 피드가 위로 쌓이며 자연스럽게 묻힘.
+    const LAUNCH_TS = '2026-05-06T12:00:00+09:00';
+    const noticeBase = (id: number, ts: string, title: string, content: string): FeedItem => ({
       kind: 'notice' as const,
       id,
       apt_master_id: 0,
       post_id: null,
       title,
       content,
-      created_at: new Date().toISOString(),
+      created_at: ts,
       apt_nm: null, dong: null, lat: null, lng: null,
       author_id: null, author_name: '분양홍보팀', author_link: null,
       author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
     });
     const NOTICE_ITEMS: FeedItem[] = [
-      noticeBase(1, '이마트 분양 시작',
+      noticeBase(1, LAUNCH_TS, '이마트 분양 시작',
         '이마트 매장이 분양 대상으로 추가됐습니다.\n분양가 5 mlbg, 매일 1 mlbg 자동 수익. 5일이면 회수. 1인 1점포.\n지도 노란 e 핀 클릭 → 분양받기.'),
-      noticeBase(2, 'SK하이닉스 분양 시작',
+      noticeBase(2, LAUNCH_TS, 'SK하이닉스 분양 시작',
         'SK하이닉스 이천·청주 캠퍼스가 분양 대상으로 추가됐습니다.\n분양가 1,000 mlbg, 매일 20 mlbg 자동 수익. 50일이면 회수.\n지도 빨간 H 핀 클릭 → 분양받기.'),
-      noticeBase(3, '삼성전자 분양 시작',
+      noticeBase(3, LAUNCH_TS, '삼성전자 분양 시작',
         '삼성전자 평택 캠퍼스가 분양 대상으로 추가됐습니다.\n분양가 800 mlbg, 매일 20 mlbg 자동 수익. 40일이면 회수.\n지도 파란 S 핀 클릭 → 분양받기.'),
-      noticeBase(4, '코스트코 분양 시작',
+      noticeBase(4, LAUNCH_TS, '코스트코 분양 시작',
         '코스트코 6개 매장 (양재·상봉·의정부·일산·광명·하남) 이 분양 대상으로 추가됐습니다.\n분양가 50 mlbg, 매일 5 mlbg 자동 수익. 10일이면 회수.\n지도 파란 C 핀 클릭 → 분양받기.'),
-      noticeBase(5, '금속노조 분양 시작',
+      noticeBase(5, LAUNCH_TS, '금속노조 분양 시작',
         '전국금속노조 본부·경기지부·인천지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 진남색 금속 핀 클릭 → 분양받기.'),
-      noticeBase(6, '화물연대 분양 시작',
+      noticeBase(6, LAUNCH_TS, '화물연대 분양 시작',
         '화물연대 본부·경기지부·부산지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 초록 화물 핀 클릭 → 분양받기.'),
     ];
 
@@ -486,11 +488,12 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 경매·공지는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 + 이마트/공장 시간순
-    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems]
+    // 경매는 강제 최상단 유지. 공지·일반·입찰·이마트·공장은 모두 시간순 (LAUNCH_TS 박힌 공지는
+    // 신규 피드가 위에 쌓일수록 자연스럽게 아래로 묻힘).
+    const others = [...NOTICE_ITEMS, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 80 - auctionItems.length - NOTICE_ITEMS.length);
-    return [...NOTICE_ITEMS, ...auctionItems, ...others];
+      .slice(0, 80 - auctionItems.length);
+    return [...auctionItems, ...others];
 }
 
 export default async function HomePage() {
