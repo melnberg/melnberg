@@ -72,8 +72,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
         setErr(error?.message ?? '저장 실패');
         return;
       }
-      // AI 품질 평가 + mlbg 적립 — fire-and-forget
-      const awardKind = category === 'hotdeal' ? 'hotdeal_post' : category === 'blog' ? 'community_post' : 'community_post';
+      // AI 품질 평가 + mlbg 적립 — fire-and-forget. 블로그/커뮤니티는 같은 community_post kind.
+      const awardKind = category === 'hotdeal' ? 'hotdeal_post' : 'community_post';
       void awardMlbg(awardKind, data.id, content.trim());
       notifyTelegram(awardKind, data.id);
       router.push(`${redirectBase}/${data.id}`);

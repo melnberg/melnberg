@@ -657,26 +657,16 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               )}
             </div>
 
-            {/* 매물 박스는 ListingInteractions 안에 통합 — 여기선 본인 시점만 처리 */}
+            {/* 매도자 시점 매물 액션 — 헤더·설명은 ListingInteractions 가 담당.
+                여기선 매물 등록·수정·해제 버튼만 컴팩트하게. */}
             {occupierId === userId && (
               <div className="mt-2 space-y-1.5">
                 {listingPrice != null ? (
-                  <div className="px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px]">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-navy">내 매물 호가</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
-                        <button type="button" onClick={() => { setSellPriceInput(String(listingPrice)); setSellDescInput(listingDescription ?? ''); setSellPanelOpen(true); }}
-                          className="text-[11px] text-muted hover:text-navy bg-transparent border-none p-0">수정</button>
-                        <button type="button" onClick={unlist} disabled={trading}
-                          className="text-[11px] text-red-500 hover:text-red-700 bg-transparent border-none p-0 disabled:opacity-40">해제</button>
-                      </div>
-                    </div>
-                    {listingDescription && (
-                      <div className="mt-1.5 pt-1.5 border-t border-cyan/30 text-[11px] text-text leading-relaxed whitespace-pre-wrap">
-                        {listingDescription}
-                      </div>
-                    )}
+                  <div className="flex items-center justify-end gap-3 text-[11px]">
+                    <button type="button" onClick={() => { setSellPriceInput(String(listingPrice)); setSellDescInput(listingDescription ?? ''); setSellPanelOpen(true); }}
+                      className="text-muted hover:text-navy bg-transparent border-none p-0">매물 수정</button>
+                    <button type="button" onClick={unlist} disabled={trading}
+                      className="text-red-500 hover:text-red-700 bg-transparent border-none p-0 disabled:opacity-40">매물 해제</button>
                   </div>
                 ) : (
                   <button type="button" onClick={() => { setSellPriceInput(''); setSellDescInput(''); setSellPanelOpen((v) => !v); }}
