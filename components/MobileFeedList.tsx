@@ -73,8 +73,8 @@ export default function MobileFeedList({ items }: Props) {
   return (
     <div className="bg-white">
       <div className="sticky top-0 z-10 bg-white px-4 py-3 border-b border-border flex items-center gap-2">
-        <h1 className="text-[16px] font-bold text-navy tracking-tight">최근 활동</h1>
-        <span className="text-[11px] text-muted">{items.length}건</span>
+        <h1 className="text-[16px] font-bold text-navy tracking-tight">활동</h1>
+        <span className="text-[11px] text-muted">{items.length}건 · v2</span>
         <Link href="/?view=map" className="ml-auto text-[11px] font-bold text-navy no-underline px-2 py-1 border border-border hover:border-navy">
           지도 보기 →
         </Link>
