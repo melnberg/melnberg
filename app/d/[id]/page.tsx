@@ -45,7 +45,7 @@ export default async function AptDiscussionDetailPage({ params }: { params: Prom
   const supabase = await createClient();
 
   // 임베드 없이 단순 select — 임베드 실패 시 통째로 null 되는 것 방지
-  const [{ data: post }, { data: { user } }] = await Promise.all([
+  const [{ data: post, error: postErr }, { data: { user } }] = await Promise.all([
     supabase
       .from('apt_discussions')
       .select('id, apt_master_id, author_id, title, content, created_at, updated_at, deleted_at')
@@ -53,7 +53,21 @@ export default async function AptDiscussionDetailPage({ params }: { params: Prom
       .maybeSingle(),
     supabase.auth.getUser(),
   ]);
-  if (!post) notFound();
+  if (!post) {
+    return (
+      <Layout>
+        <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { label: '글 없음', bold: true }]} meta="404" />
+        <article className="py-16">
+          <div className="max-w-[520px] mx-auto px-6 text-center">
+            <h1 className="text-[20px] font-bold text-navy mb-3">글을 찾을 수 없어요</h1>
+            <p className="text-[12px] text-muted mb-2">id={numId}</p>
+            {postErr && <p className="text-[11px] text-red-600 break-all mb-4">err: {postErr.message}</p>}
+            <Link href="/" className="inline-block bg-navy text-white px-6 py-3 text-[13px] font-bold no-underline hover:bg-navy-dark">← 피드로</Link>
+          </div>
+        </article>
+      </Layout>
+    );
+  }
 
   const aptMasterIdRaw = (post as { apt_master_id: number }).apt_master_id;
   const authorIdRaw = (post as { author_id: string }).author_id;
