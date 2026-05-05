@@ -55,7 +55,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid';
   /** 경매 전용 — 종료 시각 */
   ends_at?: string;
   /** 경매 전용 — auction id (jumpToFeedItem 라우팅용) */
@@ -624,8 +624,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
   function jumpToFeedItem(item: FeedItem) {
-    // 경매 → /auctions/{id}
-    if (item.kind === 'auction' && item.auction_id) {
+    // 경매 / 입찰 → /auctions/{id}
+    if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) {
       router.push(`/auctions/${item.auction_id}`);
       return;
     }
@@ -1314,6 +1314,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isOffer = f.kind === 'offer';
                   const isSnatch = f.kind === 'snatch';
                   const isAuction = f.kind === 'auction';
+                  const isAuctionBid = f.kind === 'auction_bid';
                   const headLabel = isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
@@ -1338,7 +1339,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           onKeyDown={(e) => { if (e.key === 'Enter') jumpToFeedItem(f); }}
                           className="cursor-pointer hover:opacity-80"
                         >
-                          {isAuction ? (
+                          {isAuctionBid ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-[#dc2626] text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5">입찰</span>
+                              <span className="whitespace-pre-wrap break-words">
+                                <b className="text-[#dc2626]">{f.title}</b>
+                                {f.apt_nm && <span className="text-muted block mt-0.5">{f.apt_nm}</span>}
+                              </span>
+                            </div>
+                          ) : isAuction ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-[#dc2626] text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5 animate-pulse">LIVE</span>
                               <span className="whitespace-pre-wrap break-words flex-1">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Props = {
   auctionId: number;
@@ -92,6 +93,8 @@ export default function AuctionBidForm({
       setExtendedFlash(true);
       setTimeout(() => setExtendedFlash(false), 3000);
     }
+    // 텔레그램 알림 — fire-and-forget. 실패해도 입찰 흐름 영향 없음.
+    notifyTelegram('auction_bid', auctionId);
     router.refresh();
   }
 

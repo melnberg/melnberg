@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -77,6 +77,38 @@ export async function POST(req: NextRequest) {
     if (!r || r.seller_id !== user.id) return NextResponse.json({ error: 'not seller' }, { status: 403 });
     tag = r.apt_master?.apt_nm ?? '단지';
     main = `매물 ${Number(r.price).toLocaleString()} mlbg`;
+  } else if (kind === 'auction_start') {
+    // 어드민만 — 새 경매 시작 알림
+    const { data: profCheck } = await admin.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+    if (!(profCheck as { is_admin?: boolean } | null)?.is_admin) {
+      return NextResponse.json({ error: 'admin only' }, { status: 403 });
+    }
+    const { data: auc } = await admin
+      .from('apt_auctions')
+      .select('id, apt_id, ends_at, min_bid, status, apt_master:apt_master!apt_id(apt_nm)')
+      .eq('id', refId).maybeSingle();
+    const r = auc as { id: number; apt_id: number; ends_at: string; min_bid: number; status: string; apt_master: { apt_nm: string | null } | null } | null;
+    if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
+    tag = '🔥 LIVE 경매';
+    const aptName = r.apt_master?.apt_nm ?? '단지';
+    const endsKr = new Date(r.ends_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+    main = `${aptName} 시작가 ${Number(r.min_bid).toLocaleString()} mlbg · ${endsKr} 종료`;
+  } else if (kind === 'auction_bid') {
+    // 입찰자 본인만 — 현재가 갱신 알림. 락은 race-y 하지만 latest current_bidder_id 검증으로 가벼운 boundary.
+    const { data: auc } = await admin
+      .from('apt_auctions')
+      .select('id, apt_id, current_bid, current_bidder_id, ends_at, bid_count, apt_master:apt_master!apt_id(apt_nm)')
+      .eq('id', refId).maybeSingle();
+    const r = auc as { id: number; apt_id: number; current_bid: number | null; current_bidder_id: string | null; ends_at: string; bid_count: number; apt_master: { apt_nm: string | null } | null } | null;
+    if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
+    if (r.current_bidder_id !== user.id) {
+      return NextResponse.json({ error: 'not latest bidder' }, { status: 403 });
+    }
+    const aptName = r.apt_master?.apt_nm ?? '단지';
+    const { data: pr } = await admin.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+    const bidderName = (pr as { display_name?: string | null } | null)?.display_name ?? '익명';
+    tag = '⚡ 경매 입찰';
+    main = `${aptName} ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 갱신 (${bidderName} 님 · 누적 ${r.bid_count}건)`;
   } else if (kind === 'offer' || kind === 'snatch') {
     // refId = apt_listing_offers.id. 매수 호가 / 내놔 알림.
     const { data } = await admin

@@ -67,6 +67,38 @@ async function fetchFeed(): Promise<FeedItem[]> {
       .limit(10)
       .then((r) => r, () => ({ data: null }));
 
+    // 최근 입찰 — 피드 일반 항목으로 노출
+    const { data: recentBids } = await supabase
+      .from('auction_bids')
+      .select('id, auction_id, bidder_id, amount, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const bidRows = (recentBids ?? []) as Array<{ id: number; auction_id: number; bidder_id: string; amount: number; created_at: string }>;
+    // 입찰의 apt_nm 조회 (auction_id → apt_master.apt_nm)
+    const auctionIds = Array.from(new Set(bidRows.map((b) => b.auction_id)));
+    const auctionAptMap = new Map<number, { apt_nm: string | null; lat: number | null; lng: number | null; dong: string | null; apt_master_id: number }>();
+    if (auctionIds.length > 0) {
+      const { data: aucRows } = await supabase
+        .from('apt_auctions')
+        .select('id, apt_id, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+        .in('id', auctionIds);
+      for (const r of (aucRows ?? []) as unknown as Array<{ id: number; apt_id: number; apt_master: unknown }>) {
+        const am = (Array.isArray(r.apt_master) ? r.apt_master[0] : r.apt_master) as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+        auctionAptMap.set(r.id, {
+          apt_nm: am?.apt_nm ?? null,
+          dong: am?.dong ?? null,
+          lat: am?.lat ?? null,
+          lng: am?.lng ?? null,
+          apt_master_id: r.apt_id,
+        });
+      }
+    }
+    // 입찰자 닉네임 추가 fetch (allAuthorIds 에 추가하기 위함)
+    for (const b of bidRows) if (b.bidder_id) {
+      // 추가 — profileMap 은 아래에서 단일 fetch 라 별도 처리 필요. 일단 placeholder 로 두고 후처리.
+    }
+
     // postComments 의 post_id → posts(title, category) 별도 조회 (임베드 회피)
     const commentPostIds = Array.from(new Set(((postComments ?? []) as Array<{ post_id: number }>).map((c) => c.post_id).filter(Boolean)));
     const commentPostMap = new Map<number, { title: string | null; category: string | null }>();
@@ -87,6 +119,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       ...((postComments ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
       ...((listings ?? []).map((l) => (l as Record<string, unknown>).seller_id as string)),
       ...((offers ?? []).map((o) => (o as Record<string, unknown>).buyer_id as string)),
+      ...bidRows.map((b) => b.bidder_id),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
@@ -327,10 +360,38 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 경매는 강제로 피드 최상단 (시간 정렬 무시)
-    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems]
+    // 입찰 → FeedItem (auction_bid)
+    const bidItems: FeedItem[] = bidRows.map((b) => {
+      const apt = auctionAptMap.get(b.auction_id);
+      const prof = profileMap.get(b.bidder_id);
+      return {
+        kind: 'auction_bid' as const,
+        id: b.id,
+        auction_id: b.auction_id,
+        apt_master_id: apt?.apt_master_id ?? 0,
+        post_id: null,
+        title: `입찰 : ${prof?.display_name ?? '익명'} (${Number(b.amount).toLocaleString()} mlbg)`,
+        content: apt?.apt_nm ? `${apt.apt_nm}` : null,
+        created_at: b.created_at,
+        apt_nm: apt?.apt_nm ?? null,
+        dong: apt?.dong ?? null,
+        lat: apt?.lat ?? null,
+        lng: apt?.lng ?? null,
+        author_id: b.bidder_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        listing_price: Number(b.amount),
+      };
+    });
+
+    // 경매는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 시간순
+    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 50 - auctionItems.length);
+      .slice(0, 60 - auctionItems.length);
     return [...auctionItems, ...others];
 }
 

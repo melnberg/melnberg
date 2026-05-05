@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { notifyTelegram } from '@/lib/telegram-notify';
 
 type AptSuggestion = {
   id: number; apt_nm: string; dong: string | null;
@@ -65,7 +66,9 @@ export default function AdminAuctionForm() {
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_auction_id: number | null; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '경매 생성 실패'); return; }
-    alert(`경매 #${row.out_auction_id} 생성 완료 — ${picked.apt_nm}`);
+    // 자동 텔레그램 푸시 — fire-and-forget
+    if (row.out_auction_id) notifyTelegram('auction_start', row.out_auction_id);
+    alert(`경매 #${row.out_auction_id} 생성 완료 — ${picked.apt_nm} (텔레그램 알림 자동 발송)`);
     clearPick();
     router.refresh();
   }
