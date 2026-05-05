@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'emart_occupy';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'emart_occupy'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -93,6 +93,19 @@ export async function POST(req: NextRequest) {
     const aptName = r.apt_master?.apt_nm ?? '단지';
     const endsKr = new Date(r.ends_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
     main = `${aptName} 시작가 ${Number(r.min_bid).toLocaleString()} mlbg · ${endsKr} 종료`;
+  } else if (kind === 'emart_occupy') {
+    // refId = emart_locations.id. 분양받은 본인만 발송 가능 (검증).
+    const { data: occ } = await admin
+      .from('emart_occupations')
+      .select('user_id, emart_id, emart:emart_locations!emart_id(name)')
+      .eq('emart_id', refId)
+      .maybeSingle();
+    const r = occ as { user_id: string; emart_id: number; emart: unknown } | null;
+    if (!r) return NextResponse.json({ error: 'emart not occupied' }, { status: 404 });
+    if (r.user_id !== user.id) return NextResponse.json({ error: 'not occupier' }, { status: 403 });
+    const em = (Array.isArray(r.emart) ? r.emart[0] : r.emart) as { name?: string | null } | null;
+    tag = '🛒 이마트 분양';
+    main = `${em?.name ?? '이마트'}`;
   } else if (kind === 'auction_bid') {
     // 입찰자 본인만 — 현재가 갱신 알림. 락은 race-y 하지만 latest current_bidder_id 검증으로 가벼운 boundary.
     const { data: auc } = await admin

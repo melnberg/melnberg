@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import Countdown from './Countdown';
+import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
@@ -1056,6 +1057,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '분양 실패'); return; }
     alert(`${emart.name} 분양 완료. 5 mlbg 차감됨.`);
+    // 텔레그램 자동 알림 — fire-and-forget
+    notifyTelegram('emart_occupy', emart.id);
     setSelectedEmart(null);
     await refetchEmart();
     router.refresh();
