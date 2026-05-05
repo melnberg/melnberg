@@ -1,15 +1,13 @@
-import { unstable_cache } from 'next/cache';
 import Layout from '@/components/Layout';
 import AptMap, { type FeedItem } from '@/components/AptMap';
 import { createPublicClient } from '@/lib/supabase/public';
 
-// 정적 캐시 방지 — 피드는 매 요청마다 unstable_cache (30s) 거쳐 신선한 데이터 반환
+// 매 요청마다 fresh fetch — 피드 즉시 반영 위해 캐시 제거
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// 피드 — 30초 캐싱. 글(apt_discussions) + 댓글(apt_discussion_comments) 합쳐 시간순.
-const fetchFeed = unstable_cache(
-  async (): Promise<FeedItem[]> => {
+// 피드 — 글(apt_discussions) + 댓글(apt_discussion_comments) + 커뮤니티 글/댓글 + 매물/호가 합쳐 시간순.
+async function fetchFeed(): Promise<FeedItem[]> {
     const supabase = createPublicClient();
     const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp] = await Promise.all([
       supabase
@@ -283,11 +281,7 @@ const fetchFeed = unstable_cache(
     return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 50);
-  },
-  // v2: 빈/stale 응답이 캐시에 박혀있을 가능성 → 키 bump 으로 즉시 fresh fetch
-  ['home-feed-v2'],
-  { revalidate: 30, tags: ['apt-discussions', 'apt-discussion-comments', 'posts', 'comments', 'profiles', 'home-feed'] },
-);
+}
 
 export default async function HomePage() {
   // 핀은 클라이언트에서 /api/home-pins 로 비동기 fetch — 페이지 셸 먼저 보여서 체감 빠름
