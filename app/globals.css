@@ -143,6 +143,15 @@
   font-family: Pretendard, ui-sans-serif, system-ui, sans-serif;
 }
 
+/* 라이브 활동 토스트 — 우측에서 슬라이드 인 */
+@keyframes slideInRight {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-in-right {
+  animation: slideInRight 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* 럭키 룰렛 — 빠른 회전 + 발광 펄스 */
 @keyframes spinFast {
   from { transform: rotate(0deg); }
