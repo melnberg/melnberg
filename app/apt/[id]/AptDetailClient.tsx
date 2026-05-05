@@ -15,6 +15,12 @@ export default function AptDetailClient({ id }: { id: number }) {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    if (typeof history !== 'undefined' && 'scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!Number.isFinite(id) || id <= 0) { setNotFound(true); setLoading(false); return; }

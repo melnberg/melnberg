@@ -22,6 +22,12 @@ export default function EmartDetailClient({ id }: { id: number }) {
     setEmart(e); setLoading(false);
   }
 
+  useEffect(() => {
+    if (typeof history !== 'undefined' && 'scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [id]);
 
   if (loading) return <div className="px-4 py-12 text-center text-[13px] text-muted">불러오는 중...</div>;

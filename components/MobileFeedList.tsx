@@ -69,6 +69,14 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 export default function MobileFeedList({ items }: Props) {
   const [lastClickKey, setLastClickKey] = useState<string | null>(null);
 
+  // 브라우저 자동 스크롤 복원 끄기 — 우리가 sessionStorage 로 직접 관리.
+  // 이 옵션이 켜져있으면 뒤로가기 시 떠나는 페이지에 잘못된 스크롤이 적용됨.
+  useEffect(() => {
+    if (typeof history !== 'undefined' && 'scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   // 마운트 시 — 저장된 스크롤 복원 + 마지막 클릭 키 읽기.
   // 브라우저 자체 scroll restoration 이 늦게 발화될 수 있어 여러 시점에 보강.
   useEffect(() => {
