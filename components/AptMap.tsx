@@ -1735,8 +1735,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       </form>
 
 
-      {/* 우측 하단 범례 — 실제 지도 핀과 동일 SVG (깃발 없음) */}
-      <div className="absolute bottom-8 right-6 z-20 pointer-events-none">
+      {/* 우측 하단 범례 — 숨김 (PC 도 깔끔하게) */}
+      <div className="hidden absolute bottom-8 right-6 z-20 pointer-events-none">
         <div className="text-[11px] font-bold text-navy mb-1.5 tracking-wider uppercase drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)]">세대수</div>
         <ul className="space-y-1.5 text-[12px]">
           <li className="flex items-center gap-2">
