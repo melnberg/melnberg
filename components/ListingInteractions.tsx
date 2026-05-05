@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Comment = {
   id: number;
@@ -168,11 +169,14 @@ export default function ListingInteractions({
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '호가 실패'); return; }
+    const offerId = (Array.isArray(data) ? data[0] : data) as { out_id?: number } | undefined;
     setOfferOpen(false);
     setOfferPrice('');
     setOfferMsg('');
     setSnatchMsg('');
     alert(kind === 'snatch' ? '내놔 요청 보냄. 매도자 결정을 기다리세요.' : '매수 호가 보냄. 매도자가 수락하면 즉시 거래.');
+    // 텔레그램 채널 알림 — 다른 회원이 보고 끼어들 수 있도록
+    if (offerId?.out_id) notifyTelegram(kind, offerId.out_id);
     await load();
   }
 

@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -77,6 +77,22 @@ export async function POST(req: NextRequest) {
     if (!r || r.seller_id !== user.id) return NextResponse.json({ error: 'not seller' }, { status: 403 });
     tag = r.apt_master?.apt_nm ?? '단지';
     main = `매물 ${Number(r.price).toLocaleString()} mlbg`;
+  } else if (kind === 'offer' || kind === 'snatch') {
+    // refId = apt_listing_offers.id. 매수 호가 / 내놔 알림.
+    const { data } = await admin
+      .from('apt_listing_offers')
+      .select('id, apt_id, buyer_id, price, kind, message')
+      .eq('id', refId).maybeSingle();
+    const r = data as { id: number; apt_id: number; buyer_id: string; price: number; kind: string; message: string | null } | null;
+    if (!r || r.buyer_id !== user.id) return NextResponse.json({ error: 'not buyer' }, { status: 403 });
+    const { data: apt } = await admin.from('apt_master').select('apt_nm').eq('id', r.apt_id).maybeSingle();
+    tag = (apt as { apt_nm: string | null } | null)?.apt_nm ?? '단지';
+    if (r.kind === 'snatch') {
+      main = '내놔 요청 (무상)';
+    } else {
+      main = `매수 호가 ${Number(r.price).toLocaleString()} mlbg`;
+    }
+    if (r.message) main += ` — ${r.message.slice(0, 60)}`;
   }
 
   // 작성자 닉네임
