@@ -424,14 +424,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return new Date(kstMidnightUtc).toISOString();
   }
 
-  // 카운트만 미리 fetch — 강제집행 폐기 후 'sell' (매매) 로 전환
+  // 카운트 미리 fetch — '오늘의 매매' 폐지. 현재 등록된 매물 갯수.
   useEffect(() => {
     const supabase = createClient();
     supabase
-      .from('apt_occupier_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('event', 'sell')
-      .gte('occurred_at', todayKstStartUtcIso())
+      .from('apt_listings')
+      .select('apt_id', { count: 'exact', head: true })
       .then(({ count }) => setEvictCount(count ?? 0));
   }, [pins]);
 
@@ -439,19 +437,29 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     if (evictsOpen) { setEvictsOpen(false); return; }
     setEvictsOpen(true);
     const supabase = createClient();
+    // 매물 리스트 — 매도인 닉네임 + 호가 + 설명
     const { data } = await supabase
-      .from('apt_occupier_events')
-      .select('occurred_at, actor_name, prev_occupier_name, actor_score, apt_id, apt_master(apt_nm, dong, lat, lng)')
-      .eq('event', 'sell')
-      .gte('occurred_at', todayKstStartUtcIso())
-      .order('occurred_at', { ascending: false });
-    const list: EvictEvent[] = (data ?? []).map((r: Record<string, unknown>) => {
+      .from('apt_listings')
+      .select('apt_id, seller_id, price, listed_at, description, apt_master(apt_nm, dong, lat, lng)')
+      .order('listed_at', { ascending: false });
+    const rawList = (data ?? []) as Array<Record<string, unknown>>;
+
+    // 매도인 닉네임 일괄 조회
+    const sellerIds = Array.from(new Set(rawList.map((r) => r.seller_id as string).filter(Boolean)));
+    const sellerMap = new Map<string, string>();
+    if (sellerIds.length > 0) {
+      const { data: profs } = await supabase.from('profiles').select('id, display_name').in('id', sellerIds);
+      for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null }>) {
+        if (p.display_name) sellerMap.set(p.id, p.display_name);
+      }
+    }
+    const list: EvictEvent[] = rawList.map((r) => {
       const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
       return {
-        occurred_at: r.occurred_at as string,
-        actor_name: r.actor_name as string | null,
-        prev_occupier_name: r.prev_occupier_name as string | null,
-        actor_score: r.actor_score == null ? null : Number(r.actor_score),
+        occurred_at: r.listed_at as string,
+        actor_name: sellerMap.get(r.seller_id as string) ?? '익명',
+        prev_occupier_name: (r.description as string | null) ?? null, // 설명 재활용 (UI 에서 description 으로 표시)
+        actor_score: r.price == null ? null : Number(r.price),         // 호가
         apt_id: r.apt_id as number,
         apt_nm: am?.apt_nm ?? null,
         dong: am?.dong ?? null,
@@ -763,8 +771,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           onClick={toggleEvicts}
           className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-cyan/10 hover:border-cyan-dark flex items-center gap-1.5"
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="#0070C0"><path d="M12 2L1 21h22L12 2zm0 4l8.5 14h-17L12 6z"/></svg>
-          <span>오늘의 매매 : {evictCount}건</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#0070C0"><path d="M3 6h18M3 12h18M3 18h18" stroke="#0070C0" strokeWidth="2.5" strokeLinecap="round"/></svg>
+          <span>매물 : {evictCount}건</span>
           <span className="ml-auto text-[11px] text-muted">{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {evictsOpen && (
@@ -772,7 +780,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             {evicts === null ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">불러오는 중...</div>
             ) : evicts.length === 0 ? (
-              <div className="px-4 py-6 text-[12px] text-muted text-center">오늘 매매 내역 없음</div>
+              <div className="px-4 py-6 text-[12px] text-muted text-center">등록된 매물 없음</div>
             ) : (
               <ul>
                 {evicts.map((e, i) => (
@@ -784,18 +792,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="text-[13px] font-bold text-navy truncate">{e.apt_nm ?? '(단지 정보 없음)'}</div>
-                        <div className="text-[10px] text-muted tabular-nums flex-shrink-0">
-                          {occupiedSinceLabel(e.occurred_at)}
-                        </div>
-                      </div>
-                      <div className="text-[11px] flex items-center gap-1.5">
-                        <span className="text-muted line-through">{e.prev_occupier_name ?? '익명'}</span>
-                        <span className="text-muted">→</span>
-                        <span className="text-cyan font-bold">{e.actor_name ?? '익명'}</span>
                         {e.actor_score != null && (
-                          <span className="text-[10px] text-navy ml-auto font-bold tabular-nums">{Number(e.actor_score).toLocaleString()} mlbg</span>
+                          <div className="text-[12px] text-cyan font-bold tabular-nums flex-shrink-0">
+                            {Number(e.actor_score).toLocaleString()} mlbg
+                          </div>
                         )}
                       </div>
+                      <div className="text-[11px] flex items-center gap-1.5">
+                        <span className="text-muted">매도</span>
+                        <span className="text-text font-medium">{e.actor_name ?? '익명'}</span>
+                        <span className="text-muted ml-auto tabular-nums text-[10px]">{occupiedSinceLabel(e.occurred_at)}</span>
+                      </div>
+                      {e.prev_occupier_name && (
+                        <div className="text-[11px] text-muted leading-snug whitespace-pre-wrap mt-0.5 line-clamp-2">
+                          {e.prev_occupier_name}
+                        </div>
+                      )}
                     </button>
                   </li>
                 ))}
