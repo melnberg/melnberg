@@ -85,6 +85,24 @@ async function fetchFeed(): Promise<FeedItem[]> {
       .then((r) => r, () => ({ data: null }));
     const factoryRows = ((factoryOccs ?? []) as unknown as Array<{ id: number; factory_id: number; user_id: string; occupied_at: string; factory: unknown }>);
 
+    // 시설 댓글 — 이마트/공장
+    const { data: emartCommRaw } = await supabase
+      .from('emart_comments')
+      .select('id, emart_id, author_id, content, created_at, emart:emart_locations!emart_id(name, lat, lng)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const emartCommRows = ((emartCommRaw ?? []) as unknown as Array<{ id: number; emart_id: number; author_id: string; content: string; created_at: string; emart: unknown }>);
+    const { data: factoryCommRaw } = await supabase
+      .from('factory_comments')
+      .select('id, factory_id, author_id, content, created_at, factory:factory_locations!factory_id(name, lat, lng)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const factoryCommRows = ((factoryCommRaw ?? []) as unknown as Array<{ id: number; factory_id: number; author_id: string; content: string; created_at: string; factory: unknown }>);
+
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
       .from('auction_bids')
@@ -140,6 +158,8 @@ async function fetchFeed(): Promise<FeedItem[]> {
       ...bidRows.map((b) => b.bidder_id),
       ...emartRows.map((e) => e.user_id),
       ...factoryRows.map((f) => f.user_id),
+      ...emartCommRows.map((c) => c.author_id),
+      ...factoryCommRows.map((c) => c.author_id),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
@@ -410,7 +430,8 @@ async function fetchFeed(): Promise<FeedItem[]> {
 
     // 시스템 공지 — 자동 작성된 일반 커뮤니티 글처럼 노출.
     // created_at 을 고정 시점 (분양 개시 시각) 으로 박아서 시간순 정렬에 합류 → 신규 피드가 위로 쌓이며 자연스럽게 묻힘.
-    const LAUNCH_TS = '2026-05-06T12:00:00+09:00';
+    // 어제 시점으로 backdate — 신규 피드 (방금/N분 전) 가 자연스럽게 공지 위로
+    const LAUNCH_TS = '2026-05-05T12:00:00+09:00';
     const noticeBase = (id: number, ts: string, title: string, content: string): FeedItem => ({
       kind: 'notice' as const,
       id,
@@ -492,11 +513,64 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 경매는 강제 최상단 유지. 공지·일반·입찰·이마트·공장은 모두 시간순 (LAUNCH_TS 박힌 공지는
-    // 신규 피드가 위에 쌓일수록 자연스럽게 아래로 묻힘).
-    const others = [...NOTICE_ITEMS, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems]
+    // 시설 댓글 → FeedItem (post_comment kind 재활용 — 댓글 뱃지 노출)
+    const facilityCommentItems: FeedItem[] = [
+      ...emartCommRows.map((c) => {
+        const em = (Array.isArray(c.emart) ? c.emart[0] : c.emart) as { name?: string | null; lat?: number | null; lng?: number | null } | null;
+        const prof = profileMap.get(c.author_id);
+        return {
+          kind: 'emart_occupy' as const,    // emart click 핸들러 재활용
+          id: 200000 + c.id,
+          apt_master_id: c.emart_id,
+          post_id: null,
+          title: `${em?.name ?? '이마트'} 댓글`,
+          content: c.content,
+          created_at: c.created_at,
+          emart_name: em?.name ?? undefined,
+          apt_nm: em?.name ?? null,
+          dong: null,
+          lat: em?.lat ?? null,
+          lng: em?.lng ?? null,
+          author_id: c.author_id,
+          author_name: prof?.display_name ?? null,
+          author_link: prof?.link_url ?? null,
+          author_is_paid: isActivePaid(prof),
+          author_is_solo: !!prof?.is_solo,
+          author_avatar_url: prof?.avatar_url ?? null,
+          author_apt_count: prof?.apt_count ?? null,
+        } as FeedItem;
+      }),
+      ...factoryCommRows.map((c) => {
+        const f = (Array.isArray(c.factory) ? c.factory[0] : c.factory) as { name?: string | null; lat?: number | null; lng?: number | null } | null;
+        const prof = profileMap.get(c.author_id);
+        return {
+          kind: 'factory_occupy' as const,
+          id: 300000 + c.id,
+          apt_master_id: c.factory_id,
+          post_id: null,
+          title: `${f?.name ?? '시설'} 댓글`,
+          content: c.content,
+          created_at: c.created_at,
+          emart_name: f?.name ?? undefined,
+          apt_nm: f?.name ?? null,
+          dong: null,
+          lat: f?.lat ?? null,
+          lng: f?.lng ?? null,
+          author_id: c.author_id,
+          author_name: prof?.display_name ?? null,
+          author_link: prof?.link_url ?? null,
+          author_is_paid: isActivePaid(prof),
+          author_is_solo: !!prof?.is_solo,
+          author_avatar_url: prof?.avatar_url ?? null,
+          author_apt_count: prof?.apt_count ?? null,
+        } as FeedItem;
+      }),
+    ];
+
+    // 경매는 강제 최상단 유지. 공지·일반·입찰·이마트·공장은 모두 시간순.
+    const others = [...NOTICE_ITEMS, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 80 - auctionItems.length);
+      .slice(0, 100 - auctionItems.length);
     return [...auctionItems, ...others];
 }
 
