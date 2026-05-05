@@ -61,7 +61,9 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'notice';
+  /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
+  notice_href?: string;
   /** 경매 전용 — 종료 시각 */
   ends_at?: string;
   /** 경매 전용 — auction id (jumpToFeedItem 라우팅용) */
@@ -1470,10 +1472,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isSnatch = f.kind === 'snatch';
                   const isAuction = f.kind === 'auction';
                   const isAuctionBid = f.kind === 'auction_bid';
+                  const isNotice = f.kind === 'notice';
                   const headLabel = isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
-                      <div className={`px-3 py-2.5 ${isAuction ? 'bg-[#fef2f2] hover:bg-[#fee2e2] border-l-4 border-[#dc2626]' : 'bg-white hover:bg-[#fafbfc]'}`}>
+                      <div className={`px-3 py-2.5 ${
+                        isAuction ? 'bg-[#fef2f2] hover:bg-[#fee2e2] border-l-4 border-[#dc2626]' :
+                        'bg-white hover:bg-[#fafbfc]'
+                      }`}>
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <button
                             type="button"

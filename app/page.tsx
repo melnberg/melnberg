@@ -388,11 +388,28 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 경매는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 시간순
+    // 시스템 공지 — 자동 작성된 일반 커뮤니티 글처럼 노출 (티 안 나게).
+    // 비활성화 시 NOTICE_ITEMS 를 빈 배열로 두면 됨.
+    const NOTICE_ITEMS: FeedItem[] = [
+      {
+        kind: 'notice' as const,
+        id: 1,
+        apt_master_id: 0,
+        post_id: null,
+        title: '이마트 분양 시작',
+        content: '이마트 매장이 새 분양 대상으로 추가됐습니다.\n분양가 5 mlbg, 매일 1 mlbg 자동 수익 (24시간마다 청구). 5일이면 분양가 회수, 이후엔 순수익. 1인 1점포 제한.\n지도에서 노란 e 핀 클릭 → 분양받기.',
+        created_at: new Date().toISOString(),
+        apt_nm: null, dong: null, lat: null, lng: null,
+        author_id: null, author_name: '멜른버그', author_link: null,
+        author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
+      },
+    ];
+
+    // 경매·공지는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 시간순
     const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 60 - auctionItems.length);
-    return [...auctionItems, ...others];
+      .slice(0, 60 - auctionItems.length - NOTICE_ITEMS.length);
+    return [...NOTICE_ITEMS, ...auctionItems, ...others];
 }
 
 export default async function HomePage() {
