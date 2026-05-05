@@ -81,6 +81,7 @@ export type AptPin = {
   geocoded_address: string | null;
   occupier_id: string | null;
   occupied_at: string | null;
+  listing_price: number | null;
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
@@ -113,11 +114,15 @@ const PIN_COLORS = {
 };
 
 // 물방울 모양 핀 SVG. 단색 + 광택. 점거 시 흰 삼각 깃발 추가.
-function buildPinSvg(color: string, occupied: boolean): string {
+function buildPinSvg(color: string, occupied: boolean, listed: boolean = false): string {
   // 깃발: 흰색 + 검정 테두리. 사이즈 20% 축소.
   // 깃대: 검정 outer + 흰 inner (테두리 효과). 삼각: 흰 fill + 검정 stroke.
   const flag = occupied
     ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
+    : '';
+  // 매물 등록: 우상단에 노란 "$" 뱃지. 깃발이 있으면 살짝 옆으로.
+  const saleBadge = listed
+    ? '<g><circle cx="25" cy="7" r="6" fill="#FFD400" stroke="#1a1d22" stroke-width="1.5"/><text x="25" y="10" font-family="Arial,sans-serif" font-size="9" font-weight="900" fill="#1a1d22" text-anchor="middle">$</text></g>'
     : '';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
 <defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs>
@@ -125,6 +130,7 @@ function buildPinSvg(color: string, occupied: boolean): string {
 <path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="${color}" stroke="#1a1d22" stroke-width="2"/>
 <path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>
 ${flag}
+${saleBadge}
 </svg>`;
   return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
 }
@@ -584,16 +590,28 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     markersRef.current = [];
 
     const PIN_W = 32, PIN_H = 45;
-    const makeImg = (color: string, occ: boolean) => new window.kakao.maps.MarkerImage(
-      buildPinSvg(color, occ),
+    const makeImg = (color: string, occ: boolean, listed: boolean = false) => new window.kakao.maps.MarkerImage(
+      buildPinSvg(color, occ, listed),
       new window.kakao.maps.Size(PIN_W, PIN_H),
       { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) },
     );
     const pins8 = {
-      red: { plain: makeImg(PIN_COLORS.red, false), occ: makeImg(PIN_COLORS.red, true) },
-      orange: { plain: makeImg(PIN_COLORS.orange, false), occ: makeImg(PIN_COLORS.orange, true) },
-      green: { plain: makeImg(PIN_COLORS.green, false), occ: makeImg(PIN_COLORS.green, true) },
-      blue: { plain: makeImg(PIN_COLORS.blue, false), occ: makeImg(PIN_COLORS.blue, true) },
+      red: {
+        plain: makeImg(PIN_COLORS.red, false), occ: makeImg(PIN_COLORS.red, true),
+        listedPlain: makeImg(PIN_COLORS.red, false, true), listedOcc: makeImg(PIN_COLORS.red, true, true),
+      },
+      orange: {
+        plain: makeImg(PIN_COLORS.orange, false), occ: makeImg(PIN_COLORS.orange, true),
+        listedPlain: makeImg(PIN_COLORS.orange, false, true), listedOcc: makeImg(PIN_COLORS.orange, true, true),
+      },
+      green: {
+        plain: makeImg(PIN_COLORS.green, false), occ: makeImg(PIN_COLORS.green, true),
+        listedPlain: makeImg(PIN_COLORS.green, false, true), listedOcc: makeImg(PIN_COLORS.green, true, true),
+      },
+      blue: {
+        plain: makeImg(PIN_COLORS.blue, false), occ: makeImg(PIN_COLORS.blue, true),
+        listedPlain: makeImg(PIN_COLORS.blue, false, true), listedOcc: makeImg(PIN_COLORS.blue, true, true),
+      },
     };
     const dotBlue = new window.kakao.maps.MarkerImage(
       '/pins/blue_dot.svg',
@@ -601,10 +619,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       { offset: new window.kakao.maps.Point(10, 10) },
     );
 
-    function pickPin(hh: number | null, occupied: boolean) {
+    function pickPin(hh: number | null, occupied: boolean, listed: boolean) {
       if (hh === null) return dotBlue;
       const t = hh >= 3000 ? 'red' : hh >= 2000 ? 'orange' : hh >= 1000 ? 'green' : hh >= 300 ? 'blue' : null;
       if (!t) return dotBlue;
+      if (listed) return occupied ? pins8[t].listedOcc : pins8[t].listedPlain;
       return occupied ? pins8[t].occ : pins8[t].plain;
     }
 
@@ -632,13 +651,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         const hh = p.household_count ?? 0;
         const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
         const occupied = !!p.occupier_id;
-        const visible = tier === 0 || occupied
+        const listed = p.listing_price != null;
+        const visible = tier === 0 || occupied || listed
           || (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
         const marker = new window.kakao.maps.Marker({
           position: pos,
-          title: p.apt_nm,
+          title: listed ? `${p.apt_nm} — 매물 ${Number(p.listing_price).toLocaleString()} mlbg` : p.apt_nm,
           clickable: true,
-          image: pickPin(p.household_count, occupied),
+          image: pickPin(p.household_count, occupied, listed),
           map: visible ? map : undefined,
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));

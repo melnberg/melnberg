@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
+import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
 import Nickname from './Nickname';
 
 type Props = {
@@ -72,6 +73,11 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     }
     setList([...list, data as unknown as CommunityComment]);
     setContent('');
+    const insertedId = (data as { id: number }).id;
+    awardMlbg('community_comment', insertedId, content.trim()).then((r) => {
+      const msg = awardToastMessage(r);
+      if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
+    });
     router.refresh();
   }
 
@@ -88,6 +94,11 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     }
     setList([...list, data as unknown as CommunityComment]);
     setReplyingTo(null);
+    const insertedId = (data as { id: number }).id;
+    awardMlbg('community_comment', insertedId, replyContent.trim()).then((r) => {
+      const msg = awardToastMessage(r);
+      if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
+    });
     router.refresh();
   }
 

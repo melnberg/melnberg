@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
@@ -70,6 +71,10 @@ export default function PostForm({ initial, category = 'community', redirectBase
         setErr(error?.message ?? '저장 실패');
         return;
       }
+      // AI 품질 평가 + mlbg 적립 — 결과 toast 후 이동
+      const award = await awardMlbg('community_post', data.id, content.trim());
+      const msg = awardToastMessage(award);
+      if (msg) alert(msg);
       router.push(`${redirectBase}/${data.id}`);
       router.refresh();
     }

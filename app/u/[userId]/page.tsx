@@ -10,7 +10,7 @@ import { isActivePaid } from '@/lib/tier-utils';
 
 export const dynamic = 'force-dynamic';
 
-type Tab = 'posts' | 'comments' | 'occupier' | 'bio';
+type Tab = 'posts' | 'comments' | 'occupier' | 'bio' | 'apts';
 
 type ProfileRow = {
   id: string;
@@ -55,7 +55,7 @@ export default async function UserProfilePage({
 }) {
   const { userId } = await params;
   const { tab: tabParam } = await searchParams;
-  const tab: Tab = (['bio', 'posts', 'comments', 'occupier'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'bio';
+  const tab: Tab = (['bio', 'posts', 'comments', 'occupier', 'apts'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'bio';
 
   const supabase = await createClient();
   // base — schema.sql 부터 항상 존재
@@ -95,12 +95,14 @@ export default async function UserProfilePage({
     { count: commentCount },
     { count: aptCommentCount },
     { count: eventCount },
+    { count: ownedAptCount },
   ] = await Promise.all([
     supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', userId).eq('category', 'community'),
     supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
     supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', userId),
     supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
     supabase.from('apt_occupier_events').select('occurred_at', { count: 'exact', head: true }).or(`actor_id.eq.${userId},prev_occupier_id.eq.${userId}`),
+    supabase.from('apt_master').select('id', { count: 'exact', head: true }).eq('occupier_id', userId),
   ]);
 
   const totalPosts = (postCount ?? 0) + (aptCount ?? 0);
@@ -112,6 +114,7 @@ export default async function UserProfilePage({
   let commentRows: Array<CommunityCommentRow & { kind: 'community' }> = [];
   let aptCmtRows: Array<AptCommentRow & { kind: 'apt' }> = [];
   let eventRows: EvictEvent[] = [];
+  let ownedApts: Array<{ id: number; apt_nm: string; dong: string | null; listing_price: number | string | null; occupied_at: string | null }> = [];
 
   if (tab === 'posts') {
     const [{ data: cp }, { data: ap }] = await Promise.all([
@@ -129,6 +132,14 @@ export default async function UserProfilePage({
       .filter((r) => r.post?.category === 'community')
       .map((r) => ({ ...r, kind: 'community' as const }));
     aptCmtRows = ((ac ?? []) as unknown as AptCommentRow[]).map((r) => ({ ...r, kind: 'apt' as const }));
+  } else if (tab === 'apts') {
+    const { data } = await supabase
+      .from('apt_master_with_listing')
+      .select('id, apt_nm, dong, listing_price, occupied_at')
+      .eq('occupier_id', userId)
+      .order('occupied_at', { ascending: false })
+      .limit(200);
+    ownedApts = (data ?? []) as typeof ownedApts;
   } else if (tab === 'occupier') {
     const { data } = await supabase
       .from('apt_occupier_events')
@@ -208,6 +219,7 @@ export default async function UserProfilePage({
             <TabLink href={`/u/${userId}?tab=bio`} active={tab === 'bio'}>자기소개</TabLink>
             <TabLink href={`/u/${userId}?tab=posts`} active={tab === 'posts'}>글 ({totalPosts})</TabLink>
             <TabLink href={`/u/${userId}?tab=comments`} active={tab === 'comments'}>댓글 ({totalComments})</TabLink>
+            <TabLink href={`/u/${userId}?tab=apts`} active={tab === 'apts'}>보유 단지 ({ownedAptCount ?? 0})</TabLink>
             <TabLink href={`/u/${userId}?tab=occupier`} active={tab === 'occupier'}>점거·퇴거 ({eventCount ?? 0})</TabLink>
           </div>
 
@@ -247,6 +259,39 @@ export default async function UserProfilePage({
                 </li>
               ))}
             </ul>
+          )}
+
+          {tab === 'apts' && (
+            ownedApts.length === 0 ? (
+              <p className="text-center py-12 text-muted text-[13px]">보유한 단지가 없습니다.</p>
+            ) : (
+              <ul className="border border-border">
+                {ownedApts.map((a) => {
+                  const lp = a.listing_price == null ? null : Number(a.listing_price);
+                  return (
+                    <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border last:border-b-0 bg-white">
+                      <Link href={`/?apt=${a.id}`} className="flex-1 min-w-0 no-underline">
+                        <div className="text-[13px] font-bold text-navy truncate">{a.apt_nm}</div>
+                        <div className="text-[11px] text-muted mt-0.5">
+                          {a.dong ?? ''}
+                          {a.occupied_at && ` · 분양 ${new Date(a.occupied_at).toLocaleDateString('ko-KR')}`}
+                        </div>
+                      </Link>
+                      <div className="text-right flex-shrink-0">
+                        {lp != null ? (
+                          <>
+                            <div className="text-[12px] font-bold text-cyan tabular-nums">{lp.toLocaleString()} mlbg</div>
+                            <div className="text-[10px] font-bold tracking-widest uppercase text-cyan mt-0.5">매물</div>
+                          </>
+                        ) : (
+                          <div className="text-[10px] font-bold tracking-widest uppercase text-muted">보유중</div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )
           )}
 
           {tab === 'occupier' && (

@@ -30,6 +30,7 @@ export default async function MePage() {
     { count: aptCommentCount },
     { count: communityPostCount },
     { count: communityCommentCount },
+    { data: ownedAptsData },
   ] = await Promise.all([
     getCurrentProfile(),
     getCurrentScore(),
@@ -39,7 +40,15 @@ export default async function MePage() {
     supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
     supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
     supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id),
+    supabase.from('apt_master_with_listing')
+      .select('id, apt_nm, dong, lawd_cd, listing_price, occupied_at')
+      .eq('occupier_id', user.id)
+      .order('occupied_at', { ascending: false }),
   ]);
+  const ownedApts = (ownedAptsData ?? []) as Array<{
+    id: number; apt_nm: string; dong: string | null; lawd_cd: string | null;
+    listing_price: number | string | null; occupied_at: string | null;
+  }>;
 
   const displayName =
     profile?.display_name ??
@@ -123,6 +132,46 @@ export default async function MePage() {
               </ul>
               <p className="text-muted mt-1.5">단지 분양·매매 시 사용되는 화폐 단위입니다. 누적 적립 점수: <b>{score}</b></p>
             </div>
+          </div>
+
+          {/* 보유 단지 */}
+          <div className="mt-10">
+            <h2 className="text-[15px] font-bold text-navy mb-3">
+              보유 단지 <span className="text-muted text-[12px] font-semibold">{ownedApts.length}개</span>
+            </h2>
+            {ownedApts.length === 0 ? (
+              <p className="text-[13px] text-muted py-6 px-5 border border-border text-center leading-relaxed">
+                보유한 단지가 없습니다.<br/>
+                <span className="text-[11px]">홈 지도에서 단지를 분양받거나 매물을 매수해보세요.</span>
+              </p>
+            ) : (
+              <ul className="border border-border">
+                {ownedApts.map((a) => {
+                  const lp = a.listing_price == null ? null : Number(a.listing_price);
+                  return (
+                    <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border last:border-b-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-bold text-text truncate">{a.apt_nm}</div>
+                        <div className="text-[11px] text-muted mt-0.5">
+                          {a.dong ?? ''}
+                          {a.occupied_at && ` · 분양 ${new Date(a.occupied_at).toLocaleDateString('ko-KR')}`}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        {lp != null ? (
+                          <>
+                            <div className="text-[12px] font-bold text-cyan tabular-nums">{lp.toLocaleString()} mlbg</div>
+                            <div className="text-[10px] font-bold tracking-widest uppercase text-cyan mt-0.5">매물 등록</div>
+                          </>
+                        ) : (
+                          <div className="text-[10px] font-bold tracking-widest uppercase text-muted">보유중</div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           {/* 결제 내역 */}

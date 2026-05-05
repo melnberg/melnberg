@@ -6,17 +6,17 @@ import { createPublicClient } from '@/lib/supabase/public';
 // detail=1 → 중소형 (100~999세대)
 // fresh=1  → unstable_cache 우회. 점거/강제집행 직후 강제 갱신용
 
-const PIN_SELECT = 'id, apt_nm, dong, lawd_cd, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at';
+const PIN_SELECT = 'id, apt_nm, dong, lawd_cd, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at, listing_price';
 
 async function fetchBig(): Promise<unknown[]> {
   const supabase = createPublicClient();
   const all: unknown[] = [];
   for (let offset = 0; offset < 50000; offset += 1000) {
     const { data, error } = await supabase
-      .from('apt_master')
+      .from('apt_master_with_listing')
       .select(PIN_SELECT)
       .not('lat', 'is', null)
-      .or('household_count.gte.1000,occupier_id.not.is.null')
+      .or('household_count.gte.1000,occupier_id.not.is.null,listing_price.not.is.null')
       .range(offset, offset + 999);
     if (error || !data || data.length === 0) break;
     all.push(...data);
@@ -30,7 +30,7 @@ async function fetchSmall(): Promise<unknown[]> {
   const all: unknown[] = [];
   for (let offset = 0; offset < 50000; offset += 1000) {
     const { data, error } = await supabase
-      .from('apt_master')
+      .from('apt_master_with_listing')
       .select(PIN_SELECT)
       .not('lat', 'is', null)
       .gte('household_count', 100)

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import Nickname, { type NicknameInfo } from './Nickname';
 import type { AptPin } from './AptMap';
 import { getAptListingPrice } from '@/lib/listing-price';
+import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
 
 type Discussion = {
   id: number;
@@ -98,6 +99,13 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
   const [claiming, setClaiming] = useState(false);
 
+  // 매물 (P2P 매매)
+  const [listingPrice, setListingPrice] = useState<number | null>(null);
+  const [sellPanelOpen, setSellPanelOpen] = useState(false);
+  const [sellPriceInput, setSellPriceInput] = useState('');
+  const [trading, setTrading] = useState(false);
+  const [myMlbgBalance, setMyMlbgBalance] = useState<number | null>(null);
+
   // 점거 히스토리
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<HistoryEvent[] | null>(null);
@@ -120,8 +128,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setLoading(true);
     setErr(null);
 
-    // Round 1: 글 + 사용자 + 점거인 정보 + apt_master 동시 fetch
-    const [{ data: dData, error: dErr }, { data: { user } }, { data: occData }] = await Promise.all([
+    // Round 1: 글 + 사용자 + 점거인 정보 + apt_master + 매물 동시 fetch
+    const [{ data: dData, error: dErr }, { data: { user } }, { data: occData }, { data: listingData }] = await Promise.all([
       supabase
         .from('apt_discussions')
         .select('id, title, content, vote_up_count, vote_down_count, created_at, author_id')
@@ -131,7 +139,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         .limit(50),
       supabase.auth.getUser(),
       supabase.from('apt_master').select('occupier_id, occupied_at').eq('id', apt.id).maybeSingle(),
+      supabase.from('apt_listings').select('price').eq('apt_id', apt.id).maybeSingle(),
     ]);
+    const lp = (listingData as { price?: number | string | null } | null)?.price;
+    setListingPrice(lp == null ? null : Number(lp));
 
     if (dErr) { setErr(dErr.message); setLoading(false); return; }
     const ds = (dData ?? []) as unknown as Discussion[];
@@ -243,6 +254,15 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     const myOccs = (myOccsData as Array<{ id: number; apt_nm: string }> | null)?.[0] ?? null;
     setMyCurrentApt(myOccs);
 
+    // 본인 mlbg_balance — 매수 가능 여부 표시용
+    if (user) {
+      const { data: profBal } = await supabase.from('profiles').select('mlbg_balance').eq('id', user.id).maybeSingle();
+      const v = (profBal as { mlbg_balance?: number | string | null } | null)?.mlbg_balance;
+      setMyMlbgBalance(v == null ? 0 : Number(v));
+    } else {
+      setMyMlbgBalance(null);
+    }
+
     setLoading(false);
     // 사이드바 score(서버 컴포넌트)도 갱신되도록 RSC 재요청
     router.refresh();
@@ -271,6 +291,52 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setMyCurrentApt(null);
     setHistory(null); // 다음 열기 시 재fetch
     // 홈 지도 핀 캐시 무효화 신호 (점거 마커 즉시 갱신)
+    window.dispatchEvent(new Event('mlbg-pins-changed'));
+  }
+
+  async function listForSale() {
+    if (!userId) return;
+    const price = Number(sellPriceInput);
+    if (!Number.isFinite(price) || price <= 0) { alert('가격을 0보다 큰 숫자로 입력하세요.'); return; }
+    setTrading(true);
+    const { data, error } = await supabase.rpc('list_apt_for_sale', { p_apt_id: apt.id, p_price: price });
+    setTrading(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '매물 등록 실패'); return; }
+    setListingPrice(price);
+    setSellPanelOpen(false);
+    setSellPriceInput('');
+    window.dispatchEvent(new Event('mlbg-pins-changed'));
+  }
+
+  async function unlist() {
+    if (!userId) return;
+    if (!confirm('매물 등록을 해제할까요?')) return;
+    setTrading(true);
+    const { data, error } = await supabase.rpc('unlist_apt', { p_apt_id: apt.id });
+    setTrading(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '해제 실패'); return; }
+    setListingPrice(null);
+    window.dispatchEvent(new Event('mlbg-pins-changed'));
+  }
+
+  async function buyApt() {
+    if (!userId || listingPrice == null) return;
+    if (!confirm(`이 단지를 ${listingPrice.toLocaleString()} mlbg 에 매수합니다. 진행할까요?`)) return;
+    setTrading(true);
+    const { data, error } = await supabase.rpc('buy_apt', { p_apt_id: apt.id });
+    setTrading(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_seller_id: string | null; out_seller_name: string | null; out_price: number | null; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '매수 실패'); return; }
+    alert(`매수 완료. ${row.out_seller_name ?? ''} 님으로부터 ${row.out_price ?? listingPrice} mlbg 에 인수했습니다.`);
+    setListingPrice(null);
+    setOccupierId(userId);
+    setHistory(null);
+    await reload();
     window.dispatchEvent(new Event('mlbg-pins-changed'));
   }
 
@@ -342,21 +408,29 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setSubmitErr(null);
 
     let error;
+    let insertedId: number | null = null;
     if (editingId) {
       ({ error } = await supabase.from('apt_discussions').update({
         title: titleLine.slice(0, 200),
         content: restLines,
       }).eq('id', editingId));
     } else {
-      ({ error } = await supabase.from('apt_discussions').insert({
+      const ins = await supabase.from('apt_discussions').insert({
         apt_master_id: apt.id,
         author_id: userId,
         title: titleLine.slice(0, 200),
         content: restLines,
-      }));
+      }).select('id').single();
+      error = ins.error;
+      insertedId = (ins.data as { id: number } | null)?.id ?? null;
     }
 
     if (error) { setSubmitErr(error.message); setSubmitting(false); return; }
+    if (insertedId) {
+      const award = await awardMlbg('apt_post', insertedId, [titleLine, restLines ?? ''].join('\n').trim());
+      const msg = awardToastMessage(award);
+      if (msg) alert(msg);
+    }
     setSubmitting(false);
     setWriting(false);
     setEditingId(null);
@@ -412,11 +486,18 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (!userId) { alert('로그인이 필요해요.'); return; }
     const text = (commentBody.get(discussionId) ?? '').trim();
     if (!text) return;
-    const { error } = await supabase.from('apt_discussion_comments').insert({
+    const { data, error } = await supabase.from('apt_discussion_comments').insert({
       discussion_id: discussionId, author_id: userId, content: text,
-    });
+    }).select('id').single();
     if (error) { alert(error.message); return; }
     setCommentBody((prev) => { const m = new Map(prev); m.set(discussionId, ''); return m; });
+    const cid = (data as { id: number } | null)?.id;
+    if (cid) {
+      awardMlbg('apt_comment', cid, text).then((r) => {
+        const msg = awardToastMessage(r);
+        if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
+      });
+    }
     await reload();
   }
 
@@ -424,12 +505,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (!userId) { alert('로그인이 필요해요.'); return; }
     const text = replyBody.trim();
     if (!text) return;
-    const { error } = await supabase.from('apt_discussion_comments').insert({
+    const { data, error } = await supabase.from('apt_discussion_comments').insert({
       discussion_id: discussionId, author_id: userId, content: text, parent_id: parentId,
-    });
+    }).select('id').single();
     if (error) { alert(error.message); return; }
     setReplyBody('');
     setReplyTo(null);
+    const cid = (data as { id: number } | null)?.id;
+    if (cid) {
+      awardMlbg('apt_comment', cid, text).then((r) => {
+        const msg = awardToastMessage(r);
+        if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
+      });
+    }
     await reload();
   }
 
@@ -503,6 +591,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         {/* 점거 상태 + 버튼 */}
         <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
           {occupierId ? (
+            <>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
@@ -545,6 +634,16 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               </div>
               {occupierId === userId ? (
                 <span className="text-[11px] font-bold text-cyan flex-shrink-0">내가 점거중</span>
+              ) : userId && listingPrice != null ? (
+                <button
+                  type="button"
+                  onClick={buyApt}
+                  disabled={trading || (myMlbgBalance != null && myMlbgBalance < listingPrice)}
+                  className="text-[11px] font-bold px-2.5 py-1 bg-navy text-white hover:bg-navy-dark disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                  title={myMlbgBalance != null && myMlbgBalance < listingPrice ? `잔액 부족 (${myMlbgBalance} / ${listingPrice} mlbg)` : '매수'}
+                >
+                  매수 {listingPrice.toLocaleString()} mlbg
+                </button>
               ) : userId ? (
                 <span className="relative group flex-shrink-0">
                   <button
@@ -588,6 +687,48 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 </Link>
               )}
             </div>
+
+            {/* 매물 표시 / 매도 컨트롤 */}
+            {listingPrice != null && occupierId !== userId && (
+              <div className="mt-2 px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px] flex items-center justify-between">
+                <span className="text-navy font-medium">매물 등록됨</span>
+                <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
+              </div>
+            )}
+            {occupierId === userId && (
+              <div className="mt-2 space-y-1.5">
+                {listingPrice != null ? (
+                  <div className="flex items-center justify-between gap-2 px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px]">
+                    <span className="text-navy">내 매물 호가</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
+                      <button type="button" onClick={() => { setSellPriceInput(String(listingPrice)); setSellPanelOpen(true); }}
+                        className="text-[11px] text-muted hover:text-navy bg-transparent border-none p-0">수정</button>
+                      <button type="button" onClick={unlist} disabled={trading}
+                        className="text-[11px] text-red-500 hover:text-red-700 bg-transparent border-none p-0 disabled:opacity-40">해제</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => { setSellPriceInput(''); setSellPanelOpen((v) => !v); }}
+                    className="w-full text-[12px] py-1.5 border border-navy/40 text-navy hover:bg-navy hover:text-white transition-colors">
+                    매물로 등록
+                  </button>
+                )}
+                {sellPanelOpen && (
+                  <div className="border border-border bg-white p-2.5 flex items-center gap-2">
+                    <input type="number" min="1" value={sellPriceInput} onChange={(e) => setSellPriceInput(e.target.value)}
+                      placeholder="호가 (mlbg)" className="flex-1 border border-border px-2 py-1 text-[12px] outline-none focus:border-navy" />
+                    <button type="button" onClick={listForSale} disabled={trading || !sellPriceInput}
+                      className="text-[11px] font-bold px-3 py-1 bg-navy text-white hover:bg-navy-dark disabled:opacity-40">
+                      {trading ? '...' : '확정'}
+                    </button>
+                    <button type="button" onClick={() => setSellPanelOpen(false)}
+                      className="text-[11px] text-muted hover:text-text bg-transparent border-none p-0">취소</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
           ) : userId ? (
             <div>
               <div className="text-[12px] text-muted mb-1.5 flex items-center justify-between">
