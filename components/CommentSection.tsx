@@ -218,6 +218,7 @@ function CommentRow({
               link: comment.author?.link_url ?? null,
               isPaid: comment.author?.tier === 'paid' && (!comment.author?.tier_expires_at || new Date(comment.author.tier_expires_at).getTime() > Date.now()),
               isSolo: !!comment.author?.is_solo,
+              userId: comment.author_id,
             }} />
           </span>
           <span className="text-muted">·</span>
