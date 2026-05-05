@@ -366,6 +366,18 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [recentHotdeals, setRecentHotdeals] = useState<HotdealItem[]>([]);
   type RankMode = 'score' | 'wealth' | 'trade' | 'hot' | 'activity' | 'quality' | 'sells' | 'offers' | 'hotdeals';
   const [rankMode, setRankMode] = useState<RankMode>('score');
+  // 모드 전환 컨베이어 — outgoing 이 잠시 표시되면서 위로 밀려나감
+  const prevModeRef = useRef<RankMode>('score');
+  const [outgoingMode, setOutgoingMode] = useState<RankMode | null>(null);
+  useEffect(() => {
+    if (prevModeRef.current !== rankMode) {
+      const old = prevModeRef.current;
+      setOutgoingMode(old);
+      prevModeRef.current = rankMode;
+      const t = setTimeout(() => setOutgoingMode(null), 400);
+      return () => clearTimeout(t);
+    }
+  }, [rankMode]);
   // 마퀴 통일 속도 — 트랙 width 측정해서 px/s 기준 duration 계산
   const marqueeTrackRef = useRef<HTMLDivElement>(null);
   const [marqueeDuration, setMarqueeDuration] = useState(12);
@@ -470,6 +482,91 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     });
     return () => cancelAnimationFrame(id);
   }, [rankMode, ranking, wealthRanking, tradeHighlights, hotApts, activityStats, qualityAwards, todaySells, activeOffers, recentHotdeals]);
+
+  // outgoing 모드 콘텐츠 렌더 (밀려나가는 트랙용 — 이미 렌더된 jsx 와 동일하면 좋지만 분리되어서 함수로 추출)
+  function renderMarqueeItems(mode: RankMode, copy: number): React.ReactNode {
+    if (mode === 'score') return ranking.map((r, i) => (
+      <span key={`s-${copy}-${r.user_id}`} className="flex-shrink-0">
+        <span className="text-yellow-300 font-bold">{i + 1}위</span>{' '}
+        <span className="text-white font-bold">{r.display_name}</span>
+        <span className="text-cyan"> {r.score}</span>
+      </span>
+    ));
+    if (mode === 'wealth') return wealthRanking.map((w, i) => (
+      <span key={`w-${copy}-${w.user_id}`} className="flex-shrink-0">
+        <span className="text-[#fbcfe8] font-bold">{i + 1}위</span>{' '}
+        <span className="text-white font-bold">{w.display_name}</span>
+        <span className="text-cyan"> {Number(w.total_wealth).toLocaleString()} mlbg</span>
+        {w.apt_count > 0 && <span className="text-white/60 text-[10px]"> ({w.apt_count}주택)</span>}
+      </span>
+    ));
+    if (mode === 'trade') return tradeHighlights.map((t, i) => (
+      <span key={`t-${copy}-${i}`} className="flex-shrink-0">
+        <span className="text-[#86efac] font-bold">{t.apt_nm}</span>
+        <span className="text-white/70"> {Number(t.excl_use_ar).toFixed(0)}㎡</span>
+        <span className="text-white font-bold"> {fmtKRW(Number(t.deal_amount))}</span>
+        <span className="text-white/50 text-[10px]"> ({t.deal_date.slice(5).replace('-', '/')})</span>
+      </span>
+    ));
+    if (mode === 'hot') return hotApts.map((a, i) => (
+      <span key={`h-${copy}-${i}`} className="flex-shrink-0">
+        <span className="text-[#fdba74] font-bold">{i + 1}위</span>{' '}
+        <span className="text-white font-bold">{a.apt_nm}</span>
+        <span className="text-cyan"> {a.trade_count}건</span>
+        <span className="text-white/60 text-[10px]"> 중앙 {fmtKRW(Number(a.median_amount))}</span>
+      </span>
+    ));
+    if (mode === 'activity' && activityStats) return [
+      { label: '커뮤글', n: activityStats.posts_today },
+      { label: '단지글', n: activityStats.apt_posts_today },
+      { label: '커뮤댓글', n: activityStats.comments_today },
+      { label: '단지댓글', n: activityStats.apt_comments_today },
+      { label: '신규가입', n: activityStats.new_users_today },
+      { label: '출석', n: activityStats.checkins_today },
+      { label: '신규분양', n: activityStats.claims_today },
+    ].map((s, i) => (
+      <span key={`a-${copy}-${i}`} className="flex-shrink-0">
+        <span className="text-[#bae6fd] font-bold">{s.label}</span>
+        <span className="text-white font-bold"> {Number(s.n).toLocaleString()}</span>
+        <span className="text-white/50 text-[10px]"> 건</span>
+      </span>
+    ));
+    if (mode === 'quality') return qualityAwards.map((q, i) => (
+      <span key={`q-${copy}-${i}`} className="flex-shrink-0">
+        <span className="text-[#fde68a] font-bold">{q.author_name ?? '?'}</span>
+        {q.apt_nm && <span className="text-white/70"> [{q.apt_nm}]</span>}
+        <span className="text-white"> {(q.title ?? '').slice(0, 40)}</span>
+        <span className="text-cyan font-bold"> +{q.earned} mlbg</span>
+        <span className="text-[#fde68a] text-[10px]"> ({q.multiplier}x)</span>
+      </span>
+    ));
+    if (mode === 'sells') return todaySells.map((s, i) => (
+      <span key={`sl-${copy}-${i}`} className="flex-shrink-0">
+        <span className="text-[#a7f3d0] font-bold">{s.apt_nm ?? '?'}</span>
+        <span className="text-white/70"> {s.seller_name ?? ''} → </span>
+        <span className="text-white font-bold">{s.buyer_name ?? ''}</span>
+        <span className="text-cyan"> {Number(s.price).toLocaleString()} mlbg</span>
+      </span>
+    ));
+    if (mode === 'offers') return activeOffers.map((o, i) => (
+      <span key={`of-${copy}-${i}`} className="flex-shrink-0">
+        <span className={`font-bold text-[10px] tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-red-500 text-white' : 'bg-cyan text-white'}`}>{o.kind === 'snatch' ? '내놔' : '매수'}</span>
+        <span className="text-[#fda4af] font-bold"> {o.apt_nm ?? '?'}</span>
+        <span className="text-white/70"> by </span>
+        <span className="text-white font-bold">{o.buyer_name ?? ''}</span>
+        <span className="text-cyan"> {o.kind === 'snatch' ? '0 mlbg' : `${Number(o.price).toLocaleString()} mlbg`}</span>
+      </span>
+    ));
+    if (mode === 'hotdeals') return recentHotdeals.map((h, i) => (
+      <span key={`hd-${copy}-${i}`} className="flex-shrink-0">
+        <span className="text-[#fed7aa] font-bold">[핫딜]</span>{' '}
+        <span className="text-white">{h.author_name ?? ''}</span>
+        <span className="text-white/70">: </span>
+        <span className="text-white">{(h.title ?? '').slice(0, 50)}</span>
+      </span>
+    ));
+    return null;
+  }
 
   // 만원 단위 → 표시
   function fmtKRW(만원: number): string {
@@ -865,13 +962,29 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             {rankMode === 'offers' && <span className="text-[#fda4af] [text-shadow:0_0_6px_rgba(253,164,175,0.6)]">💸 진행중 호가</span>}
             {rankMode === 'hotdeals' && <span className="text-[#fed7aa] [text-shadow:0_0_6px_rgba(254,215,170,0.6)]">🛒 핫딜</span>}
           </button>
-          <div className="marquee-mask flex-1 overflow-hidden">
+          <div className="marquee-mask flex-1 overflow-hidden relative h-[20px]">
+            {/* 위로 밀려나가는 직전 모드 (outgoing) */}
+            {outgoingMode && (
+              <div className="absolute inset-0 marquee-conveyor-out">
+                <div className="marquee-track flex w-max" style={{ ['--marquee-duration' as string]: `${marqueeDuration}s`, animationPlayState: 'paused' }}>
+                  {[0, 1].map((copy) => (
+                    <div key={copy} aria-hidden={copy === 1} className="flex gap-8 pr-8">
+                      {renderMarqueeItems(outgoingMode, copy)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* 새로 올라오는 현재 모드 (incoming) */}
             <div
               key={rankMode}
-              ref={marqueeTrackRef}
-              className="marquee-track marquee-slide-in flex w-max"
-              style={{ ['--marquee-duration' as string]: `${marqueeDuration}s` }}
+              className="absolute inset-0 marquee-conveyor-in"
             >
+              <div
+                ref={marqueeTrackRef}
+                className="marquee-track flex w-max"
+                style={{ ['--marquee-duration' as string]: `${marqueeDuration}s` }}
+              >
               {[0, 1].map((copy) => (
                 <div key={copy} aria-hidden={copy === 1} className="flex gap-8 pr-8">
                   {rankMode === 'score' && ranking.map((r, i) => (
@@ -960,6 +1073,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   ))}
                 </div>
               ))}
+              </div>
             </div>
           </div>
         </div>

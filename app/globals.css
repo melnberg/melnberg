@@ -40,13 +40,21 @@
   animation-play-state: paused;
 }
 
-/* 모드 전환 시 아래에서 위로 슬라이드 인 */
-@keyframes marqueeSlideUpIn {
-  0%   { transform: translateY(100%); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+/* 모드 전환 컨베이어 — 새 콘텐츠가 위로 올라오며 기존을 밀어냄.
+   wrapper 가 vertical slide, 안의 marquee-track 은 별도 horizontal scroll */
+@keyframes marqueeConveyorIn {
+  0%   { transform: translateY(100%); }
+  100% { transform: translateY(0); }
 }
-.marquee-slide-in {
-  animation: marqueeSlideUpIn 350ms ease-out;
+@keyframes marqueeConveyorOut {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+.marquee-conveyor-in {
+  animation: marqueeConveyorIn 400ms ease-out;
+}
+.marquee-conveyor-out {
+  animation: marqueeConveyorOut 400ms ease-out forwards;
 }
 
 @layer base {
