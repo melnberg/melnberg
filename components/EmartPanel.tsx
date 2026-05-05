@@ -16,7 +16,11 @@ export type EmartItem = {
   occupier_name: string | null;
   occupied_at?: string | null;
   last_claimed_at?: string | null;
+  listing_price?: number | null;
+  listing_description?: string | null;
 };
+
+type EmartComment = { id: number; author_id: string; author_name: string | null; content: string; created_at: string };
 
 type Props = {
   emart: EmartItem;
@@ -34,9 +38,27 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
   const [busy, setBusy] = useState(false);
   const [currentUid, setCurrentUid] = useState<string | null>(null);
 
+  // 매도 등록 폼
+  const [sellPriceInput, setSellPriceInput] = useState('');
+  const [sellDescInput, setSellDescInput] = useState('');
+  const [sellPanelOpen, setSellPanelOpen] = useState(false);
+
+  // 댓글
+  const [comments, setComments] = useState<EmartComment[]>([]);
+  const [commentInput, setCommentInput] = useState('');
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUid(data?.user?.id ?? null), () => {});
   }, [supabase]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc('list_emart_comments', { p_emart_id: emart.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
+      if (!cancelled) setComments((data ?? []) as EmartComment[]);
+    })();
+    return () => { cancelled = true; };
+  }, [emart.id, supabase]);
 
   const isMine = !!emart.occupier_id && emart.occupier_id === currentUid;
   const lastClaimMs = emart.last_claimed_at
@@ -88,6 +110,73 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
     onChanged();
     onClose();
     router.refresh();
+  }
+
+  async function listForSale() {
+    if (busy) return;
+    const price = Number(sellPriceInput);
+    if (!Number.isFinite(price) || price <= 0) { alert('가격을 0보다 큰 숫자로 입력하세요.'); return; }
+    setBusy(true);
+    const { data, error } = await supabase.rpc('list_emart_for_sale', { p_emart_id: emart.id, p_price: price, p_description: sellDescInput.trim() || null });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '매도 등록 실패'); return; }
+    alert(`매도 등록 완료: ${price.toLocaleString()} mlbg`);
+    setSellPanelOpen(false);
+    setSellPriceInput('');
+    setSellDescInput('');
+    onChanged();
+    router.refresh();
+  }
+
+  async function unlist() {
+    if (busy) return;
+    if (!confirm('매도 등록을 해제할까요?')) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('unlist_emart', { p_emart_id: emart.id });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '해제 실패'); return; }
+    onChanged();
+    router.refresh();
+  }
+
+  async function buyListing() {
+    if (busy) return;
+    if (emart.listing_price == null) return;
+    if (!confirm(`${emart.name}\n${Number(emart.listing_price).toLocaleString()} mlbg 에 매수합니다. 진행할까요?`)) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('buy_emart', { p_emart_id: emart.id });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null; out_price: number } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '매수 실패'); return; }
+    alert(`매수 완료: ${Number(row.out_price).toLocaleString()} mlbg`);
+    notifyTelegram('emart_occupy', emart.id);
+    onChanged();
+    onClose();
+    router.refresh();
+  }
+
+  async function postComment() {
+    const txt = commentInput.trim();
+    if (!txt || busy) return;
+    setBusy(true);
+    const { error } = await supabase.from('emart_comments').insert({ emart_id: emart.id, author_id: currentUid, content: txt });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    setCommentInput('');
+    const { data } = await supabase.rpc('list_emart_comments', { p_emart_id: emart.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
+    setComments((data ?? []) as EmartComment[]);
+  }
+
+  async function deleteComment(id: number) {
+    if (!confirm('댓글을 삭제할까요?')) return;
+    const { error } = await supabase.from('emart_comments').delete().eq('id', id);
+    if (error) { alert(error.message); return; }
+    setComments((prev) => prev.filter((c) => c.id !== id));
   }
 
   return (
@@ -183,16 +272,94 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
             )}
           </div>
 
-          {/* 매도/매수 — 곧 출시 */}
-          <div className="border border-dashed border-border px-4 py-3 text-center mb-4">
-            <div className="text-[11px] text-muted mb-1">매도·매수 (호가 시장)</div>
-            <div className="text-[10px] text-muted">곧 출시 — 사장끼리 자유롭게 거래 가능</div>
-          </div>
+          {/* 매도 등록된 경우 — 누구나 즉시 매수 (본인 제외) */}
+          {emart.listing_price != null && (
+            <div className="border-2 border-[#dc2626] bg-[#fef2f2] px-4 py-3 mb-4">
+              <div className="flex items-baseline justify-between gap-3 mb-2">
+                <span className="text-[10px] tracking-widest uppercase text-[#dc2626]">매도 중</span>
+                <span className="text-[20px] font-black text-[#dc2626] tabular-nums">{Number(emart.listing_price).toLocaleString()} <span className="text-[12px]">mlbg</span></span>
+              </div>
+              {emart.listing_description && (
+                <div className="text-[11px] text-muted mb-2 whitespace-pre-wrap">{emart.listing_description}</div>
+              )}
+              {isMine ? (
+                <button type="button" onClick={unlist} disabled={busy} className="w-full bg-white border border-border text-text px-4 py-2 text-[12px] font-bold hover:border-red-500 hover:text-red-600 disabled:opacity-50 cursor-pointer">매도 해제</button>
+              ) : (
+                <button type="button" onClick={buyListing} disabled={busy} className="w-full bg-[#dc2626] text-white border-none px-4 py-2.5 text-[13px] font-black tracking-wide hover:bg-[#b91c1c] disabled:opacity-50 cursor-pointer">즉시 매수</button>
+              )}
+            </div>
+          )}
 
-          {/* 댓글 — 곧 출시 */}
-          <div className="border border-border px-4 py-4 text-center">
-            <div className="text-[12px] font-bold text-navy mb-1">💬 매장 후기·댓글</div>
-            <div className="text-[10px] text-muted">곧 출시</div>
+          {/* 본인 보유 + 매도 안 된 경우 — 매도 등록 */}
+          {isMine && emart.listing_price == null && (
+            <div className="border border-border px-4 py-3 mb-4">
+              {!sellPanelOpen ? (
+                <button type="button" onClick={() => setSellPanelOpen(true)} className="w-full bg-white border border-border text-navy px-4 py-2 text-[12px] font-bold hover:border-navy cursor-pointer">매도 등록</button>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="number"
+                    value={sellPriceInput}
+                    onChange={(e) => setSellPriceInput(e.target.value)}
+                    placeholder="매도가 (mlbg)"
+                    min={1}
+                    className="w-full px-3 py-2 border border-border focus:border-navy text-[13px] tabular-nums outline-none rounded-none"
+                  />
+                  <textarea
+                    value={sellDescInput}
+                    onChange={(e) => setSellDescInput(e.target.value)}
+                    placeholder="매물 설명 (선택, 1000자 이내)"
+                    rows={2}
+                    className="w-full px-3 py-2 border border-border focus:border-navy text-[12px] outline-none rounded-none resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { setSellPanelOpen(false); setSellPriceInput(''); setSellDescInput(''); }} className="flex-1 bg-white border border-border text-text px-3 py-1.5 text-[12px] font-bold hover:border-navy cursor-pointer">취소</button>
+                    <button type="button" onClick={listForSale} disabled={busy || !sellPriceInput.trim()} className="flex-1 bg-navy text-white border-none px-3 py-1.5 text-[12px] font-bold hover:bg-navy-dark disabled:opacity-50 cursor-pointer">{busy ? '...' : '등록'}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 댓글 */}
+          <div className="border border-border">
+            <div className="px-4 py-2 border-b border-border bg-bg/30 text-[12px] font-bold text-navy">💬 매장 댓글 ({comments.length})</div>
+            <div className="max-h-[260px] overflow-y-auto">
+              {comments.length === 0 ? (
+                <div className="px-4 py-6 text-[11px] text-muted text-center">첫 댓글을 남겨보세요.</div>
+              ) : (
+                <ul>
+                  {comments.map((c) => (
+                    <li key={c.id} className="px-4 py-2 border-b border-[#f0f0f0] last:border-b-0">
+                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                        <span className="text-[12px] font-bold text-navy">{c.author_name ?? '익명'}</span>
+                        <span className="text-[10px] text-muted tabular-nums">{fmtKstShort(c.created_at)}</span>
+                      </div>
+                      <div className="text-[12px] text-text whitespace-pre-wrap break-words">{c.content}</div>
+                      {currentUid && currentUid === c.author_id && (
+                        <button type="button" onClick={() => deleteComment(c.id)} className="mt-1 text-[10px] text-muted hover:text-red-600 bg-transparent border-none p-0 cursor-pointer">삭제</button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {currentUid ? (
+              <div className="px-3 py-2 border-t border-border flex gap-2">
+                <input
+                  type="text"
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') postComment(); }}
+                  placeholder="댓글 남기기..."
+                  maxLength={500}
+                  className="flex-1 px-2 py-1.5 border border-border focus:border-navy text-[12px] outline-none rounded-none"
+                />
+                <button type="button" onClick={postComment} disabled={busy || !commentInput.trim()} className="bg-navy text-white border-none px-3 py-1.5 text-[12px] font-bold hover:bg-navy-dark disabled:opacity-40 cursor-pointer">등록</button>
+              </div>
+            ) : (
+              <div className="px-4 py-3 border-t border-border text-[11px] text-muted text-center">로그인하면 댓글 작성 가능</div>
+            )}
           </div>
         </div>
       </aside>
