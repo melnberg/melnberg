@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
@@ -35,6 +35,7 @@ export default function NotificationsBell() {
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<Notification[] | null>(null);
   const [signedIn, setSignedIn] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
@@ -51,6 +52,7 @@ export default function NotificationsBell() {
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled) return;
       setSignedIn(!!user);
+      setCurrentUserId(user?.id ?? null);
       if (!user) { setUnread(0); return; }
       const { count } = await supabase
         .from('notifications')
@@ -119,11 +121,11 @@ export default function NotificationsBell() {
     setUnread(0);
   }
 
-  function hrefFor(n: Notification): string {
+  function hrefFor(n: Notification, currentUserId: string | null = null): string {
     if (n.type === 'community_comment' && n.post_id) return `/community/${n.post_id}`;
     if (n.type === 'feedback_reply') return '/me/feedback';
-    if (n.type === 'admin_notice') return '/me'; // 마이페이지로 (링크 재등록 등)
-    // apt_comment, apt_evicted: 홈으로 가서 단지 패널 자동 열도록 query 전달
+    if (n.type === 'admin_notice') return '/me';
+    if (n.type === 'bio_comment' && currentUserId) return `/u/${currentUserId}?tab=bio`;
     if ((n.type === 'apt_comment' || n.type === 'apt_evicted') && n.apt_master_id) {
       return `/?apt=${n.apt_master_id}`;
     }
@@ -157,11 +159,12 @@ export default function NotificationsBell() {
                 n.type === 'apt_comment' ? '아파트' :
                 n.type === 'apt_evicted' ? '강제집행' :
                 n.type === 'admin_notice' ? '관리자 알림' :
+                n.type === 'bio_comment' ? '자기소개 댓글' :
                 '건의 답글';
               return (
                 <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
                   <Link
-                    href={hrefFor(n)}
+                    href={hrefFor(n, currentUserId)}
                     onClick={() => setOpen(false)}
                     className="block px-5 py-3 hover:bg-[#eef4fb] no-underline"
                   >
@@ -180,6 +183,8 @@ export default function NotificationsBell() {
                         <>건의사항 답글: <span className="text-muted">{n.comment_excerpt ?? ''}</span></>
                       ) : n.type === 'admin_notice' ? (
                         <span className="text-text">{n.comment_excerpt ?? '관리자 알림'}</span>
+                      ) : n.type === 'bio_comment' ? (
+                        <>내 자기소개 댓글: <span className="text-muted">{n.comment_excerpt ?? ''}</span></>
                       ) : (
                         <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
                       )}

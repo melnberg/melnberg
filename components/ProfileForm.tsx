@@ -187,7 +187,7 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
         <Row label="이메일">
           <span className="text-[14px] text-text">{email}</span>
         </Row>
-        <div className="flex flex-col px-5 py-4 gap-2">
+        <div id="bio" className="flex flex-col px-5 py-4 gap-2 scroll-mt-24">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-[12px] font-bold tracking-widest uppercase text-muted">자기소개</span>
             <span className="text-[10px] text-muted">{bio.length}/500</span>

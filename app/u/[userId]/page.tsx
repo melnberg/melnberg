@@ -3,7 +3,9 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Nickname from '@/components/Nickname';
+import BioComments from '@/components/BioComments';
 import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/auth';
 import { isActivePaid } from '@/lib/tier-utils';
 
 export const dynamic = 'force-dynamic';
@@ -44,15 +46,19 @@ export default async function UserProfilePage({
   const tab: Tab = (['posts', 'comments', 'occupier', 'bio'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'posts';
 
   const supabase = await createClient();
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('id, display_name, naver_id, link_url, bio, is_solo, tier, tier_expires_at, created_at')
-    .eq('id', userId)
-    .maybeSingle();
+  const [{ data: profileData }, me] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, display_name, naver_id, link_url, bio, is_solo, tier, tier_expires_at, created_at')
+      .eq('id', userId)
+      .maybeSingle(),
+    getCurrentUser(),
+  ]);
   const profile = profileData as ProfileRow | null;
   if (!profile) notFound();
 
   const isPaid = isActivePaid({ tier: profile.tier, tier_expires_at: profile.tier_expires_at });
+  const isOwner = me?.id === profile.id;
 
   // 카운트 — 탭 카운터 표시용
   const [
@@ -229,12 +235,25 @@ export default async function UserProfilePage({
           )}
 
           {tab === 'bio' && (
-            <div className="border border-border bg-white p-5 min-h-[200px]">
-              {profile.bio ? (
-                <p className="text-[14px] text-text whitespace-pre-wrap leading-relaxed break-words">{profile.bio}</p>
-              ) : (
-                <p className="text-[13px] text-muted text-center py-12">자기소개가 비어있습니다.</p>
-              )}
+            <div>
+              <div className="border border-border bg-white p-5 min-h-[200px]">
+                {profile.bio ? (
+                  <p className="text-[14px] text-text whitespace-pre-wrap leading-relaxed break-words">{profile.bio}</p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <p className="text-[13px] text-muted">자기소개가 비어있습니다.</p>
+                    {isOwner && (
+                      <Link
+                        href="/me#bio"
+                        className="bg-navy text-white px-4 py-2 text-[12px] font-bold no-underline hover:bg-navy-dark"
+                      >
+                        내 자기소개 쓰러가기 →
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+              <BioComments profileUserId={profile.id} />
             </div>
           )}
         </div>
