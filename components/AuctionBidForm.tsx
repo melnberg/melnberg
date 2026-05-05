@@ -17,14 +17,12 @@ type Props = {
 };
 
 function formatRemaining(ms: number): string {
-  if (ms <= 0) return '종료됨';
+  if (ms <= 0) return '00:00:00';
   const sec = Math.floor(ms / 1000);
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  if (h > 0) return `${h}시간 ${m}분 ${s}초`;
-  if (m > 0) return `${m}분 ${s}초`;
-  return `${s}초`;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 export default function AuctionBidForm({
@@ -98,7 +96,8 @@ export default function AuctionBidForm({
   }
 
   const minimumNext = Math.max(minBid, (currentBid ?? 0) + 1);
-  const lastFiveMinutes = remainingMs > 0 && remainingMs < 5 * 60 * 1000;
+  // 안티스나이프 윈도우 — 3분 이하 남으면 빨강·펄스
+  const lastFiveMinutes = remainingMs > 0 && remainingMs < 3 * 60 * 1000;
 
   return (
     <div className={`border-2 ${isActive ? 'border-[#dc2626] bg-[#fef2f2]' : 'border-border bg-white'} px-6 py-5`}>
@@ -123,7 +122,7 @@ export default function AuctionBidForm({
 
       {extendedFlash && (
         <div className="mt-2 mb-2 px-3 py-2 bg-[#fbbf24] text-[#92400e] text-[12px] font-bold animate-slide-in-right">
-          ⚡ 종료 5분 전 입찰 — +5분 자동 연장!
+          ⚡ 종료 3분 전 입찰 — +3분 자동 연장!
         </div>
       )}
 

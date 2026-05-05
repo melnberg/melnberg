@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AptDiscussionPanel from './AptDiscussionPanel';
+import Countdown from './Countdown';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
@@ -54,7 +55,11 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction';
+  /** 경매 전용 — 종료 시각 */
+  ends_at?: string;
+  /** 경매 전용 — auction id (jumpToFeedItem 라우팅용) */
+  auction_id?: number;
   id: number;
   apt_master_id: number;
   post_id: number | null;
@@ -619,6 +624,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
   function jumpToFeedItem(item: FeedItem) {
+    // 경매 → /auctions/{id}
+    if (item.kind === 'auction' && item.auction_id) {
+      router.push(`/auctions/${item.auction_id}`);
+      return;
+    }
     // 커뮤니티 글/댓글 → /community/{post_id} 로 이동
     if ((item.kind === 'post' || item.kind === 'post_comment') && item.post_id) {
       router.push(`/community/${item.post_id}`);
@@ -1220,12 +1230,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             className="bg-[#dc2626] text-white px-3 py-2 shadow-[0_2px_8px_rgba(220,38,38,0.4)] text-[12px] font-bold flex items-center gap-1.5 border border-[#b91c1c] hover:bg-[#b91c1c] no-underline animate-pulse-glow"
           >
             <span className="text-[14px]">🔥</span>
-            <span className="font-black tracking-wide">LIVE 경매 {liveAuctions.length}건</span>
-            <span className="ml-auto text-[10px] opacity-90 truncate">
-              {liveAuctions.length === 1
-                ? `${liveAuctions[0].apt_nm ?? '단지'} · ${Number(liveAuctions[0].current_bid ?? liveAuctions[0].min_bid).toLocaleString()} mlbg`
-                : '클릭'}
-            </span>
+            <span className="font-black tracking-wide">LIVE 경매 {liveAuctions.length}</span>
+            <Countdown endsAt={liveAuctions[0].ends_at} className="ml-auto text-[12px] font-black" />
           </Link>
         )}
         <button
@@ -1307,10 +1313,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isListing = f.kind === 'listing';
                   const isOffer = f.kind === 'offer';
                   const isSnatch = f.kind === 'snatch';
+                  const isAuction = f.kind === 'auction';
                   const headLabel = isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
-                      <div className="px-3 py-2.5 bg-white hover:bg-[#fafbfc]">
+                      <div className={`px-3 py-2.5 ${isAuction ? 'bg-[#fef2f2] hover:bg-[#fee2e2] border-l-4 border-[#dc2626]' : 'bg-white hover:bg-[#fafbfc]'}`}>
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <button
                             type="button"
@@ -1331,7 +1338,20 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           onKeyDown={(e) => { if (e.key === 'Enter') jumpToFeedItem(f); }}
                           className="cursor-pointer hover:opacity-80"
                         >
-                          {isComment ? (
+                          {isAuction ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-[#dc2626] text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5 animate-pulse">LIVE</span>
+                              <span className="whitespace-pre-wrap break-words flex-1">
+                                <b className="text-[#dc2626]">{f.title}</b>
+                                {fullContent && <span className="text-muted block mt-0.5">{fullContent}</span>}
+                                {f.ends_at && (
+                                  <span className="block mt-1 text-[#dc2626] font-black tabular-nums">
+                                    종료까지 <Countdown endsAt={f.ends_at} />
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          ) : isComment ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
                               <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>

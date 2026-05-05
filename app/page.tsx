@@ -58,6 +58,15 @@ async function fetchFeed(): Promise<FeedItem[]> {
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
 
+    // 진행중 경매 — 모두 강제 노출 (피드 상단)
+    const { data: activeAuctions } = await supabase
+      .from('apt_auctions')
+      .select('id, apt_id, ends_at, min_bid, current_bid, current_bidder_id, bid_count, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(10)
+      .then((r) => r, () => ({ data: null }));
+
     // postComments 의 post_id → posts(title, category) 별도 조회 (임베드 회피)
     const commentPostIds = Array.from(new Set(((postComments ?? []) as Array<{ post_id: number }>).map((c) => c.post_id).filter(Boolean)));
     const commentPostMap = new Map<number, { title: string | null; category: string | null }>();
@@ -289,9 +298,40 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems]
+    // 진행중 경매 → FeedItem (강제 상단 노출)
+    const auctionItems: FeedItem[] = ((activeAuctions ?? []) as Array<Record<string, unknown>>).map((r) => {
+      const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+      const price = Number(r.current_bid ?? r.min_bid ?? 0);
+      return {
+        kind: 'auction' as const,
+        id: r.id as number,
+        auction_id: r.id as number,
+        apt_master_id: r.apt_id as number,
+        post_id: null,
+        title: `🔥 ${am?.apt_nm ?? '단지'} LIVE 경매`,
+        content: `현재가 ${price.toLocaleString()} mlbg · 입찰 ${(r.bid_count ?? 0)}건`,
+        created_at: r.created_at as string,
+        ends_at: r.ends_at as string,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+        author_id: null,
+        author_name: null,
+        author_link: null,
+        author_is_paid: false,
+        author_is_solo: false,
+        author_avatar_url: null,
+        author_apt_count: null,
+        listing_price: price,
+      };
+    });
+
+    // 경매는 강제로 피드 최상단 (시간 정렬 무시)
+    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 50);
+      .slice(0, 50 - auctionItems.length);
+    return [...auctionItems, ...others];
 }
 
 export default async function HomePage() {
