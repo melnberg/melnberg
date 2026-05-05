@@ -66,6 +66,7 @@ export type FeedItem = {
   author_is_paid: boolean;
   author_is_solo: boolean;
   author_avatar_url: string | null;
+  author_apt_count: number | null;
 };
 
 export type AptPin = {
@@ -309,7 +310,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
-  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null }>>(new Map());
+  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null; aptCount: number | null }>>(new Map());
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ?apt={id} query 로 진입 시 해당 단지 패널 자동 열기 (알림 종 클릭 흐름)
@@ -475,13 +476,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').in('id', ids);
-    const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null }>();
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count').in('id', ids);
+    const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null; aptCount: number | null }>();
     const now = Date.now();
-    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null }>) {
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
       if (r.display_name) {
         const isPaid = r.tier === 'paid' && (!r.tier_expires_at || new Date(r.tier_expires_at).getTime() > now);
-        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: !!r.is_solo, avatarUrl: r.avatar_url });
+        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: !!r.is_solo, avatarUrl: r.avatar_url, aptCount: r.apt_count });
       }
     }
     setOccupierProfiles(map);
@@ -825,7 +826,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           {p.occupier_id ? (
                             <Nickname info={(() => {
                               const pf = occupierProfiles.get(p.occupier_id);
-                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo, userId: p.occupier_id, avatarUrl: pf.avatarUrl } : { name: '...' };
+                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo, userId: p.occupier_id, avatarUrl: pf.avatarUrl, aptCount: pf.aptCount } : { name: '...' };
                             })()} />
                           ) : ''}
                         </div>
@@ -877,7 +878,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo, userId: f.author_id, avatarUrl: f.author_avatar_url }} />
+                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo, userId: f.author_id, avatarUrl: f.author_avatar_url, aptCount: f.author_apt_count }} />
                           </span>
                         </div>
                         {/* 본문 영역 — 클릭 시 jumpToFeedItem 으로 이동 (글로) */}

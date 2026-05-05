@@ -94,6 +94,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [occupierLink, setOccupierLink] = useState<string | null>(null);
   const [occupierIsPaid, setOccupierIsPaid] = useState<boolean>(false);
   const [occupierIsSolo, setOccupierIsSolo] = useState<boolean>(false);
+  const [occupierAptCount, setOccupierAptCount] = useState<number | null>(null);
   const [occupierScore, setOccupierScore] = useState<number | null>(null);
   const [occupierMlbg, setOccupierMlbg] = useState<number | null>(null);
   const [myScore, setMyScore] = useState<number | null>(null);
@@ -155,13 +156,14 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     const ids = ds.map((d) => d.id);
     const authorIds = Array.from(new Set(ds.map((d) => d.author_id)));
     const nowMs = Date.now();
-    const toInfo = (p: { id?: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo?: boolean | null; avatar_url?: string | null }): NicknameInfo => ({
+    const toInfo = (p: { id?: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo?: boolean | null; avatar_url?: string | null; apt_count?: number | null }): NicknameInfo => ({
       name: p.display_name,
       link: p.link_url,
       isPaid: p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs),
       isSolo: !!p.is_solo,
       userId: p.id ?? null,
       avatarUrl: p.avatar_url ?? null,
+      aptCount: p.apt_count ?? null,
     });
 
     // Round 2: 댓글 + 글 작성자 프로필 + 본인 점수·점거·vote + 점거인 점수 모두 병렬
@@ -177,7 +179,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         ? supabase.from('apt_discussion_comments').select('id, discussion_id, content, created_at, author_id, parent_id').in('discussion_id', ids).is('deleted_at', null).order('created_at', { ascending: true })
         : Promise.resolve({ data: [] as Comment[] | null }),
       authorIds.length > 0
-        ? supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').in('id', authorIds)
+        ? supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count').in('id', authorIds)
         : Promise.resolve({ data: [] as unknown[] | null }),
       user ? supabase.rpc('get_user_score', { p_user_id: user.id }) : Promise.resolve({ data: null }),
       user ? supabase.from('apt_master').select('id, apt_nm').eq('occupier_id', user.id).neq('id', apt.id).limit(1) : Promise.resolve({ data: null }),
@@ -199,7 +201,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
     // 글 작성자 프로필 처리
     const aMap = new Map<string, NicknameInfo>();
-    for (const p of (discAuthorProfs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null }>) {
+    for (const p of (discAuthorProfs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
       if (p.display_name) aMap.set(p.id, toInfo(p));
     }
 
@@ -213,9 +215,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (extraIds.length > 0) {
       const { data: extra } = await supabase
         .from('profiles')
-        .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
+        .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count')
         .in('id', extraIds);
-      for (const p of (extra ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null }>) {
+      for (const p of (extra ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
         if (p.display_name) aMap.set(p.id, toInfo(p));
         // 점거인이면 별도 state 도 set
         if (p.id === oid) {
@@ -223,6 +225,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           setOccupierLink(p.link_url ?? null);
           setOccupierIsPaid(p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs));
           setOccupierIsSolo(!!p.is_solo);
+          setOccupierAptCount(p.apt_count ?? null);
         }
       }
     }
@@ -235,12 +238,14 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         setOccupierLink(occInfo.link ?? null);
         setOccupierIsPaid(!!occInfo.isPaid);
         setOccupierIsSolo(!!occInfo.isSolo);
+        setOccupierAptCount(occInfo.aptCount ?? null);
       }
     } else if (!oid) {
       setOccupierName(null);
       setOccupierLink(null);
       setOccupierIsPaid(false);
       setOccupierIsSolo(false);
+      setOccupierAptCount(null);
     }
     setOccupierScore(typeof occScoreData === 'number' ? occScoreData : occScoreData != null ? Number(occScoreData) : null);
     setAuthors(aMap);
@@ -610,7 +615,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                 <span className="text-[12px] text-[#666] font-medium flex-shrink-0">점거인</span>
                 <span className="text-[14px] font-bold text-black truncate">
-                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid, isSolo: occupierIsSolo, userId: occupierId }} />
+                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid, isSolo: occupierIsSolo, userId: occupierId, aptCount: occupierAptCount }} />
                 </span>
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">

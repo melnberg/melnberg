@@ -11,7 +11,27 @@ export type NicknameInfo = {
   isSolo?: boolean;
   userId?: string | null;
   avatarUrl?: string | null;
+  /** 보유 단지 수 — 0/1/2+ 별 색·라벨로 좌측에 노출. undefined 면 숨김. */
+  aptCount?: number | null;
 };
+
+function HousingTag({ n }: { n: number }) {
+  // 0 = 무주택 (회색), 1 = 1주택 (시안), 2+ = N주택 (네이비)
+  const cls = n === 0
+    ? 'bg-[#e5e7eb] text-[#6b7280]'
+    : n === 1
+    ? 'bg-cyan/15 text-cyan'
+    : 'bg-navy text-white';
+  const label = n === 0 ? '무주택' : `${n}주택`;
+  return (
+    <span
+      className={`text-[9px] font-bold tracking-wider px-1 py-px mr-1 align-middle leading-none ${cls}`}
+      title={`보유 단지 ${n}개`}
+    >
+      {label}
+    </span>
+  );
+}
 
 const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px ml-1 align-middle';
 
@@ -71,6 +91,9 @@ export default function Nickname({
   const name = info?.name;
   if (!name) return <span className={className}>{fallback}</span>;
 
+  const aptCount = info?.aptCount;
+  const housingTag = typeof aptCount === 'number' ? <HousingTag n={aptCount} /> : null;
+
   const isPaid = !!info?.isPaid;
   const isSolo = !!info?.isSolo;
   const hasLink = !!info?.link;
@@ -90,7 +113,7 @@ export default function Nickname({
 
   if (!isPaid) {
     // 무료회원은 그냥 텍스트 (프로필 페이지 X)
-    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}</span>;
+    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{housingTag}{name}</span>;
   }
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';
@@ -210,6 +233,7 @@ export default function Nickname({
   return (
     <span className={`inline-flex items-center whitespace-nowrap ${className}`}>
       {avatarNode}
+      {housingTag}
       {nameNode}
       {badgeNode}
       {dotEl}

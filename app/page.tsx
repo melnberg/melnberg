@@ -40,7 +40,7 @@ const fetchFeed = unstable_cache(
       ...((postComments ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
     ].filter(Boolean)));
 
-    type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null };
+    type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
     const profileMap = new Map<string, ProfRow>();
     if (allAuthorIds.length > 0) {
       const { data: profs } = await supabase
@@ -76,6 +76,7 @@ const fetchFeed = unstable_cache(
         author_is_paid: isActivePaid(prof),
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
       };
     });
 
@@ -102,6 +103,7 @@ const fetchFeed = unstable_cache(
         author_is_paid: isActivePaid(prof),
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
       };
     });
 
@@ -123,6 +125,7 @@ const fetchFeed = unstable_cache(
         author_is_paid: isActivePaid(prof),
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
       };
     });
 
@@ -150,6 +153,7 @@ const fetchFeed = unstable_cache(
           author_is_paid: isActivePaid(prof),
           author_is_solo: !!prof?.is_solo,
           author_avatar_url: prof?.avatar_url ?? null,
+          author_apt_count: prof?.apt_count ?? null,
         };
       });
 

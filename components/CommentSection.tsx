@@ -64,7 +64,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: postId, author_id: currentUserId, content: content.trim(), parent_id: null })
-      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at)')
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
       .single();
     setLoading(false);
     if (error || !data) {
@@ -86,7 +86,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: postId, author_id: currentUserId, content: replyContent.trim(), parent_id: parentId })
-      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at)')
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
       .single();
     if (error || !data) {
       alert(error?.message ?? '저장 실패');
@@ -231,6 +231,7 @@ function CommentRow({
               isSolo: !!comment.author?.is_solo,
               userId: comment.author_id,
               avatarUrl: comment.author?.avatar_url ?? null,
+              aptCount: comment.author?.apt_count ?? null,
             }} />
           </span>
           <span className="text-muted">·</span>
