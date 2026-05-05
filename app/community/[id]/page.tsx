@@ -8,6 +8,7 @@ import Nickname from '@/components/Nickname';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
+import { profileToNicknameInfo } from '@/lib/nickname-info';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,14 +90,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
               <span className="font-bold text-navy">
-                <Nickname info={{
-                  name: post.author?.display_name ?? null,
-                  link: post.author?.link_url ?? null,
-                  isPaid: post.author?.tier === 'paid' && (!post.author?.tier_expires_at || new Date(post.author.tier_expires_at).getTime() > Date.now()),
-                  isSolo: !!post.author?.is_solo,
-                  userId: post.author_id,
-                  avatarUrl: post.author?.avatar_url ?? null,
-                }} />
+                <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
               </span>
               <span>·</span>
               <span>{formatRelativeKo(post.created_at)}</span>

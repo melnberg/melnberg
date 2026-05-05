@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
+import { profileToNicknameInfo } from '@/lib/nickname-info';
 
 type Comment = {
   id: number;
@@ -160,15 +161,7 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
             <li key={c.id} className="bg-[#fafafa] px-3 py-2.5">
               <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words mb-1">{c.content}</div>
               <div className="flex items-center gap-2 text-[10px] text-muted">
-                <Nickname info={{
-                  name: c.author?.display_name ?? null,
-                  link: c.author?.link_url ?? null,
-                  isPaid: isAuthorPaid(c),
-                  isSolo: !!c.author?.is_solo,
-                  userId: c.author_id,
-                  avatarUrl: c.author?.avatar_url ?? null,
-                  aptCount: c.author?.apt_count ?? null,
-                }} className="text-muted" />
+                <Nickname info={profileToNicknameInfo(c.author, c.author_id)} className="text-muted" />
                 <span>·</span>
                 <span>{relTime(c.created_at)}</span>
                 {me?.id === c.author_id && (

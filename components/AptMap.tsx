@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
+import { feedItemToNicknameInfo } from '@/lib/nickname-info';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { __latlng: never };
@@ -880,7 +881,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo, userId: f.author_id, avatarUrl: f.author_avatar_url, aptCount: f.author_apt_count }} />
+                            <Nickname info={feedItemToNicknameInfo(f)} />
                           </span>
                         </div>
                         {/* 본문 영역 — 클릭 시 jumpToFeedItem 으로 이동 (글로) */}

@@ -3,6 +3,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import { listPosts, formatBoardTime, isCurrentUserAdmin } from '@/lib/community';
 import Nickname from '@/components/Nickname';
+import { profileToNicknameInfo } from '@/lib/nickname-info';
 
 export const metadata = {
   title: '블로그 — 멜른버그',
@@ -83,14 +84,7 @@ export default async function BlogPage() {
                       </td>
                       <td className="py-2.5 px-2 text-center text-navy font-semibold relative overflow-visible">
                         <span className="inline-flex justify-center">
-                        <Nickname info={{
-                          name: p.author?.display_name ?? null,
-                          link: p.author?.link_url ?? null,
-                          isPaid: p.author?.tier === 'paid' && (!p.author?.tier_expires_at || new Date(p.author.tier_expires_at).getTime() > Date.now()),
-                          isSolo: !!p.author?.is_solo,
-                          userId: p.author_id,
-                          avatarUrl: p.author?.avatar_url ?? null,
-                        }} />
+                        <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
                         </span>
                       </td>
                       <td className="py-2.5 px-2 text-center text-muted tabular-nums">

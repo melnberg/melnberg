@@ -41,13 +41,33 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
     console.error('listPosts error', error);
     return [];
   }
-  return (data ?? []).map((p: Record<string, unknown>) => {
+  const rows = (data ?? []).map((p: Record<string, unknown>) => {
     const commentsArr = p.comments as Array<{ count: number }> | undefined;
     const commentCount = commentsArr?.[0]?.count ?? 0;
     const { comments, ...rest } = p;
     void comments;
     return { ...rest, comment_count: commentCount } as CommunityPost;
   });
+
+  // 작성자별 apt_count 별도 fetch (SQL 062 컬럼 없으면 graceful)
+  const authorIds = Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean) as string[]));
+  if (authorIds.length > 0) {
+    const { data: counts } = await supabase
+      .from('profiles').select('id, apt_count').in('id', authorIds)
+      .then((r) => r, () => ({ data: null }));
+    const countMap = new Map<string, number>();
+    for (const c of (counts ?? []) as Array<{ id: string; apt_count: number | null }>) {
+      countMap.set(c.id, c.apt_count ?? 0);
+    }
+    if (countMap.size > 0) {
+      for (const r of rows) {
+        if (r.author && r.author_id) {
+          (r.author as { apt_count?: number | null }).apt_count = countMap.get(r.author_id) ?? null;
+        }
+      }
+    }
+  }
+  return rows;
 }
 
 export async function getPost(id: number, category?: PostCategory): Promise<CommunityPost | null> {
@@ -60,6 +80,7 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
+  let post: CommunityPost | null = null;
   if (error || !data) {
     // 컬럼 없는 경우 fallback — deleted_at 빼고 다시 조회
     const { data: data2 } = await supabase
@@ -67,9 +88,22 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
       .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
       .eq('id', id).maybeSingle();
     if (!data2) return null;
-    return data2 as unknown as CommunityPost;
+    post = data2 as unknown as CommunityPost;
+  } else {
+    post = data as unknown as CommunityPost;
   }
-  return data as unknown as CommunityPost;
+
+  // 작성자 apt_count 별도 fetch
+  if (post.author_id) {
+    const { data: cnt } = await supabase
+      .from('profiles').select('apt_count').eq('id', post.author_id).maybeSingle()
+      .then((r) => r, () => ({ data: null }));
+    const v = (cnt as { apt_count?: number | null } | null)?.apt_count;
+    if (post.author && (typeof v === 'number' || v === null)) {
+      (post.author as { apt_count?: number | null }).apt_count = v ?? 0;
+    }
+  }
+  return post;
 }
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
@@ -116,7 +150,25 @@ export async function listComments(postId: number): Promise<CommunityComment[]> 
     console.error('listComments error', error);
     return [];
   }
-  return (data ?? []) as unknown as CommunityComment[];
+  const rows = (data ?? []) as unknown as CommunityComment[];
+
+  // 작성자 apt_count 별도 fetch
+  const authorIds = Array.from(new Set(rows.map((r) => r.author_id).filter(Boolean) as string[]));
+  if (authorIds.length > 0) {
+    const { data: counts } = await supabase
+      .from('profiles').select('id, apt_count').in('id', authorIds)
+      .then((r) => r, () => ({ data: null }));
+    const countMap = new Map<string, number>();
+    for (const c of (counts ?? []) as Array<{ id: string; apt_count: number | null }>) {
+      countMap.set(c.id, c.apt_count ?? 0);
+    }
+    for (const r of rows) {
+      if (r.author && r.author_id) {
+        (r.author as { apt_count?: number | null }).apt_count = countMap.get(r.author_id) ?? null;
+      }
+    }
+  }
+  return rows;
 }
 
 // 서버(Vercel UTC)·클라이언트 어디서 실행해도 KST 기준으로 표시

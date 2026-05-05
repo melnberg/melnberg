@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Nickname from '@/components/Nickname';
 import BioComments from '@/components/BioComments';
+import { profileToNicknameInfo } from '@/lib/nickname-info';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 import { isActivePaid } from '@/lib/tier-utils';
@@ -76,6 +77,11 @@ export default async function UserProfilePage({
     .eq('id', userId)
     .maybeSingle();
   const ext = (extData ?? {}) as { naver_id?: string | null; link_url?: string | null; bio?: string | null; is_solo?: boolean | null; avatar_url?: string | null };
+  // 보유 단지 수 — SQL 062 미적용 시 graceful
+  const { data: housingCountData } = await supabase
+    .from('profiles').select('apt_count').eq('id', userId).maybeSingle()
+    .then((r) => r, () => ({ data: null }));
+  const housingCount = (housingCountData as { apt_count?: number | null } | null)?.apt_count ?? null;
   const profile: ProfileRow = {
     ...(baseData as { id: string; display_name: string | null; tier: 'free' | 'paid'; tier_expires_at: string | null; created_at: string }),
     naver_id: ext.naver_id ?? null,
@@ -203,7 +209,7 @@ export default async function UserProfilePage({
             )}
             <div className="flex-1 min-w-0">
               <h1 className="text-[24px] font-bold text-navy tracking-tight mb-1">
-                <Nickname info={{ name: profile.display_name, link: profile.link_url, isPaid, isSolo: !!profile.is_solo, userId: profile.id, avatarUrl: null }} />
+                <Nickname info={profileToNicknameInfo({ ...profile, apt_count: housingCount }, profile.id)} />
               </h1>
               <div className="text-[12px] text-muted">
                 가입일 {new Date(profile.created_at).toLocaleDateString('ko-KR')}

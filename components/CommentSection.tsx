@@ -7,6 +7,7 @@ import { type CommunityComment } from '@/lib/community';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { linkify } from '@/lib/linkify';
+import { profileToNicknameInfo } from '@/lib/nickname-info';
 import Nickname from './Nickname';
 
 type Props = {
@@ -223,15 +224,7 @@ function CommentRow({
       <div className="flex items-start justify-between gap-3 mb-1">
         <div className="flex items-center gap-2 text-[12px]">
           <span className="font-bold text-navy">
-            <Nickname info={{
-              name: comment.author?.display_name ?? null,
-              link: comment.author?.link_url ?? null,
-              isPaid: comment.author?.tier === 'paid' && (!comment.author?.tier_expires_at || new Date(comment.author.tier_expires_at).getTime() > Date.now()),
-              isSolo: !!comment.author?.is_solo,
-              userId: comment.author_id,
-              avatarUrl: comment.author?.avatar_url ?? null,
-              aptCount: comment.author?.apt_count ?? null,
-            }} />
+            <Nickname info={profileToNicknameInfo(comment.author, comment.author_id)} />
           </span>
           <span className="text-muted">·</span>
           <span className="text-muted">{formatRelativeKo(comment.created_at)}</span>

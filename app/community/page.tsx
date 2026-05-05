@@ -4,6 +4,7 @@ import MainTop from '@/components/MainTop';
 import { listPosts, formatBoardTime } from '@/lib/community';
 import { getCurrentUser } from '@/lib/auth';
 import Nickname from '@/components/Nickname';
+import { profileToNicknameInfo } from '@/lib/nickname-info';
 
 export const metadata = {
   title: '커뮤니티 — 멜른버그',
@@ -80,14 +81,7 @@ export default async function CommunityPage() {
                       </td>
                       <td className="py-2.5 px-2 text-left text-navy font-semibold relative overflow-visible">
                         <span className="inline-flex">
-                        <Nickname info={{
-                          name: p.author?.display_name ?? null,
-                          link: p.author?.link_url ?? null,
-                          isPaid: p.author?.tier === 'paid' && (!p.author?.tier_expires_at || new Date(p.author.tier_expires_at).getTime() > Date.now()),
-                          isSolo: !!p.author?.is_solo,
-                          userId: p.author_id,
-                          avatarUrl: p.author?.avatar_url ?? null,
-                        }} />
+                        <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
                         </span>
                       </td>
                       <td className="py-2.5 px-2 text-center text-muted tabular-nums">
