@@ -48,14 +48,28 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
         const isPaid = t?.tier === 'paid' && (!t.tier_expires_at || new Date(t.tier_expires_at) > new Date());
         if (!cancelled) setMe({ id: user.id, isPaid });
       }
-      const { data } = await supabase
+      const { data: rows } = await supabase
         .from('profile_bio_comments')
-        .select('id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo)')
+        .select('id, author_id, content, created_at')
         .eq('profile_user_id', profileUserId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(100);
-      if (!cancelled) setComments((data ?? []) as unknown as Comment[]);
+      const list = (rows ?? []) as Array<{ id: number; author_id: string; content: string; created_at: string }>;
+      const ids = Array.from(new Set(list.map((r) => r.author_id)));
+      let authorMap = new Map<string, Comment['author']>();
+      if (ids.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
+          .in('id', ids);
+        for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
+          authorMap.set(p.id, p);
+        }
+      }
+      if (!cancelled) {
+        setComments(list.map((r) => ({ ...r, author: authorMap.get(r.author_id) ?? null })));
+      }
     })();
     return () => { cancelled = true; };
   }, [profileUserId, supabase]);
@@ -72,14 +86,20 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
     const { data, error } = await supabase
       .from('profile_bio_comments')
       .insert({ profile_user_id: profileUserId, author_id: me.id, content: t })
-      .select('id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo)')
+      .select('id, author_id, content, created_at')
       .maybeSingle();
-    setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setBusy(false); setErr(error.message); return; }
     if (data) {
-      setComments((prev) => [data as unknown as Comment, ...(prev ?? [])]);
+      // 작성자 본인 프로필 가져오기
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('display_name, link_url, tier, tier_expires_at, is_solo')
+        .eq('id', me.id)
+        .maybeSingle();
+      setComments((prev) => [{ ...(data as { id: number; author_id: string; content: string; created_at: string }), author: prof as Comment['author'] }, ...(prev ?? [])]);
       setContent('');
     }
+    setBusy(false);
   }
 
   async function remove(id: number) {

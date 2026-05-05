@@ -90,6 +90,7 @@ export default async function MePage() {
               link_url: profile?.link_url ?? null,
               is_solo: !!profile?.is_solo,
               bio: profile?.bio ?? '',
+              avatar_url: profile?.avatar_url ?? null,
             }}
             email={user.email ?? '-'}
             isPaid={isActive}

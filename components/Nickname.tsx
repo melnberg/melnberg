@@ -10,6 +10,7 @@ export type NicknameInfo = {
   isPaid?: boolean;
   isSolo?: boolean;
   userId?: string | null;
+  avatarUrl?: string | null;
 };
 
 const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px ml-1 align-middle';
@@ -74,10 +75,14 @@ export default function Nickname({
   const isSolo = !!info?.isSolo;
   const hasLink = !!info?.link;
   const userId = info?.userId ?? null;
+  const avatarUrl = info?.avatarUrl ?? null;
+  const avatarNode = avatarUrl ? (
+    <img src={avatarUrl} alt="" className="w-4 h-4 rounded-full object-cover mr-1 align-middle inline-block flex-shrink-0" />
+  ) : null;
 
   if (!isPaid) {
     // 무료회원은 그냥 텍스트 (프로필 페이지 X)
-    return <span className={className}>{name}</span>;
+    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}</span>;
   }
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';

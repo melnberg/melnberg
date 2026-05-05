@@ -11,6 +11,7 @@ type Props = {
     link_url: string | null;
     is_solo: boolean;
     bio: string;
+    avatar_url: string | null;
   };
   email: string;
   isPaid: boolean;
@@ -44,8 +45,45 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
   const [linkUrl, setLinkUrl] = useState(initial.link_url ?? '');
   const [isSolo, setIsSolo] = useState(initial.is_solo);
   const [bio, setBio] = useState(initial.bio);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initial.avatar_url);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'error' | 'info'; text: string } | null>(null);
+
+  async function uploadAvatar(file: File) {
+    if (uploadingAvatar) return;
+    if (!file.type.startsWith('image/')) { setMsg({ type: 'error', text: '이미지 파일만 업로드 가능합니다.' }); return; }
+    if (file.size > 2 * 1024 * 1024) { setMsg({ type: 'error', text: '파일 크기는 2MB 이하만 가능합니다.' }); return; }
+    setUploadingAvatar(true);
+    setMsg(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setMsg({ type: 'error', text: '로그인이 필요합니다.' }); return; }
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) { setMsg({ type: 'error', text: `업로드 실패: ${upErr.message}` }); return; }
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+      // 캐시 buster
+      const finalUrl = `${publicUrl}?v=${Date.now()}`;
+      const { error: pErr } = await supabase.from('profiles').update({ avatar_url: finalUrl }).eq('id', user.id);
+      if (pErr) { setMsg({ type: 'error', text: `저장 실패: ${pErr.message}` }); return; }
+      setAvatarUrl(finalUrl);
+      setMsg({ type: 'info', text: '✓ 사진 업로드 완료' });
+      router.refresh();
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function removeAvatar() {
+    if (!confirm('프로필 사진을 제거할까요?')) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('profiles').update({ avatar_url: null }).eq('id', user.id);
+    setAvatarUrl(null);
+    router.refresh();
+  }
 
   const dirty =
     name.trim() !== initial.display_name ||
@@ -165,6 +203,34 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
   return (
     <div className="flex flex-col gap-0">
       <div className="border border-border">
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
+          <div className="flex flex-col gap-0.5 flex-shrink-0">
+            <span className="text-[12px] font-bold tracking-widest uppercase text-muted">프로필 사진</span>
+            <span className="text-[10px] normal-case font-medium text-muted">2MB 이하 · jpg/png/webp/gif</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="프로필" className="w-12 h-12 rounded-full object-cover border border-border" />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-navy-soft border border-border flex items-center justify-center text-navy text-[14px] font-bold">
+                {(name[0] ?? '').toUpperCase()}
+              </div>
+            )}
+            <label className="px-3 py-1.5 bg-white border border-border text-text text-[12px] font-bold whitespace-nowrap hover:border-navy cursor-pointer">
+              {uploadingAvatar ? '업로드 중...' : avatarUrl ? '변경' : '업로드'}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploadingAvatar}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.target.value = ''; }}
+                className="hidden"
+              />
+            </label>
+            {avatarUrl && (
+              <button type="button" onClick={removeAvatar} className="text-[11px] text-muted hover:text-red-600">제거</button>
+            )}
+          </div>
+        </div>
         <Row label="닉네임">
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} minLength={2} maxLength={20} className={inputCls} />
         </Row>

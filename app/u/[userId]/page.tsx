@@ -19,6 +19,7 @@ type ProfileRow = {
   link_url: string | null;
   bio: string | null;
   is_solo: boolean | null;
+  avatar_url: string | null;
   tier: 'free' | 'paid';
   tier_expires_at: string | null;
   created_at: string;
@@ -28,7 +29,18 @@ type CommunityPostRow = { id: number; title: string; created_at: string; categor
 type AptDiscussionRow = { id: number; title: string; created_at: string; apt_master_id: number; apt_master: { apt_nm: string | null; dong: string | null } | null };
 type CommunityCommentRow = { id: number; post_id: number; content: string; created_at: string; post: { title: string | null; category: string | null } | null };
 type AptCommentRow = { id: number; discussion_id: number; content: string; created_at: string; discussion: { title: string | null; apt_master_id: number | null; apt_master: { apt_nm: string | null } | null } | null };
-type EvictEvent = { occurred_at: string; event: 'claim' | 'evict' | 'vacate'; apt_id: number; actor_name: string | null; prev_occupier_name: string | null; apt_master: { apt_nm: string | null } | null };
+type EvictEvent = {
+  occurred_at: string;
+  event: 'claim' | 'evict' | 'vacate';
+  apt_id: number;
+  actor_id: string | null;
+  prev_occupier_id: string | null;
+  actor_name: string | null;
+  prev_occupier_name: string | null;
+  actor_score: number | null;
+  prev_score: number | null;
+  apt_master: { apt_nm: string | null } | null;
+};
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -43,13 +55,13 @@ export default async function UserProfilePage({
 }) {
   const { userId } = await params;
   const { tab: tabParam } = await searchParams;
-  const tab: Tab = (['posts', 'comments', 'occupier', 'bio'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'posts';
+  const tab: Tab = (['bio', 'posts', 'comments', 'occupier'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'bio';
 
   const supabase = await createClient();
   const [{ data: profileData }, me] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, display_name, naver_id, link_url, bio, is_solo, tier, tier_expires_at, created_at')
+      .select('id, display_name, naver_id, link_url, bio, is_solo, avatar_url, tier, tier_expires_at, created_at')
       .eq('id', userId)
       .maybeSingle(),
     getCurrentUser(),
@@ -104,7 +116,7 @@ export default async function UserProfilePage({
   } else if (tab === 'occupier') {
     const { data } = await supabase
       .from('apt_occupier_events')
-      .select('occurred_at, event, apt_id, actor_name, prev_occupier_name, apt_master(apt_nm)')
+      .select('occurred_at, event, apt_id, actor_id, prev_occupier_id, actor_name, prev_occupier_name, actor_score, prev_score, apt_master(apt_nm)')
       .or(`actor_id.eq.${userId},prev_occupier_id.eq.${userId}`)
       .order('occurred_at', { ascending: false })
       .limit(100);
@@ -153,27 +165,34 @@ export default async function UserProfilePage({
 
       <section className="py-10">
         <div className="max-w-[680px] mx-auto px-6">
-          {/* 헤더 — 닉네임·SNS·등급 */}
-          <div className="border border-border bg-white p-5 mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-[24px] font-bold text-navy tracking-tight">
-                <Nickname info={{ name: profile.display_name, link: profile.link_url, isPaid, isSolo: !!profile.is_solo }} />
+          {/* 헤더 — 아바타·닉네임·SNS·등급 */}
+          <div className="border border-border bg-white p-5 mb-6 flex items-center gap-4">
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="w-16 h-16 rounded-full object-cover border border-border flex-shrink-0" />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-navy-soft border border-border flex items-center justify-center text-navy text-[22px] font-bold flex-shrink-0">
+                {(profile.display_name?.[0] ?? '').toUpperCase()}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[24px] font-bold text-navy tracking-tight mb-1">
+                <Nickname info={{ name: profile.display_name, link: profile.link_url, isPaid, isSolo: !!profile.is_solo, userId: profile.id, avatarUrl: null }} />
               </h1>
-            </div>
-            <div className="text-[12px] text-muted">
-              가입일 {new Date(profile.created_at).toLocaleDateString('ko-KR')}
-              {isPaid && profile.tier_expires_at && (
-                <> · 만료일 {new Date(profile.tier_expires_at).toLocaleDateString('ko-KR')}</>
-              )}
+              <div className="text-[12px] text-muted">
+                가입일 {new Date(profile.created_at).toLocaleDateString('ko-KR')}
+                {isPaid && profile.tier_expires_at && (
+                  <> · 만료일 {new Date(profile.tier_expires_at).toLocaleDateString('ko-KR')}</>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* 탭 */}
+          {/* 탭 — 자기소개 기본 */}
           <div className="flex border-b border-border mb-4">
+            <TabLink href={`/u/${userId}?tab=bio`} active={tab === 'bio'}>자기소개</TabLink>
             <TabLink href={`/u/${userId}?tab=posts`} active={tab === 'posts'}>글 ({totalPosts})</TabLink>
             <TabLink href={`/u/${userId}?tab=comments`} active={tab === 'comments'}>댓글 ({totalComments})</TabLink>
             <TabLink href={`/u/${userId}?tab=occupier`} active={tab === 'occupier'}>점거·퇴거 ({eventCount ?? 0})</TabLink>
-            <TabLink href={`/u/${userId}?tab=bio`} active={tab === 'bio'}>자기소개</TabLink>
           </div>
 
           {/* 탭 콘텐츠 */}
@@ -215,23 +234,51 @@ export default async function UserProfilePage({
           )}
 
           {tab === 'occupier' && (
-            <ul className="space-y-2">
-              {eventRows.length === 0 ? (
-                <li className="text-center py-12 text-muted text-[13px]">점거·퇴거 이력이 없습니다.</li>
-              ) : eventRows.map((e, i) => {
-                const aptName = e.apt_master?.apt_nm ?? '(단지)';
-                let label: string;
-                if (e.event === 'claim') label = `${aptName} 점거`;
-                else if (e.event === 'vacate') label = `${aptName} 퇴거`;
-                else label = `${aptName} 강제집행 — ${e.actor_name === profile.display_name ? `${e.prev_occupier_name ?? '점거인'} 축출` : `${e.actor_name ?? '누군가'} 에게 축출당함`}`;
-                return (
-                  <li key={`${e.apt_id}-${e.occurred_at}-${i}`} className="border border-border px-4 py-3 bg-white flex items-center justify-between gap-3">
-                    <Link href={`/?apt=${e.apt_id}`} className="text-[14px] text-navy hover:underline no-underline flex-1 break-words">{label}</Link>
-                    <span className="text-[10px] text-muted flex-shrink-0">{fmtDate(e.occurred_at)}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            eventRows.length === 0 ? (
+              <p className="text-center py-12 text-muted text-[13px]">점거·퇴거 이력이 없습니다.</p>
+            ) : (
+              <ol className="border-t border-border">
+                {eventRows.map((e, i) => {
+                  const aptName = e.apt_master?.apt_nm ?? '(단지)';
+                  const isUserActor = e.actor_id === profile.id;
+                  return (
+                    <li key={`${e.apt_id}-${e.occurred_at}-${i}`} className="flex gap-3 text-[13px] leading-snug border-b border-border py-2.5 px-1">
+                      <span className="text-[11px] text-muted tabular-nums flex-shrink-0 w-[110px] mt-0.5">{fmtDate(e.occurred_at)}</span>
+                      <Link href={`/?apt=${e.apt_id}`} className="flex-1 min-w-0 text-text no-underline hover:underline break-words">
+                        <span className="text-navy font-bold">{aptName}</span>
+                        {' '}
+                        {e.event === 'claim' && <span>점거</span>}
+                        {e.event === 'vacate' && (
+                          <span>
+                            <span className="text-muted">자진퇴거</span>
+                            <span className="text-muted text-[10px] ml-1">(다른 단지 점거로 자동)</span>
+                          </span>
+                        )}
+                        {e.event === 'evict' && (
+                          <>
+                            {isUserActor ? (
+                              <span>
+                                <span className="text-red-500 font-bold">강제집행</span>
+                                <span className="text-muted">{' — '}</span>
+                                <span className="text-muted line-through">{e.prev_occupier_name ?? '익명'}</span>
+                                <span className="text-muted text-[10px] ml-1">축출 (score {e.prev_score ?? '?'} → {e.actor_score ?? '?'})</span>
+                              </span>
+                            ) : (
+                              <span>
+                                <span className="text-red-500 font-bold">강제집행 당함</span>
+                                <span className="text-muted">{' — '}</span>
+                                <span className="text-text">{e.actor_name ?? '익명'}</span>
+                                <span className="text-muted text-[10px] ml-1">에게 (score {e.prev_score ?? '?'} → {e.actor_score ?? '?'})</span>
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            )
           )}
 
           {tab === 'bio' && (
