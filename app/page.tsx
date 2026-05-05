@@ -67,6 +67,15 @@ async function fetchFeed(): Promise<FeedItem[]> {
       .limit(10)
       .then((r) => r, () => ({ data: null }));
 
+    // 최근 이마트 분양 — 피드 일반 항목
+    const { data: emartOccs } = await supabase
+      .from('emart_occupations')
+      .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name)')
+      .order('occupied_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const emartRows = ((emartOccs ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
+
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
       .from('auction_bids')
@@ -120,6 +129,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       ...((listings ?? []).map((l) => (l as Record<string, unknown>).seller_id as string)),
       ...((offers ?? []).map((o) => (o as Record<string, unknown>).buyer_id as string)),
       ...bidRows.map((b) => b.bidder_id),
+      ...emartRows.map((e) => e.user_id),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
@@ -405,8 +415,33 @@ async function fetchFeed(): Promise<FeedItem[]> {
       },
     ];
 
-    // 경매·공지는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 시간순
-    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems]
+    // 이마트 분양 → FeedItem
+    const emartItems: FeedItem[] = emartRows.map((r) => {
+      const em = (Array.isArray(r.emart) ? r.emart[0] : r.emart) as { name?: string | null } | null;
+      const prof = profileMap.get(r.user_id);
+      return {
+        kind: 'emart_occupy' as const,
+        id: r.id,
+        apt_master_id: 0,
+        post_id: null,
+        title: `${em?.name ?? '이마트'} 분양받음`,
+        content: null,
+        created_at: r.occupied_at,
+        emart_name: em?.name ?? undefined,
+        apt_nm: em?.name ?? null,
+        dong: null, lat: null, lng: null,
+        author_id: r.user_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+      };
+    });
+
+    // 경매·공지는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 + 이마트 시간순
+    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 60 - auctionItems.length - NOTICE_ITEMS.length);
     return [...NOTICE_ITEMS, ...auctionItems, ...others];

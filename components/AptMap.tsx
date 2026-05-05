@@ -61,7 +61,9 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'notice';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'notice' | 'emart_occupy';
+  /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
+  emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
   notice_href?: string;
   /** 경매 전용 — 종료 시각 */
@@ -1473,7 +1475,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isAuction = f.kind === 'auction';
                   const isAuctionBid = f.kind === 'auction_bid';
                   const isNotice = f.kind === 'notice';
-                  const headLabel = isNotice ? '이마트' : isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
+                  const isEmartOccupy = f.kind === 'emart_occupy';
+                  const headLabel = (isNotice || isEmartOccupy) ? '이마트' : isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
                       <div className={`px-3 py-2.5 ${
@@ -1500,7 +1503,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           onKeyDown={(e) => { if (e.key === 'Enter') jumpToFeedItem(f); }}
                           className="cursor-pointer hover:opacity-80"
                         >
-                          {isAuctionBid ? (
+                          {isEmartOccupy ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-[#F5A623] text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5">분양</span>
+                              <span className="whitespace-pre-wrap break-words">
+                                <b className="text-[#92400e]">{f.emart_name ?? '이마트'}</b> 분양받음 (5 mlbg)
+                              </span>
+                            </div>
+                          ) : isAuctionBid ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-[#dc2626] text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5">입찰</span>
                               <span className="whitespace-pre-wrap break-words">
