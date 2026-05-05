@@ -79,7 +79,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
   async function occupy() {
     if (busy) return;
     if (factory.occupier_id) { alert(`이미 ${factory.occupier_name ?? '다른 사람'} 님이 보유 중`); return; }
-    if (!confirm(`${factory.name}\n${factory.occupy_price.toLocaleString()} mlbg 로 분양받습니다. (1인 1공장)`)) return;
+    if (!confirm(`${factory.name}\n${factory.occupy_price.toLocaleString()} mlbg 로 분양받습니다.`)) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('occupy_factory', { p_factory_id: factory.id });
     setBusy(false);
@@ -94,7 +94,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
   async function claim() {
     if (busy) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc('claim_factory_income');
+    const { data, error } = await supabase.rpc('claim_factory_income', { p_factory_id: factory.id });
     setBusy(false);
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_earned: number; out_message: string | null } | undefined;
@@ -107,7 +107,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
     if (busy) return;
     if (!confirm(`보유 해제 시 ${factory.occupy_price.toLocaleString()} mlbg 환불받습니다. 진행할까요?`)) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc('release_factory');
+    const { data, error } = await supabase.rpc('release_factory', { p_factory_id: factory.id });
     setBusy(false);
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null; out_refund: number } | undefined;
@@ -220,7 +220,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
 
           <div className="border-l-4 border-cyan bg-cyan/5 px-4 py-3 mb-4">
             <div className="text-[12px] font-bold text-navy mb-1">💰 매일 {factory.daily_income} mlbg 자동 수익</div>
-            <div className="text-[11px] text-muted leading-relaxed">24시간마다 +{factory.daily_income} 누적. {ownerLabel}이 직접 청구. 1인 1보유 제한.</div>
+            <div className="text-[11px] text-muted leading-relaxed">24시간마다 +{factory.daily_income} 누적. {ownerLabel}이 직접 청구.</div>
           </div>
 
           <div className="grid gap-2 mb-4">
