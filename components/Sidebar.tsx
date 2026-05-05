@@ -165,28 +165,31 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           )}
         </nav>
 
-        <div className="border-t border-border px-6 pt-4 pb-3">
-          <div className="flex items-start gap-3 pb-3">
-            <div className="w-9 h-9 rounded-full bg-navy-soft text-navy flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <div className="text-[11px] text-muted tracking-wide mb-0.5">상담문의</div>
-              <span className="block text-base font-bold text-navy tracking-tight">오픈채팅</span>
-              <div className="text-[10px] text-muted mt-1 leading-relaxed">
-                결제 후 비공개 채팅방 안내
-                <br />
-                응답: 24시간 이내
+        {/* 사이드바 하단 상담문의(오픈채팅) 섹션 — 임시 숨김. 추후 부활 시 false → true */}
+        {false && (
+          <div className="border-t border-border px-6 pt-4 pb-3">
+            <div className="flex items-start gap-3 pb-3">
+              <div className="w-9 h-9 rounded-full bg-navy-soft text-navy flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-[11px] text-muted tracking-wide mb-0.5">상담문의</div>
+                <span className="block text-base font-bold text-navy tracking-tight">오픈채팅</span>
+                <div className="text-[10px] text-muted mt-1 leading-relaxed">
+                  결제 후 비공개 채팅방 안내
+                  <br />
+                  응답: 24시간 이내
+                </div>
               </div>
             </div>
+            <div className="flex border-t border-border pt-3">
+              <Link href="/" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy">홈</Link>
+              <Link href="/blog" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy border-l border-border">블로그</Link>
+            </div>
           </div>
-          <div className="flex border-t border-border pt-3">
-            <Link href="/" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy">홈</Link>
-            <Link href="/blog" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy border-l border-border">블로그</Link>
-          </div>
-        </div>
+        )}
       </aside>
 
       {open && (
