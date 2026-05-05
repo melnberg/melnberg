@@ -59,7 +59,7 @@ export default function AptCommentSection({ discussionId, comments, currentUserI
     const { data, error } = await supabase
       .from('apt_discussion_comments')
       .insert({ discussion_id: discussionId, author_id: currentUserId, content: content.trim() })
-      .select('id, discussion_id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
+      .select('id, discussion_id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
       .single();
     setLoading(false);
     if (error || !data) { setErr(error?.message ?? '저장 실패'); return; }

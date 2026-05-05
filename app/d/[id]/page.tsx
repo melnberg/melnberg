@@ -54,7 +54,7 @@ export default async function AptDiscussionDetailPage({ params }: { params: Prom
       .select(`
         id, apt_master_id, author_id, title, content, created_at, updated_at, deleted_at,
         apt_master(apt_nm, dong, lat, lng),
-        author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)
+        author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)
       `)
       .eq('id', numId)
       .maybeSingle(),
@@ -71,7 +71,7 @@ export default async function AptDiscussionDetailPage({ params }: { params: Prom
 
   const { data: comments } = await supabase
     .from('apt_discussion_comments')
-    .select('id, discussion_id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
+    .select('id, discussion_id, author_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
     .eq('discussion_id', numId)
     .is('deleted_at', null)
     .order('created_at', { ascending: true });
