@@ -345,19 +345,26 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [evicts, setEvicts] = useState<EvictEvent[] | null>(null);
   const [evictCount, setEvictCount] = useState(0);
 
-  // 스코어 랭킹 + 자산 랭킹 top 10
+  // 스코어 랭킹 + 자산 랭킹 + 실거래 하이라이트 + 거래 활발 단지
   type RankRow = { user_id: string; display_name: string; score: number };
   type WealthRow = { user_id: string; display_name: string; total_wealth: number; apt_count: number };
+  type TradeHighlight = { apt_nm: string; umd_nm: string | null; deal_amount: number; excl_use_ar: number; deal_date: string };
+  type TradedApt = { apt_id: number | null; apt_nm: string; umd_nm: string | null; trade_count: number; median_amount: number };
   const [ranking, setRanking] = useState<RankRow[]>([]);
   const [wealthRanking, setWealthRanking] = useState<WealthRow[]>([]);
-  const [rankMode, setRankMode] = useState<'score' | 'wealth'>('score');
+  const [tradeHighlights, setTradeHighlights] = useState<TradeHighlight[]>([]);
+  const [hotApts, setHotApts] = useState<TradedApt[]>([]);
+  type RankMode = 'score' | 'wealth' | 'trade' | 'hot';
+  const [rankMode, setRankMode] = useState<RankMode>('score');
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [r1, r2] = await Promise.all([
+        const [r1, r2, r3, r4] = await Promise.all([
           fetch('/api/score-ranking'),
           fetch('/api/wealth-ranking'),
+          fetch('/api/trade-highlights'),
+          fetch('/api/most-traded-apts'),
         ]);
         if (r1.ok) {
           const j1 = (await r1.json()) as { ranking: RankRow[] };
@@ -367,15 +374,34 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           const j2 = (await r2.json()) as { ranking: WealthRow[] };
           if (!cancelled) setWealthRanking(j2.ranking ?? []);
         }
+        if (r3.ok) {
+          const j3 = (await r3.json()) as { trades: TradeHighlight[] };
+          if (!cancelled) setTradeHighlights((j3.trades ?? []).map((t) => ({ ...t, deal_amount: Number(t.deal_amount) })));
+        }
+        if (r4.ok) {
+          const j4 = (await r4.json()) as { apts: TradedApt[] };
+          if (!cancelled) setHotApts((j4.apts ?? []).map((a) => ({ ...a, trade_count: Number(a.trade_count), median_amount: Number(a.median_amount) })));
+        }
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
   }, []);
-  // 8초마다 score ↔ wealth 자동 토글
+  // 8초마다 모드 자동 토글 (score → wealth → trade → hot → ...)
   useEffect(() => {
-    const t = setInterval(() => setRankMode((m) => (m === 'score' ? 'wealth' : 'score')), 8000);
+    const order: RankMode[] = ['score', 'wealth', 'trade', 'hot'];
+    const t = setInterval(() => setRankMode((m) => order[(order.indexOf(m) + 1) % order.length]), 8000);
     return () => clearInterval(t);
   }, []);
+
+  // 만원 단위 → 표시
+  function fmtKRW(만원: number): string {
+    if (만원 >= 10000) {
+      const 억 = Math.floor(만원 / 10000);
+      const 만 = 만원 % 10000;
+      return 만 > 0 ? `${억}억${만.toLocaleString()}` : `${억}억`;
+    }
+    return `${만원.toLocaleString()}만`;
+  }
 
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
@@ -725,43 +751,62 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 상단 전광판 — 스코어 ↔ 자산 랭킹 TOP 10 (8초마다 토글) */}
-      {((rankMode === 'score' && ranking.length > 0) || (rankMode === 'wealth' && wealthRanking.length > 0)) && (
+      {/* 상단 전광판 — 스코어 / 자산 / 실거래 / 거래활발 단지 (8초 토글) */}
+      {((rankMode === 'score' && ranking.length > 0)
+        || (rankMode === 'wealth' && wealthRanking.length > 0)
+        || (rankMode === 'trade' && tradeHighlights.length > 0)
+        || (rankMode === 'hot' && hotApts.length > 0)
+      ) && (
         <div className="absolute top-4 left-[300px] right-4 z-20 bg-black border border-black shadow-[0_2px_8px_rgba(0,0,0,0.4)] px-3 py-2 text-[12px] flex items-center gap-3 tabular-nums tracking-wide">
           <button
             type="button"
-            onClick={() => setRankMode((m) => (m === 'score' ? 'wealth' : 'score'))}
+            onClick={() => {
+              const order: RankMode[] = ['score', 'wealth', 'trade', 'hot'];
+              setRankMode((m) => order[(order.indexOf(m) + 1) % order.length]);
+            }}
             className="font-bold flex-shrink-0 bg-transparent border-none p-0 cursor-pointer"
-            title="클릭하면 랭킹 종류 전환"
+            title="클릭하면 다음 랭킹으로"
           >
-            {rankMode === 'score' ? (
-              <span className="text-yellow-300 [text-shadow:0_0_6px_rgba(253,224,71,0.6)]">🏆 스코어 TOP 10</span>
-            ) : (
-              <span className="text-[#fbcfe8] [text-shadow:0_0_6px_rgba(251,207,232,0.6)]">💰 자산 TOP 10</span>
-            )}
+            {rankMode === 'score' && <span className="text-yellow-300 [text-shadow:0_0_6px_rgba(253,224,71,0.6)]">🏆 스코어 TOP 10</span>}
+            {rankMode === 'wealth' && <span className="text-[#fbcfe8] [text-shadow:0_0_6px_rgba(251,207,232,0.6)]">💰 자산 TOP 10</span>}
+            {rankMode === 'trade' && <span className="text-[#86efac] [text-shadow:0_0_6px_rgba(134,239,172,0.6)]">📈 실거래 (7일)</span>}
+            {rankMode === 'hot' && <span className="text-[#fdba74] [text-shadow:0_0_6px_rgba(253,186,116,0.6)]">🔥 거래활발 (3개월)</span>}
           </button>
           <div className="marquee-mask flex-1 overflow-hidden">
             <div className="marquee-track flex w-max">
               {[0, 1].map((copy) => (
                 <div key={copy} aria-hidden={copy === 1} className="flex gap-8 pr-8">
-                  {rankMode === 'score'
-                    ? ranking.map((r, i) => (
-                        <span key={`s-${copy}-${r.user_id}`} className="flex-shrink-0">
-                          <span className="text-yellow-300 font-bold [text-shadow:0_0_4px_rgba(253,224,71,0.5)]">{i + 1}위</span>{' '}
-                          <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{r.display_name}</span>
-                          <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {r.score}</span>
-                        </span>
-                      ))
-                    : wealthRanking.map((w, i) => (
-                        <span key={`w-${copy}-${w.user_id}`} className="flex-shrink-0">
-                          <span className="text-[#fbcfe8] font-bold [text-shadow:0_0_4px_rgba(251,207,232,0.5)]">{i + 1}위</span>{' '}
-                          <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{w.display_name}</span>
-                          <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {Number(w.total_wealth).toLocaleString()} mlbg</span>
-                          {w.apt_count > 0 && (
-                            <span className="text-white/60 text-[10px]"> ({w.apt_count}주택)</span>
-                          )}
-                        </span>
-                      ))}
+                  {rankMode === 'score' && ranking.map((r, i) => (
+                    <span key={`s-${copy}-${r.user_id}`} className="flex-shrink-0">
+                      <span className="text-yellow-300 font-bold [text-shadow:0_0_4px_rgba(253,224,71,0.5)]">{i + 1}위</span>{' '}
+                      <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{r.display_name}</span>
+                      <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {r.score}</span>
+                    </span>
+                  ))}
+                  {rankMode === 'wealth' && wealthRanking.map((w, i) => (
+                    <span key={`w-${copy}-${w.user_id}`} className="flex-shrink-0">
+                      <span className="text-[#fbcfe8] font-bold [text-shadow:0_0_4px_rgba(251,207,232,0.5)]">{i + 1}위</span>{' '}
+                      <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{w.display_name}</span>
+                      <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {Number(w.total_wealth).toLocaleString()} mlbg</span>
+                      {w.apt_count > 0 && <span className="text-white/60 text-[10px]"> ({w.apt_count}주택)</span>}
+                    </span>
+                  ))}
+                  {rankMode === 'trade' && tradeHighlights.map((t, i) => (
+                    <span key={`t-${copy}-${i}`} className="flex-shrink-0">
+                      <span className="text-[#86efac] font-bold [text-shadow:0_0_4px_rgba(134,239,172,0.5)]">{t.apt_nm}</span>
+                      <span className="text-white/70"> {Number(t.excl_use_ar).toFixed(0)}㎡</span>
+                      <span className="text-white font-bold"> {fmtKRW(Number(t.deal_amount))}</span>
+                      <span className="text-white/50 text-[10px]"> ({t.deal_date.slice(5).replace('-', '/')})</span>
+                    </span>
+                  ))}
+                  {rankMode === 'hot' && hotApts.map((a, i) => (
+                    <span key={`h-${copy}-${i}`} className="flex-shrink-0">
+                      <span className="text-[#fdba74] font-bold [text-shadow:0_0_4px_rgba(253,186,116,0.5)]">{i + 1}위</span>{' '}
+                      <span className="text-white font-bold">{a.apt_nm}</span>
+                      <span className="text-cyan"> {a.trade_count}건</span>
+                      <span className="text-white/60 text-[10px]"> 중앙 {fmtKRW(Number(a.median_amount))}</span>
+                    </span>
+                  ))}
                 </div>
               ))}
             </div>

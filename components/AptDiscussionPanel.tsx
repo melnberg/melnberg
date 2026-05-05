@@ -11,6 +11,7 @@ import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
+import TradeChart from './TradeChart';
 
 type Discussion = {
   id: number;
@@ -732,6 +733,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
           )}
 
           {/* 히스토리 토글 */}
+          {/* 실거래가 차트 — 국토부 데이터 */}
+          <div className="mt-3">
+            <TradeChart aptId={apt.id} />
+          </div>
+
           <button
             type="button"
             onClick={toggleHistory}
