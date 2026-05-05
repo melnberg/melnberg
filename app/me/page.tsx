@@ -125,12 +125,28 @@ export default async function MePage() {
               <Stat label="mlbg 잔액" value={String(balance)} accent border />
             </div>
             <div className="mt-3 px-4 py-3 border border-border bg-navy-soft text-[11px] leading-relaxed">
-              <div className="text-navy font-bold mb-1.5 tracking-wider uppercase text-[10px]">mlbg 적립 기준</div>
+              <div className="text-navy font-bold mb-1.5 tracking-wider uppercase text-[10px]">mlbg 적립 기준 (AI 평가)</div>
+              <p className="text-text mb-2">
+                글·댓글을 작성하면 <b className="text-navy">AI 가 정보가치를 판단</b>해 기준 mlbg 의 <b className="text-navy">0.1배 ~ 1.5배</b> 사이로 차등 지급함.
+              </p>
               <ul className="space-y-0.5 text-text">
-                <li>· 커뮤니티 글 <b className="text-navy">2 mlbg</b> / 커뮤니티 댓글 <b className="text-navy">0.3 mlbg</b></li>
-                <li>· 아파트글 <b className="text-navy">1 mlbg</b> / 아파트 댓글 <b className="text-navy">0.5 mlbg</b></li>
+                <li>· 커뮤니티 글 <b className="text-navy">2 mlbg</b> 기준 → 실제 <span className="text-muted">0.2 ~ 3.0</span></li>
+                <li>· 커뮤니티 댓글 <b className="text-navy">0.3 mlbg</b> 기준 → 실제 <span className="text-muted">0.03 ~ 0.45</span></li>
+                <li>· 아파트글 <b className="text-navy">1 mlbg</b> 기준 → 실제 <span className="text-muted">0.1 ~ 1.5</span></li>
+                <li>· 아파트 댓글 <b className="text-navy">0.5 mlbg</b> 기준 → 실제 <span className="text-muted">0.05 ~ 0.75</span></li>
               </ul>
-              <p className="text-muted mt-1.5">단지 분양·매매 시 사용되는 화폐 단위입니다. 누적 적립 점수: <b>{score}</b></p>
+              <div className="mt-2 pt-2 border-t border-navy/15">
+                <div className="text-navy font-bold text-[10px] tracking-wider uppercase mb-1">평가 가이드</div>
+                <ul className="space-y-0.5 text-muted">
+                  <li>· <b className="text-red-600">0.1 ~ 0.3배</b> — 의미없음·스팸·한두 단어·이모지·단순반복</li>
+                  <li>· <b>0.4 ~ 0.7배</b> — 단순 의견·짧은 감상</li>
+                  <li>· <b>0.8 ~ 1.0배</b> — 정보가 어느 정도 있음 (기본값)</li>
+                  <li>· <b>1.1 ~ 1.3배</b> — 구체적 정보·경험 공유</li>
+                  <li>· <b className="text-cyan">1.4 ~ 1.5배</b> — 정성있는 분석·정보가 풍부</li>
+                </ul>
+                <p className="text-muted mt-1.5 text-[10px]">길이만 길고 내용 빈약하면 점수 낮춤. 짧아도 정보가치 높으면 점수 높임. <b>같은 글·댓글 반복 작성은 거의 적립되지 않음.</b></p>
+              </div>
+              <p className="text-muted mt-2 pt-2 border-t border-navy/15">단지 분양·매매 시 사용되는 화폐 단위입니다. 누적 적립 점수: <b>{score}</b></p>
             </div>
           </div>
 
