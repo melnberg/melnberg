@@ -15,6 +15,7 @@ type KakaoCluster = { getCenter: () => KakaoLatLng };
 type KakaoSize = { __size: never };
 type KakaoPoint = { __point: never };
 type KakaoMarkerImage = { __mImage: never };
+type KakaoCustomOverlay = { __overlay: never };
 type KakaoMaps = {
   load: (cb: () => void) => void;
   LatLng: new (lat: number, lng: number) => KakaoLatLng;
@@ -23,6 +24,7 @@ type KakaoMaps = {
   MarkerImage: new (src: string, size: KakaoSize, opts?: { offset?: KakaoPoint }) => KakaoMarkerImage;
   Map: new (container: HTMLElement, opts: { center: KakaoLatLng; level: number }) => KakaoMap;
   Marker: new (opts: { position: KakaoLatLng; title?: string; map?: KakaoMap; clickable?: boolean; image?: KakaoMarkerImage }) => KakaoMarker;
+  CustomOverlay: new (opts: { position: KakaoLatLng; content: string | HTMLElement; yAnchor?: number; xAnchor?: number; zIndex?: number; clickable?: boolean; map?: KakaoMap }) => KakaoCustomOverlay;
   event: { addListener: (target: unknown, type: string, handler: (...args: unknown[]) => void) => void };
   MarkerClusterer: new (opts: {
     map: KakaoMap;
@@ -43,6 +45,7 @@ type KakaoMapInst = KakaoMap & {
   panTo: (latlng: KakaoLatLng) => void;
 };
 type KakaoMarkerInst = KakaoMarker & { setMap: (map: KakaoMap | null) => void };
+type KakaoOverlayInst = KakaoCustomOverlay & { setMap: (map: KakaoMap | null) => void };
 declare global {
   interface Window {
     kakao: { maps: KakaoMaps };
@@ -88,6 +91,7 @@ export type AptPin = {
   occupier_id: string | null;
   occupied_at: string | null;
   listing_price: number | null;
+  pyeong_price: number | null;
 };
 
 const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
@@ -309,6 +313,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
   const markersRef = useRef<MarkerTier[]>([]);
+  const overlaysRef = useRef<KakaoOverlayInst[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [selected, setSelected] = useState<AptPin | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -810,6 +815,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
             marker.setMap(visible ? map : null);
           }
+          // 평당가 라벨은 가까이 줌 했을 때만 (level <= 4)
+          const showLabels = level <= 4;
+          for (const ov of overlaysRef.current) ov.setMap(showLabels ? map : null);
         });
 
         setMapReady(true);
@@ -827,9 +835,16 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     if (pins.length === 0) return;
     const map = mapInstRef.current;
 
-    // 기존 마커 제거
+    // 기존 마커·오버레이 제거
     for (const { marker } of markersRef.current) marker.setMap(null);
     markersRef.current = [];
+    for (const ov of overlaysRef.current) ov.setMap(null);
+    overlaysRef.current = [];
+
+    function formatPyeong(p: number): string {
+      if (p >= 10000) return `${(p / 10000).toFixed(1)}억/평`;
+      return `${p.toLocaleString()}만/평`;
+    }
 
     const PIN_W = 32, PIN_H = 45;
     const makeImg = (color: string, occ: boolean, listed: boolean = false) => new window.kakao.maps.MarkerImage(
@@ -905,6 +920,19 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
         allMarkers.push({ marker, tier, occupied });
+
+        // 평당가 라벨 — 데이터 있는 단지만, 가까이 줌(level<=4) 했을 때만 노출
+        if (p.pyeong_price && p.pyeong_price > 0) {
+          const overlay = new window.kakao.maps.CustomOverlay({
+            position: pos,
+            content: `<div class="apt-pyeong-label">${formatPyeong(p.pyeong_price)}</div>`,
+            yAnchor: 2.4,
+            zIndex: 3,
+            clickable: false,
+            map: level <= 4 ? map : undefined,
+          }) as KakaoOverlayInst;
+          overlaysRef.current.push(overlay);
+        }
       }
       markersRef.current = allMarkers;
       if (i < sorted.length) setTimeout(processChunk, 0);
