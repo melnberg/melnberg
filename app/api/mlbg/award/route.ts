@@ -5,13 +5,15 @@ import { getOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment';
 
 const BASE: Record<Kind, number> = {
   apt_post: 1.0,
   apt_comment: 0.5,
   community_post: 2.0,
   community_comment: 0.3,
+  hotdeal_post: 5.0,         // 핫딜 글 — 일반 커뮤글의 2.5배
+  hotdeal_comment: 1.0,      // 핫딜 댓글 — 일반 커뮤댓글의 ~3배
 };
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -19,6 +21,8 @@ const KIND_LABEL: Record<Kind, string> = {
   apt_comment: '아파트 단지 평가 댓글',
   community_post: '커뮤니티 게시판 글',
   community_comment: '커뮤니티 게시판 댓글',
+  hotdeal_post: '핫딜 정보 글',
+  hotdeal_comment: '핫딜 댓글',
 };
 
 // AI 평가 — multiplier 0.1 ~ 1.5 범위로 반환
@@ -130,6 +134,8 @@ export async function POST(req: NextRequest) {
     apt_comment: 'apt_discussion_comments',
     community_post: 'posts',
     community_comment: 'comments',
+    hotdeal_post: 'posts',
+    hotdeal_comment: 'comments',
   };
   const table = tableMap[kind];
   const { data: row, error: rowErr } = await admin.from(table).select('author_id').eq('id', refId).maybeSingle();

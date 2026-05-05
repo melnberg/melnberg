@@ -781,13 +781,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           onClick={toggleEvicts}
           className={`px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold flex items-center gap-1.5 border ${
             evictCount > 0
-              ? 'bg-[#ec4899] text-white border-[#db2777] hover:bg-[#db2777]'
+              ? 'bg-[#fce7f3] text-[#9d174d] border-[#fbcfe8] hover:bg-[#fbcfe8]'
               : 'bg-white text-navy border-border hover:border-navy'
           }`}
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
           <span>매물 : {evictCount}건</span>
-          <span className={`ml-auto text-[11px] ${evictCount > 0 ? 'text-white/80' : 'text-muted'}`}>{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
+          <span className={`ml-auto text-[11px] ${evictCount > 0 ? 'text-[#9d174d]/70' : 'text-muted'}`}>{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {evictsOpen && (
           <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-full max-h-[60vh] overflow-y-auto">

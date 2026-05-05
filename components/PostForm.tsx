@@ -8,8 +8,8 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
-  category?: 'community' | 'blog';
-  redirectBase?: string; // '/community' 또는 '/blog'
+  category?: 'community' | 'blog' | 'hotdeal';
+  redirectBase?: string; // '/community' | '/blog' | '/hotdeal'
 };
 
 export default function PostForm({ initial, category = 'community', redirectBase = '/community' }: Props) {
@@ -72,10 +72,10 @@ export default function PostForm({ initial, category = 'community', redirectBase
         setErr(error?.message ?? '저장 실패');
         return;
       }
-      // AI 품질 평가 + mlbg 적립 — fire-and-forget (작성 차단 안 함, 마이페이지에서 확인)
-      void awardMlbg('community_post', data.id, content.trim());
-      // 텔레그램 채널 알림 (fire-and-forget)
-      notifyTelegram('community_post', data.id);
+      // AI 품질 평가 + mlbg 적립 — fire-and-forget
+      const awardKind = category === 'hotdeal' ? 'hotdeal_post' : category === 'blog' ? 'community_post' : 'community_post';
+      void awardMlbg(awardKind, data.id, content.trim());
+      notifyTelegram(awardKind, data.id);
       router.push(`${redirectBase}/${data.id}`);
       router.refresh();
     }

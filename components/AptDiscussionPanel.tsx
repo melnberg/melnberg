@@ -146,7 +146,12 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       supabase.from('apt_master').select('occupier_id, occupied_at').eq('id', apt.id).maybeSingle(),
       supabase.from('apt_listings').select('price, description').eq('apt_id', apt.id).maybeSingle(),
     ]);
-    const ld = listingData as { price?: number | string | null; description?: string | null } | null;
+    let ld = listingData as { price?: number | string | null; description?: string | null } | null;
+    // description 컬럼 없을 때 (SQL 065 미적용) → price 만 다시 fetch
+    if (!ld) {
+      const { data: priceOnly } = await supabase.from('apt_listings').select('price').eq('apt_id', apt.id).maybeSingle();
+      ld = priceOnly as { price?: number | string | null } | null;
+    }
     setListingPrice(ld?.price == null ? null : Number(ld.price));
     setListingDescription(ld?.description ?? null);
 
