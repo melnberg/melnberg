@@ -635,18 +635,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       <div className={`flex-1 min-w-0 ${forceMap ? 'map-minimal' : 'hidden lg:flex lg:flex-col'}`}>
         <AptMap feed={feed} />
       </div>
-      {/* 모바일 forceMap 시 우상단 '← 피드' 플로팅 링크 + 부수 효과 */}
-      {forceMap && (
-        <>
-          <Link
-            href="/"
-            className="lg:hidden fixed top-2 right-2 z-40 px-3 py-1.5 bg-white/95 border border-border text-navy text-[12px] font-bold no-underline shadow-sm hover:bg-white"
-          >
-            ← 피드
-          </Link>
-          <MapMinimalEffects />
-        </>
-      )}
+      {/* 모바일 forceMap 시 미니멀 모드 부수 효과 (외부 floating widgets 숨김 + relayout) */}
+      {forceMap && <MapMinimalEffects />}
       {/* lg 미만 — forceMap 아닐 때 피드 풀스크린 */}
       {!forceMap && (
         <div className="lg:hidden flex-1 min-w-0">

@@ -65,7 +65,7 @@ export default function FeedbackWidget() {
   }
 
   return (
-    <div className="floating-widget fixed bottom-5 right-5 z-50 flex items-end gap-2">
+    <div className="floating-widget fixed bottom-[72px] right-5 z-50 flex items-end gap-2">
       {open ? (
         <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.18)] w-[320px] max-w-[calc(100vw-40px)]">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-navy text-white">

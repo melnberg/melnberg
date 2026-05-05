@@ -4,6 +4,7 @@ import { getCurrentUser, getCurrentProfile, getCurrentMlbgBalance } from '@/lib/
 import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 import TelegramFloatingLink from './TelegramFloatingLink';
+import FloatingMapPin from './FloatingMapPin';
 import LiveActivityToaster from './LiveActivityToaster';
 
 // 사이드바 최신글 — 30초 캐싱. 모든 페이지 공통이라 cache hit 비율 매우 높음.
@@ -60,6 +61,7 @@ export default async function Layout({ current, children }: { current?: string; 
       <main className="flex-1 min-w-0 flex flex-col">{children}</main>
       <TelegramFloatingLink />
       <FeedbackWidget />
+      <FloatingMapPin />
       <LiveActivityToaster />
     </div>
   );
