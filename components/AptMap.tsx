@@ -337,8 +337,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     }
   }, [searchParams, pins, router]);
 
-  // 오늘의 강제집행
-  type EvictEvent = { occurred_at: string; actor_name: string | null; prev_occupier_name: string | null; apt_id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null };
+  // 오늘의 매매 (sell 이벤트). 강제집행 폐기 후 매매 활동성 표시.
+  type EvictEvent = { occurred_at: string; actor_name: string | null; prev_occupier_name: string | null; actor_score: number | null; apt_id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null };
   const [evictsOpen, setEvictsOpen] = useState(false);
   const [evicts, setEvicts] = useState<EvictEvent[] | null>(null);
   const [evictCount, setEvictCount] = useState(0);
@@ -422,13 +422,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return new Date(kstMidnightUtc).toISOString();
   }
 
-  // 카운트만 미리 fetch
+  // 카운트만 미리 fetch — 강제집행 폐기 후 'sell' (매매) 로 전환
   useEffect(() => {
     const supabase = createClient();
     supabase
       .from('apt_occupier_events')
       .select('id', { count: 'exact', head: true })
-      .eq('event', 'evict')
+      .eq('event', 'sell')
       .gte('occurred_at', todayKstStartUtcIso())
       .then(({ count }) => setEvictCount(count ?? 0));
   }, [pins]);
@@ -439,8 +439,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const supabase = createClient();
     const { data } = await supabase
       .from('apt_occupier_events')
-      .select('occurred_at, actor_name, prev_occupier_name, apt_id, apt_master(apt_nm, dong, lat, lng)')
-      .eq('event', 'evict')
+      .select('occurred_at, actor_name, prev_occupier_name, actor_score, apt_id, apt_master(apt_nm, dong, lat, lng)')
+      .eq('event', 'sell')
       .gte('occurred_at', todayKstStartUtcIso())
       .order('occurred_at', { ascending: false });
     const list: EvictEvent[] = (data ?? []).map((r: Record<string, unknown>) => {
@@ -449,6 +449,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         occurred_at: r.occurred_at as string,
         actor_name: r.actor_name as string | null,
         prev_occupier_name: r.prev_occupier_name as string | null,
+        actor_score: r.actor_score == null ? null : Number(r.actor_score),
         apt_id: r.apt_id as number,
         apt_nm: am?.apt_nm ?? null,
         dong: am?.dong ?? null,
@@ -758,10 +759,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         <button
           type="button"
           onClick={toggleEvicts}
-          className="bg-white border border-red-500 px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#fdf0ee] hover:border-red-600 flex items-center gap-1.5"
+          className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-cyan/10 hover:border-cyan-dark flex items-center gap-1.5"
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 2L4 7v6c0 5 4 9 8 10 4-1 8-5 8-10V7l-8-5z"/></svg>
-          <span>오늘의 강제집행 : {evictCount}건</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#0070C0"><path d="M12 2L1 21h22L12 2zm0 4l8.5 14h-17L12 6z"/></svg>
+          <span>오늘의 매매 : {evictCount}건</span>
           <span className="ml-auto text-[11px] text-muted">{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {evictsOpen && (
@@ -769,7 +770,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             {evicts === null ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">불러오는 중...</div>
             ) : evicts.length === 0 ? (
-              <div className="px-4 py-6 text-[12px] text-muted text-center">오늘 강제집행 내역 없음</div>
+              <div className="px-4 py-6 text-[12px] text-muted text-center">오늘 매매 내역 없음</div>
             ) : (
               <ul>
                 {evicts.map((e, i) => (
@@ -777,7 +778,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     <button
                       type="button"
                       onClick={() => jumpToEvict(e)}
-                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 bg-white hover:bg-[#fdf0ee] flex flex-col gap-0.5"
+                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 bg-white hover:bg-cyan/10 flex flex-col gap-0.5"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="text-[13px] font-bold text-navy truncate">{e.apt_nm ?? '(단지 정보 없음)'}</div>
@@ -785,10 +786,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           {occupiedSinceLabel(e.occurred_at)}
                         </div>
                       </div>
-                      <div className="text-[11px] flex items-center gap-1">
+                      <div className="text-[11px] flex items-center gap-1.5">
                         <span className="text-muted line-through">{e.prev_occupier_name ?? '익명'}</span>
                         <span className="text-muted">→</span>
                         <span className="text-cyan font-bold">{e.actor_name ?? '익명'}</span>
+                        {e.actor_score != null && (
+                          <span className="text-[10px] text-navy ml-auto font-bold tabular-nums">{Number(e.actor_score).toLocaleString()} mlbg</span>
+                        )}
                       </div>
                     </button>
                   </li>

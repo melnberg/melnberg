@@ -97,10 +97,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [occupierIsPaid, setOccupierIsPaid] = useState<boolean>(false);
   const [occupierIsSolo, setOccupierIsSolo] = useState<boolean>(false);
   const [occupierAptCount, setOccupierAptCount] = useState<number | null>(null);
-  const [occupierScore, setOccupierScore] = useState<number | null>(null);
   const [occupierMlbg, setOccupierMlbg] = useState<number | null>(null);
-  const [myScore, setMyScore] = useState<number | null>(null);
-  const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
   const [claiming, setClaiming] = useState(false);
 
   // 매물 (P2P 매매)
@@ -168,14 +165,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       aptCount: p.apt_count ?? null,
     });
 
-    // Round 2: 댓글 + 글 작성자 프로필 + 본인 점수·점거·vote + 점거인 점수 모두 병렬
+    // Round 2: 댓글 + 글 작성자 프로필 + vote 병렬 fetch
     const [
       { data: cData },
       { data: discAuthorProfs },
-      { data: myScoreData },
-      { data: myOccsData },
       { data: myVotesData },
-      { data: occScoreData },
     ] = await Promise.all([
       ids.length > 0
         ? supabase.from('apt_discussion_comments').select('id, discussion_id, content, created_at, author_id, parent_id').in('discussion_id', ids).is('deleted_at', null).order('created_at', { ascending: true })
@@ -183,12 +177,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       authorIds.length > 0
         ? supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').in('id', authorIds)
         : Promise.resolve({ data: [] as unknown[] | null }),
-      user ? supabase.rpc('get_user_score', { p_user_id: user.id }) : Promise.resolve({ data: null }),
-      user ? supabase.from('apt_master').select('id, apt_nm').eq('occupier_id', user.id).neq('id', apt.id).limit(1) : Promise.resolve({ data: null }),
       user && ids.length > 0
         ? supabase.from('apt_discussion_votes').select('discussion_id, vote_type').eq('user_id', user.id).in('discussion_id', ids)
         : Promise.resolve({ data: null }),
-      oid ? supabase.rpc('get_user_score', { p_user_id: oid }) : Promise.resolve({ data: null }),
     ]);
 
     // 댓글 처리
@@ -265,18 +256,12 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       setOccupierIsSolo(false);
       setOccupierAptCount(null);
     }
-    setOccupierScore(typeof occScoreData === 'number' ? occScoreData : occScoreData != null ? Number(occScoreData) : null);
     setAuthors(aMap);
 
     // 내 vote map
     const vMap = new Map<number, 'up' | 'down'>();
     for (const v of (myVotesData ?? []) as MyVote[]) vMap.set(v.discussion_id, v.vote_type);
     setMyVotes(vMap);
-
-    // 본인 score / 다른 곳 점거
-    setMyScore(typeof myScoreData === 'number' ? myScoreData : myScoreData != null ? Number(myScoreData) : null);
-    const myOccs = (myOccsData as Array<{ id: number; apt_nm: string }> | null)?.[0] ?? null;
-    setMyCurrentApt(myOccs);
 
     // 본인 mlbg_balance — 매수 가능 여부 표시용
     if (user) {
@@ -302,28 +287,18 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   }
 
   async function claimApt() {
-    if (!userId) { alert('점거하려면 로그인이 필요해요.'); return; }
-    // 클릭 시점에 fresh fetch — 패널 로딩 중이거나 stale일 때 대비
-    const { data: myOccs } = await supabase
-      .from('apt_master')
-      .select('id, apt_nm')
-      .eq('occupier_id', userId)
-      .neq('id', apt.id)
-      .limit(1);
+    if (!userId) { alert('분양받으려면 로그인이 필요해요.'); return; }
     const price = getAptListingPrice(apt.lawd_cd);
-    if (!confirm(`이 단지를 ${price} mlbg에 분양받습니다. 진행할까요?`)) return;
+    if (!confirm(`이 단지를 ${price} mlbg 에 분양받습니다. 진행할까요?`)) return;
     setClaiming(true);
     const { data, error } = await supabase.rpc('claim_apt', { p_apt_id: apt.id });
     setClaiming(false);
     if (error) { alert(error.message); return; }
-    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_occupier_score: number | null; out_message: string | null } | undefined;
-    if (!row?.out_success) { alert(row?.out_message ?? '점거 실패'); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '분양 실패'); return; }
     setOccupierId(row.out_occupier_id);
     setOccupierName(row.out_occupier_name ?? null);
-    setOccupierScore(row.out_occupier_score ?? null);
-    setMyCurrentApt(null);
-    setHistory(null); // 다음 열기 시 재fetch
-    // 홈 지도 핀 캐시 무효화 신호 (점거 마커 즉시 갱신)
+    setHistory(null);
     window.dispatchEvent(new Event('mlbg-pins-changed'));
     // 차감된 mlbg 잔액 즉시 반영 — 패널 + 사이드바 (router.refresh)
     await reload();
@@ -377,41 +352,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     window.dispatchEvent(new Event('mlbg-pins-changed'));
   }
 
-  async function forceEvict() {
-    if (!userId) { alert('로그인이 필요해요.'); return; }
-    if (myScore !== null && occupierScore !== null && myScore <= occupierScore) {
-      alert(`점수 부족 — 내 ${myScore} vs 점거인 ${occupierScore}. 강제집행하려면 더 높은 점수가 필요해요.`);
-      return;
-    }
-    // fresh fetch
-    const { data: myOccs } = await supabase
-      .from('apt_master')
-      .select('id, apt_nm')
-      .eq('occupier_id', userId)
-      .neq('id', apt.id)
-      .limit(1);
-    const existing = (myOccs as Array<{ id: number; apt_nm: string }> | null)?.[0];
-    if (existing) {
-      const ok = confirm(`기존에 점거중인 [${existing.apt_nm}]은 자동 퇴거됩니다. 그래도 강제집행하시겠어요?`);
-      if (!ok) return;
-    } else {
-      const ok = confirm(`${occupierName ?? '점거인'} 님을 강제집행해 이 단지를 차지합니다.`);
-      if (!ok) return;
-    }
-    setClaiming(true);
-    const { data, error } = await supabase.rpc('force_evict_apt', { p_apt_id: apt.id });
-    setClaiming(false);
-    if (error) { alert(error.message); return; }
-    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_occupier_id: string | null; out_occupier_name: string | null; out_occupier_score: number | null; out_message: string | null } | undefined;
-    if (!row?.out_success) { alert(row?.out_message ?? '강제집행 실패'); return; }
-    setOccupierId(row.out_occupier_id);
-    setOccupierName(row.out_occupier_name ?? null);
-    setOccupierScore(row.out_occupier_score ?? null);
-    setMyCurrentApt(null);
-    setHistory(null);
-    window.dispatchEvent(new Event('mlbg-pins-changed'));
-    await reload();
-  }
+  // 강제집행 폐기 — Stage 4 매매 시스템으로 대체. 코드 제거.
 
   useEffect(() => {
     let cancelled = false;
@@ -422,11 +363,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setSubmitErr(null);
     setOpenComments(new Set());
     setCommentBody(new Map());
-    setMyCurrentApt(null);
     setOccupierId(null);
     setOccupierName(null);
-    setOccupierScore(null);
-    setMyScore(null);
+    setOccupierMlbg(null);
     setHistoryOpen(false);
     setHistory(null);
     reload().finally(() => { if (cancelled) return; });
@@ -679,7 +618,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   매수 {listingPrice.toLocaleString()} mlbg
                 </button>
               ) : userId ? (
-                <span className="text-[10px] text-muted flex-shrink-0 italic" title="강제집행 폐기. 매물 등록되면 매수만 가능">
+                <span className="text-[10px] text-muted flex-shrink-0" title="매물로 등록되어야 인수 가능">
                   매물 없음
                 </span>
               ) : (
