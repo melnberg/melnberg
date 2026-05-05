@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
     tag = '🔥 LIVE 경매';
     const aptName = r.apt_master?.apt_nm ?? '단지';
-    const endsKr = new Date(r.ends_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+    const endsKr = new Date(r.ends_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
     main = `${aptName} 시작가 ${Number(r.min_bid).toLocaleString()} mlbg · ${endsKr} 종료`;
   } else if (kind === 'auction_bid') {
     // 입찰자 본인만 — 현재가 갱신 알림. 락은 race-y 하지만 latest current_bidder_id 검증으로 가벼운 boundary.
