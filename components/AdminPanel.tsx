@@ -467,7 +467,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                 <th className="py-0 px-2 font-semibold text-left">닉네임</th>
                 <th className="py-0 px-2 font-semibold text-left w-32">네이버 ID</th>
                 <th className="py-0 px-2 font-semibold text-left w-48">이메일</th>
-                <th className="py-0 px-2 font-semibold text-left w-[220px]">SNS 링크</th>
+                <th className="py-0 px-2 font-semibold text-left w-[200px] min-w-[180px]">SNS 링크</th>
                 <th className="py-0 px-2 font-semibold text-center w-24">만료일</th>
                 <th className="py-0 px-2 font-semibold text-center w-24">가입일</th>
               </tr>
@@ -503,9 +503,9 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                     <td className="py-0 px-2 text-[12px] text-text truncate max-w-[200px]" title={(p as { email?: string | null }).email ?? ''}>
                       {(p as { email?: string | null }).email ?? <span className="text-muted">—</span>}
                     </td>
-                    <td className="py-0 px-2 text-[11px]">
+                    <td className="py-0 px-2 text-[11px] min-w-[180px]">
                       {p.link_url ? (
-                        <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0 w-full">
                           {(() => {
                             const st = linkStatus.get(p.id);
                             if (st === 'checking') return <span className="text-[10px] text-muted">●</span>;
@@ -517,7 +517,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                             href={p.link_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-navy hover:underline truncate min-w-0 flex-1"
+                            className="text-navy hover:underline truncate min-w-0 flex-1 max-w-[120px]"
                             title={p.link_url}
                           >
                             {p.link_url.replace(/^https?:\/\//, '').replace(/^www\./, '')}
@@ -525,8 +525,8 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                           <button
                             type="button"
                             onClick={() => clearLink(p)}
-                            className="flex-shrink-0 w-5 h-5 flex items-center justify-center text-[12px] font-bold leading-none bg-red-50 text-red-600 border border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer rounded-sm transition-colors"
-                            title="이 링크 강제 삭제 (link_url = null)"
+                            className="ml-auto flex-shrink-0 w-6 h-6 flex items-center justify-center text-[14px] font-bold leading-none bg-red-50 text-red-600 border border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600 cursor-pointer rounded transition-colors"
+                            title="이 링크 강제 삭제"
                             aria-label="링크 삭제"
                           >
                             ✕
