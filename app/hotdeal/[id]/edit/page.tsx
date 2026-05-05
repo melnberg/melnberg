@@ -34,7 +34,7 @@ export default async function EditHotdealPage({ params }: { params: Promise<{ id
 
       <section className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
-          <h1 className="text-[28px] font-bold text-[#9d174d] tracking-tight mb-2">핫딜 수정</h1>
+          <h1 className="text-[28px] font-bold text-[#92400e] tracking-tight mb-2">핫딜 수정</h1>
           <p className="text-sm text-muted mb-8">내용을 수정하고 저장하세요.</p>
           <PostForm initial={{ id: post.id, title: post.title, content: post.content }} category="hotdeal" redirectBase="/hotdeal" />
         </div>

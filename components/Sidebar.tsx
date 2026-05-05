@@ -151,7 +151,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           ))}
 
           {/* 핫딜 게시판 — 적립 보상 2.5x */}
-          <SItem href="/hotdeal" label="핫딜 🔥" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
 
           {/* 커뮤니티 — 메뉴 맨 아래 + 최신글 미리보기 */}
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />

@@ -40,9 +40,9 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
         <article className="py-24">
           <div className="max-w-[520px] mx-auto px-6 text-center">
             <div className="text-[14px] font-bold tracking-wider uppercase text-muted mb-4">DELETED</div>
-            <h1 className="text-[22px] font-bold text-[#9d174d] mb-3">게시글이 삭제되었습니다</h1>
+            <h1 className="text-[22px] font-bold text-[#92400e] mb-3">게시글이 삭제되었습니다</h1>
             <p className="text-[13px] text-muted leading-relaxed mb-8">작성자가 이 핫딜을 삭제했어요.</p>
-            <Link href="/hotdeal" className="inline-block bg-[#ec4899] text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-[#db2777]">
+            <Link href="/hotdeal" className="inline-block bg-[#f59e0b] text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-[#d97706]">
               ← 핫딜 목록
             </Link>
           </div>
@@ -79,9 +79,9 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
 
       <article className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
-          <header className="pb-6 mb-6 border-b border-[#fbcfe8]">
-            <div className="inline-block bg-[#fce7f3] text-[#9d174d] text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 mb-2">HOT DEAL 🔥</div>
-            <h1 className="text-[28px] font-bold text-[#9d174d] tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
+          <header className="pb-6 mb-6 border-b border-[#fde68a]">
+            <div className="inline-block bg-[#fef3c7] text-[#78350f] text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 mb-2">HOT DEAL</div>
+            <h1 className="text-[28px] font-bold text-[#92400e] tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
               <span className="font-bold text-navy">
                 <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
@@ -116,7 +116,7 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
           />
 
           <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
-            <Link href="/hotdeal" className="text-[13px] font-bold text-[#9d174d] no-underline hover:underline">
+            <Link href="/hotdeal" className="text-[13px] font-bold text-[#92400e] no-underline hover:underline">
               ← 목록으로
             </Link>
           </div>

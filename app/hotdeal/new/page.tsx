@@ -24,9 +24,9 @@ export default async function NewHotdealPage() {
 
       <section className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
-          <h1 className="text-[28px] font-bold text-[#9d174d] tracking-tight mb-2">핫딜 올리기 🔥</h1>
-          <p className="text-sm text-muted mb-2">입주민·매매·임대 핫딜 정보를 공유해주세요.</p>
-          <p className="text-[12px] text-[#9d174d] mb-8 px-3 py-2 bg-[#fce7f3] border border-[#fbcfe8]">
+          <h1 className="text-[28px] font-bold text-[#92400e] tracking-tight mb-2">핫딜 올리기</h1>
+          <p className="text-sm text-muted mb-2">만두·쇼핑·먹거리·생활용품 등 회원에게 도움 되는 핫한 정보를 공유해주세요.</p>
+          <p className="text-[12px] text-[#78350f] mb-8 px-3 py-2 bg-[#fef3c7] border border-[#fde68a]">
             적립 보상 — 핫딜 글은 일반 커뮤글의 <b>2.5배 (5 mlbg base, AI 평가에 따라 0.5~7.5)</b>. 정성껏 쓰면 더 많이 받음.
           </p>
           <PostForm category="hotdeal" redirectBase="/hotdeal" />
