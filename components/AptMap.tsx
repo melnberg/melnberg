@@ -1657,10 +1657,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           )}
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
                             <span>{feedRelTime(f.created_at)} 전</span>
-                            {typeof f.earned_mlbg === 'number' && f.earned_mlbg > 0 && (
-                              <span className="text-cyan font-bold tabular-nums" title="이 글·댓글을 작성하여 획득한 mlbg">
-                                +{f.earned_mlbg}
-                              </span>
+                            {typeof f.earned_mlbg === 'number' && (
+                              f.earned_mlbg > 0 ? (
+                                <span className="text-cyan font-bold tabular-nums" title="이 글·댓글을 작성하여 획득한 mlbg">
+                                  +{f.earned_mlbg}
+                                </span>
+                              ) : (
+                                <span className="text-muted tabular-nums" title="단지 토론 1줄(20자 미만) 글은 미지급">+0</span>
+                              )
                             )}
                           </div>
                         </div>
