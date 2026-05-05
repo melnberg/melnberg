@@ -7,6 +7,7 @@ import AptDiscussionPanel from './AptDiscussionPanel';
 import EmartPanel from './EmartPanel';
 import FactoryPanel, { type FactoryItem } from './FactoryPanel';
 import Countdown from './Countdown';
+import RewardTooltip from './RewardTooltip';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
@@ -1658,13 +1659,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
                             <span>{feedRelTime(f.created_at)} 전</span>
                             {typeof f.earned_mlbg === 'number' && (
-                              f.earned_mlbg > 0 ? (
-                                <span className="text-cyan font-bold tabular-nums" title="적립 기준&#10;· 커뮤·핫딜 글: +2&#10;· 단지 토론 글: 1줄(20자+) 0 / 2~4줄 +2 / 5~9줄 +3 / 10줄+ +5&#10;· 모든 댓글: +1">
-                                  +{f.earned_mlbg}
-                                </span>
-                              ) : (
-                                <span className="text-muted tabular-nums" title="단지 토론 적립 기준 (20자=1줄 환산)&#10;· 1줄(20자+): 0 (미지급)&#10;· 2~4줄(40자+): +2&#10;· 5~9줄(100자+): +3&#10;· 10줄+(200자+): +5&#10;· 댓글: +1">+0</span>
-                              )
+                              <RewardTooltip earned={f.earned_mlbg} kind={f.kind === 'discussion' ? 'apt_post' : f.kind === 'comment' ? 'apt_comment' : f.kind === 'post' ? 'community_post' : f.kind === 'post_comment' ? 'community_comment' : undefined} />
                             )}
                           </div>
                         </div>

@@ -12,6 +12,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
+import RewardTooltip from './RewardTooltip';
 
 type Discussion = {
   id: number;
@@ -855,16 +856,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     {(() => {
                       const earned = awardMap.get(`apt_post:${d.id}`);
                       if (typeof earned !== 'number') return null;
-                      if (earned > 0) return (
-                        <>
-                          <span>·</span>
-                          <span className="text-cyan font-bold tabular-nums" title="단지 토론 적립 기준 (20자=1줄 환산)\n· 1줄(20자+): 0 (미지급)\n· 2~4줄(40자+): +2\n· 5~9줄(100자+): +3\n· 10줄+(200자+): +5\n· 댓글: +1">+{earned} mlbg</span>
-                        </>
-                      );
                       return (
                         <>
                           <span>·</span>
-                          <span className="text-muted tabular-nums" title="단지 토론 적립 기준 (20자=1줄 환산)&#10;· 1줄(20자+): 0 (미지급)&#10;· 2~4줄(40자+): +2&#10;· 5~9줄(100자+): +3&#10;· 10줄+(200자+): +5&#10;· 댓글: +1">+0 mlbg</span>
+                          <RewardTooltip earned={earned} kind="apt_post" />
                         </>
                       );
                     })()}
@@ -918,7 +913,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                 return typeof earned === 'number' && earned > 0 ? (
                                   <>
                                     <span>·</span>
-                                    <span className="text-cyan font-bold tabular-nums" title="댓글 적립 +1 mlbg (어디든 일률)">+{earned} mlbg</span>
+                                    <RewardTooltip earned={earned} kind="apt_comment" />
                                   </>
                                 ) : null;
                               })()}
@@ -955,7 +950,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                           return typeof earned === 'number' && earned > 0 ? (
                                             <>
                                               <span>·</span>
-                                              <span className="text-cyan font-bold tabular-nums" title="댓글 적립 +1 mlbg (어디든 일률)">+{earned} mlbg</span>
+                                              <RewardTooltip earned={earned} kind="apt_comment" />
                                             </>
                                           ) : null;
                                         })()}

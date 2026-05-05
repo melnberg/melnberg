@@ -9,6 +9,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 import Nickname from './Nickname';
+import RewardTooltip from './RewardTooltip';
 
 type Props = {
   postId: number;
@@ -240,7 +241,7 @@ function CommentRow({
           {typeof earned === 'number' && earned > 0 && (
             <>
               <span className="text-muted">·</span>
-              <span className="text-cyan font-bold tabular-nums" title="댓글 적립 +1 mlbg (어디든 일률)">+{earned}</span>
+              <RewardTooltip earned={earned} kind="community_comment" />
             </>
           )}
         </div>
