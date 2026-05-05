@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { revalidateTag } from 'next/cache';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AuctionBidForm from '@/components/AuctionBidForm';
@@ -28,7 +29,11 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
 
   const supabase = createPublicClient();
   // 만료된 경매 자동 종료 (각 페이지 진입마다 한 번)
-  await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
+  const completeRes = await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
+  // 경매 종료 처리되면 apt_master 변경 → home-pins 캐시 무효화
+  if (completeRes && (completeRes as { data?: number })?.data && Number((completeRes as { data: number }).data) > 0) {
+    revalidateTag('apt-master');
+  }
 
   const [{ data: auc }, { data: aptRow }, { data: bidRows }] = await Promise.all([
     supabase.from('apt_auctions').select('id, apt_id, starts_at, ends_at, min_bid, current_bid, current_bidder_id, status, bid_count').eq('id', numId).maybeSingle(),

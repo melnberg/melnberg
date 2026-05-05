@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { revalidateTag } from 'next/cache';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import { createPublicClient } from '@/lib/supabase/public';
@@ -15,8 +16,11 @@ type AuctionRow = {
 
 export default async function AuctionsPage() {
   const supabase = createPublicClient();
-  // 만료 경매 자동 종료 처리 (페이지 로드 시 한 번)
-  await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
+  // 만료 경매 자동 종료 처리 (페이지 로드 시 한 번). 종료 발생 시 home-pins 캐시 무효화.
+  const completeRes = await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
+  if (completeRes && Number((completeRes as { data?: number })?.data ?? 0) > 0) {
+    revalidateTag('apt-master');
+  }
   const { data } = await supabase.rpc('list_recent_auctions', { p_limit: 50 }).then((r) => r, () => ({ data: null }));
   const rows = (data ?? []) as AuctionRow[];
   const active = rows.filter((r) => r.status === 'active');

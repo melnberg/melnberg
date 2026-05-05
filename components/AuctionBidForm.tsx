@@ -73,7 +73,12 @@ export default function AuctionBidForm({
           setCurrentBidderName((pr as { display_name?: string | null } | null)?.display_name ?? '익명');
         }
       }
-      if (row.status !== 'active') router.refresh();
+      if (row.status !== 'active') {
+        // 경매 종료 감지 → 클라이언트 핀 캐시 무효화 (홈 지도 깃발 즉시 반영)
+        try { localStorage.removeItem('mlbg_pins_big_v3'); localStorage.removeItem('mlbg_pins_small_v3'); } catch { /* ignore */ }
+        window.dispatchEvent(new Event('mlbg-pins-changed'));
+        router.refresh();
+      }
     }, 5000);
     return () => { cancelled = true; clearInterval(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
