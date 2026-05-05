@@ -69,21 +69,31 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 export default function MobileFeedList({ items }: Props) {
   const [lastClickKey, setLastClickKey] = useState<string | null>(null);
 
-  // 마운트 시 — 저장된 스크롤 복원 + 마지막 클릭 키 읽기
+  // 마운트 시 — 저장된 스크롤 복원 + 마지막 클릭 키 읽기.
+  // 브라우저 자체 scroll restoration 이 늦게 발화될 수 있어 여러 시점에 보강.
   useEffect(() => {
     try {
       const lastKey = sessionStorage.getItem(LAST_CLICK_KEY);
       const scrollStr = sessionStorage.getItem(SCROLL_KEY);
       if (lastKey) setLastClickKey(lastKey);
-      if (scrollStr) {
-        const y = Number(scrollStr);
-        if (Number.isFinite(y)) {
-          // 다음 프레임에 스크롤 (DOM 렌더링 후)
-          requestAnimationFrame(() => window.scrollTo(0, y));
-        }
-      }
-      // 한 번만 사용 — 다음 진입에는 새로 저장된 값 사용
-      sessionStorage.removeItem(SCROLL_KEY);
+      if (!scrollStr) return;
+      const y = Number(scrollStr);
+      if (!Number.isFinite(y) || y <= 0) return;
+
+      const restore = () => window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior });
+      // 다중 시도 — RAF 2회 + setTimeout 50/200/400ms.
+      // Next.js 라우터의 기본 스크롤 동작이나 브라우저 restoration 이 늦게 덮어쓰는 경우 대응.
+      requestAnimationFrame(() => {
+        restore();
+        requestAnimationFrame(restore);
+      });
+      const t1 = setTimeout(restore, 50);
+      const t2 = setTimeout(restore, 200);
+      const t3 = setTimeout(() => {
+        restore();
+        sessionStorage.removeItem(SCROLL_KEY);
+      }, 400);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     } catch { /* SSR / blocked storage */ }
   }, []);
 
