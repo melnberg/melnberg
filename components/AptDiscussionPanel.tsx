@@ -565,7 +565,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
             <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{apt.dong ?? ''}</div>
             <h2 className="text-[18px] font-bold text-navy tracking-tight inline-flex items-center gap-1.5">
               <span>{apt.apt_nm}</span>
-              <a href={`/?apt=${apt.id}`} aria-label="지도에서 위치 보기" title="지도에서 위치 보기" className="text-muted hover:text-navy inline-flex items-center">
+              <a href={apt.lat != null && apt.lng != null ? `/?apt=${apt.id}&lat=${apt.lat}&lng=${apt.lng}` : `/?apt=${apt.id}`} aria-label="지도에서 위치 보기" title="지도에서 위치 보기" className="text-muted hover:text-navy inline-flex items-center">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
                 </svg>

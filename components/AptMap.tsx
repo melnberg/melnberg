@@ -457,23 +457,35 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null; aptCount: number | null }>>(new Map());
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ?apt={id} query 로 진입 시 해당 단지 패널 자동 열기 (알림 종 클릭 흐름)
+  // ?apt={id} query 로 진입 시 해당 단지 패널 자동 열기 (알림 종 / 디테일 페이지 지도 핀 클릭 흐름)
+  // URL 에 &lat=&lng= 가 있으면 pins 로딩 기다리지 않고 즉시 panTo → '강남역 1초 flash' 차단.
+  // 줌 레벨 4 (이전 3 → 한 단계 줄아웃, 주변 환경 같이 보이게).
   useEffect(() => {
     const aptParam = searchParams.get('apt');
-    if (!aptParam || pins.length === 0) return;
+    if (!aptParam) return;
     const aptId = Number(aptParam);
     if (Number.isNaN(aptId)) return;
+
+    // 즉시 panTo — URL 의 lat/lng 우선 (pins 미로딩 상태에서도 바로 이동)
+    const inst = mapInstRef.current;
+    const latParam = Number(searchParams.get('lat'));
+    const lngParam = Number(searchParams.get('lng'));
+    if (inst && Number.isFinite(latParam) && Number.isFinite(lngParam) && latParam !== 0 && lngParam !== 0) {
+      const ll = new window.kakao.maps.LatLng(latParam, lngParam);
+      inst.setLevel(4);
+      inst.panTo(ll);
+    }
+
+    // 핀 로딩 후 패널 자동 오픈 (+ pins 로 fallback panTo)
+    if (pins.length === 0) return;
     const pin = pins.find((p) => p.id === aptId);
     if (pin) {
       setSelected(pin);
-      // 지도 중심 이동 + 줌인
-      const inst = mapInstRef.current;
-      if (inst) {
-        const ll = new window.kakao.maps.LatLng(pin.lat, pin.lng);
-        inst.setLevel(3);
-        inst.panTo(ll);
+      // URL 에 lat/lng 없었으면 여기서 pin 좌표로 한 번 이동
+      if (inst && !(Number.isFinite(latParam) && Number.isFinite(lngParam) && latParam !== 0)) {
+        inst.setLevel(4);
+        inst.panTo(new window.kakao.maps.LatLng(pin.lat, pin.lng));
       }
-      // URL 유지 — 모바일에서 ?apt= 사라지면 피드로 튕겨나옴. 리프레시 시 패널 다시 열리는 게 의도된 동작.
     }
   }, [searchParams, pins, router]);
 
@@ -987,8 +999,16 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     loadKakaoSdk()
       .then(() => {
         if (cancelled || !mapRef.current || mapInstRef.current) return;
-        const center = new window.kakao.maps.LatLng(37.498, 127.027); // 강남 일대
-        const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
+        // 초기 중심 — URL 에 ?lat=&lng= 가 있으면 그 위치로 (디테일 페이지 → 지도 핀 흐름).
+        // 없으면 강남 일대 default. 이로써 apt 핀 클릭 시 '강남 1초 flash' 차단.
+        const urlLat = Number(searchParams.get('lat'));
+        const urlLng = Number(searchParams.get('lng'));
+        const hasUrlCoords = Number.isFinite(urlLat) && Number.isFinite(urlLng) && urlLat !== 0 && urlLng !== 0;
+        const center = hasUrlCoords
+          ? new window.kakao.maps.LatLng(urlLat, urlLng)
+          : new window.kakao.maps.LatLng(37.498, 127.027);
+        const initialLevel = hasUrlCoords ? 4 : 6;
+        const map = new window.kakao.maps.Map(mapRef.current, { center, level: initialLevel }) as KakaoMapInst;
         mapInstRef.current = map;
 
         // tier 기반 노출 — 원래 로직 복원
