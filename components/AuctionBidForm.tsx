@@ -120,6 +120,9 @@ export default function AuctionBidForm({
           <div className={`text-[24px] font-black tabular-nums leading-none ${lastFiveMinutes ? 'text-[#dc2626]' : 'text-navy'}`}>
             {formatRemaining(remainingMs)}
           </div>
+          <div className="text-[11px] text-muted mt-1 tabular-nums">
+            종료 {new Date(endsAt).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })}
+          </div>
         </div>
       </div>
 
