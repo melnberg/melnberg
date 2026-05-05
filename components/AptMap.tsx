@@ -91,6 +91,8 @@ export type FeedItem = {
   author_is_solo: boolean;
   author_avatar_url: string | null;
   author_apt_count: number | null;
+  /** 단지 댓글(comment) 전용 — 부모 토론글 id */
+  discussion_id?: number;
   /** 매물(listing) 전용 — 호가 mlbg */
   listing_price?: number | null;
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
@@ -461,8 +463,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         inst.setLevel(3);
         inst.panTo(ll);
       }
-      // URL 정리 — query 제거 (뒤로가기/새로고침 시 다시 안 열리게)
-      router.replace('/', { scroll: false });
+      // URL 유지 — 모바일에서 ?apt= 사라지면 피드로 튕겨나옴. 리프레시 시 패널 다시 열리는 게 의도된 동작.
     }
   }, [searchParams, pins, router]);
 
@@ -476,7 +477,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         setSelectedEmart(e);
         const inst = mapInstRef.current;
         if (inst) { inst.setLevel(3); inst.panTo(new window.kakao.maps.LatLng(e.lat, e.lng)); }
-        router.replace('/', { scroll: false });
       }
     }
     const factoryParam = searchParams.get('factory');
@@ -487,7 +487,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         setSelectedFactory(f);
         const inst = mapInstRef.current;
         if (inst) { inst.setLevel(3); inst.panTo(new window.kakao.maps.LatLng(f.lat, f.lng)); }
-        router.replace('/', { scroll: false });
       }
     }
   }, [searchParams, emartList, factoryList, router]);

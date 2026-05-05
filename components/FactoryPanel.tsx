@@ -26,7 +26,7 @@ export type FactoryItem = {
 
 type FactoryComment = { id: number; author_id: string; author_name: string | null; content: string; created_at: string };
 
-type Props = { factory: FactoryItem; onClose: () => void; onChanged: () => void };
+type Props = { factory: FactoryItem; onClose: () => void; onChanged: () => void; inline?: boolean };
 
 const BRAND_META: Record<FactoryItem['brand'], { label: string; bg: string; iconBg: string; pin: string }> = {
   hynix:   { label: 'SK하이닉스 캠퍼스', bg: '#E51E2A', iconBg: '#fee2e2', pin: '/pins/factory-hynix.svg' },
@@ -42,7 +42,7 @@ function fmtKstShort(iso: string): string {
   return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
+export default function FactoryPanel({ factory, onClose, onChanged, inline = false }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [busy, setBusy] = useState(false);
@@ -191,8 +191,10 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[170] bg-black/40" onClick={onClose} />
-      <aside className="fixed top-0 right-0 z-[180] w-[420px] max-w-[100vw] h-screen bg-white border-l border-border shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col">
+      {!inline && <div className="fixed inset-0 z-[170] bg-black/40" onClick={onClose} />}
+      <aside className={inline
+        ? 'block w-full bg-white flex flex-col'
+        : 'fixed top-0 right-0 z-[180] w-[420px] max-w-[100vw] h-screen bg-white border-l border-border shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col'}>
         <div className="px-5 py-4 flex items-center gap-3 flex-shrink-0" style={{ background: meta.bg }}>
           <img src={meta.pin} alt="" className="w-9 h-12 flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -200,7 +202,7 @@ export default function FactoryPanel({ factory, onClose, onChanged }: Props) {
             <h1 className="text-[18px] font-bold text-white truncate">{factory.name}</h1>
             {factory.address && <div className="text-[11px] text-white/80 truncate">{factory.address}</div>}
           </div>
-          <button type="button" onClick={onClose} className="text-white/90 hover:text-white text-[20px] leading-none px-1 cursor-pointer bg-transparent border-none">✕</button>
+          {!inline && <button type="button" onClick={onClose} className="text-white/90 hover:text-white text-[20px] leading-none px-1 cursor-pointer bg-transparent border-none">✕</button>}
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">

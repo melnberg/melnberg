@@ -18,30 +18,22 @@ function relTime(iso: string): string {
   return `${d.getMonth() + 1}.${d.getDate()}`;
 }
 
-// 피드 아이템 → 상세 페이지 또는 지도 진입 경로
+// 피드 아이템 → 풀페이지 라우트 (모바일 SNS 모델)
 function hrefFor(f: FeedItem): string | null {
   if ((f.kind === 'auction' || f.kind === 'auction_bid') && f.auction_id) return `/auctions/${f.auction_id}`;
   if (f.kind === 'post' || f.kind === 'post_comment') return f.post_id ? `/community/${f.post_id}` : null;
   if (f.kind === 'notice' && f.notice_href) return f.notice_href;
-  // 단지 관련 — 지도 진입 시 패널 자동 오픈
-  if (
-    f.kind === 'discussion' || f.kind === 'comment' ||
-    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch'
-  ) return f.apt_master_id ? `/?apt=${f.apt_master_id}` : null;
-  // 시설 — 지도 진입
-  if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/?emart=${f.apt_master_id}`;
-  if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/?factory=${f.apt_master_id}`;
-  return null;
-}
-
-// 멜른버그 내부 지도 핀으로 이동 (kind 별 query param 매핑)
-function internalMapHref(f: FeedItem): string | null {
-  if (
-    f.kind === 'discussion' || f.kind === 'comment' ||
-    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch'
-  ) return f.apt_master_id ? `/?apt=${f.apt_master_id}` : null;
-  if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/?emart=${f.apt_master_id}`;
-  if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/?factory=${f.apt_master_id}`;
+  // 단지 토론 — /d/{discussionId} 풀페이지
+  if (f.kind === 'discussion') return `/d/${f.id}`;
+  if (f.kind === 'comment') return f.discussion_id ? `/d/${f.discussion_id}` : null;
+  // 매물/호가 류 — 단지가 핵심이라 단지 토론 페이지로 묶을 수도 있지만,
+  // 우선 단지 첫번째 토론 없을 수 있으니 지도로 (/?apt=) 보냄.
+  if (f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch') {
+    return f.apt_master_id ? `/?apt=${f.apt_master_id}` : null;
+  }
+  // 시설 — 풀페이지
+  if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/e/${f.apt_master_id}`;
+  if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/f/${f.apt_master_id}`;
   return null;
 }
 
@@ -96,7 +88,6 @@ export default function MobileFeedList({ items }: Props) {
             : (f.kind === 'post' || f.kind === 'post_comment') ? '커뮤니티'
             : (f.apt_nm ?? '');
           const fullContent = (f.content ?? '').trim();
-          const mapHref = internalMapHref(f);
           const isAuctionLive = f.kind === 'auction';
 
           const Wrapper: React.ElementType = href ? Link : 'div';
@@ -141,20 +132,6 @@ export default function MobileFeedList({ items }: Props) {
                     )}
                   </div>
                 </Wrapper>
-                {/* 우측 — 지도 마커: 내부 지도(핀) 로 이동 */}
-                {mapHref && (
-                  <Link
-                    href={mapHref}
-                    aria-label="지도에서 보기"
-                    className="flex-shrink-0 px-3 flex items-center justify-center text-navy border-l border-[#f0f0f0] active:bg-[#f5f7fa] no-underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                      <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                  </Link>
-                )}
               </div>
             </li>
           );

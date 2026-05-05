@@ -244,6 +244,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
         kind: 'comment',
         id: row.id as number,
         apt_master_id: (disc?.apt_master_id ?? 0) as number,
+        discussion_id: row.discussion_id as number,
         post_id: null,
         title: disc?.title ?? '(삭제된 글)',
         content: row.content as string | null,

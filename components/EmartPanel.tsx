@@ -28,13 +28,14 @@ type Props = {
   emart: EmartItem;
   onClose: () => void;
   onChanged: () => void; // 분양/청구 후 부모 list 재조회
+  inline?: boolean;
 };
 
 function fmtKstShort(iso: string): string {
   return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-export default function EmartPanel({ emart, onClose, onChanged }: Props) {
+export default function EmartPanel({ emart, onClose, onChanged, inline = false }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [busy, setBusy] = useState(false);
@@ -194,8 +195,10 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[170] bg-black/40" onClick={onClose} />
-      <aside className="fixed top-0 right-0 z-[180] w-[420px] max-w-[100vw] h-screen bg-white border-l border-border shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col">
+      {!inline && <div className="fixed inset-0 z-[170] bg-black/40" onClick={onClose} />}
+      <aside className={inline
+        ? 'block w-full bg-white flex flex-col'
+        : 'fixed top-0 right-0 z-[180] w-[420px] max-w-[100vw] h-screen bg-white border-l border-border shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col'}>
         {/* 헤더 — 노란 바 */}
         <div className="bg-[#F5A623] px-5 py-4 flex items-center gap-3 flex-shrink-0">
           <img src="/pins/emart.svg" alt="" className="w-9 h-12 flex-shrink-0" />
@@ -204,7 +207,7 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
             <h1 className="text-[18px] font-bold text-white truncate">{emart.name}</h1>
             {emart.address && <div className="text-[11px] text-white/80 truncate">{emart.address}</div>}
           </div>
-          <button type="button" onClick={onClose} className="text-white/90 hover:text-white text-[20px] leading-none px-1 cursor-pointer bg-transparent border-none">✕</button>
+          {!inline && <button type="button" onClick={onClose} className="text-white/90 hover:text-white text-[20px] leading-none px-1 cursor-pointer bg-transparent border-none">✕</button>}
         </div>
 
         {/* 본문 */}
