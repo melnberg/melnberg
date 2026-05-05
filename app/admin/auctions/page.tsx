@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AdminAuctionForm from '@/components/AdminAuctionForm';
 import TelegramResendButton from '@/components/TelegramResendButton';
+import Countdown from '@/components/Countdown';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 
@@ -82,8 +83,14 @@ export default async function AdminAuctionsPage() {
                         {a.current_bidder_name && <div className="text-[10px] text-muted">{a.current_bidder_name}</div>}
                       </td>
                       <td className="py-1.5 px-2 text-center tabular-nums">{a.bid_count}</td>
-                      <td className="py-1.5 px-2 text-center text-muted tabular-nums">
-                        {new Date(a.ends_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                      <td className="py-1.5 px-2 text-center tabular-nums">
+                        {a.status === 'active' ? (
+                          <span className="text-[#dc2626] font-bold"><Countdown endsAt={a.ends_at} /></span>
+                        ) : (
+                          <span className="text-muted text-[11px]">
+                            {new Date(a.ends_at).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
+                          </span>
+                        )}
                       </td>
                       <td className="py-1.5 px-2 text-center">
                         {a.status === 'active' && <TelegramResendButton auctionId={a.id} />}
