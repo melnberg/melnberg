@@ -834,7 +834,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
           if (tier === 0 || occupied || listed) return true;
           if (tier === 1 && lvl <= 7) return true;   // green (1000+) — 4km 까지
-          if (tier === 2 && lvl <= 6) return true;   // blue (300+) — 1km 까지
+          if (tier === 2 && lvl <= 5) return true;   // blue (300+) — 500m 까지
           if (tier === 3 && lvl <= 4) return true;   // dot (<300) — 250m 까지
           return false;
         }
