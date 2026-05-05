@@ -167,8 +167,9 @@ const CLUSTER_STYLES = [
 
 type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
 
-const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v1';
-const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v1';
+// v2: 평당가 buggy 배포 시점에 빈 캐시가 박힌 케이스 대응 — 키 bump 로 강제 fresh fetch
+const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v2';
+const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v2';
 const PINS_CACHE_TTL_MS = 5 * 60 * 1000; // 5분 — 서버 캐시와 동일
 
 function readPinCache(key: string): { ts: number; pins: AptPin[] } | null {
@@ -212,11 +213,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
     // 1단계: 큰 단지·점거 단지 — 캐시 우선
     const cachedBig = readPinCache(PINS_CACHE_KEY_BIG);
-    if (cachedBig?.pins?.length) {
-      bigPins.push(...cachedBig.pins);
+    const cachedBigHasPins = !!cachedBig?.pins?.length;
+    if (cachedBigHasPins) {
+      bigPins.push(...cachedBig!.pins);
       applyPins();
     }
-    if (!cachedBig || Date.now() - cachedBig.ts >= PINS_CACHE_TTL_MS) {
+    // 캐시 없거나 / 비어있거나 / 만료됐으면 fresh fetch
+    if (!cachedBigHasPins || Date.now() - cachedBig!.ts >= PINS_CACHE_TTL_MS) {
       (async () => {
         try {
           const r = await fetch('/api/home-pins');
@@ -225,7 +228,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           if (cancelled) return;
           bigPins.length = 0;
           bigPins.push(...json.pins);
-          writePinCache(PINS_CACHE_KEY_BIG, json.pins);
+          if (json.pins.length > 0) writePinCache(PINS_CACHE_KEY_BIG, json.pins); // 빈 배열은 캐시 안 함
           applyPins();
         } catch { /* ignore */ }
       })();
@@ -235,11 +238,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const smallTimer = setTimeout(() => {
       if (cancelled) return;
       const cachedSmall = readPinCache(PINS_CACHE_KEY_SMALL);
-      if (cachedSmall?.pins?.length) {
-        smallPins.push(...cachedSmall.pins);
+      const cachedSmallHasPins = !!cachedSmall?.pins?.length;
+      if (cachedSmallHasPins) {
+        smallPins.push(...cachedSmall!.pins);
         applyPins();
       }
-      if (!cachedSmall || Date.now() - cachedSmall.ts >= PINS_CACHE_TTL_MS) {
+      if (!cachedSmallHasPins || Date.now() - cachedSmall!.ts >= PINS_CACHE_TTL_MS) {
         (async () => {
           try {
             const r = await fetch('/api/home-pins?detail=1');
@@ -248,7 +252,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             if (cancelled) return;
             smallPins.length = 0;
             smallPins.push(...json.pins);
-            writePinCache(PINS_CACHE_KEY_SMALL, json.pins);
+            if (json.pins.length > 0) writePinCache(PINS_CACHE_KEY_SMALL, json.pins);
             applyPins();
           } catch { /* ignore */ }
         })();
