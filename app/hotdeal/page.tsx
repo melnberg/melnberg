@@ -45,7 +45,6 @@ export default async function HotdealPage() {
             <b>핫딜 게시판 안내</b>
             <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
               <li>만두·쇼핑·먹거리·생활용품 등 회원 간 알면 좋은 핫한 정보 공유</li>
-              <li>매매·임대 부동산 정보는 해당 단지 패널의 매물 등록 기능 사용</li>
               <li>적립 mlbg: 일반 커뮤글의 <b>2.5배 (글 5 / 댓글 1)</b></li>
               <li>AI 평가는 동일 — 정성껏 쓴 분석은 최대 1.5배, 한두 줄 짧은 글은 0.1배</li>
             </ul>

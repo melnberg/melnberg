@@ -10,6 +10,7 @@ import { getAptListingPrice } from '@/lib/listing-price';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { linkify } from '@/lib/linkify';
+import ListingInteractions from './ListingInteractions';
 
 type Discussion = {
   id: number;
@@ -739,6 +740,16 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
             >
               로그인하고 분양받기
             </Link>
+          )}
+
+          {/* 매물 인터랙션 — 매물 등록된 단지에서만 표시: 댓글·매수호가·내놔·받은호가 */}
+          {(listingPrice != null || (occupierId === userId)) && (
+            <ListingInteractions
+              aptId={apt.id}
+              userId={userId}
+              isOwner={occupierId === userId}
+              onTradeExecuted={() => reload()}
+            />
           )}
 
           {/* 히스토리 토글 */}
