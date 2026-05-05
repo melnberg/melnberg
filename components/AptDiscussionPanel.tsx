@@ -541,7 +541,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#00B0F0" className="flex-shrink-0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                 <span className="text-[12px] text-[#666] font-medium flex-shrink-0">점거인</span>
                 <span className="text-[14px] font-bold text-black truncate">
-                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid, isSolo: occupierIsSolo }} />
+                  <Nickname info={{ name: occupierName, link: occupierLink, isPaid: occupierIsPaid, isSolo: occupierIsSolo, userId: occupierId }} />
                 </span>
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">
@@ -723,7 +723,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap [&::first-line]:font-bold">{d.content}</p>
                   )}
                   <div className="text-[11px] text-muted mt-2 flex items-center gap-2">
-                    <Nickname info={author} className="text-muted" />
+                    <Nickname info={{ ...author, userId: d.author_id }} className="text-muted" />
 
                     <span>·</span>
                     <span>{relativeTime(d.created_at)}</span>
@@ -769,7 +769,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                           <div key={c.id} className="text-[12px]">
                             <p className="text-text whitespace-pre-wrap leading-snug">{c.content}</p>
                             <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
-                              <Nickname info={cAuthor} className="text-muted" />
+                              <Nickname info={{ ...cAuthor, userId: c.author_id }} className="text-muted" />
                               <span>·</span>
                               <span>{relativeTime(c.created_at)}</span>
                               {userId && (
@@ -797,7 +797,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                     <div key={r.id} className="text-[12px]">
                                       <p className="text-text whitespace-pre-wrap leading-snug">{r.content}</p>
                                       <div className="text-[10px] text-muted mt-0.5 flex items-center gap-1.5">
-                                        <Nickname info={rAuthor} className="text-muted" />
+                                        <Nickname info={{ ...rAuthor, userId: r.author_id }} className="text-muted" />
                                         <span>·</span>
                                         <span>{relativeTime(r.created_at)}</span>
                                         {rIsMine && (

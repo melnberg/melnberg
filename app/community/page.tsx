@@ -85,6 +85,7 @@ export default async function CommunityPage() {
                           link: p.author?.link_url ?? null,
                           isPaid: p.author?.tier === 'paid' && (!p.author?.tier_expires_at || new Date(p.author.tier_expires_at).getTime() > Date.now()),
                           isSolo: !!p.author?.is_solo,
+                          userId: p.author_id,
                         }} />
                         </span>
                       </td>

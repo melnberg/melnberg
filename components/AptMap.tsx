@@ -51,15 +51,16 @@ declare global {
 export type FeedItem = {
   kind: 'discussion' | 'comment' | 'post' | 'post_comment';
   id: number;
-  apt_master_id: number;     // post/post_comment 일 땐 0
-  post_id: number | null;    // post: 자기 id / post_comment: 부모 post id / 그 외 null
-  title: string;             // discussion: 글 제목 / comment: 부모 글 제목 / post: 글 제목 / post_comment: 부모 글 제목
+  apt_master_id: number;
+  post_id: number | null;
+  title: string;
   content: string | null;
   created_at: string;
   apt_nm: string | null;
   dong: string | null;
   lat: number | null;
   lng: number | null;
+  author_id: string | null;
   author_name: string | null;
   author_link: string | null;
   author_is_paid: boolean;
@@ -791,7 +792,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           {p.occupier_id ? (
                             <Nickname info={(() => {
                               const pf = occupierProfiles.get(p.occupier_id);
-                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo } : { name: '...' };
+                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo, userId: p.occupier_id } : { name: '...' };
                             })()} />
                           ) : ''}
                         </div>
@@ -838,28 +839,37 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           <button
                             type="button"
                             onClick={() => jumpToFeedItem(f)}
-                            className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1"
+                            className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1 bg-transparent border-none p-0 cursor-pointer"
                           >
                             {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo }} />
+                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo, userId: f.author_id }} />
                           </span>
                         </div>
-                        {isComment ? (
-                          <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
-                            <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
-                            <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-[12px] text-text leading-snug mb-0.5 break-words">{f.title}</div>
-                            {fullContent && (
-                              <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">{fullContent}</div>
-                            )}
-                          </>
-                        )}
-                        <div className="text-[10px] text-muted mt-1">{feedRelTime(f.created_at)} 전</div>
+                        {/* 본문 영역 — 클릭 시 jumpToFeedItem 으로 이동 (글로) */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => jumpToFeedItem(f)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') jumpToFeedItem(f); }}
+                          className="cursor-pointer hover:opacity-80"
+                        >
+                          {isComment ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
+                              <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-[12px] text-text leading-snug mb-0.5 break-words">{f.title}</div>
+                              {fullContent && (
+                                <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">{fullContent}</div>
+                              )}
+                            </>
+                          )}
+                          <div className="text-[10px] text-muted mt-1">{feedRelTime(f.created_at)} 전</div>
+                        </div>
                       </div>
                     </li>
                   );

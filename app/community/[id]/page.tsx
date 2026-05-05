@@ -71,6 +71,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   link: post.author?.link_url ?? null,
                   isPaid: post.author?.tier === 'paid' && (!post.author?.tier_expires_at || new Date(post.author.tier_expires_at).getTime() > Date.now()),
                   isSolo: !!post.author?.is_solo,
+                  userId: post.author_id,
                 }} />
               </span>
               <span>·</span>
