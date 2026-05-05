@@ -50,7 +50,8 @@ end;
 $$;
 grant execute on function public.claim_emart_income() to authenticated;
 
--- list_emart_with_occupation 도 last_claimed_at 노출하도록 확장
+-- list_emart_with_occupation 도 last_claimed_at 노출하도록 확장 — 시그니처 변경이라 DROP 필요
+drop function if exists public.list_emart_with_occupation();
 create or replace function public.list_emart_with_occupation()
 returns table(
   id bigint,

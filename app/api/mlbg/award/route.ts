@@ -1,32 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { getOpenAI } from '@/lib/openai';
 
 export const dynamic = 'force-dynamic';
 
 type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment';
 
-const BASE: Record<Kind, number> = {
-  apt_post: 1.0,
-  apt_comment: 0.5,
-  community_post: 2.0,
-  community_comment: 0.3,
-  hotdeal_post: 5.0,         // 핫딜 글 — 일반 커뮤글의 2.5배
-  hotdeal_comment: 1.0,      // 핫딜 댓글 — 일반 커뮤댓글의 ~3배
-};
+// 결정론적 정책 — AI 평가 제거. 줄 수 기반 고정 지급.
+//   글 (community/hotdeal): 기본 2 mlbg
+//   글 (apt):
+//     1줄: 0 mlbg (지급 없음)
+//     2~4줄: 2 mlbg (기본)
+//     5~9줄: 3 mlbg
+//     10줄+: 5 mlbg
+//   댓글 (어디든): 1 mlbg
+function countLines(content: string): number {
+  return (content ?? '').split('\n').map((l) => l.trim()).filter((l) => l.length > 0).length;
+}
 
-const KIND_LABEL: Record<Kind, string> = {
-  apt_post: '아파트 단지 평가 글',
-  apt_comment: '아파트 단지 평가 댓글',
-  community_post: '커뮤니티 게시판 글',
-  community_comment: '커뮤니티 게시판 댓글',
-  hotdeal_post: '핫딜 정보 글',
-  hotdeal_comment: '핫딜 댓글',
-};
+function evaluateAward(kind: Kind, content: string): { earned: number; reason: string } {
+  if (kind.endsWith('_comment')) return { earned: 1, reason: '댓글' };
+  const lines = countLines(content);
+  if (kind === 'apt_post') {
+    if (lines <= 1) return { earned: 0, reason: '아파트 1줄 — 미지급' };
+    if (lines >= 10) return { earned: 5, reason: '아파트 10줄+' };
+    if (lines >= 5) return { earned: 3, reason: '아파트 5줄+' };
+    return { earned: 2, reason: '아파트 글 기본' };
+  }
+  // community_post / hotdeal_post — 기본 2
+  return { earned: 2, reason: '글 작성 기본' };
+}
 
-// AI 평가 — multiplier 0.1 ~ 1.5 범위로 반환
-async function evaluateQuality(kind: Kind, content: string): Promise<{ multiplier: number; reason: string }> {
+// (deprecated AI 평가 — 정책 단순화로 제거. 호환 위한 stub 유지)
+async function _legacyAi(kind: Kind, content: string): Promise<{ multiplier: number; reason: string }> {
   const text = (content ?? '').trim();
   if (!text) return { multiplier: 0.1, reason: '내용 없음' };
 

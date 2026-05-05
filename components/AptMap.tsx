@@ -885,8 +885,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
           if (occupied || listed) return true;       // 점거·매물은 어떤 줌이든 항상 노출
           if (tier === 0) return true;                // red/orange (2000+) — 항상
-          if (tier === 1 && lvl <= 7) return true;    // green (1000+) — 4km 까지
-          if (tier === 2 && lvl <= 4) return true;    // blue (300+) — 250m 까지 (500m·1km 줌에선 숨김)
+          if (tier === 1 && lvl <= 5) return true;    // green (1000+) — 500m 까지 (1km 줌에선 숨김)
+          if (tier === 2 && lvl <= 4) return true;    // blue (300+) — 250m 까지
           if (tier === 3 && lvl <= 4) return true;    // dot (<300) — 250m 까지
           return false;
         }
