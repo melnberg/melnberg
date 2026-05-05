@@ -1473,7 +1473,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isAuction = f.kind === 'auction';
                   const isAuctionBid = f.kind === 'auction_bid';
                   const isNotice = f.kind === 'notice';
-                  const headLabel = isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
+                  const headLabel = isNotice ? '이마트' : isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
                       <div className={`px-3 py-2.5 ${
