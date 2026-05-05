@@ -850,17 +850,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             if (normalCount < VISIBLE_CAP) { showSet.add(e); normalCount++; }
           }
           const lvl = map.getLevel();
-          // 평당가 라벨 노출 기준
-          //  level <= 2 (~100m): 모든 단지
-          //  level == 3 (~250m): 300세대 이상 큰 단지만
-          //  level >= 4: 라벨 안 노출
+          // 평당가 라벨 노출 기준 (카카오 줌: 1=25m, 2=50m, 3=100m, 4=250m, 5=500m)
+          //  level <= 3 (~100m): 모든 단지
+          //  level == 4 (~250m): 300세대 이상 큰 단지만
+          //  level >= 5: 라벨 안 노출
           for (const e of markersRef.current) {
             const v = showSet.has(e);
             e.marker.setMap(v ? map : null);
             if (e.overlay) {
               let showLabel = false;
-              if (lvl <= 2) showLabel = true;
-              else if (lvl === 3) showLabel = e.hh >= 300;
+              if (lvl <= 3) showLabel = true;
+              else if (lvl === 4) showLabel = e.hh >= 300;
               e.overlay.setMap(v && showLabel ? map : null);
             }
           }
