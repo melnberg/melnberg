@@ -5,10 +5,21 @@ import { useEffect, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
+import InlineCommentBox, { type InlineKind } from './InlineCommentBox';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
+import { createClient } from '@/lib/supabase/client';
 
 const SCROLL_KEY = 'mlbg.feed.scroll';
 const LAST_CLICK_KEY = 'mlbg.feed.lastClick';
+
+// kind → InlineCommentBox 가 다룰 부모 식별. 댓글 자체 종류는 펼치기 미지원.
+function inlineKindFor(f: FeedItem): { kind: InlineKind; parentId: number } | null {
+  if (f.kind === 'discussion') return { kind: 'discussion', parentId: f.id };
+  if (f.kind === 'post') return f.post_id ? { kind: 'post', parentId: f.post_id } : null;
+  if (f.kind === 'emart_occupy') return { kind: 'emart_occupy', parentId: f.apt_master_id };
+  if (f.kind === 'factory_occupy') return { kind: 'factory_occupy', parentId: f.apt_master_id };
+  return null;
+}
 
 type Props = { items: FeedItem[] };
 
@@ -68,6 +79,24 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 
 export default function MobileFeedList({ items }: Props) {
   const [lastClickKey, setLastClickKey] = useState<string | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [me, setMe] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+      const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+      const name = (prof as { display_name?: string } | null)?.display_name
+        ?? (user.user_metadata?.display_name as string | undefined)
+        ?? user.email?.split('@')[0] ?? '회원';
+      if (!cancelled) setMe({ id: user.id, name });
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // 브라우저 자동 스크롤 복원 끄기 — 우리가 sessionStorage 로 직접 관리.
   // 이 옵션이 켜져있으면 뒤로가기 시 떠나는 페이지에 잘못된 스크롤이 적용됨.
@@ -119,13 +148,10 @@ export default function MobileFeedList({ items }: Props) {
 
   return (
     <div className="bg-white">
-      <div className="sticky top-0 z-10 bg-white border-b border-border h-[52px] relative flex items-center justify-center">
+      <div className="sticky top-0 z-10 bg-white border-b border-border h-[52px] flex items-center justify-center">
         <Link href="/" className="flex items-center gap-2 no-underline">
           <img src="/logo.svg" alt="" className="w-7 h-7 flex-shrink-0" />
           <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
-        </Link>
-        <Link href="/?view=map" className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-navy no-underline px-2 py-1 border border-border hover:border-navy">
-          지도 →
         </Link>
       </div>
       <ul>
@@ -145,6 +171,9 @@ export default function MobileFeedList({ items }: Props) {
           const itemKey = `${f.kind}-${f.id}`;
           const isLastClicked = itemKey === lastClickKey;
           const onItemClick = () => rememberPosition(itemKey);
+          const inlineCfg = inlineKindFor(f);
+          const cnt = counts[itemKey] ?? f.comment_count ?? 0;
+          const isExpanded = expandedKey === itemKey;
           return (
             <li key={itemKey} className={`border-b border-[#f0f0f0] ${isAuctionLive ? 'bg-[#fef2f2] border-l-4 border-l-[#dc2626]' : isLastClicked ? 'bg-[#eef4fb]' : ''}`}>
               <div className="flex items-stretch">
@@ -176,15 +205,38 @@ export default function MobileFeedList({ items }: Props) {
                       ) : null}
                     </span>
                   </div>
-                  {/* 메타 — 시각 + 보상 */}
+                  {/* 메타 — 시각 + 보상 + 댓글 카운트 (우측) */}
                   <div className="text-[10px] text-muted mt-1.5 flex items-center gap-2">
                     <span>{relTime(f.created_at)} 전</span>
                     {typeof f.earned_mlbg === 'number' && (
                       <RewardTooltip earned={f.earned_mlbg} kind={rewardKind(f.kind)} />
                     )}
+                    {inlineCfg && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpandedKey(isExpanded ? null : itemKey); }}
+                        className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 text-navy hover:bg-navy-soft cursor-pointer bg-transparent border-none"
+                        aria-label={`댓글 ${cnt}개`}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span className="tabular-nums">{cnt}</span>
+                      </button>
+                    )}
                   </div>
                 </Wrapper>
               </div>
+              {/* 인라인 댓글 영역 — 말풍선 클릭 시 펼침 */}
+              {isExpanded && inlineCfg && (
+                <InlineCommentBox
+                  kind={inlineCfg.kind}
+                  parentId={inlineCfg.parentId}
+                  currentUserId={me?.id ?? null}
+                  currentUserName={me?.name ?? null}
+                  onCountChange={(n) => setCounts((c) => ({ ...c, [itemKey]: n }))}
+                />
+              )}
             </li>
           );
         })}

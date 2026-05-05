@@ -208,6 +208,39 @@ async function fetchFeed(): Promise<FeedItem[]> {
         awardMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
       }
     }
+
+    // 댓글 카운트 — 단지 토론 / 커뮤니티 글 / 시설 분양 별로 부모 id → count 매핑
+    const discIds = (discs ?? []).map((d) => (d as { id: number }).id);
+    const postIds = (posts ?? []).map((p) => (p as { id: number }).id);
+    const emartIds = emartRows.map((e) => e.emart_id);
+    const factoryIds = factoryRows.map((f) => f.factory_id);
+
+    const [discCommRows, postCommRows, emartCommCntRows, factoryCommCntRows] = await Promise.all([
+      discIds.length > 0
+        ? supabase.from('apt_discussion_comments').select('discussion_id').in('discussion_id', discIds).is('deleted_at', null)
+            .then((r) => (r.data ?? []) as Array<{ discussion_id: number }>, () => [] as Array<{ discussion_id: number }>)
+        : Promise.resolve([] as Array<{ discussion_id: number }>),
+      postIds.length > 0
+        ? supabase.from('comments').select('post_id').in('post_id', postIds).is('deleted_at', null)
+            .then((r) => (r.data ?? []) as Array<{ post_id: number }>, () => [] as Array<{ post_id: number }>)
+        : Promise.resolve([] as Array<{ post_id: number }>),
+      emartIds.length > 0
+        ? supabase.from('emart_comments').select('emart_id').in('emart_id', emartIds).is('deleted_at', null)
+            .then((r) => (r.data ?? []) as Array<{ emart_id: number }>, () => [] as Array<{ emart_id: number }>)
+        : Promise.resolve([] as Array<{ emart_id: number }>),
+      factoryIds.length > 0
+        ? supabase.from('factory_comments').select('factory_id').in('factory_id', factoryIds).is('deleted_at', null)
+            .then((r) => (r.data ?? []) as Array<{ factory_id: number }>, () => [] as Array<{ factory_id: number }>)
+        : Promise.resolve([] as Array<{ factory_id: number }>),
+    ]);
+    const discCommCnt = new Map<number, number>();
+    for (const r of discCommRows) discCommCnt.set(r.discussion_id, (discCommCnt.get(r.discussion_id) ?? 0) + 1);
+    const postCommCnt = new Map<number, number>();
+    for (const r of postCommRows) postCommCnt.set(r.post_id, (postCommCnt.get(r.post_id) ?? 0) + 1);
+    const emartCommCnt = new Map<number, number>();
+    for (const r of emartCommCntRows) emartCommCnt.set(r.emart_id, (emartCommCnt.get(r.emart_id) ?? 0) + 1);
+    const factoryCommCnt = new Map<number, number>();
+    for (const r of factoryCommCntRows) factoryCommCnt.set(r.factory_id, (factoryCommCnt.get(r.factory_id) ?? 0) + 1);
     const earnedFor = (kind: string, refId: number): number | null => awardMap.get(`${kind}:${refId}`) ?? null;
 
     const discussionItems: FeedItem[] = (discs ?? []).map((r) => {
@@ -234,6 +267,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
         earned_mlbg: earnedFor('apt_post', row.id as number),
+        comment_count: discCommCnt.get(row.id as number) ?? 0,
       };
     });
 
@@ -286,6 +320,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
         earned_mlbg: earnedFor('community_post', row.id as number),
+        comment_count: postCommCnt.get(row.id as number) ?? 0,
       };
     });
 
@@ -494,6 +529,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
+        comment_count: factoryCommCnt.get(r.factory_id) ?? 0,
       };
     });
 
@@ -520,6 +556,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
+        comment_count: emartCommCnt.get(r.emart_id) ?? 0,
       };
     });
 

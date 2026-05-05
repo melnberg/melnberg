@@ -93,6 +93,8 @@ export type FeedItem = {
   author_apt_count: number | null;
   /** 단지 댓글(comment) 전용 — 부모 토론글 id */
   discussion_id?: number;
+  /** 댓글 수 (피드 카드 우측하단 말풍선용). discussion/post/emart_occupy/factory_occupy 만 채움. */
+  comment_count?: number;
   /** 매물(listing) 전용 — 호가 mlbg */
   listing_price?: number | null;
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
