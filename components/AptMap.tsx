@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
@@ -335,6 +336,23 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
+  // 진행중 경매 — 60초 폴링, 좌측 LIVE 배너 표시용
+  const [liveAuctions, setLiveAuctions] = useState<Array<{ id: number; apt_nm: string | null; current_bid: number | null; min_bid: number; ends_at: string }>>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchLive() {
+      try {
+        const r = await fetch('/api/active-auctions');
+        if (!r.ok) return;
+        const json = await r.json();
+        if (cancelled) return;
+        setLiveAuctions((json.auctions ?? []).slice(0, 3));
+      } catch { /* silent */ }
+    }
+    fetchLive();
+    const id = setInterval(fetchLive, 60000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
   const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null; aptCount: number | null }>>(new Map());
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1195,6 +1213,20 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               </li>
             ))}
           </ul>
+        )}
+        {liveAuctions.length > 0 && (
+          <Link
+            href={liveAuctions.length === 1 ? `/auctions/${liveAuctions[0].id}` : '/auctions'}
+            className="bg-[#dc2626] text-white px-3 py-2 shadow-[0_2px_8px_rgba(220,38,38,0.4)] text-[12px] font-bold flex items-center gap-1.5 border border-[#b91c1c] hover:bg-[#b91c1c] no-underline animate-pulse-glow"
+          >
+            <span className="text-[14px]">🔥</span>
+            <span className="font-black tracking-wide">LIVE 경매 {liveAuctions.length}건</span>
+            <span className="ml-auto text-[10px] opacity-90 truncate">
+              {liveAuctions.length === 1
+                ? `${liveAuctions[0].apt_nm ?? '단지'} · ${Number(liveAuctions[0].current_bid ?? liveAuctions[0].min_bid).toLocaleString()} mlbg`
+                : '클릭'}
+            </span>
+          </Link>
         )}
         <button
           type="button"
