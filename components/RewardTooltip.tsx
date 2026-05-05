@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 
-// +N mlbg 뱃지 + 클릭 시 보상 지급 기준 박스 표시
+// +N mlbg 뱃지 + hover 시 보상 지급 기준 박스 표시
 type Props = {
   earned: number;
   kind?: 'apt_post' | 'apt_comment' | 'community_post' | 'hotdeal_post' | 'community_comment' | 'hotdeal_comment';
@@ -10,27 +10,19 @@ type Props = {
 
 export default function RewardTooltip({ earned }: Props) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
 
   return (
-    <span ref={wrapRef} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="tabular-nums bg-transparent border-none p-0 cursor-pointer text-text"
+    <span
+      className="relative inline-block"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <span
+        className="tabular-nums cursor-default"
         style={{ font: 'inherit', color: 'inherit' }}
       >
         +{earned} mlbg
-      </button>
+      </span>
       {open && (
         <div className="absolute left-0 top-full mt-1 z-50 w-[260px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
           <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">
@@ -69,7 +61,7 @@ export default function RewardTooltip({ earned }: Props) {
             </li>
           </ul>
           <div className="px-4 py-2.5 border-t border-white/15 text-[10px] text-white/70 leading-snug">
-            작성하면 작성자에게 자동 적립됩니다.
+            작성 시 작성자에게 자동 적립됩니다.
           </div>
         </div>
       )}
