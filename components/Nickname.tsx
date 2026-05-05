@@ -76,14 +76,7 @@ export default function Nickname({
   const userId = info?.userId ?? null;
 
   if (!isPaid) {
-    // 무료회원도 userId 있으면 닉네임 자체에 프로필 링크
-    if (userId) {
-      return (
-        <Link href={`/u/${userId}`} onClick={(e) => e.stopPropagation()} className={`hover:underline no-underline ${className}`}>
-          {name}
-        </Link>
-      );
-    }
+    // 무료회원은 그냥 텍스트 (프로필 페이지 X)
     return <span className={className}>{name}</span>;
   }
 
