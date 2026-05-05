@@ -822,52 +822,28 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
         mapInstRef.current = map;
 
-        // 뷰포트 culling — pan/zoom 끝난 시점(idle) 에 화면 안 핀만 골라서 top N 표시
-        // 점거/매물 핀은 게임 정보라 cap·tier 무시하고 항상 노출
-        const VISIBLE_CAP = 180;
-        // 줌 레벨별 일반 핀 최소 세대수 (카카오: 1=25m, 2=50m, 3=100m, 4=250m, 5=500m, 6=1km, 7=2km)
-        function minHhForLevel(lvl: number): number {
-          if (lvl <= 4) return 0;       // 250m 이하: 모든 단지
-          if (lvl === 5) return 1000;   // 500m: 1000세대 이상 (green/orange/red)
-          if (lvl === 6) return 2000;   // 1km: 2000세대 이상 (orange/red)
-          return 3000;                  // 2km+ : 3000세대 이상 (red)
+        // tier 기반 노출 — 원래 로직 복원
+        // tier 0 (≥2000세대): 항상 노출
+        // tier 1 (1000~1999): level <= 7
+        // tier 2 (300~999):   level <= 5
+        // tier 3 (<300):      level <= 4
+        // 점거/매물 핀은 tier 무관 항상 노출 (게임 정보)
+        function tierFor(hh: number): 0 | 1 | 2 | 3 {
+          return hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
+        }
+        function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
+          if (tier === 0 || occupied || listed) return true;
+          if (tier === 1 && lvl <= 7) return true;
+          if (tier === 2 && lvl <= 5) return true;
+          if (tier === 3 && lvl <= 4) return true;
+          return false;
         }
         const updateVisibility = () => {
-          const m = map as KakaoMapInst & { getBounds?: () => { getSouthWest: () => { getLat: () => number; getLng: () => number }; getNorthEast: () => { getLat: () => number; getLng: () => number } } };
-          const bounds = m.getBounds?.();
-          if (!bounds) return;
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const swLat = sw.getLat(), swLng = sw.getLng();
-          const neLat = ne.getLat(), neLng = ne.getLng();
-          const lvlEarly = map.getLevel();
-          const minHh = minHhForLevel(lvlEarly);
-          const inside: MarkerEntry[] = [];
-          for (const e of markersRef.current) {
-            if (e.lat < swLat || e.lat > neLat || e.lng < swLng || e.lng > neLng) continue;
-            // 점거/매물은 무조건 후보. 일반 핀은 줌 레벨별 세대수 임계값 통과해야.
-            if (!e.occupied && !e.listed && e.hh < minHh) continue;
-            inside.push(e);
-          }
-          inside.sort((a, b) => {
-            const ap = (a.occupied || a.listed) ? 1 : 0;
-            const bp = (b.occupied || b.listed) ? 1 : 0;
-            if (ap !== bp) return bp - ap;
-            return b.hh - a.hh;
-          });
-          const showSet = new Set<MarkerEntry>();
-          let normalCount = 0;
-          for (const e of inside) {
-            if (e.occupied || e.listed) { showSet.add(e); continue; }
-            if (normalCount < VISIBLE_CAP) { showSet.add(e); normalCount++; }
-          }
           const lvl = map.getLevel();
-          // 평당가 라벨 노출 기준 (카카오 줌: 1=25m, 2=50m, 3=100m, 4=250m, 5=500m)
-          //  level <= 3 (~100m): 모든 단지
-          //  level == 4 (~250m): 300세대 이상 큰 단지만
-          //  level >= 5: 라벨 안 노출
+          // 평당가 라벨: 줌 ≤ 3 (~100m) 모두 / 줌 == 4 (~250m) 300세대 이상 / 줌 ≥ 5 안 노출
           for (const e of markersRef.current) {
-            const v = showSet.has(e);
+            const tier = tierFor(e.hh);
+            const v = isVisibleForTier(tier, lvl, e.occupied, e.listed);
             e.marker.setMap(v ? map : null);
             if (e.overlay) {
               let showLabel = false;
@@ -877,8 +853,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             }
           }
         };
-        window.kakao.maps.event.addListener(map, 'idle', updateVisibility);
-        // 핀 chunk 적재 끝날 때마다 이 함수 호출되도록 window 이벤트로 중계
+        window.kakao.maps.event.addListener(map, 'zoom_changed', updateVisibility);
         window.addEventListener('mlbg-markers-updated', updateVisibility);
 
         setMapReady(true);
