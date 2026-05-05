@@ -3,6 +3,7 @@ import { createClient as createAdminSb } from '@supabase/supabase-js';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AdminPanel from '@/components/AdminPanel';
+import LaunchTelegramButton from '@/components/LaunchTelegramButton';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 import { type ProfileWithTier, type PaymentRecord } from '@/lib/tier';
@@ -76,6 +77,7 @@ export default async function AdminPage() {
               <a href="/admin/auctions" className="px-3 py-1.5 border border-[#dc2626] bg-[#dc2626] text-white text-[12px] font-bold no-underline hover:bg-[#b91c1c]">시한 경매</a>
               <a href="/admin/apt-master" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">아파트 마스터</a>
               <a href="/admin/feedback" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">건의사항</a>
+              <LaunchTelegramButton />
             </div>
           </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>

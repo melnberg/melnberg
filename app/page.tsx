@@ -418,7 +418,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       content,
       created_at: new Date().toISOString(),
       apt_nm: null, dong: null, lat: null, lng: null,
-      author_id: null, author_name: '멜른버그', author_link: null,
+      author_id: null, author_name: '분양홍보팀', author_link: null,
       author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
     });
     const NOTICE_ITEMS: FeedItem[] = [
