@@ -819,8 +819,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 5) || (tier === 3 && level <= 4);
             marker.setMap(visible ? map : null);
           }
-          // 평당가 라벨은 가까이 줌 했을 때만 (level <= 4)
-          const showLabels = level <= 4;
+          // 평당가 라벨은 어느 정도 가까이 줌 했을 때만 (level <= 5)
+          const showLabels = level <= 5;
           for (const ov of overlaysRef.current) ov.setMap(showLabels ? map : null);
         });
 
@@ -925,7 +925,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
         allMarkers.push({ marker, tier, occupied });
 
-        // 평당가 라벨 — 데이터 있는 단지만, 가까이 줌(level<=4) 했을 때만 노출
+        // 평당가 라벨 — 데이터 있는 단지만, 줌 level <= 5 일 때 노출
         if (p.pyeong_price && p.pyeong_price > 0) {
           const overlay = new window.kakao.maps.CustomOverlay({
             position: pos,
@@ -933,7 +933,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             yAnchor: 2.4,
             zIndex: 3,
             clickable: false,
-            map: level <= 4 ? map : undefined,
+            map: level <= 5 ? map : undefined,
           }) as KakaoOverlayInst;
           overlaysRef.current.push(overlay);
         }
