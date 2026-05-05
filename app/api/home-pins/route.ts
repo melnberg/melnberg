@@ -67,9 +67,19 @@ async function fetchPyeongDict(): Promise<Record<string, number>> {
   return dict;
 }
 
-// v3: apt_pyeong_avg MV 적재 전 빈 dict 가 600s 캐시된 상태 무효화
-const fetchBigCached = unstable_cache(fetchBig, ['home-pins-big-v4'], { revalidate: 300, tags: ['apt-master'] });
-const fetchSmallCached = unstable_cache(fetchSmall, ['home-pins-small-v4'], { revalidate: 300, tags: ['apt-master'] });
+// v5: 빈 배열 캐시 포이즌 방지 가드 추가 (Supabase 일시 장애로 [] 가 5분 박혀 핀 사라지는 사고 재발 방지)
+async function fetchBigSafe(): Promise<unknown[]> {
+  const rows = await fetchBig();
+  if (rows.length === 0) throw new Error('empty pins — skip cache'); // 캐시 안 됨
+  return rows;
+}
+async function fetchSmallSafe(): Promise<unknown[]> {
+  const rows = await fetchSmall();
+  if (rows.length === 0) throw new Error('empty pins — skip cache');
+  return rows;
+}
+const fetchBigCached = unstable_cache(fetchBigSafe, ['home-pins-big-v5'], { revalidate: 300, tags: ['apt-master'] });
+const fetchSmallCached = unstable_cache(fetchSmallSafe, ['home-pins-small-v5'], { revalidate: 300, tags: ['apt-master'] });
 const fetchPyeongDictCached = unstable_cache(fetchPyeongDict, ['home-pins-pyeong-v3'], { revalidate: 600, tags: ['apt-pyeong'] });
 
 type PinRow = { apt_nm: string; lawd_cd: string; dong: string | null };
@@ -88,9 +98,10 @@ export async function GET(request: Request) {
   const fresh = url.searchParams.get('fresh') === '1';
 
   // 핀 데이터는 필수, 평당가는 best-effort. 평당가 fetch 가 실패해도 핀은 표시.
-  const pinsPromise = detail
-    ? (fresh ? fetchSmall() : fetchSmallCached())
-    : (fresh ? fetchBig() : fetchBigCached());
+  // cached 가 throw (빈 배열 가드) 한 경우 fresh fetch 로 폴백 — 절대 빈 응답 캐시 안 함.
+  const pinsPromise: Promise<unknown[]> = detail
+    ? (fresh ? fetchSmall() : fetchSmallCached().catch(() => fetchSmall()))
+    : (fresh ? fetchBig() : fetchBigCached().catch(() => fetchBig()));
   const pyeongPromise = fetchPyeongDictCached().catch(() => ({} as Record<string, number>));
 
   const [pinsRaw, pyeongDict] = await Promise.all([pinsPromise, pyeongPromise]);
