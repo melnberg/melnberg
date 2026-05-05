@@ -136,7 +136,7 @@ function HousingTag({ n, userId }: { n: number; userId?: string | null }) {
   );
 }
 
-const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px ml-1 align-middle';
+const BADGE_CLS = 'text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1 py-px align-middle leading-none';
 
 // 두 반원으로 깔끔하게 합친 dot. right=null이면 단색.
 function SoloDot({ left, right, size = 10 }: { left: string; right: string | null; size?: number }) {
@@ -301,17 +301,18 @@ export default function Nickname({
     );
   })();
 
-  // 조합원 배지 — userId 있으면 프로필 페이지로, 없으면 그냥 표시
+  // 조합원 배지 — 주택수 라벨이 있으면 그 옆에 딱 붙이고, 없으면 이름과 1px 간격
+  const badgeMargin = housingTag ? '' : 'ml-1';
   const badgeNode = userId ? (
     <Link
       href={`/u/${userId}`}
       onClick={(e) => e.stopPropagation()}
-      className={`${BADGE_CLS} no-underline hover:bg-cyan/80 cursor-pointer`}
+      className={`${BADGE_CLS} ${badgeMargin} no-underline hover:bg-cyan/80 cursor-pointer`}
     >
       조합원
     </Link>
   ) : (
-    <span className={BADGE_CLS}>조합원</span>
+    <span className={`${BADGE_CLS} ${badgeMargin}`}>조합원</span>
   );
 
   const tipPopup = mounted && tipOpen && tipPos && createPortal(
