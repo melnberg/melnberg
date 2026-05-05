@@ -65,7 +65,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: postId, author_id: currentUserId, content: content.trim(), parent_id: null })
-      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
       .single();
     setLoading(false);
     if (error || !data) {
@@ -88,7 +88,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     const { data, error } = await supabase
       .from('comments')
       .insert({ post_id: postId, author_id: currentUserId, content: replyContent.trim(), parent_id: parentId })
-      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
+      .select('id, post_id, author_id, parent_id, content, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
       .single();
     if (error || !data) {
       alert(error?.message ?? '저장 실패');

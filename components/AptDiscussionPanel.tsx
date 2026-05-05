@@ -180,7 +180,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         ? supabase.from('apt_discussion_comments').select('id, discussion_id, content, created_at, author_id, parent_id').in('discussion_id', ids).is('deleted_at', null).order('created_at', { ascending: true })
         : Promise.resolve({ data: [] as Comment[] | null }),
       authorIds.length > 0
-        ? supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count').in('id', authorIds)
+        ? supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').in('id', authorIds)
         : Promise.resolve({ data: [] as unknown[] | null }),
       user ? supabase.rpc('get_user_score', { p_user_id: user.id }) : Promise.resolve({ data: null }),
       user ? supabase.from('apt_master').select('id, apt_nm').eq('occupier_id', user.id).neq('id', apt.id).limit(1) : Promise.resolve({ data: null }),
@@ -216,7 +216,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (extraIds.length > 0) {
       const { data: extra } = await supabase
         .from('profiles')
-        .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count')
+        .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
         .in('id', extraIds);
       for (const p of (extra ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
         if (p.display_name) aMap.set(p.id, toInfo(p));

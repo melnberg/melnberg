@@ -476,7 +476,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count').in('id', ids);
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').in('id', ids);
     const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null; aptCount: number | null }>();
     const now = Date.now();
     for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
