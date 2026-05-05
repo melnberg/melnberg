@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
+import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
@@ -52,7 +53,7 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
   }
 
   const supabase = await createClient();
-  void supabase.rpc('increment_post_view', { p_post_id: numId }).then(() => {}, () => {});
+  // 조회수 +1 은 클라이언트(<PostViewCounter />)에서 sessionStorage dedup 후 처리.
   const { data: { user } } = await supabase.auth.getUser();
   const isAuthor = user?.id === post.author_id;
 
@@ -68,6 +69,7 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
 
   return (
     <Layout current="hotdeal">
+      <PostViewCounter postId={post.id} />
       <MainTop
         crumbs={[
           { href: '/', label: '멜른버그' },
