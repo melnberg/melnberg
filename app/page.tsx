@@ -591,13 +591,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <Layout current="home">
-      {/* 데스크톱 — 항상 지도. 모바일 forceMap 시에도 지도. */}
-      <div className={`flex-1 min-w-0 ${forceMap ? '' : 'hidden md:flex md:flex-col'}`}>
+      {/* 데스크톱 (lg+) — 항상 지도. 그 미만은 forceMap 시에만 지도. */}
+      <div className={`flex-1 min-w-0 ${forceMap ? '' : 'hidden lg:flex lg:flex-col'}`}>
         <AptMap feed={feed} />
       </div>
-      {/* 모바일 — forceMap 아닐 때 피드 풀스크린 */}
+      {/* lg 미만 — forceMap 아닐 때 피드 풀스크린 */}
       {!forceMap && (
-        <div className="md:hidden flex-1 min-w-0">
+        <div className="lg:hidden flex-1 min-w-0">
           <MobileFeedList items={feed} />
         </div>
       )}
