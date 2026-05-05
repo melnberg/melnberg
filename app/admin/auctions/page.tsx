@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AdminAuctionForm from '@/components/AdminAuctionForm';
+import TelegramResendButton from '@/components/TelegramResendButton';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 
@@ -83,6 +84,9 @@ export default async function AdminAuctionsPage() {
                       <td className="py-1.5 px-2 text-center tabular-nums">{a.bid_count}</td>
                       <td className="py-1.5 px-2 text-center text-muted tabular-nums">
                         {new Date(a.ends_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </td>
+                      <td className="py-1.5 px-2 text-center">
+                        {a.status === 'active' && <TelegramResendButton auctionId={a.id} />}
                       </td>
                     </tr>
                   ))}
