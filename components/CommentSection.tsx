@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
-import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
+import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import Nickname from './Nickname';
 
@@ -75,10 +75,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setList([...list, data as unknown as CommunityComment]);
     setContent('');
     const insertedId = (data as { id: number }).id;
-    awardMlbg('community_comment', insertedId, content.trim()).then((r) => {
-      const msg = awardToastMessage(r);
-      if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
-    });
+    void awardMlbg('community_comment', insertedId, content.trim());
     notifyTelegram('community_comment', insertedId);
     router.refresh();
   }
@@ -97,10 +94,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setList([...list, data as unknown as CommunityComment]);
     setReplyingTo(null);
     const insertedId = (data as { id: number }).id;
-    awardMlbg('community_comment', insertedId, replyContent.trim()).then((r) => {
-      const msg = awardToastMessage(r);
-      if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
-    });
+    void awardMlbg('community_comment', insertedId, replyContent.trim());
     notifyTelegram('community_comment', insertedId);
     router.refresh();
   }

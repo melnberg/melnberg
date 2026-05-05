@@ -2,7 +2,6 @@ import { unstable_cache } from 'next/cache';
 import Layout from '@/components/Layout';
 import AptMap, { type FeedItem } from '@/components/AptMap';
 import { createPublicClient } from '@/lib/supabase/public';
-import { fetchAptCounts } from '@/lib/apt-count';
 
 // 피드 — 30초 캐싱. 글(apt_discussions) + 댓글(apt_discussion_comments) 합쳐 시간순.
 const fetchFeed = unstable_cache(
@@ -53,12 +52,21 @@ const fetchFeed = unstable_cache(
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
     const profileMap = new Map<string, ProfRow>();
     if (allAuthorIds.length > 0) {
-      const { data: profs } = await supabase
-        .from('profiles')
-        .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
-        .in('id', allAuthorIds);
-      for (const p of (profs ?? []) as Array<{ id: string } & ProfRow>) {
-        profileMap.set(p.id, p);
+      const [{ data: profs }, aptCountResp] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
+          .in('id', allAuthorIds),
+        // SQL 062 적용되면 값이 들어오고, 미적용이면 error → 빈 Map 처리
+        supabase.from('profiles').select('id, apt_count').in('id', allAuthorIds)
+          .then((r) => r, () => ({ data: null })),
+      ]);
+      const aptCountMap = new Map<string, number>();
+      for (const r of ((aptCountResp as { data: unknown[] | null }).data ?? []) as Array<{ id: string; apt_count: number | null }>) {
+        aptCountMap.set(r.id, r.apt_count ?? 0);
+      }
+      for (const p of (profs ?? []) as Array<{ id: string } & Omit<ProfRow, 'apt_count'>>) {
+        profileMap.set(p.id, { ...p, apt_count: aptCountMap.get(p.id) ?? null });
       }
     }
     const now = Date.now();

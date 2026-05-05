@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
+import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Props = {
@@ -72,10 +72,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
         setErr(error?.message ?? '저장 실패');
         return;
       }
-      // AI 품질 평가 + mlbg 적립 — 결과 toast 후 이동
-      const award = await awardMlbg('community_post', data.id, content.trim());
-      const msg = awardToastMessage(award);
-      if (msg) alert(msg);
+      // AI 품질 평가 + mlbg 적립 — fire-and-forget (작성 차단 안 함, 마이페이지에서 확인)
+      void awardMlbg('community_post', data.id, content.trim());
       // 텔레그램 채널 알림 (fire-and-forget)
       notifyTelegram('community_post', data.id);
       router.push(`${redirectBase}/${data.id}`);

@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import Nickname, { type NicknameInfo } from './Nickname';
 import type { AptPin } from './AptMap';
 import { getAptListingPrice } from '@/lib/listing-price';
-import { awardMlbg, awardToastMessage } from '@/lib/mlbg-award';
+import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Discussion = {
@@ -200,10 +200,25 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     }
     setComments(cMap);
 
+    // 댓글 작성자까지 합한 전체 ID 로 apt_count 별도 fetch (SQL 062 미실행이어도 graceful)
+    const allIdsForCount = Array.from(new Set([
+      ...authorIds,
+      ...((cData ?? []) as Comment[]).map((c) => c.author_id),
+      ...(oid ? [oid] : []),
+    ].filter(Boolean) as string[]));
+    const aptCountMap = new Map<string, number>();
+    if (allIdsForCount.length > 0) {
+      const { data: aptCountRows } = await supabase.from('profiles').select('id, apt_count').in('id', allIdsForCount)
+        .then((r) => r, () => ({ data: null }));
+      for (const r of (aptCountRows ?? []) as Array<{ id: string; apt_count: number | null }>) {
+        aptCountMap.set(r.id, r.apt_count ?? 0);
+      }
+    }
+
     // 글 작성자 프로필 처리
     const aMap = new Map<string, NicknameInfo>();
     for (const p of (discAuthorProfs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
-      if (p.display_name) aMap.set(p.id, toInfo(p));
+      if (p.display_name) aMap.set(p.id, toInfo({ ...p, apt_count: aptCountMap.get(p.id) ?? null }));
     }
 
     // 댓글 작성자 중 글 작성자에 없는 사람들 — 추가 round
@@ -219,14 +234,15 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
         .in('id', extraIds);
       for (const p of (extra ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null }>) {
-        if (p.display_name) aMap.set(p.id, toInfo(p));
+        const merged = { ...p, apt_count: aptCountMap.get(p.id) ?? null };
+        if (p.display_name) aMap.set(p.id, toInfo(merged));
         // 점거인이면 별도 state 도 set
         if (p.id === oid) {
           setOccupierName(p.display_name ?? null);
           setOccupierLink(p.link_url ?? null);
           setOccupierIsPaid(p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > nowMs));
           setOccupierIsSolo(!!p.is_solo);
-          setOccupierAptCount(p.apt_count ?? null);
+          setOccupierAptCount(aptCountMap.get(p.id) ?? null);
         }
       }
     }
@@ -239,7 +255,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         setOccupierLink(occInfo.link ?? null);
         setOccupierIsPaid(!!occInfo.isPaid);
         setOccupierIsSolo(!!occInfo.isSolo);
-        setOccupierAptCount(occInfo.aptCount ?? null);
+        setOccupierAptCount(occInfo.aptCount ?? aptCountMap.get(oid) ?? null);
       }
     } else if (!oid) {
       setOccupierName(null);
@@ -448,9 +464,9 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
     if (error) { setSubmitErr(error.message); setSubmitting(false); return; }
     if (insertedId) {
-      const award = await awardMlbg('apt_post', insertedId, [titleLine, restLines ?? ''].join('\n').trim());
-      const msg = awardToastMessage(award);
-      if (msg) alert(msg);
+      // AI 평가 + mlbg 적립 — fire-and-forget. 작성 흐름 차단 안 함.
+      // 결과는 마이페이지 mlbg 잔액으로만 확인.
+      void awardMlbg('apt_post', insertedId, [titleLine, restLines ?? ''].join('\n').trim());
       notifyTelegram('apt_post', insertedId);
     }
     setSubmitting(false);
@@ -515,10 +531,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setCommentBody((prev) => { const m = new Map(prev); m.set(discussionId, ''); return m; });
     const cid = (data as { id: number } | null)?.id;
     if (cid) {
-      awardMlbg('apt_comment', cid, text).then((r) => {
-        const msg = awardToastMessage(r);
-        if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
-      });
+      void awardMlbg('apt_comment', cid, text);
       notifyTelegram('apt_comment', cid);
     }
     await reload();
@@ -536,10 +549,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setReplyTo(null);
     const cid = (data as { id: number } | null)?.id;
     if (cid) {
-      awardMlbg('apt_comment', cid, text).then((r) => {
-        const msg = awardToastMessage(r);
-        if (msg && r.ok && r.multiplier <= 0.3) alert(msg);
-      });
+      void awardMlbg('apt_comment', cid, text);
       notifyTelegram('apt_comment', cid);
     }
     await reload();
