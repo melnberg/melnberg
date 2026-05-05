@@ -1111,8 +1111,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         </div>
       )}
 
-      {/* 좌상단 — 아파트 검색 + 정보 배지 스택 */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 w-[280px]">
+      {/* 좌상단 — 아파트 검색 + 정보 배지 스택 (gap 없이 딱 붙임) */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col w-[280px]">
         <div className="bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-3 text-muted flex-shrink-0">
             <circle cx={11} cy={11} r={7} />
@@ -1209,54 +1209,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             )}
           </div>
         )}
-        <button
-          type="button"
-          onClick={toggleOccupied}
-          disabled={occupied.length === 0}
-          className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#eef4fb] hover:border-navy disabled:opacity-50 flex items-center gap-1.5"
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="#00B0F0"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z" /></svg>
-          <span>점거된 아파트 : {occupied.length.toLocaleString()}개단지</span>
-          <span className="ml-auto text-[11px] text-muted">{occupiedOpen ? '접기 ^' : '펼치기 v'}</span>
-        </button>
-        {occupiedOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-full max-h-[60vh] overflow-y-auto">
-            {occupied.length === 0 ? (
-              <div className="px-4 py-6 text-[12px] text-muted text-center">점거된 단지 없음</div>
-            ) : (
-              <ul>
-                {occupied.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => { jumpToApt(p); setOccupiedOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 border-b border-[#f0f0f0] last:border-b-0 bg-white hover:bg-[#eef4fb] flex items-center justify-between gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[13px] font-bold text-navy truncate">{p.apt_nm}</div>
-                        {p.dong && <div className="text-[10px] text-muted truncate">{p.dong}</div>}
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="text-[11px] text-cyan font-bold truncate">
-                          {p.occupier_id ? (
-                            <Nickname info={(() => {
-                              const pf = occupierProfiles.get(p.occupier_id);
-                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo, userId: p.occupier_id, avatarUrl: pf.avatarUrl, aptCount: pf.aptCount } : { name: '...' };
-                            })()} />
-                          ) : ''}
-                        </div>
-                        {p.occupied_at && (
-                          <div className="text-[10px] text-muted mt-0.5">{occupiedSinceLabel(p.occupied_at)}</div>
-                        )}
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-
         {/* 피드 — 단지별 글 최신순. 기본 펼침. */}
         <button
           type="button"
