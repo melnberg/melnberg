@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 import NotificationsBell from './NotificationsBell';
+import CheckinButton from './CheckinButton';
 
 export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; avatarUrl?: string | null };
 export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
@@ -85,6 +86,10 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                 ) : <span />}
                 <span className="text-muted hover:text-navy">마이페이지 →</span>
               </Link>
+              {/* 출석 체크 — 박스 안 하단 */}
+              <div className="px-3 pb-2 pt-1">
+                <CheckinButton />
+              </div>
             </div>
           ) : (
             <div className="flex gap-2">

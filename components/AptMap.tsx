@@ -345,20 +345,36 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [evicts, setEvicts] = useState<EvictEvent[] | null>(null);
   const [evictCount, setEvictCount] = useState(0);
 
-  // 스코어 랭킹 top 5
+  // 스코어 랭킹 + 자산 랭킹 top 10
   type RankRow = { user_id: string; display_name: string; score: number };
+  type WealthRow = { user_id: string; display_name: string; total_wealth: number; apt_count: number };
   const [ranking, setRanking] = useState<RankRow[]>([]);
+  const [wealthRanking, setWealthRanking] = useState<WealthRow[]>([]);
+  const [rankMode, setRankMode] = useState<'score' | 'wealth'>('score');
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch('/api/score-ranking');
-        if (!r.ok) return;
-        const json = (await r.json()) as { ranking: RankRow[] };
-        if (!cancelled) setRanking(json.ranking ?? []);
+        const [r1, r2] = await Promise.all([
+          fetch('/api/score-ranking'),
+          fetch('/api/wealth-ranking'),
+        ]);
+        if (r1.ok) {
+          const j1 = (await r1.json()) as { ranking: RankRow[] };
+          if (!cancelled) setRanking(j1.ranking ?? []);
+        }
+        if (r2.ok) {
+          const j2 = (await r2.json()) as { ranking: WealthRow[] };
+          if (!cancelled) setWealthRanking(j2.ranking ?? []);
+        }
       } catch { /* ignore */ }
     })();
     return () => { cancelled = true; };
+  }, []);
+  // 8초마다 score ↔ wealth 자동 토글
+  useEffect(() => {
+    const t = setInterval(() => setRankMode((m) => (m === 'score' ? 'wealth' : 'score')), 8000);
+    return () => clearInterval(t);
   }, []);
 
   // 피드 (단지별 글 최신순). 기본 펼침.
@@ -709,21 +725,43 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 상단 전광판 — 실시간 스코어 랭킹 TOP 10 (우→좌 마퀴) */}
-      {ranking.length > 0 && (
+      {/* 상단 전광판 — 스코어 ↔ 자산 랭킹 TOP 10 (8초마다 토글) */}
+      {((rankMode === 'score' && ranking.length > 0) || (rankMode === 'wealth' && wealthRanking.length > 0)) && (
         <div className="absolute top-4 left-[300px] right-4 z-20 bg-black border border-black shadow-[0_2px_8px_rgba(0,0,0,0.4)] px-3 py-2 text-[12px] flex items-center gap-3 tabular-nums tracking-wide">
-          <span className="font-bold text-yellow-300 flex-shrink-0 [text-shadow:0_0_6px_rgba(253,224,71,0.6)]">🏆 실시간 스코어 랭킹 TOP 10</span>
+          <button
+            type="button"
+            onClick={() => setRankMode((m) => (m === 'score' ? 'wealth' : 'score'))}
+            className="font-bold flex-shrink-0 bg-transparent border-none p-0 cursor-pointer"
+            title="클릭하면 랭킹 종류 전환"
+          >
+            {rankMode === 'score' ? (
+              <span className="text-yellow-300 [text-shadow:0_0_6px_rgba(253,224,71,0.6)]">🏆 스코어 TOP 10</span>
+            ) : (
+              <span className="text-[#fbcfe8] [text-shadow:0_0_6px_rgba(251,207,232,0.6)]">💰 자산 TOP 10</span>
+            )}
+          </button>
           <div className="marquee-mask flex-1 overflow-hidden">
             <div className="marquee-track flex w-max">
               {[0, 1].map((copy) => (
                 <div key={copy} aria-hidden={copy === 1} className="flex gap-8 pr-8">
-                  {ranking.map((r, i) => (
-                    <span key={`${copy}-${r.user_id}`} className="flex-shrink-0">
-                      <span className="text-yellow-300 font-bold [text-shadow:0_0_4px_rgba(253,224,71,0.5)]">{i + 1}위</span>{' '}
-                      <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{r.display_name}</span>
-                      <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {r.score}</span>
-                    </span>
-                  ))}
+                  {rankMode === 'score'
+                    ? ranking.map((r, i) => (
+                        <span key={`s-${copy}-${r.user_id}`} className="flex-shrink-0">
+                          <span className="text-yellow-300 font-bold [text-shadow:0_0_4px_rgba(253,224,71,0.5)]">{i + 1}위</span>{' '}
+                          <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{r.display_name}</span>
+                          <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {r.score}</span>
+                        </span>
+                      ))
+                    : wealthRanking.map((w, i) => (
+                        <span key={`w-${copy}-${w.user_id}`} className="flex-shrink-0">
+                          <span className="text-[#fbcfe8] font-bold [text-shadow:0_0_4px_rgba(251,207,232,0.5)]">{i + 1}위</span>{' '}
+                          <span className="text-white font-bold [text-shadow:0_0_4px_rgba(255,255,255,0.4)]">{w.display_name}</span>
+                          <span className="text-cyan [text-shadow:0_0_4px_rgba(0,176,240,0.6)]"> {Number(w.total_wealth).toLocaleString()} mlbg</span>
+                          {w.apt_count > 0 && (
+                            <span className="text-white/60 text-[10px]"> ({w.apt_count}주택)</span>
+                          )}
+                        </span>
+                      ))}
                 </div>
               ))}
             </div>
