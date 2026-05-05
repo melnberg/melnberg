@@ -1,8 +1,9 @@
 -- ──────────────────────────────────────────────
 -- 073: 핀에 표시할 평당가 (국토부 실거래 기반)
--- - apt_trades 24개월 합산: sum(deal_amount) / sum(excl_use_ar × 0.3025)
+-- - apt_trades 24개월 합산: sum(deal_amount) / sum(exclu_use_ar × 0.3025)
 -- - apt_trades 는 admin RLS 라 materialized view 로 한번 적재 후 anon 공개
 -- - apt_master_with_listing 에 pyeong_price 컬럼 추가 (home-pins 에서 사용)
+-- 주: 컬럼명은 DB 실제 스키마의 'exclu_use_ar' 사용 (071_marquee_data_rpcs.sql 동일)
 -- ──────────────────────────────────────────────
 
 drop materialized view if exists public.apt_pyeong_avg cascade;
@@ -13,12 +14,12 @@ create materialized view public.apt_pyeong_avg as
     lawd_cd,
     coalesce(dong, '') as dong_norm,
     -- 만원/평. 합산 비율이 평균비율보다 통계적으로 안정.
-    round(sum(deal_amount)::numeric / nullif(sum(excl_use_ar) * 0.3025, 0), 0)::int as pyeong_price,
+    round(sum(deal_amount)::numeric / nullif(sum(exclu_use_ar) * 0.3025, 0), 0)::int as pyeong_price,
     count(*) as trade_count,
     max(deal_date) as last_trade_date
   from public.apt_trades
   where deal_date >= (current_date - interval '24 months')
-    and excl_use_ar > 0
+    and exclu_use_ar > 0
     and deal_amount > 0
   group by apt_nm, lawd_cd, coalesce(dong, '');
 
