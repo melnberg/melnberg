@@ -46,7 +46,7 @@ export default async function Layout({ current, children }: { current?: string; 
     sidebarUser = {
       name: profile?.display_name ?? (user.user_metadata?.display_name as string | undefined) ?? user.email?.split('@')[0] ?? '회원',
       email: user.email ?? '',
-      score: balance,
+      balance,
       isPaid,
       avatarUrl: profile?.avatar_url ?? null,
     };

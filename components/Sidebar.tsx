@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 import NotificationsBell from './NotificationsBell';
 
-export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean; avatarUrl?: string | null };
+export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; avatarUrl?: string | null };
 export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
 
 type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[] };
@@ -80,8 +80,8 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-between gap-2 px-3 pb-2 pt-0.5 text-[11px] no-underline border-t border-[#f3f3f3] mx-3"
               >
-                {typeof user.score === 'number' ? (
-                  <span className="text-cyan font-bold tabular-nums">💰 {user.score} mlbg</span>
+                {typeof user.balance === 'number' ? (
+                  <span className="text-cyan font-bold tabular-nums">💰 {user.balance} mlbg</span>
                 ) : <span />}
                 <span className="text-muted hover:text-navy">마이페이지 →</span>
               </Link>
