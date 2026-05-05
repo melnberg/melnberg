@@ -62,7 +62,7 @@ function relativeTime(iso: string): string {
   return iso.slice(0, 10);
 }
 
-export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onClose: () => void }) {
+export default function AptDiscussionPanel({ apt, onClose, inline = false }: { apt: AptPin; onClose: () => void; inline?: boolean }) {
   const router = useRouter();
   const [discussions, setDiscussions] = useState<Discussion[] | null>(null);
   // 글·댓글 별 AI 평가 적립 mlbg (kind:ref_id → earned)
@@ -534,20 +534,24 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   }
 
   return (
-    <aside className={`absolute top-0 left-0 h-full w-[380px] max-w-full bg-white border-r border-border shadow-[8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30 transition-transform duration-200 ease-out ${shown ? 'translate-x-0' : '-translate-x-full'}`}>
-      {/* 우측 가장자리 닫기 탭 */}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="닫기"
-        className="absolute top-1/2 -right-7 -translate-y-1/2 w-7 h-16 bg-white border border-l-0 border-border flex items-center justify-center text-navy hover:border-navy hover:text-navy-dark shadow-[4px_0_8px_rgba(0,0,0,0.06)]"
-        title="닫기"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
+    <aside className={inline
+      ? 'block w-full bg-white flex flex-col'
+      : `absolute top-0 left-0 h-full w-[380px] max-w-full bg-white border-r border-border shadow-[8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30 transition-transform duration-200 ease-out ${shown ? 'translate-x-0' : '-translate-x-full'}`}>
+      {/* 우측 가장자리 닫기 탭 — overlay 모드만 */}
+      {!inline && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="닫기"
+          className="absolute top-1/2 -right-7 -translate-y-1/2 w-7 h-16 bg-white border border-l-0 border-border flex items-center justify-center text-navy hover:border-navy hover:text-navy-dark shadow-[4px_0_8px_rgba(0,0,0,0.06)]"
+          title="닫기"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      )}
 
       <div className="px-6 py-4 border-b border-border">
         <div className="flex items-start justify-between gap-3">

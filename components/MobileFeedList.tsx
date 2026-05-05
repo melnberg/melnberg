@@ -23,14 +23,11 @@ function hrefFor(f: FeedItem): string | null {
   if ((f.kind === 'auction' || f.kind === 'auction_bid') && f.auction_id) return `/auctions/${f.auction_id}`;
   if (f.kind === 'post' || f.kind === 'post_comment') return f.post_id ? `/community/${f.post_id}` : null;
   if (f.kind === 'notice' && f.notice_href) return f.notice_href;
-  // 단지 토론 — /d/{discussionId} 풀페이지
-  if (f.kind === 'discussion') return `/d/${f.id}`;
-  if (f.kind === 'comment') return f.discussion_id ? `/d/${f.discussion_id}` : null;
-  // 매물/호가 류 — 단지가 핵심이라 단지 토론 페이지로 묶을 수도 있지만,
-  // 우선 단지 첫번째 토론 없을 수 있으니 지도로 (/?apt=) 보냄.
-  if (f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch') {
-    return f.apt_master_id ? `/?apt=${f.apt_master_id}` : null;
-  }
+  // 단지 토론·매물·호가 — 모두 단지 페이지 /apt/{apt_master_id} 로 통합
+  if (
+    f.kind === 'discussion' || f.kind === 'comment' ||
+    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch'
+  ) return f.apt_master_id ? `/apt/${f.apt_master_id}` : null;
   // 시설 — 풀페이지
   if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/e/${f.apt_master_id}`;
   if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/f/${f.apt_master_id}`;
