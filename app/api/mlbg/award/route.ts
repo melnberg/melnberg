@@ -20,23 +20,20 @@ function countLines(content: string): number {
   return (content ?? '').split('\n').map((l) => l.trim()).filter((l) => l.length > 0).length;
 }
 
-// 줄 수 기반 등급 + 글자 수 기반 등급 중 높은 쪽 채택 — 긴 한 줄 글도 인정.
-// apt_post 정책:
-//   0줄 또는 30자 미만: 0 (미지급)
-//   2~4줄 or 30~149자: 2
-//   5~9줄 or 150~399자: 3
-//   10줄+ or 400자+: 5
+// 단지 토론 정책 — 20자 = 1줄 환산. \n 줄 수와 글자 수 환산 줄 중 큰 값 사용.
+//   1줄 (20자~39자):     0 (미지급)
+//   2~4줄 (40자~99자):   2
+//   5~9줄 (100자~199자): 3
+//   10줄+ (200자+):      5
 function evaluateAward(kind: Kind, content: string): { earned: number; reason: string } {
   if (kind.endsWith('_comment')) return { earned: 1, reason: '댓글' };
   const text = (content ?? '').trim();
-  const lines = countLines(text);
-  const chars = text.length;
+  const nlLines = countLines(text);
+  const charLines = Math.floor(text.length / 20);
+  const lines = Math.max(nlLines, charLines);
   if (kind === 'apt_post') {
-    if (chars < 30 && lines <= 1) return { earned: 0, reason: '단지 토론 짧은 글 — 미지급' };
-    const fromLines = lines >= 10 ? 5 : lines >= 5 ? 3 : lines >= 2 ? 2 : 0;
-    const fromChars = chars >= 400 ? 5 : chars >= 150 ? 3 : chars >= 30 ? 2 : 0;
-    const earned = Math.max(fromLines, fromChars);
-    return { earned, reason: `단지 토론 (${lines}줄·${chars}자)` };
+    const earned = lines >= 10 ? 5 : lines >= 5 ? 3 : lines >= 2 ? 2 : 0;
+    return { earned, reason: `단지 토론 (${lines}줄 환산)` };
   }
   return { earned: 2, reason: '글 작성 기본' };
 }
