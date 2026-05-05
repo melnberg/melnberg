@@ -191,12 +191,15 @@ const fetchFeed = unstable_cache(
 
     const postCommentItems: FeedItem[] = (postComments ?? [])
       .filter((r) => {
-        const post = (r as Record<string, unknown>).post as { category?: string | null } | null;
+        // PostgREST 임베드는 케이스 따라 object 또는 배열로 반환됨 — 양쪽 다 대응
+        const raw = (r as Record<string, unknown>).post;
+        const post = (Array.isArray(raw) ? raw[0] : raw) as { category?: string | null } | null;
         return post?.category === 'community';
       })
       .map((r) => {
         const row = r as Record<string, unknown>;
-        const post = row.post as { title: string | null; category: string | null } | null;
+        const rawPost = row.post;
+        const post = (Array.isArray(rawPost) ? rawPost[0] : rawPost) as { title: string | null; category: string | null } | null;
         const prof = profileMap.get(row.author_id as string);
         return {
           kind: 'post_comment' as const,
