@@ -16,9 +16,9 @@ create materialized view public.apt_pyeong_avg as
     -- 만원/평. 합산 비율이 평균비율보다 통계적으로 안정.
     round(sum(deal_amount)::numeric / nullif(sum(exclu_use_ar) * 0.3025, 0), 0)::int as pyeong_price,
     count(*) as trade_count,
-    max(deal_date) as last_trade_date
+    max(deal_day) as last_trade_date
   from public.apt_trades
-  where deal_date >= (current_date - interval '24 months')
+  where deal_day >= (current_date - interval '24 months')
     and exclu_use_ar > 0
     and deal_amount > 0
   group by apt_nm, lawd_cd, coalesce(dong, '');
