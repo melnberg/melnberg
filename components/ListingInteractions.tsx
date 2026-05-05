@@ -94,8 +94,8 @@ export default function ListingInteractions({
     }
     setComments(cList);
 
-    // 호가 (RLS: buyer 또는 seller 만 조회 가능. 본인 관련된 것만 보임)
-    if (userId) {
+    // 호가 — SQL 068 적용 후 모든 사용자에게 모든 호가 조회 가능 (login 무관 노출)
+    {
       const { data: oData } = await supabase
         .from('apt_listing_offers')
         .select('id, apt_id, buyer_id, seller_id, price, kind, message, status, created_at')
@@ -114,8 +114,6 @@ export default function ListingInteractions({
         for (const o of oList) o.buyer_name = map.get(o.buyer_id) ?? null;
       }
       setOffers(oList);
-    } else {
-      setOffers([]);
     }
   }
 
@@ -213,9 +211,10 @@ export default function ListingInteractions({
     await load();
   }
 
-  const pendingOffers = (offers ?? []).filter((o) => o.status === 'pending');
-  const myPending = pendingOffers.filter((o) => o.buyer_id === userId);
-  const receivedPending = isOwner ? pendingOffers.filter((o) => o.seller_id === userId) : [];
+  const allOffers = offers ?? [];
+  const pendingOffers = allOffers.filter((o) => o.status === 'pending');
+  const resolvedOffers = allOffers.filter((o) => o.status !== 'pending').slice(0, 20);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
     <div className="mt-3 border border-cyan/40 bg-white">
@@ -234,66 +233,90 @@ export default function ListingInteractions({
         </div>
       )}
 
-      {/* 받은 호가 (매도자 시점) */}
-      {isOwner && receivedPending.length > 0 && (
+      {/* 진행중 호가 — 모든 사용자에게 노출 */}
+      {pendingOffers.length > 0 && (
         <div className="border-b border-cyan/30 bg-cyan/5">
           <div className="px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-navy">
-            받은 호가 {receivedPending.length}건
+            진행중 호가 {pendingOffers.length}건
           </div>
           <ul className="border-t border-cyan/20">
-            {receivedPending.map((o) => (
-              <li key={o.id} className="px-3 py-2 border-b border-cyan/20 last:border-b-0">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="flex items-center gap-1.5 text-[12px] min-w-0">
-                    <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-[#fef3c7] text-[#78350f]' : 'bg-cyan text-white'}`}>
-                      {o.kind === 'snatch' ? '내놔' : '매수'}
-                    </span>
-                    <Link href={`/u/${o.buyer_id}`} className="text-text font-bold hover:underline truncate" onClick={(e) => e.stopPropagation()}>
-                      {o.buyer_name ?? '익명'}
-                    </Link>
-                    <span className="text-muted">·</span>
-                    <span className="font-bold text-navy tabular-nums flex-shrink-0">
-                      {o.kind === 'snatch' ? '0 mlbg (무상)' : `${Number(o.price).toLocaleString()} mlbg`}
-                    </span>
+            {pendingOffers.map((o) => {
+              const isBuyer = o.buyer_id === userId;
+              return (
+                <li key={o.id} className="px-3 py-2 border-b border-cyan/20 last:border-b-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-1.5 text-[12px] min-w-0 flex-wrap">
+                      <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-red-500 text-white' : 'bg-cyan text-white'}`}>
+                        {o.kind === 'snatch' ? '내놔' : '매수'}
+                      </span>
+                      <Link href={`/u/${o.buyer_id}`} className="text-text font-bold hover:underline truncate" onClick={(e) => e.stopPropagation()}>
+                        {o.buyer_name ?? '익명'}
+                      </Link>
+                      <span className="text-muted">·</span>
+                      <span className="font-bold text-navy tabular-nums flex-shrink-0">
+                        {o.kind === 'snatch' ? '0 mlbg (무상)' : `${Number(o.price).toLocaleString()} mlbg`}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted flex-shrink-0">{relTime(o.created_at)}</span>
                   </div>
-                  <span className="text-[10px] text-muted flex-shrink-0">{relTime(o.created_at)}</span>
-                </div>
-                {o.message && <div className="text-[11px] text-text leading-snug whitespace-pre-wrap mb-1.5">{o.message}</div>}
-                <div className="flex items-center justify-end gap-2">
-                  <button type="button" onClick={() => rejectOffer(o.id)}
-                    className="text-[11px] text-muted hover:text-red-600 bg-transparent border-none p-0">거절</button>
-                  <button type="button" onClick={() => acceptOffer(o.id, o.kind, Number(o.price))}
-                    className="text-[11px] font-bold px-3 py-1 bg-navy text-white hover:bg-navy-dark">수락</button>
-                </div>
-              </li>
-            ))}
+                  {o.message && <div className="text-[11px] text-text leading-snug whitespace-pre-wrap mb-1.5">{o.message}</div>}
+                  <div className="flex items-center justify-end gap-2">
+                    {isOwner && o.seller_id === userId && (
+                      <>
+                        <button type="button" onClick={() => rejectOffer(o.id)}
+                          className="text-[11px] text-muted hover:text-red-600 bg-transparent border-none p-0">거절</button>
+                        <button type="button" onClick={() => acceptOffer(o.id, o.kind, Number(o.price))}
+                          className="text-[11px] font-bold px-3 py-1 bg-navy text-white hover:bg-navy-dark">수락</button>
+                      </>
+                    )}
+                    {isBuyer && (
+                      <button type="button" onClick={() => cancelOffer(o.id)}
+                        className="text-[11px] text-muted hover:text-red-600 bg-transparent border-none p-0">내 호가 취소</button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
 
-      {/* 내가 보낸 호가 (매수자 시점) */}
-      {!isOwner && userId && myPending.length > 0 && (
+      {/* 호가 이력 — 처리된 호가들 (접기·펼치기) */}
+      {resolvedOffers.length > 0 && (
         <div className="border-b border-cyan/30">
-          <div className="px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-muted">
-            내가 보낸 호가 {myPending.length}건 (대기중)
-          </div>
-          <ul className="border-t border-cyan/20">
-            {myPending.map((o) => (
-              <li key={o.id} className="px-3 py-1.5 border-b border-cyan/20 last:border-b-0 flex items-center justify-between gap-2 text-[12px]">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-[#fef3c7] text-[#78350f]' : 'bg-cyan/15 text-cyan'}`}>
-                    {o.kind === 'snatch' ? '내놔' : '매수'}
-                  </span>
-                  <span className="font-bold text-navy tabular-nums">
-                    {o.kind === 'snatch' ? '0 mlbg' : `${Number(o.price).toLocaleString()} mlbg`}
-                  </span>
-                  <span className="text-muted text-[10px]">· {relTime(o.created_at)}</span>
-                </div>
-                <button type="button" onClick={() => cancelOffer(o.id)}
-                  className="text-[11px] text-muted hover:text-red-600 bg-transparent border-none p-0">취소</button>
-              </li>
-            ))}
-          </ul>
+          <button type="button" onClick={() => setHistoryOpen((v) => !v)}
+            className="w-full px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-muted hover:text-navy bg-transparent border-none flex items-center justify-between cursor-pointer">
+            <span>호가 이력 {resolvedOffers.length}건</span>
+            <span>{historyOpen ? '접기 ^' : '펼치기 v'}</span>
+          </button>
+          {historyOpen && (
+            <ul className="border-t border-cyan/20">
+              {resolvedOffers.map((o) => {
+                const statusLabel: Record<typeof o.status, { label: string; cls: string }> = {
+                  pending:    { label: '대기',     cls: 'bg-cyan text-white' },
+                  accepted:   { label: '거래체결', cls: 'bg-green-600 text-white' },
+                  rejected:   { label: '거절',     cls: 'bg-red-500 text-white' },
+                  cancelled:  { label: '매수자취소', cls: 'bg-gray-400 text-white' },
+                  superseded: { label: '무효화',   cls: 'bg-gray-300 text-gray-700' },
+                };
+                const s = statusLabel[o.status];
+                return (
+                  <li key={o.id} className="px-3 py-1.5 border-b border-cyan/15 last:border-b-0 text-[11px] flex items-center gap-1.5 flex-wrap">
+                    <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-red-500 text-white' : 'bg-cyan/15 text-cyan'}`}>
+                      {o.kind === 'snatch' ? '내놔' : '매수'}
+                    </span>
+                    <Link href={`/u/${o.buyer_id}`} className="text-text font-bold hover:underline" onClick={(e) => e.stopPropagation()}>
+                      {o.buyer_name ?? '익명'}
+                    </Link>
+                    <span className="text-muted">·</span>
+                    <span className="text-text tabular-nums">{o.kind === 'snatch' ? '0 mlbg' : `${Number(o.price).toLocaleString()} mlbg`}</span>
+                    <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${s.cls}`}>{s.label}</span>
+                    <span className="text-[10px] text-muted ml-auto">{relTime(o.created_at)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       )}
 

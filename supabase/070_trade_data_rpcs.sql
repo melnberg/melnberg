@@ -32,9 +32,9 @@ begin
   select
     t.deal_date,
     t.deal_amount,
-    t.excl_use_ar,
+    t.exclu_use_ar as excl_use_ar,
     t.floor as floor_no,
-    (floor(t.excl_use_ar / 5) * 5)::int as area_group
+    (floor(t.exclu_use_ar / 5) * 5)::int as area_group
   from public.apt_trades t
   where t.deal_date >= (current_date - (p_months || ' months')::interval)
     and (t.cdeal_type is null or t.cdeal_type = '')
@@ -106,7 +106,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select t.apt_nm, t.deal_amount, t.excl_use_ar, t.deal_date
+  select t.apt_nm, t.deal_amount, t.exclu_use_ar, t.deal_date
   from public.apt_trades t
   where t.deal_date >= (current_date - interval '7 days')
     and (t.cdeal_type is null or t.cdeal_type = '')

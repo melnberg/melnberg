@@ -386,12 +386,25 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     })();
     return () => { cancelled = true; };
   }, []);
-  // 8초마다 모드 자동 토글 (score → wealth → trade → hot → ...)
+  // 8초마다 모드 자동 토글 — 데이터 없는 모드는 자동 건너뜀
   useEffect(() => {
     const order: RankMode[] = ['score', 'wealth', 'trade', 'hot'];
-    const t = setInterval(() => setRankMode((m) => order[(order.indexOf(m) + 1) % order.length]), 8000);
+    const t = setInterval(() => {
+      setRankMode((m) => {
+        const idx = order.indexOf(m);
+        for (let i = 1; i <= order.length; i++) {
+          const next = order[(idx + i) % order.length];
+          const ok = (next === 'score' && ranking.length > 0)
+            || (next === 'wealth' && wealthRanking.length > 0)
+            || (next === 'trade' && tradeHighlights.length > 0)
+            || (next === 'hot' && hotApts.length > 0);
+          if (ok) return next;
+        }
+        return m;
+      });
+    }, 8000);
     return () => clearInterval(t);
-  }, []);
+  }, [ranking.length, wealthRanking.length, tradeHighlights.length, hotApts.length]);
 
   // 만원 단위 → 표시
   function fmtKRW(만원: number): string {
