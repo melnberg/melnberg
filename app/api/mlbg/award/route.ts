@@ -15,7 +15,7 @@ const VALID_KINDS: Kind[] = ['apt_post', 'apt_comment', 'community_post', 'commu
 //     2~4줄: 2 mlbg (기본)
 //     5~9줄: 3 mlbg
 //     10줄+: 5 mlbg
-//   댓글 (어디든): 1 mlbg
+//   댓글 (어디든): 0.5 mlbg
 function countLines(content: string): number {
   return (content ?? '').split('\n').map((l) => l.trim()).filter((l) => l.length > 0).length;
 }
@@ -26,7 +26,7 @@ function countLines(content: string): number {
 //   5~9줄 (100자~199자): 3
 //   10줄+ (200자+):      5
 function evaluateAward(kind: Kind, content: string): { earned: number; reason: string } {
-  if (kind.endsWith('_comment')) return { earned: 1, reason: '댓글' };
+  if (kind.endsWith('_comment')) return { earned: 0.5, reason: '댓글' };
   const text = (content ?? '').trim();
   const nlLines = countLines(text);
   const charLines = Math.floor(text.length / 20);

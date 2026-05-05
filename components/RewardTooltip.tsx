@@ -83,7 +83,7 @@ export default function RewardTooltip({ earned }: Props) {
               <li className="flex items-center gap-2.5">
                 <Dot color="#d4d4d4" />
                 <span className="flex-1">댓글 (어디든)</span>
-                <span className="tabular-nums text-white/80">+1</span>
+                <span className="tabular-nums text-white/80">+0.5</span>
               </li>
             </ul>
             <div className="px-4 py-2.5 border-t border-white/15 text-[10px] text-white/70 leading-snug">
