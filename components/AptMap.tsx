@@ -850,7 +850,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             if (normalCount < VISIBLE_CAP) { showSet.add(e); normalCount++; }
           }
           const lvl = map.getLevel();
-          const showLabels = lvl <= 5;
+          // 평당가 라벨은 충분히 가까이 줌 했을 때만 (level <= 3) 노출 — 줌 아웃 시 화면 폭발 방지
+          const showLabels = lvl <= 3;
           for (const e of markersRef.current) {
             const v = showSet.has(e);
             e.marker.setMap(v ? map : null);
