@@ -125,7 +125,7 @@ export default async function UserProfilePage({
     cash: number;
     emarts: Array<{ id: number; name: string; cost: number }>;
     factories: Array<{ id: number; name: string; brand: string; cost: number }>;
-    apts: Array<{ id: number; apt_nm: string; dong: string | null; value: number | null }>;
+    apts: Array<{ id: number; apt_nm: string; dong: string | null; value: number; source: '분양가' | '실거래' }>;
   } | null = null;
 
   if (tab === 'posts') {
@@ -157,7 +157,7 @@ export default async function UserProfilePage({
       supabase.from('profiles').select('mlbg_balance').eq('id', userId).maybeSingle(),
       supabase.from('emart_occupations').select('emart_id, emart:emart_locations!emart_id(id, name)').eq('user_id', userId),
       supabase.from('factory_occupations').select('factory_id, factory:factory_locations!factory_id(id, name, brand, occupy_price)').eq('user_id', userId),
-      supabase.from('apt_master_with_listing').select('id, apt_nm, dong, listing_price').eq('occupier_id', userId),
+      supabase.rpc('get_user_apt_assets', { p_uid: userId }),
     ]);
     const cash = Number((bal as { mlbg_balance?: number | string | null } | null)?.mlbg_balance ?? 0);
     const emarts = ((emartRows ?? []) as Array<{ emart: { id?: number; name?: string } | { id?: number; name?: string }[] | null }>).map((r) => {
@@ -168,9 +168,10 @@ export default async function UserProfilePage({
       const f = Array.isArray(r.factory) ? r.factory[0] : r.factory;
       return { id: Number(f?.id ?? 0), name: f?.name ?? '시설', brand: f?.brand ?? '', cost: Number(f?.occupy_price ?? 0) };
     }).filter((x) => x.id > 0);
-    const apts = ((aptRows ?? []) as Array<{ id: number; apt_nm: string; dong: string | null; listing_price: number | string | null }>).map((r) => ({
-      id: r.id, apt_nm: r.apt_nm, dong: r.dong,
-      value: r.listing_price == null ? null : Number(r.listing_price),
+    const apts = ((aptRows ?? []) as Array<{ id: number; apt_nm: string; dong: string | null; value: number | string; source: '분양가' | '실거래' }>).map((r) => ({
+      id: Number(r.id), apt_nm: r.apt_nm, dong: r.dong,
+      value: Number(r.value),
+      source: r.source,
     }));
     assetsData = { cash, emarts, factories, apts };
   } else if (tab === 'occupier') {
@@ -336,7 +337,7 @@ export default async function UserProfilePage({
           )}
 
           {tab === 'assets' && assetsData && (() => {
-            const aptValueSum = assetsData.apts.reduce((s, a) => s + (a.value ?? 0), 0);
+            const aptValueSum = assetsData.apts.reduce((s, a) => s + a.value, 0);
             const commercialSum = assetsData.emarts.reduce((s, e) => s + e.cost, 0)
                                 + assetsData.factories.reduce((s, f) => s + f.cost, 0);
             const total = assetsData.cash + commercialSum + aptValueSum;
@@ -347,11 +348,11 @@ export default async function UserProfilePage({
                     <tr className="bg-navy-soft text-[11px] tracking-wider uppercase text-navy">
                       <th className="text-left px-4 py-2 font-bold w-[100px]">분류</th>
                       <th className="text-left px-4 py-2 font-bold">항목</th>
-                      <th className="text-right px-4 py-2 font-bold w-[120px]">평가액 (mlbg)</th>
+                      <th className="text-right px-4 py-2 font-bold w-[140px]">평가액 (mlbg)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <AssetRow cat="현금성" name={`현금 / ${assetsData.cash.toLocaleString()} mlbg`} value={assetsData.cash} />
+                    <AssetRow cat="현금성" name="현금 잔액" value={assetsData.cash} />
                     {assetsData.emarts.length === 0 && assetsData.factories.length === 0 ? (
                       <AssetRow cat="상업용" name="(보유 없음)" value={null} />
                     ) : (
@@ -368,13 +369,17 @@ export default async function UserProfilePage({
                       <AssetRow cat="주거용" name="(보유 없음)" value={null} />
                     ) : (
                       assetsData.apts.map((a) => (
-                        <AssetRow key={`ap-${a.id}`} cat="주거용" name={`${a.apt_nm}${a.dong ? ` (${a.dong})` : ''}`} value={a.value} mutedValue={a.value == null} />
+                        <AssetRow key={`ap-${a.id}`} cat="주거용"
+                          name={`${a.apt_nm}${a.dong ? ` (${a.dong})` : ''}`}
+                          value={a.value}
+                          source={a.source}
+                        />
                       ))
                     )}
                     <tr className="border-t-2 border-navy bg-navy-soft">
                       <td className="px-4 py-3 font-bold text-navy">합계</td>
                       <td className="px-4 py-3 text-muted text-[11px]">
-                        주거용은 매물 등록된 단지만 합산
+                        주거용 = 실거래가 ▸ 없으면 구별 분양가
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-cyan text-[15px]">
                         {total.toLocaleString()} mlbg
@@ -462,13 +467,22 @@ export default async function UserProfilePage({
   );
 }
 
-function AssetRow({ cat, name, value, mutedValue }: { cat: string; name: string; value: number | null; mutedValue?: boolean }) {
+function AssetRow({ cat, name, value, source }: { cat: string; name: string; value: number | null; source?: '분양가' | '실거래' }) {
   return (
     <tr className="border-b border-border last:border-b-0">
       <td className="px-4 py-2.5 text-[12px] text-muted whitespace-nowrap">{cat}</td>
       <td className="px-4 py-2.5 text-text break-words">{name}</td>
-      <td className={`px-4 py-2.5 text-right ${mutedValue ? 'text-muted' : 'text-text'}`}>
-        {value == null ? '—' : value.toLocaleString()}
+      <td className="px-4 py-2.5 text-right text-text">
+        {value == null ? <span className="text-muted">—</span> : (
+          <span className="inline-flex items-center gap-2 justify-end">
+            {source && (
+              <span className={`text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 ${
+                source === '실거래' ? 'bg-cyan/15 text-cyan' : 'bg-navy/10 text-navy'
+              }`}>{source}</span>
+            )}
+            <span>{value.toLocaleString()}</span>
+          </span>
+        )}
       </td>
     </tr>
   );
