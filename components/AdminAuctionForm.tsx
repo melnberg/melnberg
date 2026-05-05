@@ -18,6 +18,7 @@ export default function AdminAuctionForm() {
   const [suggestions, setSuggestions] = useState<AptSuggestion[]>([]);
   const [duration, setDuration] = useState('30');
   const [minBid, setMinBid] = useState('100');
+  const [startsAt, setStartsAt] = useState(''); // YYYY-MM-DDTHH:MM (datetime-local). 빈 값=즉시.
   const [busy, setBusy] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -60,8 +61,18 @@ export default function AdminAuctionForm() {
     if (!Number.isFinite(durNum) || durNum < 5 || durNum > 1440) { alert('진행 시간은 5분~24시간'); return; }
     if (!Number.isFinite(bidNum) || bidNum <= 0) { alert('시작가가 잘못됐어요'); return; }
 
+    let startsIso: string | null = null;
+    if (startsAt.trim()) {
+      // datetime-local 은 로컬 시간 — Date 객체가 자동으로 ISO(UTC) 변환
+      const d = new Date(startsAt);
+      if (!Number.isFinite(d.getTime())) { alert('시작 시각 형식이 잘못됐어요'); return; }
+      startsIso = d.toISOString();
+    }
+
     setBusy(true);
-    const { data, error } = await supabase.rpc('create_auction', { p_apt_id: picked.id, p_duration_minutes: durNum, p_min_bid: bidNum });
+    const rpcArgs: Record<string, unknown> = { p_apt_id: picked.id, p_duration_minutes: durNum, p_min_bid: bidNum };
+    if (startsIso) rpcArgs.p_starts_at = startsIso;
+    const { data, error } = await supabase.rpc('create_auction', rpcArgs);
     setBusy(false);
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_auction_id: number | null; out_message: string | null } | undefined;
@@ -128,6 +139,15 @@ export default function AdminAuctionForm() {
               })}
             </ul>
           )}
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-bold tracking-widest uppercase text-muted" title="비워두면 즉시 시작">시작 시각 (선택)</label>
+          <input
+            type="datetime-local"
+            value={startsAt}
+            onChange={(e) => setStartsAt(e.target.value)}
+            className="w-[180px] px-3 py-2 border border-border focus:border-navy text-[13px] tabular-nums outline-none rounded-none"
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-bold tracking-widest uppercase text-muted">진행 시간 (분)</label>

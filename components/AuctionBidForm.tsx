@@ -7,6 +7,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 
 type Props = {
   auctionId: number;
+  initialStartsAt: string;
   initialEndsAt: string;
   initialCurrentBid: number | null;
   initialCurrentBidderName: string | null;
@@ -27,7 +28,7 @@ function formatRemaining(ms: number): string {
 }
 
 export default function AuctionBidForm({
-  auctionId, initialEndsAt, initialCurrentBid, initialCurrentBidderName,
+  auctionId, initialStartsAt, initialEndsAt, initialCurrentBid, initialCurrentBidderName,
   minBid, initialBidCount, isActive, isLoggedIn, myBalance,
 }: Props) {
   const router = useRouter();
@@ -39,14 +40,17 @@ export default function AuctionBidForm({
   const [bidInput, setBidInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [extendedFlash, setExtendedFlash] = useState(false);
-  const [remainingMs, setRemainingMs] = useState(() => new Date(initialEndsAt).getTime() - Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setRemainingMs(new Date(endsAt).getTime() - Date.now());
-    }, 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [endsAt]);
+  }, []);
+
+  const startsTs = new Date(initialStartsAt).getTime();
+  const endsTs = new Date(endsAt).getTime();
+  const isPending = now < startsTs;
+  const remainingMs = isPending ? startsTs - now : endsTs - now;
 
   // 5초마다 폴링 — 다른 사람 입찰 즉시 반영
   useEffect(() => {
@@ -102,26 +106,31 @@ export default function AuctionBidForm({
   // 안티스나이프 윈도우 — 3분 이하 남으면 빨강·펄스
   const lastFiveMinutes = remainingMs > 0 && remainingMs < 3 * 60 * 1000;
 
+  const startsKr = new Date(initialStartsAt).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
+  const endsKr = new Date(endsAt).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
+
   return (
-    <div className={`border-2 ${isActive ? 'border-[#dc2626] bg-[#fef2f2]' : 'border-border bg-white'} px-6 py-5`}>
+    <div className={`border-2 ${isPending ? 'border-cyan bg-cyan/5' : isActive ? 'border-[#dc2626] bg-[#fef2f2]' : 'border-border bg-white'} px-6 py-5`}>
       <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
         <div>
-          <div className="text-[10px] tracking-widest uppercase text-muted mb-1">현재 최고가</div>
+          <div className="text-[10px] tracking-widest uppercase text-muted mb-1">{isPending ? '시작가' : '현재 최고가'}</div>
           <div className="text-[36px] font-black tabular-nums text-navy leading-none">
             {currentBid != null ? `${Number(currentBid).toLocaleString()}` : Number(minBid).toLocaleString()}
             <span className="text-[14px] text-muted ml-1.5">mlbg</span>
           </div>
           <div className="text-[11px] text-muted mt-1">
-            {currentBid == null ? `시작가 (입찰 없음)` : `${currentBidderName ?? '익명'} 님 · 입찰 ${bidCount}건`}
+            {isPending
+              ? `시작 ${startsKr} 부터`
+              : currentBid == null ? `시작가 (입찰 없음)` : `${currentBidderName ?? '익명'} 님 · 입찰 ${bidCount}건`}
           </div>
         </div>
-        <div className={`text-right ${lastFiveMinutes ? 'animate-pulse' : ''}`}>
-          <div className="text-[10px] tracking-widest uppercase text-muted mb-1">남은 시간</div>
-          <div className={`text-[24px] font-black tabular-nums leading-none ${lastFiveMinutes ? 'text-[#dc2626]' : 'text-navy'}`}>
+        <div className={`text-right ${lastFiveMinutes && !isPending ? 'animate-pulse' : ''}`}>
+          <div className="text-[10px] tracking-widest uppercase text-muted mb-1">{isPending ? '시작까지' : '남은 시간'}</div>
+          <div className={`text-[24px] font-black tabular-nums leading-none ${isPending ? 'text-cyan' : lastFiveMinutes ? 'text-[#dc2626]' : 'text-navy'}`}>
             {formatRemaining(remainingMs)}
           </div>
           <div className="text-[11px] text-muted mt-1 tabular-nums">
-            종료 {new Date(endsAt).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })}
+            {isPending ? `종료 ${endsKr}` : `종료 ${endsKr}`}
           </div>
         </div>
       </div>
@@ -132,7 +141,11 @@ export default function AuctionBidForm({
         </div>
       )}
 
-      {isActive ? (
+      {isPending ? (
+        <div className="mt-3 pt-3 border-t border-cyan/40 text-[12px] text-cyan font-bold text-center">
+          ⏰ 아직 시작 전 — {startsKr} 에 입찰 시작
+        </div>
+      ) : isActive ? (
         isLoggedIn ? (
           <div className="mt-4 pt-4 border-t border-[#dc2626]/30">
             <div className="text-[11px] text-muted mb-2">

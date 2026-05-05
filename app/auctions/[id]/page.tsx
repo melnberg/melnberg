@@ -103,6 +103,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
           {/* 현재가 + 카운트다운 + 입찰 */}
           <AuctionBidForm
             auctionId={auction.id}
+            initialStartsAt={auction.starts_at}
             initialEndsAt={auction.ends_at}
             initialCurrentBid={auction.current_bid}
             initialCurrentBidderName={auction.current_bidder_id ? (nameMap.get(auction.current_bidder_id) ?? '익명') : null}
