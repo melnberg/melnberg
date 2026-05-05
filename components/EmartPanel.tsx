@@ -207,7 +207,11 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
             <h1 className="text-[18px] font-bold text-white truncate">{emart.name}</h1>
             {emart.address && <div className="text-[11px] text-white/80 truncate">{emart.address}</div>}
           </div>
-          {!inline && <button type="button" onClick={onClose} className="text-white/90 hover:text-white text-[20px] leading-none px-1 cursor-pointer bg-transparent border-none">✕</button>}
+          <button type="button" onClick={onClose} aria-label={inline ? '뒤로' : '닫기'} className="text-white/90 hover:text-white px-1 cursor-pointer bg-transparent border-none flex items-center justify-center">
+            {inline ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            ) : <span className="text-[20px] leading-none">✕</span>}
+          </button>
         </div>
 
         {/* 본문 */}

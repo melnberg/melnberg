@@ -41,7 +41,7 @@ export default function AptDetailClient({ id }: { id: number }) {
   if (!apt) return null;
   return (
     <div className="max-w-[680px] mx-auto w-full">
-      <AptDiscussionPanel apt={apt} onClose={() => router.push('/')} inline />
+      <AptDiscussionPanel apt={apt} onClose={() => router.back()} inline />
     </div>
   );
 }

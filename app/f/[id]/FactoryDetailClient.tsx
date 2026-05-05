@@ -34,7 +34,7 @@ export default function FactoryDetailClient({ id }: { id: number }) {
   if (!factory) return null;
   return (
     <div className="max-w-[680px] mx-auto w-full">
-      <FactoryPanel factory={factory} onClose={() => router.push('/')} onChanged={() => load()} inline />
+      <FactoryPanel factory={factory} onClose={() => router.back()} onChanged={() => load()} inline />
     </div>
   );
 }

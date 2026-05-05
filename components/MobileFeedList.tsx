@@ -1,10 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
+
+const SCROLL_KEY = 'mlbg.feed.scroll';
+const LAST_CLICK_KEY = 'mlbg.feed.lastClick';
 
 type Props = { items: FeedItem[] };
 
@@ -63,6 +67,34 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 }
 
 export default function MobileFeedList({ items }: Props) {
+  const [lastClickKey, setLastClickKey] = useState<string | null>(null);
+
+  // 마운트 시 — 저장된 스크롤 복원 + 마지막 클릭 키 읽기
+  useEffect(() => {
+    try {
+      const lastKey = sessionStorage.getItem(LAST_CLICK_KEY);
+      const scrollStr = sessionStorage.getItem(SCROLL_KEY);
+      if (lastKey) setLastClickKey(lastKey);
+      if (scrollStr) {
+        const y = Number(scrollStr);
+        if (Number.isFinite(y)) {
+          // 다음 프레임에 스크롤 (DOM 렌더링 후)
+          requestAnimationFrame(() => window.scrollTo(0, y));
+        }
+      }
+      // 한 번만 사용 — 다음 진입에는 새로 저장된 값 사용
+      sessionStorage.removeItem(SCROLL_KEY);
+    } catch { /* SSR / blocked storage */ }
+  }, []);
+
+  // 카드 클릭 직전 — 현재 스크롤 + 클릭 키 저장
+  function rememberPosition(key: string) {
+    try {
+      sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+      sessionStorage.setItem(LAST_CLICK_KEY, key);
+    } catch { /* ignore */ }
+  }
+
   if (items.length === 0) {
     return <div className="px-4 py-12 text-center text-[13px] text-muted">아직 작성된 글이 없어요.</div>;
   }
@@ -92,10 +124,13 @@ export default function MobileFeedList({ items }: Props) {
           const Wrapper: React.ElementType = href ? Link : 'div';
           const wrapperProps = href ? { href } : {};
 
+          const itemKey = `${f.kind}-${f.id}`;
+          const isLastClicked = itemKey === lastClickKey;
+          const onItemClick = () => rememberPosition(itemKey);
           return (
-            <li key={`${f.kind}-${f.id}`} className={`border-b border-[#f0f0f0] ${isAuctionLive ? 'bg-[#fef2f2] border-l-4 border-l-[#dc2626]' : ''}`}>
+            <li key={itemKey} className={`border-b border-[#f0f0f0] ${isAuctionLive ? 'bg-[#fef2f2] border-l-4 border-l-[#dc2626]' : isLastClicked ? 'bg-[#eef4fb]' : ''}`}>
               <div className="flex items-stretch">
-                <Wrapper {...wrapperProps} className="flex-1 min-w-0 px-4 py-3 no-underline active:bg-[#f5f7fa]">
+                <Wrapper {...wrapperProps} onClick={onItemClick} className="flex-1 min-w-0 px-4 py-3 no-underline active:bg-[#f5f7fa]">
                   {/* 헤더 — 헤드라벨 + 작성자 */}
                   <div className="flex items-center justify-between gap-2 mb-1">
                     {headLabel && (

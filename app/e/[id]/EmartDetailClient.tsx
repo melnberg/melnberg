@@ -34,7 +34,7 @@ export default function EmartDetailClient({ id }: { id: number }) {
   if (!emart) return null;
   return (
     <div className="max-w-[680px] mx-auto w-full">
-      <EmartPanel emart={emart} onClose={() => router.push('/')} onChanged={() => load()} inline />
+      <EmartPanel emart={emart} onClose={() => router.back()} onChanged={() => load()} inline />
     </div>
   );
 }

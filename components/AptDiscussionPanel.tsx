@@ -559,11 +559,17 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
             <div className="text-[11px] font-semibold tracking-wider text-cyan uppercase">{apt.dong ?? ''}</div>
             <h2 className="text-[18px] font-bold text-navy tracking-tight">{apt.apt_nm}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="닫기" className="w-10 h-10 flex items-center justify-center text-navy hover:bg-navy-soft transition-colors flex-shrink-0">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+          <button type="button" onClick={onClose} aria-label={inline ? '뒤로' : '닫기'} className="w-10 h-10 flex items-center justify-center text-navy hover:bg-navy-soft transition-colors flex-shrink-0">
+            {inline ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            )}
           </button>
         </div>
 
