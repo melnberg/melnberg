@@ -125,7 +125,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
                     <span className="text-[13px] font-bold text-text">{nameMap.get(b.bidder_id) ?? '익명'}</span>
                     <span className="text-[13px] tabular-nums text-navy font-bold">{Number(b.amount).toLocaleString()} mlbg</span>
                     <span className="text-[10px] text-muted tabular-nums">
-                      {new Date(b.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                      {new Date(b.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Seoul' })}
                     </span>
                   </li>
                 ))}

@@ -356,7 +356,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                       <td className="py-2.5 px-2 text-center text-muted">{p.pg_provider ?? '-'}</td>
                       <td className="py-2.5 px-2 text-center">{p.payer_name ?? <span className="text-muted">-</span>}</td>
                       <td className="py-2.5 px-2 text-center text-muted tabular-nums">
-                        {new Date(p.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                        {new Date(p.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Seoul' })}
                       </td>
                       <td className="py-2.5 px-2 text-center">
                         <span className={`text-[10px] font-bold tracking-widest uppercase ${p.status === 'submitted' ? 'text-cyan' : 'text-muted'}`}>
@@ -588,7 +588,7 @@ export default function AdminPanel({ profiles: initialProfiles, payments: initia
                       <td className="py-2.5 px-2 text-center text-muted">{p.pg_provider ?? '-'}</td>
                       <td className="py-2.5 px-2 text-center text-muted">{p.tier_period_label ?? '-'}</td>
                       <td className="py-2.5 px-2 text-center text-muted tabular-nums">
-                        {new Date(p.paid_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                        {new Date(p.paid_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Seoul' })}
                       </td>
                       <td className="py-2.5 px-2 text-center">
                         <span className={`text-[10px] font-bold tracking-widest uppercase ${p.status === 'paid' ? 'text-cyan' : 'text-muted'}`}>

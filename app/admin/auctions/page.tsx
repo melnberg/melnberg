@@ -88,7 +88,7 @@ export default async function AdminAuctionsPage() {
                           <span className="text-[#dc2626] font-bold"><Countdown endsAt={a.ends_at} /></span>
                         ) : (
                           <span className="text-muted text-[11px]">
-                            {new Date(a.ends_at).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
+                            {new Date(a.ends_at).toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })}
                           </span>
                         )}
                       </td>

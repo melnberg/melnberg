@@ -50,7 +50,7 @@ export default async function AuctionsPage() {
                           {a.current_bidder_name && <span className="text-muted ml-2">· {a.current_bidder_name} 님</span>}
                         </div>
                         <div className="text-muted tabular-nums">
-                          종료 {new Date(a.ends_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                          종료 {new Date(a.ends_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Seoul' })}
                           <span className="ml-2 text-[#dc2626] font-bold">입찰 {a.bid_count}건</span>
                         </div>
                       </div>
