@@ -199,7 +199,14 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
           <img src={meta.pin} alt="" className="w-9 h-12 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] font-bold tracking-widest uppercase text-white/80 mb-0.5">{meta.label}</div>
-            <h1 className="text-[18px] font-bold text-white truncate">{factory.name}</h1>
+            <h1 className="text-[18px] font-bold text-white inline-flex items-center gap-1.5">
+              <span className="truncate">{factory.name}</span>
+              <a href={`/?factory=${factory.id}`} aria-label="지도에서 위치 보기" title="지도에서 위치 보기" className="text-white/80 hover:text-white inline-flex items-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+              </a>
+            </h1>
             {factory.address && <div className="text-[11px] text-white/80 truncate">{factory.address}</div>}
           </div>
           <button type="button" onClick={onClose} aria-label={inline ? '뒤로' : '닫기'} className="text-white/90 hover:text-white px-1 cursor-pointer bg-transparent border-none flex items-center justify-center">

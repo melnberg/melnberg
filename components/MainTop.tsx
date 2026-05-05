@@ -22,7 +22,8 @@ export default function MainTop({ crumbs, meta }: { crumbs: Crumb[]; meta?: stri
           </span>
         ))}
       </div>
-      {meta && <div className="text-[11px] text-muted tracking-wider uppercase">{meta}</div>}
+      {/* meta 라벨 — 모바일에서는 우상단 floating 아이콘과 겹치므로 데스크톱만 노출 */}
+      {meta && <div className="hidden lg:block text-[11px] text-muted tracking-wider uppercase">{meta}</div>}
     </div>
   );
 }
