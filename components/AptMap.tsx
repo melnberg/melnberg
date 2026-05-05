@@ -823,8 +823,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         mapInstRef.current = map;
 
         // 뷰포트 culling — pan/zoom 끝난 시점(idle) 에 화면 안 핀만 골라서 top N 표시
-        // 점거/매물 핀은 게임 정보라 cap 무시하고 항상 노출
+        // 점거/매물 핀은 게임 정보라 cap·tier 무시하고 항상 노출
         const VISIBLE_CAP = 180;
+        // 줌 레벨별 일반 핀 최소 세대수 (카카오: 1=25m, 2=50m, 3=100m, 4=250m, 5=500m, 6=1km, 7=2km)
+        function minHhForLevel(lvl: number): number {
+          if (lvl <= 4) return 0;       // 250m 이하: 모든 단지
+          if (lvl === 5) return 1000;   // 500m: 1000세대 이상 (green/orange/red)
+          if (lvl === 6) return 2000;   // 1km: 2000세대 이상 (orange/red)
+          return 3000;                  // 2km+ : 3000세대 이상 (red)
+        }
         const updateVisibility = () => {
           const m = map as KakaoMapInst & { getBounds?: () => { getSouthWest: () => { getLat: () => number; getLng: () => number }; getNorthEast: () => { getLat: () => number; getLng: () => number } } };
           const bounds = m.getBounds?.();
@@ -833,9 +840,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           const ne = bounds.getNorthEast();
           const swLat = sw.getLat(), swLng = sw.getLng();
           const neLat = ne.getLat(), neLng = ne.getLng();
+          const lvlEarly = map.getLevel();
+          const minHh = minHhForLevel(lvlEarly);
           const inside: MarkerEntry[] = [];
           for (const e of markersRef.current) {
-            if (e.lat >= swLat && e.lat <= neLat && e.lng >= swLng && e.lng <= neLng) inside.push(e);
+            if (e.lat < swLat || e.lat > neLat || e.lng < swLng || e.lng > neLng) continue;
+            // 점거/매물은 무조건 후보. 일반 핀은 줌 레벨별 세대수 임계값 통과해야.
+            if (!e.occupied && !e.listed && e.hh < minHh) continue;
+            inside.push(e);
           }
           inside.sort((a, b) => {
             const ap = (a.occupied || a.listed) ? 1 : 0;
