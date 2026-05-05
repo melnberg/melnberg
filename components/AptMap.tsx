@@ -165,7 +165,17 @@ const CLUSTER_STYLES = [
   boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
 }));
 
-type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
+// 마커·오버레이 메타 — 뷰포트 culling + top-N cap 에 사용.
+// occupied / listed 인 핀은 cap 무시하고 항상 노출 (점거·매물은 게임 정보라 중요)
+type MarkerEntry = {
+  marker: KakaoMarkerInst;
+  overlay: KakaoOverlayInst | null;
+  lat: number;
+  lng: number;
+  hh: number;
+  occupied: boolean;
+  listed: boolean;
+};
 
 // v3: MV 빈 시점에 평당가 없이 캐시된 데이터 무효화. 새 MV 적재 후 평당가 합쳐진 응답 받기 위해
 const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v3';
@@ -316,7 +326,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
-  const markersRef = useRef<MarkerTier[]>([]);
+  const markersRef = useRef<MarkerEntry[]>([]);
+  // 별도 overlaysRef 더 이상 필요 없음 — MarkerEntry.overlay 로 통합. 호환 위해 유지.
   const overlaysRef = useRef<KakaoOverlayInst[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [selected, setSelected] = useState<AptPin | null>(null);
@@ -811,18 +822,44 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: 6 }) as KakaoMapInst;
         mapInstRef.current = map;
 
-        // 줌 변경 리스너는 한 번만 등록 — markersRef.current 참조
-        window.kakao.maps.event.addListener(map, 'zoom_changed', () => {
-          const level = map.getLevel();
-          for (const { marker, tier, occupied } of markersRef.current) {
-            if (tier === 0 || occupied) continue;
-            const visible = (tier === 1 && level <= 7) || (tier === 2 && level <= 6) || (tier === 3 && level <= 4);
-            marker.setMap(visible ? map : null);
+        // 뷰포트 culling — pan/zoom 끝난 시점(idle) 에 화면 안 핀만 골라서 top N 표시
+        // 점거/매물 핀은 게임 정보라 cap 무시하고 항상 노출
+        const VISIBLE_CAP = 180;
+        const updateVisibility = () => {
+          const m = map as KakaoMapInst & { getBounds?: () => { getSouthWest: () => { getLat: () => number; getLng: () => number }; getNorthEast: () => { getLat: () => number; getLng: () => number } } };
+          const bounds = m.getBounds?.();
+          if (!bounds) return;
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          const swLat = sw.getLat(), swLng = sw.getLng();
+          const neLat = ne.getLat(), neLng = ne.getLng();
+          const inside: MarkerEntry[] = [];
+          for (const e of markersRef.current) {
+            if (e.lat >= swLat && e.lat <= neLat && e.lng >= swLng && e.lng <= neLng) inside.push(e);
           }
-          // 평당가 라벨은 어느 정도 가까이 줌 했을 때만 (level <= 6)
-          const showLabels = level <= 6;
-          for (const ov of overlaysRef.current) ov.setMap(showLabels ? map : null);
-        });
+          inside.sort((a, b) => {
+            const ap = (a.occupied || a.listed) ? 1 : 0;
+            const bp = (b.occupied || b.listed) ? 1 : 0;
+            if (ap !== bp) return bp - ap;
+            return b.hh - a.hh;
+          });
+          const showSet = new Set<MarkerEntry>();
+          let normalCount = 0;
+          for (const e of inside) {
+            if (e.occupied || e.listed) { showSet.add(e); continue; }
+            if (normalCount < VISIBLE_CAP) { showSet.add(e); normalCount++; }
+          }
+          const lvl = map.getLevel();
+          const showLabels = lvl <= 5;
+          for (const e of markersRef.current) {
+            const v = showSet.has(e);
+            e.marker.setMap(v ? map : null);
+            if (e.overlay) e.overlay.setMap(v && showLabels ? map : null);
+          }
+        };
+        window.kakao.maps.event.addListener(map, 'idle', updateVisibility);
+        // 핀 chunk 적재 끝날 때마다 이 함수 호출되도록 window 이벤트로 중계
+        window.addEventListener('mlbg-markers-updated', updateVisibility);
 
         setMapReady(true);
       })
@@ -839,10 +876,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     if (pins.length === 0) return;
     const map = mapInstRef.current;
 
-    // 기존 마커·오버레이 제거
-    for (const { marker } of markersRef.current) marker.setMap(null);
+    // 기존 마커·오버레이 제거 (entry 안의 overlay 도 같이)
+    for (const e of markersRef.current) {
+      e.marker.setMap(null);
+      if (e.overlay) e.overlay.setMap(null);
+    }
     markersRef.current = [];
-    for (const ov of overlaysRef.current) ov.setMap(null);
     overlaysRef.current = [];
 
     function formatPyeong(p: number): string {
@@ -888,8 +927,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       return occupied ? pins8[t].occ : pins8[t].plain;
     }
 
-    const level = map.getLevel();
-    const allMarkers: MarkerTier[] = [];
+    const allMarkers: MarkerEntry[] = [];
     let cancelled = false;
 
     // 우선순위 정렬: 큰 단지·점거 단지 먼저 → 화면에 중요한 핀이 100ms 내 등장.
@@ -910,35 +948,33 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         const p = sorted[i];
         const pos = new window.kakao.maps.LatLng(p.lat, p.lng);
         const hh = p.household_count ?? 0;
-        const tier: 0 | 1 | 2 | 3 = hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
         const occupied = !!p.occupier_id;
         const listed = p.listing_price != null;
-        const visible = tier === 0 || occupied || listed
-          || (tier === 1 && level <= 7) || (tier === 2 && level <= 6) || (tier === 3 && level <= 4);
         const marker = new window.kakao.maps.Marker({
           position: pos,
           title: listed ? `${p.apt_nm} — 매물 ${Number(p.listing_price).toLocaleString()} mlbg` : p.apt_nm,
           clickable: true,
           image: pickPin(p.household_count, occupied, listed),
-          map: visible ? map : undefined,
+          // 일단 숨김 — updateVisibility 가 viewport 안 + cap 안에 들면 노출
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
-        allMarkers.push({ marker, tier, occupied });
 
-        // 평당가 라벨 — 데이터 있는 단지만, 줌 level <= 6 일 때 노출
+        let overlay: KakaoOverlayInst | null = null;
         if (p.pyeong_price && p.pyeong_price > 0) {
-          const overlay = new window.kakao.maps.CustomOverlay({
+          overlay = new window.kakao.maps.CustomOverlay({
             position: pos,
             content: `<div class="apt-pyeong-label">${formatPyeong(p.pyeong_price)}</div>`,
             yAnchor: 2.4,
             zIndex: 3,
             clickable: false,
-            map: level <= 6 ? map : undefined,
           }) as KakaoOverlayInst;
-          overlaysRef.current.push(overlay);
         }
+
+        allMarkers.push({ marker, overlay, lat: p.lat, lng: p.lng, hh, occupied, listed });
       }
       markersRef.current = allMarkers;
+      // 매 chunk 끝마다 visibility 업데이트 → 점진적 노출
+      window.dispatchEvent(new Event('mlbg-markers-updated'));
       if (i < sorted.length) setTimeout(processChunk, 0);
     }
     processChunk();
@@ -1111,9 +1147,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         </div>
       )}
 
-      {/* 좌상단 — 아파트 검색 + 정보 배지 스택 (gap 없이 딱 붙임) */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col w-[280px]">
-        <div className="bg-white border border-border shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center">
+      {/* 좌상단 — 아파트 검색 + 정보 배지 스택 (화면 좌상단 끝에 딱 붙임) */}
+      <div className="absolute top-0 left-0 z-20 flex flex-col w-[280px]">
+        <div className="bg-white border-2 border-navy shadow-[0_2px_8px_rgba(0,0,0,0.12)] flex items-center">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="ml-3 text-muted flex-shrink-0">
             <circle cx={11} cy={11} r={7} />
             <line x1={21} y1={21} x2={16.65} y2={16.65} />
