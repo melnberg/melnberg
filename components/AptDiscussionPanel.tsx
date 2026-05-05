@@ -657,20 +657,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               )}
             </div>
 
-            {/* 매물 표시 (구매자 시점) — 설명 포함 */}
-            {listingPrice != null && occupierId !== userId && (
-              <div className="mt-2 px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-navy font-medium">매물 등록됨</span>
-                  <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
-                </div>
-                {listingDescription && (
-                  <div className="mt-1.5 pt-1.5 border-t border-cyan/30 text-[11px] text-text leading-relaxed whitespace-pre-wrap">
-                    {listingDescription}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* 매물 박스는 ListingInteractions 안에 통합 — 여기선 본인 시점만 처리 */}
             {occupierId === userId && (
               <div className="mt-2 space-y-1.5">
                 {listingPrice != null ? (
@@ -748,6 +735,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               aptId={apt.id}
               userId={userId}
               isOwner={occupierId === userId}
+              listingPrice={listingPrice}
+              listingDescription={listingDescription}
               onTradeExecuted={() => reload()}
             />
           )}

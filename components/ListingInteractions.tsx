@@ -41,11 +41,15 @@ export default function ListingInteractions({
   aptId,
   userId,
   isOwner,
+  listingPrice,
+  listingDescription,
   onTradeExecuted,
 }: {
   aptId: number;
   userId: string | null;
   isOwner: boolean;
+  listingPrice: number | null;
+  listingDescription?: string | null;
   /** 거래 체결되어 점거 이전됐을 때 패널 reload 트리거용 */
   onTradeExecuted?: () => void;
 }) {
@@ -210,16 +214,31 @@ export default function ListingInteractions({
   const receivedPending = isOwner ? pendingOffers.filter((o) => o.seller_id === userId) : [];
 
   return (
-    <div className="mt-3 space-y-3">
+    <div className="mt-3 border border-cyan/40 bg-white">
+      {/* 매물 헤더 — 호가 + 설명 (있을 때만) */}
+      {listingPrice != null && (
+        <div className="px-3 py-2 bg-cyan/10 border-b border-cyan/30">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] text-navy font-medium">매물 등록됨</span>
+            <span className="text-[13px] font-bold text-navy tabular-nums">{listingPrice.toLocaleString()} mlbg</span>
+          </div>
+          {listingDescription && (
+            <div className="mt-1.5 pt-1.5 border-t border-cyan/20 text-[11px] text-text leading-relaxed whitespace-pre-wrap">
+              {listingDescription}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 받은 호가 (매도자 시점) */}
       {isOwner && receivedPending.length > 0 && (
-        <div className="border border-cyan/40 bg-cyan/5">
-          <div className="px-3 py-2 bg-cyan/15 text-[11px] font-bold tracking-wider uppercase text-navy border-b border-cyan/30">
+        <div className="border-b border-cyan/30 bg-cyan/5">
+          <div className="px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-navy">
             받은 호가 {receivedPending.length}건
           </div>
-          <ul>
+          <ul className="border-t border-cyan/20">
             {receivedPending.map((o) => (
-              <li key={o.id} className="px-3 py-2.5 border-b border-cyan/20 last:border-b-0">
+              <li key={o.id} className="px-3 py-2 border-b border-cyan/20 last:border-b-0">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-1.5 text-[12px] min-w-0">
                     <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-[#fef3c7] text-[#78350f]' : 'bg-cyan text-white'}`}>
@@ -250,13 +269,13 @@ export default function ListingInteractions({
 
       {/* 내가 보낸 호가 (매수자 시점) */}
       {!isOwner && userId && myPending.length > 0 && (
-        <div className="border border-border bg-bg/50">
-          <div className="px-3 py-2 bg-bg text-[11px] font-bold tracking-wider uppercase text-muted border-b border-border">
+        <div className="border-b border-cyan/30">
+          <div className="px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-muted">
             내가 보낸 호가 {myPending.length}건 (대기중)
           </div>
-          <ul>
+          <ul className="border-t border-cyan/20">
             {myPending.map((o) => (
-              <li key={o.id} className="px-3 py-2 border-b border-border last:border-b-0 flex items-center justify-between gap-2 text-[12px]">
+              <li key={o.id} className="px-3 py-1.5 border-b border-cyan/20 last:border-b-0 flex items-center justify-between gap-2 text-[12px]">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className={`text-[9px] font-bold tracking-wider px-1 py-px ${o.kind === 'snatch' ? 'bg-[#fef3c7] text-[#78350f]' : 'bg-cyan/15 text-cyan'}`}>
                     {o.kind === 'snatch' ? '내놔' : '매수'}
@@ -276,17 +295,17 @@ export default function ListingInteractions({
 
       {/* 매수 호가 / 내놔 폼 (비점거자 + 로그인 시) */}
       {!isOwner && userId && (
-        <div className="border border-border">
+        <div className="border-b border-cyan/30">
           {!offerOpen ? (
             <div className="flex">
               <button type="button"
                 onClick={() => { setOfferOpen(true); setOfferKind('offer'); }}
-                className="flex-1 text-[12px] py-2 border-r border-border bg-white text-navy hover:bg-cyan/10 font-medium">
+                className="flex-1 text-[12px] py-2 border-r border-cyan/30 bg-white text-navy hover:bg-cyan/10 font-medium">
                 매수 호가 제시
               </button>
               <button type="button"
                 onClick={() => { setOfferOpen(true); setOfferKind('snatch'); }}
-                className="flex-1 text-[12px] py-2 bg-white text-[#92400e] hover:bg-[#fef3c7] font-medium">
+                className="flex-1 text-[12px] py-2 bg-red-500 text-white hover:bg-red-600 font-bold">
                 내놔 (무상 요청)
               </button>
             </div>
@@ -298,7 +317,7 @@ export default function ListingInteractions({
                   매수 호가
                 </button>
                 <button type="button" onClick={() => setOfferKind('snatch')}
-                  className={`text-[11px] font-bold px-2 py-1 ${offerKind === 'snatch' ? 'bg-[#f59e0b] text-white' : 'bg-white border border-border text-text'}`}>
+                  className={`text-[11px] font-bold px-2 py-1 ${offerKind === 'snatch' ? 'bg-red-500 text-white' : 'bg-white border border-border text-text'}`}>
                   내놔 (무상)
                 </button>
                 <button type="button" onClick={() => setOfferOpen(false)}
@@ -326,7 +345,7 @@ export default function ListingInteractions({
                     placeholder="왜 무상으로 받고 싶은지 — 설득력 있게 (선택)"
                     className="w-full border border-border px-2 py-1.5 text-[12px] outline-none focus:border-navy resize-none" />
                   <button type="button" onClick={() => submitOffer('snatch')} disabled={offerBusy}
-                    className="w-full text-[12px] font-bold py-2 bg-[#f59e0b] text-white hover:bg-[#d97706] disabled:opacity-40">
+                    className="w-full text-[12px] font-bold py-2 bg-red-500 text-white hover:bg-red-600 disabled:opacity-40">
                     {offerBusy ? '...' : '내놔 요청 보내기'}
                   </button>
                 </>
@@ -337,12 +356,12 @@ export default function ListingInteractions({
       )}
 
       {/* 매물 댓글 */}
-      <div className="border border-border">
-        <div className="px-3 py-2 bg-bg/60 text-[11px] font-bold tracking-wider uppercase text-muted border-b border-border flex items-center justify-between">
-          <span>매물 댓글 {comments?.length ?? 0}</span>
+      <div>
+        <div className="px-3 py-1.5 text-[11px] font-bold tracking-wider uppercase text-muted">
+          매물 댓글 {comments?.length ?? 0}
         </div>
         {userId && (
-          <div className="p-2.5 border-b border-border bg-white flex items-start gap-2">
+          <div className="px-3 pb-2 flex items-start gap-2">
             <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)}
               maxLength={1000} rows={2}
               placeholder="매물에 댓글 남기기..."
@@ -354,15 +373,15 @@ export default function ListingInteractions({
           </div>
         )}
         {comments === null ? (
-          <div className="px-3 py-3 text-[11px] text-muted text-center">불러오는 중...</div>
+          <div className="px-3 py-3 text-[11px] text-muted text-center border-t border-cyan/20">불러오는 중...</div>
         ) : comments.length === 0 ? (
-          <div className="px-3 py-3 text-[11px] text-muted text-center">첫 댓글을 남겨보세요.</div>
+          <div className="px-3 py-3 text-[11px] text-muted text-center border-t border-cyan/20">첫 댓글을 남겨보세요.</div>
         ) : (
-          <ul className="max-h-[280px] overflow-y-auto">
+          <ul className="max-h-[280px] overflow-y-auto border-t border-cyan/20">
             {comments.map((c) => {
               const isMine = userId && c.author_id === userId;
               return (
-                <li key={c.id} className="px-3 py-2 border-b border-border last:border-b-0 bg-white">
+                <li key={c.id} className="px-3 py-2 border-b border-cyan/15 last:border-b-0">
                   <div className="flex items-center gap-1.5 text-[11px] text-muted mb-0.5">
                     {c.author_id ? (
                       <Link href={`/u/${c.author_id}`} className="text-text font-bold hover:underline" onClick={(e) => e.stopPropagation()}>
