@@ -643,9 +643,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     <div className="relative">
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
-      {/* 상단 전광판 — 실시간 스코어 랭킹 TOP 10 (우→좌 마퀴)
-          코인 시스템 도입 시 다시 활성화 (false → true). 코드·API·SQL 모두 유지. */}
-      {false && ranking.length > 0 && (
+      {/* 상단 전광판 — 실시간 스코어 랭킹 TOP 10 (우→좌 마퀴) */}
+      {ranking.length > 0 && (
         <div className="absolute top-4 left-[300px] right-4 z-20 bg-black border border-black shadow-[0_2px_8px_rgba(0,0,0,0.4)] px-3 py-2 text-[12px] flex items-center gap-3 tabular-nums tracking-wide">
           <span className="font-bold text-yellow-300 flex-shrink-0 [text-shadow:0_0_6px_rgba(253,224,71,0.6)]">🏆 실시간 스코어 랭킹 TOP 10</span>
           <div className="marquee-mask flex-1 overflow-hidden">
