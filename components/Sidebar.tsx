@@ -150,6 +150,9 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
             />
           ))}
 
+          {/* 핫딜 게시판 — 적립 보상 2.5x */}
+          <SItem href="/hotdeal" label="핫딜 🔥" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
+
           {/* 커뮤니티 — 메뉴 맨 아래 + 최신글 미리보기 */}
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
           {recentPosts.length > 0 && (
@@ -276,6 +279,7 @@ const iconProps = { fill: 'none' as const, stroke: 'currentColor' as const, stro
 const HomeIcon = () => <svg {...iconProps}><path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" /></svg>;
 const BlogIcon = () => <svg {...iconProps}><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z" /><path d="M4 4v12a4 4 0 0 0 4 4" /></svg>;
 const CommunityIcon = () => <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
+const HotdealIcon = () => <svg {...iconProps}><path d="M12 2c0 4-3 5-3 9a3 3 0 1 0 6 0c0-2-1-3-1-3 0 0 4 1 4 6a6 6 0 1 1-12 0c0-5 6-7 6-12z" /></svg>;
 const ApartmentIcon = () => <svg {...iconProps}><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3" /></svg>;
 const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>;

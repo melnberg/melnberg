@@ -15,6 +15,8 @@ type Props = {
   comments: CommunityComment[];
   currentUserId: string | null;
   currentUserName?: string | null;
+  /** 댓글 적립 kind 결정 — 'hotdeal' 이면 hotdeal_comment (1 mlbg base), 그 외는 community_comment (0.3) */
+  postCategory?: 'community' | 'blog' | 'hotdeal';
 };
 
 type CommentNode = CommunityComment & { replies: CommunityComment[] };
@@ -47,7 +49,8 @@ function formatRelativeKo(iso: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function CommentSection({ postId, comments, currentUserId, currentUserName }: Props) {
+export default function CommentSection({ postId, comments, currentUserId, currentUserName, postCategory = 'community' }: Props) {
+  const commentAwardKind = postCategory === 'hotdeal' ? 'hotdeal_comment' : 'community_comment';
   const router = useRouter();
   const supabase = createClient();
   const [list, setList] = useState(comments);
@@ -77,8 +80,8 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setList([...list, data as unknown as CommunityComment]);
     setContent('');
     const insertedId = (data as { id: number }).id;
-    void awardMlbg('community_comment', insertedId, content.trim());
-    notifyTelegram('community_comment', insertedId);
+    void awardMlbg(commentAwardKind, insertedId, content.trim());
+    notifyTelegram(commentAwardKind, insertedId);
     router.refresh();
   }
 
@@ -96,8 +99,8 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setList([...list, data as unknown as CommunityComment]);
     setReplyingTo(null);
     const insertedId = (data as { id: number }).id;
-    void awardMlbg('community_comment', insertedId, replyContent.trim());
-    notifyTelegram('community_comment', insertedId);
+    void awardMlbg(commentAwardKind, insertedId, replyContent.trim());
+    notifyTelegram(commentAwardKind, insertedId);
     router.refresh();
   }
 
