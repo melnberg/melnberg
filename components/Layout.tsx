@@ -1,6 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { createPublicClient } from '@/lib/supabase/public';
-import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
+import { getCurrentUser, getCurrentProfile, getCurrentMlbgBalance } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type SidebarRecentPost } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 
@@ -31,10 +31,10 @@ const fetchRecentPosts = unstable_cache(
 
 export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
   // 모두 독립적인 쿼리 — 병렬 실행. cached 헬퍼라 페이지에서 또 호출해도 dedupe됨.
-  const [user, profile, score, recentPosts] = await Promise.all([
+  const [user, profile, balance, recentPosts] = await Promise.all([
     getCurrentUser(),
     getCurrentProfile(),
-    getCurrentScore(),
+    getCurrentMlbgBalance(),
     fetchRecentPosts(),
   ]);
 
@@ -45,7 +45,7 @@ export default async function Layout({ current, children }: { current?: string; 
     sidebarUser = {
       name: profile?.display_name ?? (user.user_metadata?.display_name as string | undefined) ?? user.email?.split('@')[0] ?? '회원',
       email: user.email ?? '',
-      score,
+      score: balance,
       isPaid,
       avatarUrl: profile?.avatar_url ?? null,
     };

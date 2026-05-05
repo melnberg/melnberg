@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Nickname, { type NicknameInfo } from './Nickname';
 import type { AptPin } from './AptMap';
+import { getAptListingPrice } from '@/lib/listing-price';
 
 type Discussion = {
   id: number;
@@ -256,11 +257,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       .eq('occupier_id', userId)
       .neq('id', apt.id)
       .limit(1);
-    const existing = (myOccs as Array<{ id: number; apt_nm: string }> | null)?.[0];
-    if (existing) {
-      const ok = confirm(`기존에 점거중인 [${existing.apt_nm}]은 자동 퇴거됩니다. 그래도 진행하시겠어요?`);
-      if (!ok) return;
-    }
+    const price = getAptListingPrice(apt.lawd_cd);
+    if (!confirm(`이 단지를 ${price} mlbg에 분양받습니다. 진행할까요?`)) return;
     setClaiming(true);
     const { data, error } = await supabase.rpc('claim_apt', { p_apt_id: apt.id });
     setClaiming(false);
@@ -591,21 +589,27 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               )}
             </div>
           ) : userId ? (
-            <button
-              type="button"
-              onClick={claimApt}
-              disabled={claiming}
-              className="w-full bg-cyan text-white py-2.5 text-[13px] font-bold tracking-wide hover:bg-cyan-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
-              <span>{claiming ? '점거중...' : '이 단지 점거하기'}</span>
-            </button>
+            <div>
+              <div className="text-[12px] text-muted mb-1.5 flex items-center justify-between">
+                <span>분양가</span>
+                <span className="font-bold text-navy">{getAptListingPrice(apt.lawd_cd).toLocaleString()} mlbg</span>
+              </div>
+              <button
+                type="button"
+                onClick={claimApt}
+                disabled={claiming}
+                className="w-full bg-cyan text-white py-2.5 text-[13px] font-bold tracking-wide hover:bg-cyan-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+                <span>{claiming ? '분양중...' : `이 단지 분양받기 (${getAptListingPrice(apt.lawd_cd)} mlbg)`}</span>
+              </button>
+            </div>
           ) : (
             <Link
               href="/login"
               className="block w-full bg-white border border-cyan text-cyan py-2.5 text-[13px] font-bold tracking-wide hover:bg-navy-soft text-center no-underline"
             >
-              로그인하고 점거하기
+              로그인하고 분양받기
             </Link>
           )}
 

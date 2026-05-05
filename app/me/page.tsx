@@ -6,7 +6,7 @@ import LogoutButton from '@/components/LogoutButton';
 import ProfileForm from '@/components/ProfileForm';
 import DeleteAccountButton from '@/components/DeleteAccountButton';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser, getCurrentProfile, getCurrentScore } from '@/lib/auth';
+import { getCurrentUser, getCurrentProfile, getCurrentScore, getCurrentMlbgBalance } from '@/lib/auth';
 import { listOwnPayments, tierLabelKo, isActivePaid, formatExpiry } from '@/lib/tier';
 import { paymentStatusLabel } from '@/lib/tier-utils';
 
@@ -24,6 +24,7 @@ export default async function MePage() {
   const [
     profile,
     score,
+    balance,
     payments,
     { count: aptPostCount },
     { count: aptCommentCount },
@@ -32,6 +33,7 @@ export default async function MePage() {
   ] = await Promise.all([
     getCurrentProfile(),
     getCurrentScore(),
+    getCurrentMlbgBalance(),
     listOwnPayments(),
     supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
     supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
@@ -111,7 +113,7 @@ export default async function MePage() {
               <Stat label="게시글" value={communityPosts.toLocaleString()} suffix="개" />
               <Stat label="아파트글" value={aptPosts.toLocaleString()} suffix="개" border />
               <Stat label="댓글" value={totalComments.toLocaleString()} suffix="개" border />
-              <Stat label="mlbg" value={String(score)} accent border />
+              <Stat label="mlbg 잔액" value={String(balance)} accent border />
             </div>
             <div className="mt-3 px-4 py-3 border border-border bg-navy-soft text-[11px] leading-relaxed">
               <div className="text-navy font-bold mb-1.5 tracking-wider uppercase text-[10px]">mlbg 적립 기준</div>
@@ -119,7 +121,7 @@ export default async function MePage() {
                 <li>· 커뮤니티 글 <b className="text-navy">2 mlbg</b> / 커뮤니티 댓글 <b className="text-navy">0.3 mlbg</b></li>
                 <li>· 아파트글 <b className="text-navy">1 mlbg</b> / 아파트 댓글 <b className="text-navy">0.5 mlbg</b></li>
               </ul>
-              <p className="text-muted mt-1.5">단지 분양·매매 시 사용되는 화폐 단위입니다.</p>
+              <p className="text-muted mt-1.5">단지 분양·매매 시 사용되는 화폐 단위입니다. 누적 적립 점수: <b>{score}</b></p>
             </div>
           </div>
 

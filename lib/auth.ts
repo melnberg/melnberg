@@ -52,10 +52,21 @@ export const getCurrentProfile = cache(async (): Promise<FullProfile | null> => 
   };
 });
 
+// 적립 점수 (활동 기반, 추이 표시용 — get_user_score)
 export const getCurrentScore = cache(async (): Promise<number> => {
   const user = await getCurrentUser();
   if (!user) return 0;
   const supabase = await createClient();
   const { data } = await supabase.rpc('get_user_score', { p_user_id: user.id });
   return typeof data === 'number' ? data : Number(data ?? 0);
+});
+
+// 현재 보유 mlbg 잔액 (저장된 값)
+export const getCurrentMlbgBalance = cache(async (): Promise<number> => {
+  const user = await getCurrentUser();
+  if (!user) return 0;
+  const supabase = await createClient();
+  const { data } = await supabase.from('profiles').select('mlbg_balance').eq('id', user.id).maybeSingle();
+  const v = (data as { mlbg_balance?: number | string | null } | null)?.mlbg_balance;
+  return typeof v === 'number' ? v : Number(v ?? 0);
 });

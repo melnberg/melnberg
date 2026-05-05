@@ -72,6 +72,7 @@ export type AptPin = {
   id: number;
   apt_nm: string;
   dong: string | null;
+  lawd_cd: string | null;
   lat: number;
   lng: number;
   household_count: number | null;

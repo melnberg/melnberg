@@ -6,7 +6,7 @@ import { createPublicClient } from '@/lib/supabase/public';
 // detail=1 → 중소형 (100~999세대)
 // fresh=1  → unstable_cache 우회. 점거/강제집행 직후 강제 갱신용
 
-const PIN_SELECT = 'id, apt_nm, dong, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at';
+const PIN_SELECT = 'id, apt_nm, dong, lawd_cd, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at';
 
 async function fetchBig(): Promise<unknown[]> {
   const supabase = createPublicClient();
