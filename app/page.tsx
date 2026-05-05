@@ -1,5 +1,6 @@
 import Layout from '@/components/Layout';
 import AptMap, { type FeedItem } from '@/components/AptMap';
+import MobileFeedList from '@/components/MobileFeedList';
 import { createPublicClient } from '@/lib/supabase/public';
 
 // 매 요청마다 fresh fetch — 피드 즉시 반영 위해 캐시 제거
@@ -582,13 +583,24 @@ async function fetchFeed(): Promise<FeedItem[]> {
     return [...auctionItems, ...others];
 }
 
-export default async function HomePage() {
-  // 핀은 클라이언트에서 /api/home-pins 로 비동기 fetch — 페이지 셸 먼저 보여서 체감 빠름
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ view?: string; apt?: string; emart?: string; factory?: string }> }) {
+  const sp = await searchParams;
+  // 모바일 기본 = 피드. ?view=map 또는 단지/시설 쿼리 있으면 지도 강제 노출.
+  const forceMap = sp.view === 'map' || !!sp.apt || !!sp.emart || !!sp.factory;
   const feed = await fetchFeed();
 
   return (
     <Layout current="home">
-      <AptMap feed={feed} />
+      {/* 데스크톱 — 항상 지도. 모바일 forceMap 시에도 지도. */}
+      <div className={`flex-1 min-w-0 ${forceMap ? '' : 'hidden md:flex md:flex-col'}`}>
+        <AptMap feed={feed} />
+      </div>
+      {/* 모바일 — forceMap 아닐 때 피드 풀스크린 */}
+      {!forceMap && (
+        <div className="md:hidden flex-1 min-w-0">
+          <MobileFeedList items={feed} />
+        </div>
+      )}
     </Layout>
   );
 }

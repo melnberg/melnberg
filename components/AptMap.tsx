@@ -466,6 +466,32 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     }
   }, [searchParams, pins, router]);
 
+  // ?emart={id} / ?factory={id} — 모바일 피드에서 시설로 진입 시 해당 패널 자동 열기
+  useEffect(() => {
+    const emartParam = searchParams.get('emart');
+    if (emartParam && emartList.length > 0) {
+      const id = Number(emartParam);
+      const e = emartList.find((x) => x.id === id);
+      if (e) {
+        setSelectedEmart(e);
+        const inst = mapInstRef.current;
+        if (inst) { inst.setLevel(3); inst.panTo(new window.kakao.maps.LatLng(e.lat, e.lng)); }
+        router.replace('/', { scroll: false });
+      }
+    }
+    const factoryParam = searchParams.get('factory');
+    if (factoryParam && factoryList.length > 0) {
+      const id = Number(factoryParam);
+      const f = factoryList.find((x) => x.id === id);
+      if (f) {
+        setSelectedFactory(f);
+        const inst = mapInstRef.current;
+        if (inst) { inst.setLevel(3); inst.panTo(new window.kakao.maps.LatLng(f.lat, f.lng)); }
+        router.replace('/', { scroll: false });
+      }
+    }
+  }, [searchParams, emartList, factoryList, router]);
+
   // 오늘의 매매 (sell 이벤트). 강제집행 폐기 후 매매 활동성 표시.
   type EvictEvent = { occurred_at: string; actor_name: string | null; prev_occupier_name: string | null; actor_score: number | null; apt_id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null };
   const [evictsOpen, setEvictsOpen] = useState(false);
