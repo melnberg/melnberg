@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { awardMlbg } from '@/lib/mlbg-award';
+import RewardTooltip from './RewardTooltip';
 
 export type EmartItem = {
   id: number;
@@ -46,6 +47,7 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
 
   // 댓글
   const [comments, setComments] = useState<EmartComment[]>([]);
+  const [earnedMap, setEarnedMap] = useState<Record<number, number>>({});
   const [commentInput, setCommentInput] = useState('');
 
   useEffect(() => {
@@ -56,7 +58,18 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
     let cancelled = false;
     (async () => {
       const { data } = await supabase.rpc('list_emart_comments', { p_emart_id: emart.id, p_limit: 50 }).then((r) => r, () => ({ data: null }));
-      if (!cancelled) setComments((data ?? []) as EmartComment[]);
+      const list = (data ?? []) as EmartComment[];
+      if (cancelled) return;
+      setComments(list);
+      const ids = list.map((c) => c.id);
+      if (ids.length > 0) {
+        const { data: aw } = await supabase.from('mlbg_award_log').select('ref_id, earned')
+          .eq('kind', 'emart_comment').in('ref_id', ids)
+          .then((r) => r, () => ({ data: null }));
+        const m: Record<number, number> = {};
+        for (const r of (aw ?? []) as Array<{ ref_id: number; earned: number }>) m[r.ref_id] = Number(r.earned);
+        if (!cancelled) setEarnedMap(m);
+      }
     })();
     return () => { cancelled = true; };
   }, [emart.id, supabase]);
@@ -334,7 +347,12 @@ export default function EmartPanel({ emart, onClose, onChanged }: Props) {
                     <li key={c.id} className="px-4 py-2 border-b border-[#f0f0f0] last:border-b-0">
                       <div className="flex items-baseline justify-between gap-2 mb-0.5">
                         <span className="text-[12px] font-bold text-navy">{c.author_name ?? '익명'}</span>
-                        <span className="text-[10px] text-muted tabular-nums">{fmtKstShort(c.created_at)}</span>
+                        <span className="text-[10px] text-muted tabular-nums flex items-center gap-2">
+                          {typeof earnedMap[c.id] === 'number' && earnedMap[c.id] > 0 && (
+                            <RewardTooltip earned={earnedMap[c.id]} kind="emart_comment" />
+                          )}
+                          <span>{fmtKstShort(c.created_at)}</span>
+                        </span>
                       </div>
                       <div className="text-[12px] text-text whitespace-pre-wrap break-words">{c.content}</div>
                       {currentUid && currentUid === c.author_id && (
