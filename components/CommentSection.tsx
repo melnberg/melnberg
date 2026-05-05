@@ -240,7 +240,7 @@ function CommentRow({
           {typeof earned === 'number' && earned > 0 && (
             <>
               <span className="text-muted">·</span>
-              <span className="text-cyan font-bold tabular-nums" title="적립된 mlbg">+{earned}</span>
+              <span className="text-cyan font-bold tabular-nums" title="이 댓글을 작성하여 획득한 mlbg">+{earned}</span>
             </>
           )}
         </div>

@@ -857,7 +857,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                       return typeof earned === 'number' && earned > 0 ? (
                         <>
                           <span>·</span>
-                          <span className="text-cyan font-bold tabular-nums" title="AI 평가 적립 mlbg">+{earned} mlbg</span>
+                          <span className="text-cyan font-bold tabular-nums" title="이 글을 작성하여 획득한 mlbg">+{earned} mlbg</span>
                         </>
                       ) : null;
                     })()}
@@ -911,7 +911,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                 return typeof earned === 'number' && earned > 0 ? (
                                   <>
                                     <span>·</span>
-                                    <span className="text-cyan font-bold tabular-nums" title="AI 평가 적립 mlbg">+{earned} mlbg</span>
+                                    <span className="text-cyan font-bold tabular-nums" title="이 댓글을 작성하여 획득한 mlbg">+{earned} mlbg</span>
                                   </>
                                 ) : null;
                               })()}
@@ -948,7 +948,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                                           return typeof earned === 'number' && earned > 0 ? (
                                             <>
                                               <span>·</span>
-                                              <span className="text-cyan font-bold tabular-nums" title="AI 평가 적립 mlbg">+{earned} mlbg</span>
+                                              <span className="text-cyan font-bold tabular-nums" title="이 댓글을 작성하여 획득한 mlbg">+{earned} mlbg</span>
                                             </>
                                           ) : null;
                                         })()}

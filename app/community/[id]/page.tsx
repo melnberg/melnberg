@@ -125,7 +125,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               {postEarned > 0 && (
                 <>
                   <span>·</span>
-                  <span className="text-cyan font-bold tabular-nums" title="적립된 mlbg">+{postEarned}</span>
+                  <span className="text-cyan font-bold tabular-nums" title="이 글을 작성하여 획득한 mlbg">+{postEarned}</span>
                 </>
               )}
               {isAuthor && (
