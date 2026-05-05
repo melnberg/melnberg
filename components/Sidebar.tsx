@@ -6,7 +6,7 @@ import { products } from '@/lib/products';
 import NotificationsBell from './NotificationsBell';
 import CheckinButton from './CheckinButton';
 
-export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; avatarUrl?: string | null };
+export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; isAdmin?: boolean; avatarUrl?: string | null };
 export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
 
 type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[] };
@@ -90,6 +90,16 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
               <div className="px-3 pb-2 pt-1">
                 <CheckinButton />
               </div>
+              {/* 어드민 진입 — admin 만 노출 */}
+              {user.isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="block bg-navy text-white text-center py-1.5 text-[11px] font-bold tracking-widest uppercase no-underline hover:bg-navy-dark"
+                >
+                  어드민 페이지 →
+                </Link>
+              )}
             </div>
           ) : (
             <div className="flex gap-2">

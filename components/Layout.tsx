@@ -48,6 +48,7 @@ export default async function Layout({ current, children }: { current?: string; 
       email: user.email ?? '',
       balance,
       isPaid,
+      isAdmin: !!profile?.is_admin,
       avatarUrl: profile?.avatar_url ?? null,
     };
   }
