@@ -30,6 +30,26 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
   const [post, comments] = await Promise.all([getPost(numId), listComments(numId)]);
   if (!post) notFound();
+
+  // mlbg 적립 — 본글 + 댓글 한 번에 fetch (id → earned 매핑)
+  const sbPub = await createClient();
+  const commentIds = comments.map((c) => c.id);
+  const { data: awardRows } = await sbPub
+    .from('mlbg_award_log')
+    .select('kind, ref_id, earned')
+    .in('ref_id', [numId, ...commentIds])
+    .then((r) => r, () => ({ data: null }));
+  const earnedMap = new Map<string, number>();
+  for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
+    earnedMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
+  }
+  const postEarned = earnedMap.get(`community_post:${numId}`) ?? earnedMap.get(`hotdeal_post:${numId}`) ?? 0;
+  // 댓글 id → earned 매핑 (CommentSection 으로 전달)
+  const commentEarnedMap: Record<number, number> = {};
+  for (const cid of commentIds) {
+    const v = earnedMap.get(`community_comment:${cid}`) ?? earnedMap.get(`hotdeal_comment:${cid}`);
+    if (v && v > 0) commentEarnedMap[cid] = v;
+  }
   // 삭제된 글 — 친절한 안내 페이지
   if (post.deleted_at) {
     return (
@@ -102,6 +122,12 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <span>수정됨</span>
                 </>
               )}
+              {postEarned > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-cyan font-bold tabular-nums" title="적립된 mlbg">+{postEarned}</span>
+                </>
+              )}
               {isAuthor && (
                 <>
                   <span>·</span>
@@ -123,6 +149,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             currentUserId={user?.id ?? null}
             currentUserName={currentUserName}
             postCategory="community"
+            earnedMap={commentEarnedMap}
           />
 
           {/* 목록으로 */}

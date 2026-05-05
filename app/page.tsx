@@ -513,17 +513,17 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 시설 댓글 → FeedItem (post_comment kind 재활용 — 댓글 뱃지 노출)
+    // 시설 댓글 → FeedItem (별도 kind, 댓글 스타일로 렌더)
     const facilityCommentItems: FeedItem[] = [
       ...emartCommRows.map((c) => {
         const em = (Array.isArray(c.emart) ? c.emart[0] : c.emart) as { name?: string | null; lat?: number | null; lng?: number | null } | null;
         const prof = profileMap.get(c.author_id);
         return {
-          kind: 'emart_occupy' as const,    // emart click 핸들러 재활용
+          kind: 'emart_comment' as const,
           id: 200000 + c.id,
           apt_master_id: c.emart_id,
           post_id: null,
-          title: `${em?.name ?? '이마트'} 댓글`,
+          title: em?.name ?? '이마트',
           content: c.content,
           created_at: c.created_at,
           emart_name: em?.name ?? undefined,
@@ -544,11 +544,11 @@ async function fetchFeed(): Promise<FeedItem[]> {
         const f = (Array.isArray(c.factory) ? c.factory[0] : c.factory) as { name?: string | null; lat?: number | null; lng?: number | null } | null;
         const prof = profileMap.get(c.author_id);
         return {
-          kind: 'factory_occupy' as const,
+          kind: 'factory_comment' as const,
           id: 300000 + c.id,
           apt_master_id: c.factory_id,
           post_id: null,
-          title: `${f?.name ?? '시설'} 댓글`,
+          title: f?.name ?? '시설',
           content: c.content,
           created_at: c.created_at,
           emart_name: f?.name ?? undefined,

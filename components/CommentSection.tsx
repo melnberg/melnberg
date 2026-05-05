@@ -17,6 +17,8 @@ type Props = {
   currentUserName?: string | null;
   /** 댓글 적립 kind 결정 — 'hotdeal' 이면 hotdeal_comment (1 mlbg base), 그 외는 community_comment (0.3) */
   postCategory?: 'community' | 'blog' | 'hotdeal';
+  /** 댓글 id → 적립 mlbg 매핑 (서버에서 전달) */
+  earnedMap?: Record<number, number>;
 };
 
 type CommentNode = CommunityComment & { replies: CommunityComment[] };
@@ -49,7 +51,7 @@ function formatRelativeKo(iso: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export default function CommentSection({ postId, comments, currentUserId, currentUserName, postCategory = 'community' }: Props) {
+export default function CommentSection({ postId, comments, currentUserId, currentUserName, postCategory = 'community', earnedMap = {} }: Props) {
   const commentAwardKind = postCategory === 'hotdeal' ? 'hotdeal_comment' : 'community_comment';
   const router = useRouter();
   const supabase = createClient();
@@ -134,6 +136,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
                 onReply={() => setReplyingTo(replyingTo === c.id ? null : c.id)}
                 onDelete={() => handleDelete(c.id)}
                 showReplyButton={Boolean(currentUserId)}
+                earned={earnedMap[c.id]}
               />
 
               {/* 답글 목록 */}
@@ -147,6 +150,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
                         onDelete={() => handleDelete(r.id)}
                         showReplyButton={false}
                         compact
+                        earned={earnedMap[r.id]}
                       />
                     </li>
                   ))}
@@ -213,6 +217,7 @@ function CommentRow({
   onDelete,
   showReplyButton,
   compact,
+  earned,
 }: {
   comment: CommunityComment;
   currentUserId: string | null;
@@ -220,6 +225,7 @@ function CommentRow({
   onDelete: () => void;
   showReplyButton: boolean;
   compact?: boolean;
+  earned?: number;
 }) {
   const isMine = currentUserId === comment.author_id;
   return (
@@ -231,6 +237,12 @@ function CommentRow({
           </span>
           <span className="text-muted">·</span>
           <span className="text-muted">{formatRelativeKo(comment.created_at)}</span>
+          {typeof earned === 'number' && earned > 0 && (
+            <>
+              <span className="text-muted">·</span>
+              <span className="text-cyan font-bold tabular-nums" title="적립된 mlbg">+{earned}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {showReplyButton && onReply && (
