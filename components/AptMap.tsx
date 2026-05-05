@@ -238,6 +238,19 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; clearTimeout(smallTimer); };
   }, [pinsFromProps]);
 
+  // Supabase Realtime — apt_master 변경 시 모든 클라이언트에 즉시 push
+  // 다른 사용자의 점거/강제집행도 본인 화면에 5분 기다림 없이 반영됨
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('apt-master-realtime')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apt_master' }, () => {
+        window.dispatchEvent(new Event('mlbg-pins-changed'));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   // 점거/강제집행 액션 후 핀 갱신 — 서버 unstable_cache + localStorage 모두 무효화 후 refetch
   useEffect(() => {
     function onPinsChanged() {
