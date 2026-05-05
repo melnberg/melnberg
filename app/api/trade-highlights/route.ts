@@ -8,7 +8,7 @@ const fetchTradeHighlights = unstable_cache(
     const supabase = createPublicClient();
     const { data } = await supabase.rpc('get_recent_trade_highlights', { p_limit: 20 })
       .then((r) => r, () => ({ data: null }));
-    return (data ?? []) as Array<{ apt_nm: string; umd_nm: string | null; deal_amount: number; excl_use_ar: number; deal_date: string }>;
+    return (data ?? []) as Array<{ apt_nm: string; deal_amount: number; excl_use_ar: number; deal_date: string }>;
   },
   ['trade-highlights'],
   { revalidate: 60, tags: ['apt-trades'] },

@@ -348,8 +348,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 스코어 랭킹 + 자산 랭킹 + 실거래 하이라이트 + 거래 활발 단지
   type RankRow = { user_id: string; display_name: string; score: number };
   type WealthRow = { user_id: string; display_name: string; total_wealth: number; apt_count: number };
-  type TradeHighlight = { apt_nm: string; umd_nm: string | null; deal_amount: number; excl_use_ar: number; deal_date: string };
-  type TradedApt = { apt_id: number | null; apt_nm: string; umd_nm: string | null; trade_count: number; median_amount: number };
+  type TradeHighlight = { apt_nm: string; deal_amount: number; excl_use_ar: number; deal_date: string };
+  type TradedApt = { apt_id: number | null; apt_nm: string; trade_count: number; median_amount: number };
   const [ranking, setRanking] = useState<RankRow[]>([]);
   const [wealthRanking, setWealthRanking] = useState<WealthRow[]>([]);
   const [tradeHighlights, setTradeHighlights] = useState<TradeHighlight[]>([]);

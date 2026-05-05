@@ -1,11 +1,10 @@
 -- ──────────────────────────────────────────────
--- 070: 실거래가 데이터 공개 RPC (A·B·D 작업용)
--- apt_trades 는 admin RLS 라 일반 사용자가 직접 조회 못 함.
--- 가공된 정보만 RPC 로 노출 (security definer).
+-- 070: 실거래가 데이터 공개 RPC (A·B·D·C 작업용)
+-- apt_trades 는 admin RLS 라 가공 RPC 만 일반 사용자에 노출.
+-- umd_nm 컬럼 미존재 환경도 호환 — 거기에 의존하지 않음.
 -- ──────────────────────────────────────────────
 
 -- ── A. 단지 패널 차트용 — 최근 12개월 거래 ──────────
--- apt_master.apt_seq 또는 apt_master.apt_nm 으로 매칭 (apt_seq 우선)
 create or replace function public.get_apt_recent_trades(p_apt_id bigint, p_months int default 12)
 returns table(
   deal_date date,
@@ -24,14 +23,9 @@ declare
   v_apt_nm text;
   v_lawd_cd text;
 begin
-  select
-    coalesce(am.apt_seq, '')::text,
-    am.apt_nm,
-    am.lawd_cd
-  into v_apt_seq, v_apt_nm, v_lawd_cd
-  from public.apt_master am
-  where am.id = p_apt_id;
-
+  select coalesce(am.apt_seq, '')::text, am.apt_nm, am.lawd_cd
+    into v_apt_seq, v_apt_nm, v_lawd_cd
+    from public.apt_master am where am.id = p_apt_id;
   if v_apt_nm is null then return; end if;
 
   return query
@@ -53,7 +47,7 @@ end;
 $$;
 grant execute on function public.get_apt_recent_trades(bigint, int) to anon, authenticated;
 
--- ── A 보조 — 단지 평균·중앙값·평형별 통계 (간단 카드 표시용) ──────
+-- ── A 보조 — 단지 통계 ───────────────────────────────
 create or replace function public.get_apt_trade_summary(p_apt_id bigint, p_months int default 12)
 returns table(
   total_count bigint,
@@ -75,18 +69,17 @@ declare
 begin
   select coalesce(am.apt_seq, '')::text, am.apt_nm, am.lawd_cd
     into v_apt_seq, v_apt_nm, v_lawd_cd
-    from public.apt_master am
-    where am.id = p_apt_id;
+    from public.apt_master am where am.id = p_apt_id;
   if v_apt_nm is null then return; end if;
 
   return query
   select
-    count(*)::bigint as total_count,
-    (percentile_cont(0.5) within group (order by t.deal_amount))::bigint as median_amount,
-    (avg(t.deal_amount))::bigint as avg_amount,
-    min(t.deal_amount) as min_amount,
-    max(t.deal_amount) as max_amount,
-    max(t.deal_date) as last_deal_date
+    count(*)::bigint,
+    (percentile_cont(0.5) within group (order by t.deal_amount))::bigint,
+    (avg(t.deal_amount))::bigint,
+    min(t.deal_amount),
+    max(t.deal_amount),
+    max(t.deal_date)
   from public.apt_trades t
   where t.deal_date >= (current_date - (p_months || ' months')::interval)
     and (t.cdeal_type is null or t.cdeal_type = '')
@@ -100,12 +93,10 @@ end;
 $$;
 grant execute on function public.get_apt_trade_summary(bigint, int) to anon, authenticated;
 
--- ── B. 홈 마퀴용 — 최근 거래 highlights ────────────
--- 최근 7일 + 거래금액 상위 + 단지 이름·법정동
+-- ── B. 홈 마퀴용 — 최근 거래 highlights (umd_nm 제거) ──
 create or replace function public.get_recent_trade_highlights(p_limit int default 20)
 returns table(
   apt_nm text,
-  umd_nm text,
   deal_amount bigint,
   excl_use_ar numeric,
   deal_date date
@@ -115,7 +106,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select t.apt_nm, t.umd_nm, t.deal_amount, t.excl_use_ar, t.deal_date
+  select t.apt_nm, t.deal_amount, t.excl_use_ar, t.deal_date
   from public.apt_trades t
   where t.deal_date >= (current_date - interval '7 days')
     and (t.cdeal_type is null or t.cdeal_type = '')
@@ -130,7 +121,6 @@ create or replace function public.get_most_traded_apts(p_months int default 3, p
 returns table(
   apt_id bigint,
   apt_nm text,
-  umd_nm text,
   trade_count bigint,
   median_amount bigint,
   last_deal_date date
@@ -146,7 +136,6 @@ begin
     select
       coalesce(t.apt_seq, '') as apt_seq_key,
       max(t.apt_nm) as apt_nm,
-      max(t.umd_nm) as umd_nm,
       max(t.sgg_cd) as sgg_cd,
       count(*)::bigint as trade_count,
       (percentile_cont(0.5) within group (order by t.deal_amount))::bigint as median_amount,
@@ -167,7 +156,7 @@ begin
       limit 1
     ) am on true
   )
-  select j.apt_id, j.apt_nm, j.umd_nm, j.trade_count, j.median_amount, j.last_deal_date
+  select j.apt_id, j.apt_nm, j.trade_count, j.median_amount, j.last_deal_date
   from joined j
   where j.trade_count >= 2
   order by j.trade_count desc, j.last_deal_date desc
@@ -187,8 +176,8 @@ returns table(
   building_count int,
   kapt_build_year int,
   geocoded_address text,
-  listing_price int,           -- 게임 분양가
-  recent_median bigint,        -- 최근 6개월 중앙값 (만원)
+  listing_price int,
+  recent_median bigint,
   recent_count bigint,
   occupier_id uuid
 )
