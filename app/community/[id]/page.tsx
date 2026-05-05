@@ -120,6 +120,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             comments={comments}
             currentUserId={user?.id ?? null}
             currentUserName={currentUserName}
+            postCategory="community"
           />
 
           {/* 목록으로 */}

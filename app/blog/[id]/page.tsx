@@ -140,6 +140,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
                 comments={comments}
                 currentUserId={user?.id ?? null}
                 currentUserName={currentUserName}
+                postCategory="blog"
               />
             </>
           )}
