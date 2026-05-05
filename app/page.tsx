@@ -67,19 +67,19 @@ async function fetchFeed(): Promise<FeedItem[]> {
       .limit(10)
       .then((r) => r, () => ({ data: null }));
 
-    // 최근 이마트 분양 — 피드 일반 항목
+    // 최근 이마트 분양 — 피드 일반 항목 (lat/lng 포함하여 클릭 시 지도 이동 가능)
     const { data: emartOccs } = await supabase
       .from('emart_occupations')
-      .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name)')
+      .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
       .order('occupied_at', { ascending: false })
       .limit(20)
       .then((r) => r, () => ({ data: null }));
     const emartRows = ((emartOccs ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
 
-    // 최근 공장 분양 (하이닉스/삼성/코스트코/금속노조)
+    // 최근 공장 분양 (하이닉스/삼성/코스트코/금속노조/화물연대)
     const { data: factoryOccs } = await supabase
       .from('factory_occupations')
-      .select('id, factory_id, user_id, occupied_at, factory:factory_locations!factory_id(name, brand)')
+      .select('id, factory_id, user_id, occupied_at, factory:factory_locations!factory_id(name, brand, lat, lng)')
       .order('occupied_at', { ascending: false })
       .limit(20)
       .then((r) => r, () => ({ data: null }));
@@ -438,22 +438,24 @@ async function fetchFeed(): Promise<FeedItem[]> {
         '화물연대 본부·경기지부·부산지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 초록 화물 핀 클릭 → 분양받기.'),
     ];
 
-    // 이마트 분양 → FeedItem
+    // 공장 분양 → FeedItem (factory_occupy)
     const factoryItems: FeedItem[] = factoryRows.map((r) => {
-      const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null } | null;
+      const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null; lat?: number | null; lng?: number | null } | null;
       const prof = profileMap.get(r.user_id);
       const brandLabel = f?.brand === 'hynix' ? 'SK하이닉스' : f?.brand === 'samsung' ? '삼성전자' : f?.brand === 'costco' ? '코스트코' : f?.brand === 'union' ? '금속노조' : f?.brand === 'cargo' ? '화물연대' : '공장';
       return {
-        kind: 'emart_occupy' as const,    // 동일 렌더 재활용 (분양 뱃지)
-        id: 100000 + r.id,                 // emart 와 id 충돌 방지
-        apt_master_id: 0,
+        kind: 'factory_occupy' as const,
+        id: 100000 + r.id,
+        apt_master_id: r.factory_id,       // 클릭 시 factory id 로 패널 매칭
         post_id: null,
         title: `${brandLabel} ${f?.name ?? '시설'} 분양받음`,
         content: null,
         created_at: r.occupied_at,
         emart_name: f?.name ?? undefined,
         apt_nm: f?.name ?? null,
-        dong: null, lat: null, lng: null,
+        dong: null,
+        lat: f?.lat ?? null,
+        lng: f?.lng ?? null,
         author_id: r.user_id,
         author_name: prof?.display_name ?? null,
         author_link: prof?.link_url ?? null,
@@ -465,19 +467,21 @@ async function fetchFeed(): Promise<FeedItem[]> {
     });
 
     const emartItems: FeedItem[] = emartRows.map((r) => {
-      const em = (Array.isArray(r.emart) ? r.emart[0] : r.emart) as { name?: string | null } | null;
+      const em = (Array.isArray(r.emart) ? r.emart[0] : r.emart) as { name?: string | null; lat?: number | null; lng?: number | null } | null;
       const prof = profileMap.get(r.user_id);
       return {
         kind: 'emart_occupy' as const,
         id: r.id,
-        apt_master_id: 0,
+        apt_master_id: r.emart_id,         // 클릭 시 emart id 로 패널 매칭
         post_id: null,
         title: `${em?.name ?? '이마트'} 분양받음`,
         content: null,
         created_at: r.occupied_at,
         emart_name: em?.name ?? undefined,
         apt_nm: em?.name ?? null,
-        dong: null, lat: null, lng: null,
+        dong: null,
+        lat: em?.lat ?? null,
+        lng: em?.lng ?? null,
         author_id: r.user_id,
         author_name: prof?.display_name ?? null,
         author_link: prof?.link_url ?? null,

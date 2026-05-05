@@ -64,7 +64,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'notice' | 'emart_occupy';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'notice' | 'emart_occupy' | 'factory_occupy';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -703,6 +703,28 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     // 경매 / 입찰 → /auctions/{id}
     if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) {
       router.push(`/auctions/${item.auction_id}`);
+      return;
+    }
+    // 이마트 분양 → 지도 이동 + EmartPanel 열기
+    if (item.kind === 'emart_occupy') {
+      const e = emartList.find((x) => x.id === item.apt_master_id);
+      if (item.lat != null && item.lng != null && mapInstRef.current) {
+        const inst = mapInstRef.current;
+        inst.setLevel(3);
+        inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
+      }
+      if (e) setSelectedEmart(e);
+      return;
+    }
+    // 공장 분양 → 지도 이동 + FactoryPanel 열기
+    if (item.kind === 'factory_occupy') {
+      const f = factoryList.find((x) => x.id === item.apt_master_id);
+      if (item.lat != null && item.lng != null && mapInstRef.current) {
+        const inst = mapInstRef.current;
+        inst.setLevel(3);
+        inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
+      }
+      if (f) setSelectedFactory(f);
       return;
     }
     // 커뮤니티 글/댓글 → /community/{post_id} 로 이동
@@ -1527,7 +1549,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isAuctionBid = f.kind === 'auction_bid';
                   const isNotice = f.kind === 'notice';
                   const isEmartOccupy = f.kind === 'emart_occupy';
-                  const headLabel = (isNotice || isEmartOccupy) ? '이마트' : isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
+                  const isFactoryOccupy = f.kind === 'factory_occupy';
+                  const headLabel = isNotice ? '분양 공지'
+                    : (isEmartOccupy || isFactoryOccupy) ? (f.apt_nm ?? '시설')
+                    : isCommunity ? '커뮤니티'
+                    : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
                       <div className={`px-3 py-2.5 ${
@@ -1554,11 +1580,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           onKeyDown={(e) => { if (e.key === 'Enter') jumpToFeedItem(f); }}
                           className="cursor-pointer hover:opacity-80"
                         >
-                          {isEmartOccupy ? (
+                          {(isEmartOccupy || isFactoryOccupy) ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-[#F5A623] text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5">분양</span>
                               <span className="whitespace-pre-wrap break-words">
-                                <b className="text-[#92400e]">{f.emart_name ?? '이마트'}</b> 분양받음 (5 mlbg)
+                                <b className="text-[#92400e]">{f.title}</b>
                               </span>
                             </div>
                           ) : isAuctionBid ? (
