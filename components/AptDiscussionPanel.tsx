@@ -854,12 +854,20 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     <span>{relativeTime(d.created_at)}</span>
                     {(() => {
                       const earned = awardMap.get(`apt_post:${d.id}`);
-                      return typeof earned === 'number' && earned > 0 ? (
+                      if (typeof earned !== 'number') return null;
+                      if (earned > 0) return (
                         <>
                           <span>·</span>
                           <span className="text-cyan font-bold tabular-nums" title="이 글을 작성하여 획득한 mlbg">+{earned} mlbg</span>
                         </>
-                      ) : null;
+                      );
+                      // 1줄 글 — 정책상 0
+                      return (
+                        <>
+                          <span>·</span>
+                          <span className="text-muted tabular-nums" title="단지 토론 1줄 글은 미지급. 2줄 이상이면 +2, 5줄+ +3, 10줄+ +5">+0 mlbg</span>
+                        </>
+                      );
                     })()}
                     {isMine && (
                       <>
