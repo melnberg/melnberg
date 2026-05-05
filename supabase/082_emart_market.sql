@@ -3,6 +3,13 @@
 -- 1차: 매도가 즉시 매수 (호가 매칭은 차후)
 -- ──────────────────────────────────────────────
 
+-- 081 이 안 돌았어도 안전하게 — last_claimed_at 컬럼 보장
+alter table public.emart_occupations
+  add column if not exists last_claimed_at timestamptz;
+update public.emart_occupations
+  set last_claimed_at = occupied_at
+  where last_claimed_at is null;
+
 -- 매도 등록 — emart 당 1건만 (보유자 본인만 가능)
 create table if not exists public.emart_listings (
   id bigserial primary key,
