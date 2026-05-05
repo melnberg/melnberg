@@ -7,7 +7,7 @@ import { createPublicClient } from '@/lib/supabase/public';
 const fetchFeed = unstable_cache(
   async (): Promise<FeedItem[]> => {
     const supabase = createPublicClient();
-    const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp] = await Promise.all([
+    const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp] = await Promise.all([
       supabase
         .from('apt_discussions')
         .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
@@ -42,8 +42,18 @@ const fetchFeed = unstable_cache(
         .order('listed_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      // apt_listing_offers — pending 만 (SQL 067 미실행이면 빈 배열).
+      // RLS 가 buyer/seller 만 허용 — public client 라 일반 사용자에 한해 본인 관련만 노출.
+      supabase
+        .from('apt_listing_offers')
+        .select('id, apt_id, buyer_id, seller_id, price, kind, message, status, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(30)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
+    const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
 
     const allAuthorIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).author_id as string)),
@@ -51,6 +61,7 @@ const fetchFeed = unstable_cache(
       ...((posts ?? []).map((p) => (p as Record<string, unknown>).author_id as string)),
       ...((postComments ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
       ...((listings ?? []).map((l) => (l as Record<string, unknown>).seller_id as string)),
+      ...((offers ?? []).map((o) => (o as Record<string, unknown>).buyer_id as string)),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
@@ -230,7 +241,39 @@ const fetchFeed = unstable_cache(
       };
     });
 
-    return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems]
+    const offerItems: FeedItem[] = (offers ?? []).map((r) => {
+      const row = r as Record<string, unknown>;
+      const am = row.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+      const prof = profileMap.get(row.buyer_id as string);
+      const k = row.kind as 'offer' | 'snatch';
+      const price = Number(row.price ?? 0);
+      const aptName = am?.apt_nm ?? '단지';
+      const title = k === 'snatch' ? `${aptName} 내놔 요청 (무상)` : `${aptName} 매수 호가 ${price.toLocaleString()} mlbg`;
+      const msg = (row.message as string | null) ?? null;
+      return {
+        kind: k as 'offer' | 'snatch',
+        id: row.id as number,
+        apt_master_id: row.apt_id as number,
+        post_id: null,
+        title,
+        content: msg,
+        created_at: row.created_at as string,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+        author_id: row.buyer_id as string,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        listing_price: k === 'snatch' ? 0 : price,
+      };
+    });
+
+    return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 50);
   },

@@ -50,7 +50,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch';
   id: number;
   apt_master_id: number;
   post_id: number | null;
@@ -900,6 +900,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const fullContent = (f.content ?? '').trim();
                   const isComment = f.kind === 'comment' || f.kind === 'post_comment';
                   const isCommunity = f.kind === 'post' || f.kind === 'post_comment';
+                  const isListing = f.kind === 'listing';
+                  const isOffer = f.kind === 'offer';
+                  const isSnatch = f.kind === 'snatch';
                   const headLabel = isCommunity ? '커뮤니티' : (f.apt_nm ?? '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
@@ -928,6 +931,27 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
                               <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>
+                            </div>
+                          ) : isListing ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-[#fce7f3] text-[#9d174d] px-1.5 py-0.5 flex-shrink-0 mt-0.5">매물</span>
+                              <span className="whitespace-pre-wrap break-words font-medium">{f.title}</span>
+                            </div>
+                          ) : isOffer ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-navy text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5">매수호가</span>
+                              <span className="whitespace-pre-wrap break-words">
+                                <b className="text-navy">{f.title}</b>
+                                {fullContent && <span className="text-muted block mt-0.5">{fullContent}</span>}
+                              </span>
+                            </div>
+                          ) : isSnatch ? (
+                            <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
+                              <span className="text-[9px] font-bold tracking-wider uppercase bg-red-500 text-white px-1.5 py-0.5 flex-shrink-0 mt-0.5">내놔</span>
+                              <span className="whitespace-pre-wrap break-words">
+                                <b className="text-red-600">{f.title}</b>
+                                {fullContent && <span className="text-muted block mt-0.5">{fullContent}</span>}
+                              </span>
                             </div>
                           ) : (
                             <>
