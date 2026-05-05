@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://melnberg.com';
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -77,6 +77,18 @@ export async function POST(req: NextRequest) {
     content = r.content ?? '';
     url = `${SITE_URL}/?apt=${r.apt_master_id}`;
     category = `단지글 · ${r.apt_master?.apt_nm ?? '?'}`;
+  } else if (kind === 'listing') {
+    // refId = apt_id. 매물 등록 알림.
+    const { data } = await admin
+      .from('apt_listings')
+      .select('apt_id, seller_id, price, apt_master(apt_nm, dong, lawd_cd)')
+      .eq('apt_id', refId).maybeSingle();
+    const r = data as { apt_id: number; seller_id: string; price: number; apt_master: { apt_nm: string | null; dong: string | null; lawd_cd: string | null } | null } | null;
+    if (!r || r.seller_id !== user.id) return NextResponse.json({ error: 'not seller' }, { status: 403 });
+    title = `🏷️ 매물 등록 — ${r.apt_master?.apt_nm ?? '?'}`;
+    content = `호가 ${Number(r.price).toLocaleString()} mlbg`;
+    url = `${SITE_URL}/?apt=${r.apt_id}`;
+    category = `매물 · ${r.apt_master?.dong ?? ''}`;
   } else if (kind === 'apt_comment') {
     const { data } = await admin
       .from('apt_discussion_comments')

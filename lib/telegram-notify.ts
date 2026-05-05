@@ -4,7 +4,9 @@
 
 import type { MlbgAwardKind } from './mlbg-award';
 
-export function notifyTelegram(kind: MlbgAwardKind, refId: number): void {
+export type TelegramNotifyKind = MlbgAwardKind | 'listing';
+
+export function notifyTelegram(kind: TelegramNotifyKind, refId: number): void {
   // 비동기 호출만 하고 결과 무시 — 작성 UX 차단 방지
   fetch('/api/telegram/notify', {
     method: 'POST',

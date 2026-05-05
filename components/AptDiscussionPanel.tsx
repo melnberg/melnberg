@@ -33,7 +33,7 @@ type MyVote = { discussion_id: number; vote_type: 'up' | 'down' };
 
 type HistoryEvent = {
   occurred_at: string;
-  event: 'claim' | 'evict' | 'vacate';
+  event: 'claim' | 'evict' | 'vacate' | 'sell';
   actor_name: string | null;
   prev_occupier_name: string | null;
   actor_score: number | null;
@@ -326,6 +326,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setSellPanelOpen(false);
     setSellPriceInput('');
     window.dispatchEvent(new Event('mlbg-pins-changed'));
+    // 텔레그램 채널 + 피드 알림
+    notifyTelegram('listing', apt.id);
   }
 
   async function unlist() {
@@ -624,28 +626,27 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 {/* 도움말 — hover 시 점거 규칙 안내 */}
                 <span className="relative group flex-shrink-0">
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted text-muted text-[10px] font-bold cursor-help hover:border-navy hover:text-navy">?</span>
-                  <div className="hidden group-hover:block absolute z-50 left-0 top-6 w-[280px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
-                    <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">점거 규칙</div>
+                  <div className="hidden group-hover:block absolute z-50 left-0 top-6 w-[300px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
+                    <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">단지 규칙</div>
                     <div className="px-4 py-3 space-y-3">
                       <div>
-                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">Score 산정</div>
-                        <div className="flex justify-between text-[11px]"><span>게시글</span><b>1점</b></div>
-                        <div className="flex justify-between text-[11px]"><span>게시글 댓글</span><b>0.7점</b></div>
-                        <div className="flex justify-between text-[11px]"><span>아파트글</span><b>1점</b></div>
-                        <div className="flex justify-between text-[11px]"><span>아파트 댓글</span><b>0.5점</b></div>
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">분양 (유료화)</div>
+                        <div className="text-[11px]">빈 단지는 구별 분양가 mlbg 지불 후 분양받기</div>
+                        <div className="text-[10px] text-white/60 mt-0.5">서초 240·강남 233 / 외곽구 20 / 경기 15 / 인천 5</div>
                       </div>
                       <div className="pt-3 border-t border-white/10">
-                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">점거</div>
-                        <div className="text-[11px]">빈 단지는 누구나 점거 가능</div>
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">매매 (자유 거래)</div>
+                        <div className="text-[11px]">보유자가 호가 등록 → 다른 회원이 mlbg 차감하며 즉시 매수</div>
+                        <div className="text-[10px] text-white/60 mt-0.5">강제집행 폐기 — 매물로만 인수 가능</div>
                       </div>
                       <div className="pt-3 border-t border-white/10">
-                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">강제집행 (박탈)</div>
-                        <div className="text-[11px]">내 score &gt; 점거인 score 일 때만</div>
-                        <div className="text-[10px] text-white/60 mt-0.5">동점은 박탈 불가</div>
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">다주택 허용</div>
+                        <div className="text-[11px]">1인 1주택 폐기 — mlbg 만 충분하면 여러 단지 보유 가능</div>
                       </div>
                       <div className="pt-3 border-t border-white/10">
-                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">점거 옮기기</div>
-                        <div className="text-[11px]">1인 1점거 — 새 단지 점거 시 기존 단지에서 자동 퇴거</div>
+                        <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">mlbg 적립 (AI 평가)</div>
+                        <div className="text-[11px]">글·댓글 작성 시 AI 가 정보가치 판단 → 기준의 0.1배 ~ 1.5배 차등 지급</div>
+                        <div className="text-[10px] text-white/60 mt-0.5">기준: 커뮤글 2 · 커뮤댓글 0.3 · 단지글 1 · 단지댓글 0.5</div>
                       </div>
                     </div>
                   </div>
@@ -667,41 +668,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   매수 {listingPrice.toLocaleString()} mlbg
                 </button>
               ) : userId ? (
-                <span className="relative group flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={forceEvict}
-                    disabled={claiming || (myScore !== null && occupierScore !== null && myScore <= occupierScore)}
-                    className="text-[11px] font-bold px-2.5 py-1 bg-red-500 text-white hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    강제집행
-                  </button>
-                  {/* 호버 시 강제집행 조건 + 점수 비교 */}
-                  <div className="hidden group-hover:block absolute z-50 right-0 top-8 w-[260px] bg-navy text-white text-[11px] leading-relaxed shadow-xl">
-                    <div className="px-4 py-2.5 border-b border-cyan/30 text-cyan font-bold tracking-[0.18em] uppercase text-[10px]">강제집행 (박탈)</div>
-                    <div className="px-4 py-3 space-y-2">
-                      <div>내 score &gt; 점거인 score 일 때만</div>
-                      <div className="text-[10px] text-white/60">동점은 박탈 불가</div>
-                    </div>
-                    <div className="px-4 py-3 border-t border-white/10">
-                      <div className="text-cyan font-bold tracking-wider uppercase text-[10px] mb-1">Score 산정</div>
-                      <div className="flex justify-between text-[11px]"><span>게시글</span><b>1점</b></div>
-                      <div className="flex justify-between text-[11px]"><span>게시글 댓글</span><b>0.7점</b></div>
-                      <div className="flex justify-between text-[11px]"><span>아파트글</span><b>1점</b></div>
-                      <div className="flex justify-between text-[11px]"><span>아파트 댓글</span><b>0.5점</b></div>
-                    </div>
-                    <div className="px-4 py-3 border-t border-white/10 space-y-1">
-                      {myScore !== null && (
-                        <div className="flex justify-between"><span className="text-white/70">내 score</span><b>{myScore}</b></div>
-                      )}
-                      {occupierScore !== null && (
-                        <div className="flex justify-between"><span className="text-white/70">점거인 score</span><b>{occupierScore}</b></div>
-                      )}
-                      {myScore !== null && occupierScore !== null && myScore <= occupierScore && (
-                        <div className="text-[10px] text-cyan mt-1.5">글·댓글로 score 올린 후 다시 시도</div>
-                      )}
-                    </div>
-                  </div>
+                <span className="text-[10px] text-muted flex-shrink-0 italic" title="강제집행 폐기. 매물 등록되면 매수만 가능">
+                  매물 없음
                 </span>
               ) : (
                 <Link href="/login" className="text-[11px] font-bold text-cyan no-underline flex-shrink-0">
@@ -797,23 +765,50 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                   <span className="text-[10px]">SQL 적용 이전 점거 기록은 누락됨</span>
                 </div>
               )}
-              {!historyLoading && history && history.length > 0 && (
+              {!historyLoading && history && history.length > 0 && (() => {
+                // 가장 최근 ownership-establishing 이벤트의 actor 가 현재 점거자.
+                // 그 이전의 claim 들은 line-through 처리.
+                let currentOwnerName: string | null = null;
+                for (const h of history) { // history 는 desc 정렬 (newest first)
+                  if (h.event === 'claim' || h.event === 'evict' || h.event === 'sell') {
+                    currentOwnerName = h.actor_name;
+                    break;
+                  }
+                }
+                return (
                 <ol className="space-y-2">
-                  {history.map((h, i) => (
+                  {history.map((h, i) => {
+                    const isPastClaim = h.event === 'claim' && h.actor_name !== currentOwnerName;
+                    return (
                     <li key={i} className="flex gap-2 text-[12px] leading-snug">
                       <span className="text-[10px] text-muted tabular-nums flex-shrink-0 mt-0.5 w-[68px]">{fmtHistoryTime(h.occurred_at)}</span>
                       <span className="flex-1 min-w-0">
                         {h.event === 'claim' && (
-                          <span><b className="text-cyan">{h.actor_name ?? '익명'}</b> 점거</span>
+                          <span>
+                            <b className={isPastClaim ? 'text-muted line-through' : 'text-cyan'}>{h.actor_name ?? '익명'}</b>
+                            <span className={isPastClaim ? 'text-muted line-through' : ''}> 분양</span>
+                            {isPastClaim && <span className="text-[10px] text-muted ml-1">(이전 점거)</span>}
+                          </span>
                         )}
                         {h.event === 'evict' && (
                           <span>
                             <b className="text-muted line-through">{h.prev_occupier_name ?? '익명'}</b>
                             {' → '}
                             <b className="text-cyan">{h.actor_name ?? '익명'}</b>
-                            <span className="text-red-500 text-[10px] ml-1">강제집행</span>
+                            <span className="text-red-500 text-[10px] ml-1">강제집행 (폐기)</span>
                             <div className="text-[10px] text-muted mt-0.5">
                               score {h.prev_score ?? '?'} → {h.actor_score ?? '?'}
+                            </div>
+                          </span>
+                        )}
+                        {h.event === 'sell' && (
+                          <span>
+                            <b className="text-muted line-through">{h.prev_occupier_name ?? '익명'}</b>
+                            {' → '}
+                            <b className="text-cyan">{h.actor_name ?? '익명'}</b>
+                            <span className="text-[10px] font-bold text-navy ml-1">매매</span>
+                            <div className="text-[10px] text-muted mt-0.5">
+                              매가 {h.actor_score ?? '?'} mlbg
                             </div>
                           </span>
                         )}
@@ -825,9 +820,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                         )}
                       </span>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ol>
-              )}
+                );
+              })()}
             </div>
           )}
         </div>

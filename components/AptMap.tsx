@@ -49,7 +49,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing';
   id: number;
   apt_master_id: number;
   post_id: number | null;
@@ -67,6 +67,8 @@ export type FeedItem = {
   author_is_solo: boolean;
   author_avatar_url: string | null;
   author_apt_count: number | null;
+  /** 매물(listing) 전용 — 호가 mlbg */
+  listing_price?: number | null;
 };
 
 export type AptPin = {
@@ -364,7 +366,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       router.push(`/community/${item.post_id}`);
       return;
     }
-    // 아파트 토론/댓글 → 지도 + 단지 패널
+    // 아파트 토론/댓글/매물 → 지도 + 단지 패널
     if (item.lat == null || item.lng == null) return;
     const inst = mapInstRef.current;
     if (inst) {

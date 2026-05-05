@@ -2,12 +2,13 @@ import { unstable_cache } from 'next/cache';
 import Layout from '@/components/Layout';
 import AptMap, { type FeedItem } from '@/components/AptMap';
 import { createPublicClient } from '@/lib/supabase/public';
+import { fetchAptCounts } from '@/lib/apt-count';
 
 // 피드 — 30초 캐싱. 글(apt_discussions) + 댓글(apt_discussion_comments) 합쳐 시간순.
 const fetchFeed = unstable_cache(
   async (): Promise<FeedItem[]> => {
     const supabase = createPublicClient();
-    const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }] = await Promise.all([
+    const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp] = await Promise.all([
       supabase
         .from('apt_discussions')
         .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
@@ -31,13 +32,22 @@ const fetchFeed = unstable_cache(
         .select('id, post_id, author_id, content, created_at, post:posts!post_id(title, category)')
         .order('created_at', { ascending: false })
         .limit(50),
+      // apt_listings — best effort. 테이블 없으면 (SQL 060 미실행) 빈 배열 처리.
+      supabase
+        .from('apt_listings')
+        .select('apt_id, seller_id, price, listed_at, apt_master(apt_nm, dong, lat, lng)')
+        .order('listed_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
     ]);
+    const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
 
     const allAuthorIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).author_id as string)),
       ...((cmts ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
       ...((posts ?? []).map((p) => (p as Record<string, unknown>).author_id as string)),
       ...((postComments ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
+      ...((listings ?? []).map((l) => (l as Record<string, unknown>).seller_id as string)),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
@@ -157,7 +167,34 @@ const fetchFeed = unstable_cache(
         };
       });
 
-    return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems]
+    const listingItems: FeedItem[] = (listings ?? []).map((r) => {
+      const row = r as Record<string, unknown>;
+      const am = row.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+      const prof = profileMap.get(row.seller_id as string);
+      return {
+        kind: 'listing' as const,
+        id: row.apt_id as number,
+        apt_master_id: row.apt_id as number,
+        post_id: null,
+        title: `🏷️ ${am?.apt_nm ?? '단지'} 매물`,
+        content: `호가 ${Number(row.price).toLocaleString()} mlbg — 잔액 충분하면 즉시 매수 가능`,
+        created_at: row.listed_at as string,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+        author_id: row.seller_id as string,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        listing_price: Number(row.price),
+      };
+    });
+
+    return [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 50);
   },
