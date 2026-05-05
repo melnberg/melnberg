@@ -954,8 +954,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
 
+        // 평당가 라벨 — 어차피 level <= 4 에서만 노출되며 작은 단지(<300세대)는 level 3 이하만.
+        // 모든 pin 에 CustomOverlay 만들면 DOM 수천개 → pan 끊김 유발. hh>=300 만 생성.
         let overlay: KakaoOverlayInst | null = null;
-        if (p.pyeong_price && p.pyeong_price > 0) {
+        if (p.pyeong_price && p.pyeong_price > 0 && hh >= 300) {
           overlay = new window.kakao.maps.CustomOverlay({
             position: pos,
             content: `<div class="apt-pyeong-label">${formatPyeong(p.pyeong_price)}</div>`,
@@ -968,9 +970,16 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         allMarkers.push({ marker, overlay, lat: p.lat, lng: p.lng, hh, occupied, listed });
       }
       markersRef.current = allMarkers;
-      // 매 chunk 끝마다 visibility 업데이트 → 점진적 노출
-      window.dispatchEvent(new Event('mlbg-markers-updated'));
-      if (i < sorted.length) setTimeout(processChunk, 0);
+      // 첫 chunk (큰 단지·점거·매물 우선순위) 끝나면 한 번 노출, 그 이후는 마지막 chunk 끝에서만.
+      // 매 chunk 마다 dispatching 하면 수만개 setMap 호출 누적 → pan 끊김.
+      if (i < sorted.length) {
+        if (i === Math.min(CHUNK, sorted.length)) {
+          window.dispatchEvent(new Event('mlbg-markers-updated'));
+        }
+        setTimeout(processChunk, 0);
+      } else {
+        window.dispatchEvent(new Event('mlbg-markers-updated'));
+      }
     }
     processChunk();
 
