@@ -167,9 +167,9 @@ const CLUSTER_STYLES = [
 
 type MarkerTier = { marker: KakaoMarkerInst; tier: 0 | 1 | 2 | 3; occupied: boolean };
 
-// v2: 평당가 buggy 배포 시점에 빈 캐시가 박힌 케이스 대응 — 키 bump 로 강제 fresh fetch
-const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v2';
-const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v2';
+// v3: MV 빈 시점에 평당가 없이 캐시된 데이터 무효화. 새 MV 적재 후 평당가 합쳐진 응답 받기 위해
+const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v3';
+const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v3';
 const PINS_CACHE_TTL_MS = 5 * 60 * 1000; // 5분 — 서버 캐시와 동일
 
 function readPinCache(key: string): { ts: number; pins: AptPin[] } | null {

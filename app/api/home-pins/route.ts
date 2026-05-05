@@ -67,10 +67,10 @@ async function fetchPyeongDict(): Promise<Record<string, number>> {
   return dict;
 }
 
-// v2: 평당가 분리 직후 빈 응답이 unstable_cache 에 박혀 5분 stale 유지되던 문제 → 키 bump 으로 강제 fresh
-const fetchBigCached = unstable_cache(fetchBig, ['home-pins-big-v2'], { revalidate: 300, tags: ['apt-master'] });
-const fetchSmallCached = unstable_cache(fetchSmall, ['home-pins-small-v2'], { revalidate: 300, tags: ['apt-master'] });
-const fetchPyeongDictCached = unstable_cache(fetchPyeongDict, ['home-pins-pyeong-v2'], { revalidate: 600, tags: ['apt-pyeong'] });
+// v3: apt_pyeong_avg MV 적재 전 빈 dict 가 600s 캐시된 상태 무효화
+const fetchBigCached = unstable_cache(fetchBig, ['home-pins-big-v3'], { revalidate: 300, tags: ['apt-master'] });
+const fetchSmallCached = unstable_cache(fetchSmall, ['home-pins-small-v3'], { revalidate: 300, tags: ['apt-master'] });
+const fetchPyeongDictCached = unstable_cache(fetchPyeongDict, ['home-pins-pyeong-v3'], { revalidate: 600, tags: ['apt-pyeong'] });
 
 type PinRow = { apt_nm: string; lawd_cd: string; dong: string | null };
 function attachPyeong(rows: unknown[], dict: Record<string, number>): unknown[] {
