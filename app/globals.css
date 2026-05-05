@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 모바일 미니멀 지도 모드 — 첫번째 자식(map div)만 보이고 나머지 오버레이 모두 숨김.
+   AptMap 의 외부 wrapper 가 .map-minimal 일 때 적용. */
+.map-minimal > .relative > *:not(:first-child) { display: none !important; }
+/* AptMap 내부 floating widgets (실시간 피드받기, FeedbackWidget 등) 도 숨김 */
+.map-minimal ~ .feedback-widget,
+.map-minimal ~ .telegram-floating { display: none !important; }
+
 /* AI 답변 로딩 라벨 — 그라데이션 흐름 + 슬라이드업 */
 @keyframes shine {
   0%   { background-position: 200% 50%; }

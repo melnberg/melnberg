@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import Layout from '@/components/Layout';
 import AptMap, { type FeedItem } from '@/components/AptMap';
 import MobileFeedList from '@/components/MobileFeedList';
@@ -592,10 +593,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <Layout current="home">
-      {/* 데스크톱 (lg+) — 항상 지도. 그 미만은 forceMap 시에만 지도. */}
-      <div className={`flex-1 min-w-0 ${forceMap ? '' : 'hidden lg:flex lg:flex-col'}`}>
+      {/* 데스크톱 (lg+) — 항상 지도. 그 미만은 forceMap 시에만 지도(미니멀 모드). */}
+      <div className={`flex-1 min-w-0 ${forceMap ? 'lg:[&]:contents max-lg:map-minimal' : 'hidden lg:flex lg:flex-col'}`}>
         <AptMap feed={feed} />
       </div>
+      {/* 모바일 forceMap 시 우상단 '← 피드' 플로팅 링크 (햄버거는 좌측 Sidebar) */}
+      {forceMap && (
+        <Link
+          href="/"
+          className="lg:hidden fixed top-2 right-2 z-40 px-3 py-1.5 bg-white/95 border border-border text-navy text-[12px] font-bold no-underline shadow-sm hover:bg-white"
+        >
+          ← 피드
+        </Link>
+      )}
       {/* lg 미만 — forceMap 아닐 때 피드 풀스크린 */}
       {!forceMap && (
         <div className="lg:hidden flex-1 min-w-0">
