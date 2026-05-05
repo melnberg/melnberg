@@ -95,6 +95,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
   const [occupierIsPaid, setOccupierIsPaid] = useState<boolean>(false);
   const [occupierIsSolo, setOccupierIsSolo] = useState<boolean>(false);
   const [occupierScore, setOccupierScore] = useState<number | null>(null);
+  const [occupierMlbg, setOccupierMlbg] = useState<number | null>(null);
   const [myScore, setMyScore] = useState<number | null>(null);
   const [myCurrentApt, setMyCurrentApt] = useState<{ id: number; apt_nm: string } | null>(null);
   const [claiming, setClaiming] = useState(false);
@@ -263,6 +264,15 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
       setMyMlbgBalance(null);
     }
 
+    // 점거인 mlbg_balance — 패널에 표시
+    if (oid) {
+      const { data: occBal } = await supabase.from('profiles').select('mlbg_balance').eq('id', oid).maybeSingle();
+      const v = (occBal as { mlbg_balance?: number | string | null } | null)?.mlbg_balance;
+      setOccupierMlbg(v == null ? null : Number(v));
+    } else {
+      setOccupierMlbg(null);
+    }
+
     setLoading(false);
     // 사이드바 score(서버 컴포넌트)도 갱신되도록 RSC 재요청
     router.refresh();
@@ -292,6 +302,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setHistory(null); // 다음 열기 시 재fetch
     // 홈 지도 핀 캐시 무효화 신호 (점거 마커 즉시 갱신)
     window.dispatchEvent(new Event('mlbg-pins-changed'));
+    // 차감된 mlbg 잔액 즉시 반영 — 패널 + 사이드바 (router.refresh)
+    await reload();
   }
 
   async function listForSale() {
@@ -373,6 +385,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     setMyCurrentApt(null);
     setHistory(null);
     window.dispatchEvent(new Event('mlbg-pins-changed'));
+    await reload();
   }
 
   useEffect(() => {
@@ -628,8 +641,8 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                     </div>
                   </div>
                 </span>
-                {occupierScore !== null && (
-                  <span className="text-[11px] text-muted flex-shrink-0">(score {occupierScore})</span>
+                {occupierMlbg !== null && (
+                  <span className="text-[11px] text-muted flex-shrink-0">({occupierMlbg.toLocaleString()} mlbg)</span>
                 )}
               </div>
               {occupierId === userId ? (

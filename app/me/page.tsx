@@ -77,6 +77,13 @@ export default async function MePage() {
             <h1 className="text-[28px] font-bold text-navy tracking-tight">마이페이지</h1>
             <div className="flex items-center gap-2">
               <Link
+                href={`/u/${user.id}`}
+                className="px-3 py-1.5 border border-cyan bg-cyan/10 text-navy text-[12px] font-bold no-underline hover:bg-cyan hover:text-white"
+                title="다른 회원이 내 프로필을 어떻게 보는지 확인"
+              >
+                남이 보는 내 프로필 →
+              </Link>
+              <Link
                 href="/me/feedback"
                 className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy"
               >
