@@ -104,8 +104,10 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
 
   // 매물 (P2P 매매)
   const [listingPrice, setListingPrice] = useState<number | null>(null);
+  const [listingDescription, setListingDescription] = useState<string | null>(null);
   const [sellPanelOpen, setSellPanelOpen] = useState(false);
   const [sellPriceInput, setSellPriceInput] = useState('');
+  const [sellDescInput, setSellDescInput] = useState('');
   const [trading, setTrading] = useState(false);
   const [myMlbgBalance, setMyMlbgBalance] = useState<number | null>(null);
 
@@ -142,10 +144,11 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
         .limit(50),
       supabase.auth.getUser(),
       supabase.from('apt_master').select('occupier_id, occupied_at').eq('id', apt.id).maybeSingle(),
-      supabase.from('apt_listings').select('price').eq('apt_id', apt.id).maybeSingle(),
+      supabase.from('apt_listings').select('price, description').eq('apt_id', apt.id).maybeSingle(),
     ]);
-    const lp = (listingData as { price?: number | string | null } | null)?.price;
-    setListingPrice(lp == null ? null : Number(lp));
+    const ld = listingData as { price?: number | string | null; description?: string | null } | null;
+    setListingPrice(ld?.price == null ? null : Number(ld.price));
+    setListingDescription(ld?.description ?? null);
 
     if (dErr) { setErr(dErr.message); setLoading(false); return; }
     const ds = (dData ?? []) as unknown as Discussion[];
@@ -326,17 +329,19 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
     if (!userId) return;
     const price = Number(sellPriceInput);
     if (!Number.isFinite(price) || price <= 0) { alert('가격을 0보다 큰 숫자로 입력하세요.'); return; }
+    const desc = sellDescInput.trim().slice(0, 1000);
     setTrading(true);
-    const { data, error } = await supabase.rpc('list_apt_for_sale', { p_apt_id: apt.id, p_price: price });
+    const { data, error } = await supabase.rpc('list_apt_for_sale', { p_apt_id: apt.id, p_price: price, p_description: desc || null });
     setTrading(false);
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '매물 등록 실패'); return; }
     setListingPrice(price);
+    setListingDescription(desc || null);
     setSellPanelOpen(false);
     setSellPriceInput('');
+    setSellDescInput('');
     window.dispatchEvent(new Event('mlbg-pins-changed'));
-    // 텔레그램 채널 + 피드 알림
     notifyTelegram('listing', apt.id);
   }
 
@@ -646,42 +651,61 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
               )}
             </div>
 
-            {/* 매물 표시 / 매도 컨트롤 */}
+            {/* 매물 표시 (구매자 시점) — 설명 포함 */}
             {listingPrice != null && occupierId !== userId && (
-              <div className="mt-2 px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px] flex items-center justify-between">
-                <span className="text-navy font-medium">매물 등록됨</span>
-                <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
+              <div className="mt-2 px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-navy font-medium">매물 등록됨</span>
+                  <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
+                </div>
+                {listingDescription && (
+                  <div className="mt-1.5 pt-1.5 border-t border-cyan/30 text-[11px] text-text leading-relaxed whitespace-pre-wrap">
+                    {listingDescription}
+                  </div>
+                )}
               </div>
             )}
             {occupierId === userId && (
               <div className="mt-2 space-y-1.5">
                 {listingPrice != null ? (
-                  <div className="flex items-center justify-between gap-2 px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px]">
-                    <span className="text-navy">내 매물 호가</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
-                      <button type="button" onClick={() => { setSellPriceInput(String(listingPrice)); setSellPanelOpen(true); }}
-                        className="text-[11px] text-muted hover:text-navy bg-transparent border-none p-0">수정</button>
-                      <button type="button" onClick={unlist} disabled={trading}
-                        className="text-[11px] text-red-500 hover:text-red-700 bg-transparent border-none p-0 disabled:opacity-40">해제</button>
+                  <div className="px-3 py-2 bg-cyan/10 border border-cyan/40 text-[12px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-navy">내 매물 호가</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-navy">{listingPrice.toLocaleString()} mlbg</span>
+                        <button type="button" onClick={() => { setSellPriceInput(String(listingPrice)); setSellDescInput(listingDescription ?? ''); setSellPanelOpen(true); }}
+                          className="text-[11px] text-muted hover:text-navy bg-transparent border-none p-0">수정</button>
+                        <button type="button" onClick={unlist} disabled={trading}
+                          className="text-[11px] text-red-500 hover:text-red-700 bg-transparent border-none p-0 disabled:opacity-40">해제</button>
+                      </div>
                     </div>
+                    {listingDescription && (
+                      <div className="mt-1.5 pt-1.5 border-t border-cyan/30 text-[11px] text-text leading-relaxed whitespace-pre-wrap">
+                        {listingDescription}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <button type="button" onClick={() => { setSellPriceInput(''); setSellPanelOpen((v) => !v); }}
+                  <button type="button" onClick={() => { setSellPriceInput(''); setSellDescInput(''); setSellPanelOpen((v) => !v); }}
                     className="w-full text-[12px] py-1.5 border border-navy/40 text-navy hover:bg-navy hover:text-white transition-colors">
                     매물로 등록
                   </button>
                 )}
                 {sellPanelOpen && (
-                  <div className="border border-border bg-white p-2.5 flex items-center gap-2">
+                  <div className="border border-border bg-white p-2.5 space-y-1.5">
                     <input type="number" min="1" value={sellPriceInput} onChange={(e) => setSellPriceInput(e.target.value)}
-                      placeholder="호가 (mlbg)" className="flex-1 border border-border px-2 py-1 text-[12px] outline-none focus:border-navy" />
-                    <button type="button" onClick={listForSale} disabled={trading || !sellPriceInput}
-                      className="text-[11px] font-bold px-3 py-1 bg-navy text-white hover:bg-navy-dark disabled:opacity-40">
-                      {trading ? '...' : '확정'}
-                    </button>
-                    <button type="button" onClick={() => setSellPanelOpen(false)}
-                      className="text-[11px] text-muted hover:text-text bg-transparent border-none p-0">취소</button>
+                      placeholder="호가 (mlbg)" className="w-full border border-border px-2 py-1.5 text-[12px] outline-none focus:border-navy" />
+                    <textarea value={sellDescInput} onChange={(e) => setSellDescInput(e.target.value)} maxLength={1000} rows={3}
+                      placeholder="매물 설명 — 층수·인테리어·뷰·매도 사유 등 (선택)"
+                      className="w-full border border-border px-2 py-1.5 text-[12px] outline-none focus:border-navy resize-none leading-snug" />
+                    <div className="flex items-center justify-end gap-2">
+                      <button type="button" onClick={() => setSellPanelOpen(false)}
+                        className="text-[11px] text-muted hover:text-text bg-transparent border-none p-0">취소</button>
+                      <button type="button" onClick={listForSale} disabled={trading || !sellPriceInput}
+                        className="text-[11px] font-bold px-3 py-1 bg-navy text-white hover:bg-navy-dark disabled:opacity-40">
+                        {trading ? '...' : '확정'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

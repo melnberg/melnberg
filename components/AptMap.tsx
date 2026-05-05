@@ -437,12 +437,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     if (evictsOpen) { setEvictsOpen(false); return; }
     setEvictsOpen(true);
     const supabase = createClient();
-    // 매물 리스트 — 매도인 닉네임 + 호가 + 설명
-    const { data } = await supabase
+    // 매물 리스트 — 매도인 닉네임 + 호가 + 설명 (description 컬럼 없으면 fallback)
+    let rawData: unknown[] | null = null;
+    const primary = await supabase
       .from('apt_listings')
       .select('apt_id, seller_id, price, listed_at, description, apt_master(apt_nm, dong, lat, lng)')
       .order('listed_at', { ascending: false });
-    const rawList = (data ?? []) as Array<Record<string, unknown>>;
+    if (primary.data) {
+      rawData = primary.data as unknown[];
+    } else {
+      const fb = await supabase
+        .from('apt_listings')
+        .select('apt_id, seller_id, price, listed_at, apt_master(apt_nm, dong, lat, lng)')
+        .order('listed_at', { ascending: false });
+      rawData = (fb.data ?? null) as unknown[] | null;
+    }
+    const rawList = (rawData ?? []) as Array<Record<string, unknown>>;
 
     // 매도인 닉네임 일괄 조회
     const sellerIds = Array.from(new Set(rawList.map((r) => r.seller_id as string).filter(Boolean)));
@@ -769,11 +779,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         <button
           type="button"
           onClick={toggleEvicts}
-          className="bg-white border border-cyan px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-cyan/10 hover:border-cyan-dark flex items-center gap-1.5"
+          className={`px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold flex items-center gap-1.5 border ${
+            evictCount > 0
+              ? 'bg-[#ec4899] text-white border-[#db2777] hover:bg-[#db2777]'
+              : 'bg-white text-navy border-border hover:border-navy'
+          }`}
         >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="#0070C0"><path d="M3 6h18M3 12h18M3 18h18" stroke="#0070C0" strokeWidth="2.5" strokeLinecap="round"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
           <span>매물 : {evictCount}건</span>
-          <span className="ml-auto text-[11px] text-muted">{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
+          <span className={`ml-auto text-[11px] ${evictCount > 0 ? 'text-white/80' : 'text-muted'}`}>{evictsOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {evictsOpen && (
           <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] w-full max-h-[60vh] overflow-y-auto">
