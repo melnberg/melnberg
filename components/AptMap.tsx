@@ -258,14 +258,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       (async () => {
         try {
           const r = await fetch('/api/home-pins');
-          if (!r.ok) return;
+          if (!r.ok) return; // 503 등 서버 에러 — 기존 cached 핀 유지
           const json = (await r.json()) as { pins: AptPin[] };
           if (cancelled) return;
+          // 빈 응답을 받으면 절대 화면 비우지 않음 — cached/이전 상태 유지.
+          // 서버가 지금은 503 으로 막지만 안전장치 이중 방어.
+          if (!json.pins || json.pins.length === 0) return;
           bigPins.length = 0;
           bigPins.push(...json.pins);
-          if (json.pins.length > 0) writePinCache(PINS_CACHE_KEY_BIG, json.pins); // 빈 배열은 캐시 안 함
+          writePinCache(PINS_CACHE_KEY_BIG, json.pins);
           applyPins();
-        } catch { /* ignore */ }
+        } catch { /* ignore — 기존 cached 핀 유지 */ }
       })();
     }
 
@@ -285,11 +288,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             if (!r.ok) return;
             const json = (await r.json()) as { pins: AptPin[] };
             if (cancelled) return;
+            if (!json.pins || json.pins.length === 0) return; // 안전장치 — 빈 응답시 cached 유지
             smallPins.length = 0;
             smallPins.push(...json.pins);
-            if (json.pins.length > 0) writePinCache(PINS_CACHE_KEY_SMALL, json.pins);
+            writePinCache(PINS_CACHE_KEY_SMALL, json.pins);
             applyPins();
-          } catch { /* ignore */ }
+          } catch { /* ignore — cached 유지 */ }
         })();
       }
     }, 1000);
@@ -316,24 +320,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { supabase.removeChannel(channel); };
   }, [router]);
 
-  // 점거/강제집행 액션 후 핀 갱신 — 서버 unstable_cache + localStorage 모두 무효화 후 refetch
+  // 점거/강제집행 액션 후 핀 갱신 — 서버 응답 성공시에만 캐시·상태 갱신.
+  // 서버가 503 반환하면 기존 cached 핀 그대로 유지 → 화면 안 비워짐.
   useEffect(() => {
     function onPinsChanged() {
-      try { localStorage.removeItem(PINS_CACHE_KEY_BIG); } catch { /* ignore */ }
-      try { localStorage.removeItem(PINS_CACHE_KEY_SMALL); } catch { /* ignore */ }
       (async () => {
         try {
-          // ?fresh=1 → 서버측 unstable_cache 우회. revalidateTag 보다 안정적.
           const [bigR, smallR] = await Promise.all([
             fetch('/api/home-pins?fresh=1', { cache: 'no-store' }),
             fetch('/api/home-pins?detail=1&fresh=1', { cache: 'no-store' }),
           ]);
-          if (!bigR.ok || !smallR.ok) return;
+          if (!bigR.ok || !smallR.ok) return; // 둘 중 하나라도 실패시 그대로
           const bigJson = (await bigR.json()) as { pins: AptPin[] };
           const smallJson = (await smallR.json()) as { pins: AptPin[] };
+          if (!bigJson.pins?.length || !smallJson.pins?.length) return; // 빈 응답 안전장치
           writePinCache(PINS_CACHE_KEY_BIG, bigJson.pins);
           writePinCache(PINS_CACHE_KEY_SMALL, smallJson.pins);
-          // big 우선으로 머지 (점거 정보가 정확)
           const seen = new Set<number>();
           const merged: AptPin[] = [];
           for (const p of [...bigJson.pins, ...smallJson.pins]) {
@@ -342,7 +344,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             merged.push(p);
           }
           setPins(merged);
-        } catch { /* ignore */ }
+        } catch { /* ignore — cached 유지 */ }
       })();
     }
     window.addEventListener('mlbg-pins-changed', onPinsChanged);

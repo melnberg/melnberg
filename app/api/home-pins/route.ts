@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
-import { unstable_cache } from 'next/cache';
 import { createPublicClient } from '@/lib/supabase/public';
 
 // 홈 지도 핀.
 // detail=1 → 중소형 (100~999세대)
-// fresh=1  → unstable_cache 우회. 점거/강제집행 직후 강제 갱신용
+// fresh=1  → in-process 캐시 우회 (지금은 캐시 자체가 없으므로 의미상 동일, 하위 호환용)
+//
+// 정책 (2026-05-06 재발 방지 v6):
+//   1. unstable_cache 완전 제거 — 빈 결과/부분 결과가 캐시에 박히는 사고 반복.
+//      Vercel HTTP edge cache (Cache-Control s-maxage=60) 만 의존.
+//   2. fetchBig/Small 은 모든 실패를 throw → endpoint 가 503 반환 (no-store).
+//      → 클라가 200 + {pins:[]} 받고 화면 비우는 상황 원천 차단.
+//   3. 0개 반환도 throw — RLS 사고/일시 장애가 영구화 안 되도록.
 
-// pyeong_price 는 073 마이그가 DB 에 적용된 뒤 별도 fetch 로 합침. 미적용 환경에서도 핀이 보이도록 분리.
 const PIN_SELECT = 'id, apt_nm, dong, lawd_cd, lat, lng, household_count, building_count, kapt_build_year, geocoded_address, occupier_id, occupied_at, listing_price';
 
 async function fetchBig(): Promise<unknown[]> {
@@ -19,10 +24,13 @@ async function fetchBig(): Promise<unknown[]> {
       .not('lat', 'is', null)
       .or('household_count.gte.1000,occupier_id.not.is.null,listing_price.not.is.null')
       .range(offset, offset + 999);
-    if (error || !data || data.length === 0) break;
+    if (error) throw new Error(`fetchBig offset=${offset}: ${error.message}`);
+    if (!data) throw new Error(`fetchBig offset=${offset}: null data`);
+    if (data.length === 0) break;
     all.push(...data);
     if (data.length < 1000) break;
   }
+  if (all.length === 0) throw new Error('fetchBig: 0 rows — Supabase/RLS/view 이슈 의심');
   return all;
 }
 
@@ -38,15 +46,17 @@ async function fetchSmall(): Promise<unknown[]> {
       .lt('household_count', 1000)
       .is('occupier_id', null)
       .range(offset, offset + 999);
-    if (error || !data || data.length === 0) break;
+    if (error) throw new Error(`fetchSmall offset=${offset}: ${error.message}`);
+    if (!data) throw new Error(`fetchSmall offset=${offset}: null data`);
+    if (data.length === 0) break;
     all.push(...data);
     if (data.length < 1000) break;
   }
+  if (all.length === 0) throw new Error('fetchSmall: 0 rows');
   return all;
 }
 
-// 평당가는 별도 fetch — 073 적용된 환경만 데이터 채워짐. 미적용 환경에선 silent skip.
-// 주의: unstable_cache 가 Map 을 직렬화 못하므로 plain object 로 반환.
+// 평당가는 best-effort — 실패해도 핀은 그대로 표시. 절대 throw 안 함.
 type PyeongRow = { apt_nm: string; lawd_cd: string; dong_norm: string; pyeong_price: number };
 async function fetchPyeongDict(): Promise<Record<string, number>> {
   const supabase = createPublicClient();
@@ -63,24 +73,9 @@ async function fetchPyeongDict(): Promise<Record<string, number>> {
       }
       if (data.length < 1000) break;
     }
-  } catch { /* MV 미생성 환경에선 빈 dict 반환 */ }
+  } catch { /* MV 미생성 환경 */ }
   return dict;
 }
-
-// v5: 빈 배열 캐시 포이즌 방지 가드 추가 (Supabase 일시 장애로 [] 가 5분 박혀 핀 사라지는 사고 재발 방지)
-async function fetchBigSafe(): Promise<unknown[]> {
-  const rows = await fetchBig();
-  if (rows.length === 0) throw new Error('empty pins — skip cache'); // 캐시 안 됨
-  return rows;
-}
-async function fetchSmallSafe(): Promise<unknown[]> {
-  const rows = await fetchSmall();
-  if (rows.length === 0) throw new Error('empty pins — skip cache');
-  return rows;
-}
-const fetchBigCached = unstable_cache(fetchBigSafe, ['home-pins-big-v5'], { revalidate: 300, tags: ['apt-master'] });
-const fetchSmallCached = unstable_cache(fetchSmallSafe, ['home-pins-small-v5'], { revalidate: 300, tags: ['apt-master'] });
-const fetchPyeongDictCached = unstable_cache(fetchPyeongDict, ['home-pins-pyeong-v3'], { revalidate: 600, tags: ['apt-pyeong'] });
 
 type PinRow = { apt_nm: string; lawd_cd: string; dong: string | null };
 function attachPyeong(rows: unknown[], dict: Record<string, number>): unknown[] {
@@ -95,23 +90,24 @@ function attachPyeong(rows: unknown[], dict: Record<string, number>): unknown[] 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const detail = url.searchParams.get('detail') === '1';
-  const fresh = url.searchParams.get('fresh') === '1';
 
-  // 핀 데이터는 필수, 평당가는 best-effort. 평당가 fetch 가 실패해도 핀은 표시.
-  // cached 가 throw (빈 배열 가드) 한 경우 fresh fetch 로 폴백 — 절대 빈 응답 캐시 안 함.
-  const pinsPromise: Promise<unknown[]> = detail
-    ? (fresh ? fetchSmall() : fetchSmallCached().catch(() => fetchSmall()))
-    : (fresh ? fetchBig() : fetchBigCached().catch(() => fetchBig()));
-  const pyeongPromise = fetchPyeongDictCached().catch(() => ({} as Record<string, number>));
-
-  const [pinsRaw, pyeongDict] = await Promise.all([pinsPromise, pyeongPromise]);
-  const pins = attachPyeong(pinsRaw, pyeongDict);
-  return NextResponse.json(
-    { pins },
-    {
-      headers: fresh
-        ? { 'Cache-Control': 'no-store' }
-        : { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' },
-    },
-  );
+  try {
+    const pinsPromise = detail ? fetchSmall() : fetchBig();
+    const pyeongPromise = fetchPyeongDict(); // best-effort
+    const [pinsRaw, pyeongDict] = await Promise.all([pinsPromise, pyeongPromise]);
+    const pins = attachPyeong(pinsRaw, pyeongDict);
+    return NextResponse.json(
+      { pins },
+      // 60초 edge cache + 300초 stale-while-revalidate. 빠르면서 캐시 포이즌 안 됨 (success 만 캐시).
+      { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
+    );
+  } catch (err) {
+    // 200 + 빈 배열로 절대 안 내려감 → 클라가 화면 비우는 사고 차단.
+    // 클라는 r.ok 체크해서 기존 localStorage 캐시 유지.
+    console.error('[home-pins] fetch failed:', err);
+    return NextResponse.json(
+      { pins: [], error: err instanceof Error ? err.message : String(err) },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
 }
