@@ -103,7 +103,7 @@ export default async function UserProfilePage({
     { count: eventCount },
     { count: ownedAptCount },
   ] = await Promise.all([
-    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', userId).eq('category', 'community'),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', userId).in('category', ['community', 'hotdeal']),
     supabase.from('apt_discussions').select('id', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
     supabase.from('comments').select('id', { count: 'exact', head: true }).eq('author_id', userId),
     supabase.from('apt_discussion_comments').select('id', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
@@ -124,7 +124,7 @@ export default async function UserProfilePage({
 
   if (tab === 'posts') {
     const [{ data: cp }, { data: ap }] = await Promise.all([
-      supabase.from('posts').select('id, title, created_at, category').eq('author_id', userId).eq('category', 'community').order('created_at', { ascending: false }).limit(50),
+      supabase.from('posts').select('id, title, created_at, category').eq('author_id', userId).in('category', ['community', 'hotdeal']).order('created_at', { ascending: false }).limit(50),
       supabase.from('apt_discussions').select('id, title, created_at, apt_master_id, apt_master(apt_nm, dong)').eq('author_id', userId).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
     ]);
     postsRows = ((cp ?? []) as CommunityPostRow[]).map((r) => ({ ...r, kind: 'community' as const }));
@@ -135,7 +135,7 @@ export default async function UserProfilePage({
       supabase.from('apt_discussion_comments').select('id, discussion_id, content, created_at, discussion:apt_discussions!discussion_id(title, apt_master_id, apt_master(apt_nm))').eq('author_id', userId).is('deleted_at', null).order('created_at', { ascending: false }).limit(50),
     ]);
     commentRows = ((cc ?? []) as unknown as CommunityCommentRow[])
-      .filter((r) => r.post?.category === 'community')
+      .filter((r) => r.post?.category === 'community' || r.post?.category === 'hotdeal')
       .map((r) => ({ ...r, kind: 'community' as const }));
     aptCmtRows = ((ac ?? []) as unknown as AptCommentRow[]).map((r) => ({ ...r, kind: 'apt' as const }));
   } else if (tab === 'apts') {
@@ -159,7 +159,11 @@ export default async function UserProfilePage({
   // 탭 합치기 (글/댓글)
   type PostListRow = { id: number; title: string; created_at: string; href: string; tag: string };
   const allPosts: PostListRow[] = [
-    ...postsRows.map((r) => ({ id: r.id, title: r.title, created_at: r.created_at, href: `/community/${r.id}`, tag: '커뮤니티' })),
+    ...postsRows.map((r) => ({
+      id: r.id, title: r.title, created_at: r.created_at,
+      href: r.category === 'hotdeal' ? `/hotdeal/${r.id}` : `/community/${r.id}`,
+      tag: r.category === 'hotdeal' ? '핫딜' : '커뮤니티',
+    })),
     ...aptDiscRows.map((r) => ({
       id: r.id,
       title: r.title,
@@ -171,14 +175,17 @@ export default async function UserProfilePage({
 
   type CommentListRow = { id: number; content: string; parentTitle: string; created_at: string; href: string; tag: string };
   const allComments: CommentListRow[] = [
-    ...commentRows.map((r) => ({
-      id: r.id,
-      content: r.content,
-      parentTitle: r.post?.title ?? '(삭제된 글)',
-      created_at: r.created_at,
-      href: `/community/${r.post_id}`,
-      tag: '커뮤니티',
-    })),
+    ...commentRows.map((r) => {
+      const isHotdeal = r.post?.category === 'hotdeal';
+      return {
+        id: r.id,
+        content: r.content,
+        parentTitle: r.post?.title ?? '(삭제된 글)',
+        created_at: r.created_at,
+        href: isHotdeal ? `/hotdeal/${r.post_id}` : `/community/${r.post_id}`,
+        tag: isHotdeal ? '핫딜' : '커뮤니티',
+      };
+    }),
     ...aptCmtRows.map((r) => ({
       id: r.id,
       content: r.content,
