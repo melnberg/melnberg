@@ -183,9 +183,9 @@ type MarkerEntry = {
   listed: boolean;
 };
 
-// v3: MV 빈 시점에 평당가 없이 캐시된 데이터 무효화. 새 MV 적재 후 평당가 합쳐진 응답 받기 위해
-const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v3';
-const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v3';
+// v4: 경매 낙찰 후 점거 상태 전파 안 되던 문제 — 강제 fresh fetch
+const PINS_CACHE_KEY_BIG = 'mlbg_pins_big_v4';
+const PINS_CACHE_KEY_SMALL = 'mlbg_pins_small_v4';
 const PINS_CACHE_TTL_MS = 5 * 60 * 1000; // 5분 — 서버 캐시와 동일
 
 function readPinCache(key: string): { ts: number; pins: AptPin[] } | null {

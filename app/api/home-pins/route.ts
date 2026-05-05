@@ -68,8 +68,8 @@ async function fetchPyeongDict(): Promise<Record<string, number>> {
 }
 
 // v3: apt_pyeong_avg MV 적재 전 빈 dict 가 600s 캐시된 상태 무효화
-const fetchBigCached = unstable_cache(fetchBig, ['home-pins-big-v3'], { revalidate: 300, tags: ['apt-master'] });
-const fetchSmallCached = unstable_cache(fetchSmall, ['home-pins-small-v3'], { revalidate: 300, tags: ['apt-master'] });
+const fetchBigCached = unstable_cache(fetchBig, ['home-pins-big-v4'], { revalidate: 300, tags: ['apt-master'] });
+const fetchSmallCached = unstable_cache(fetchSmall, ['home-pins-small-v4'], { revalidate: 300, tags: ['apt-master'] });
 const fetchPyeongDictCached = unstable_cache(fetchPyeongDict, ['home-pins-pyeong-v3'], { revalidate: 600, tags: ['apt-pyeong'] });
 
 type PinRow = { apt_nm: string; lawd_cd: string; dong: string | null };

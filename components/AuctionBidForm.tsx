@@ -75,7 +75,7 @@ export default function AuctionBidForm({
       }
       if (row.status !== 'active') {
         // 경매 종료 감지 → 클라이언트 핀 캐시 무효화 (홈 지도 깃발 즉시 반영)
-        try { localStorage.removeItem('mlbg_pins_big_v3'); localStorage.removeItem('mlbg_pins_small_v3'); } catch { /* ignore */ }
+        try { localStorage.removeItem('mlbg_pins_big_v4'); localStorage.removeItem('mlbg_pins_small_v4'); } catch { /* ignore */ }
         window.dispatchEvent(new Event('mlbg-pins-changed'));
         router.refresh();
       }
