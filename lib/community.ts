@@ -12,6 +12,7 @@ export type CommunityPost = {
   is_paid_only: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   author: { display_name: string | null; link_url?: string | null; tier?: string | null; tier_expires_at?: string | null; is_solo?: boolean | null; avatar_url?: string | null; apt_count?: number | null } | null;
   comment_count?: number;
   view_count?: number;
@@ -51,13 +52,23 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
 
 export async function getPost(id: number, category?: PostCategory): Promise<CommunityPost | null> {
   const supabase = await createClient();
+  // deleted_at 도 select — 삭제된 글은 페이지에서 별도 안내 (404 대신).
+  // 컬럼이 없으면 (SQL 064 미적용) 그냥 무시되고 deleted_at = undefined.
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
-  if (error || !data) return null;
+  if (error || !data) {
+    // 컬럼 없는 경우 fallback — deleted_at 빼고 다시 조회
+    const { data: data2 } = await supabase
+      .from('posts')
+      .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
+      .eq('id', id).maybeSingle();
+    if (!data2) return null;
+    return data2 as unknown as CommunityPost;
+  }
   return data as unknown as CommunityPost;
 }
 

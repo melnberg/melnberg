@@ -24,13 +24,17 @@ const fetchFeed = unstable_cache(
         .from('posts')
         .select('id, author_id, title, content, created_at')
         .eq('category', 'community')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(50),
+        .limit(50)
+        .then((r) => r, () => ({ data: null })),
       supabase
         .from('comments')
         .select('id, post_id, author_id, content, created_at, post:posts!post_id(title, category)')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(50),
+        .limit(50)
+        .then((r) => r, () => ({ data: null })),
       // apt_listings — best effort. 테이블 없으면 (SQL 060 미실행) 빈 배열 처리.
       supabase
         .from('apt_listings')

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { linkify } from '@/lib/linkify';
 import Nickname from './Nickname';
 
 type Props = {
@@ -101,7 +102,8 @@ export default function CommentSection({ postId, comments, currentUserId, curren
 
   async function handleDelete(commentId: number) {
     if (!confirm('댓글을 삭제하시겠습니까?')) return;
-    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+    // soft-delete
+    const { error } = await supabase.from('comments').update({ deleted_at: new Date().toISOString() }).eq('id', commentId);
     if (error) {
       alert(error.message);
       return;
@@ -255,7 +257,7 @@ function CommentRow({
           )}
         </div>
       </div>
-      <p className="text-[13px] leading-relaxed break-keep whitespace-pre-wrap">{comment.content}</p>
+      <p className="text-[13px] leading-relaxed break-keep whitespace-pre-wrap">{linkify(comment.content)}</p>
     </div>
   );
 }

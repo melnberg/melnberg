@@ -7,6 +7,7 @@ import PostActions from '@/components/PostActions';
 import Nickname from '@/components/Nickname';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
+import { linkify } from '@/lib/linkify';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,28 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
   const [post, comments] = await Promise.all([getPost(numId), listComments(numId)]);
   if (!post) notFound();
+  // 삭제된 글 — 친절한 안내 페이지
+  if (post.deleted_at) {
+    return (
+      <Layout current="community">
+        <MainTop crumbs={[
+          { href: '/', label: '멜른버그' },
+          { href: '/community', label: '커뮤니티' },
+          { label: '삭제된 글', bold: true },
+        ]} meta="Deleted" />
+        <article className="py-24">
+          <div className="max-w-[520px] mx-auto px-6 text-center">
+            <div className="text-[14px] font-bold tracking-wider uppercase text-muted mb-4">DELETED</div>
+            <h1 className="text-[22px] font-bold text-navy mb-3">게시글이 삭제되었습니다</h1>
+            <p className="text-[13px] text-muted leading-relaxed mb-8">작성자가 이 글을 삭제했어요. 다른 글을 둘러보세요.</p>
+            <Link href="/community" className="inline-block bg-navy text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-navy-dark">
+              ← 커뮤니티 목록
+            </Link>
+          </div>
+        </article>
+      </Layout>
+    );
+  }
 
   const supabase = await createClient();
   // 조회수 +1 (RLS 우회 RPC). 실패해도 페이지 렌더는 계속.
@@ -92,9 +115,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </div>
           </header>
 
-          {/* 본문 */}
+          {/* 본문 — 글 안의 URL 은 자동 링크 변환 */}
           <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
-            {post.content}
+            {linkify(post.content)}
           </div>
 
           {/* 댓글 */}

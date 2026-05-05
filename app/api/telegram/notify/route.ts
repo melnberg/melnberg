@@ -7,8 +7,6 @@ export const dynamic = 'force-dynamic';
 
 type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://melnberg.com';
-
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
   try {
@@ -36,7 +34,6 @@ export async function POST(req: NextRequest) {
 
   let tag = '';   // 대괄호 안 짧은 라벨
   let main = '';  // 본문 한 줄
-  let url = SITE_URL;
 
   if (kind === 'community_post') {
     const { data } = await admin.from('posts').select('id, title, author_id, category').eq('id', refId).maybeSingle();
@@ -44,7 +41,6 @@ export async function POST(req: NextRequest) {
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
     tag = r.category === 'blog' ? '블로그' : '커뮤니티';
     main = preview(r.title, 100);
-    url = `${SITE_URL}/${r.category === 'blog' ? 'blog' : 'community'}/${r.id}`;
   } else if (kind === 'community_comment') {
     const { data } = await admin
       .from('comments')
@@ -54,7 +50,6 @@ export async function POST(req: NextRequest) {
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
     tag = r.post?.category === 'blog' ? '블로그 댓글' : '커뮤니티 댓글';
     main = preview(r.content, 80);
-    url = `${SITE_URL}/${r.post?.category === 'blog' ? 'blog' : 'community'}/${r.post_id}`;
   } else if (kind === 'apt_post') {
     const { data } = await admin
       .from('apt_discussions')
@@ -64,7 +59,6 @@ export async function POST(req: NextRequest) {
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
     tag = r.apt_master?.apt_nm ?? '단지';
     main = preview(r.title, 80);
-    url = `${SITE_URL}/?apt=${r.apt_master_id}`;
   } else if (kind === 'apt_comment') {
     const { data } = await admin
       .from('apt_discussion_comments')
@@ -74,7 +68,6 @@ export async function POST(req: NextRequest) {
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
     tag = r.discussion?.apt_master?.apt_nm ?? '단지';
     main = preview(r.content, 80);
-    url = `${SITE_URL}/?apt=${r.discussion?.apt_master_id ?? 0}`;
   } else if (kind === 'listing') {
     const { data } = await admin
       .from('apt_listings')
@@ -84,13 +77,14 @@ export async function POST(req: NextRequest) {
     if (!r || r.seller_id !== user.id) return NextResponse.json({ error: 'not seller' }, { status: 403 });
     tag = r.apt_master?.apt_nm ?? '단지';
     main = `매물 ${Number(r.price).toLocaleString()} mlbg`;
-    url = `${SITE_URL}/?apt=${r.apt_id}`;
   }
 
-  // 깔끔한 두 줄 포맷:
-  //   [tag] main
-  //   url
-  const text = `[${escapeHtml(tag)}] ${escapeHtml(main)}\n${url}`;
+  // 작성자 닉네임
+  const { data: prof } = await admin.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+  const author = (prof as { display_name: string | null } | null)?.display_name ?? '회원';
+
+  // 포맷: [tag] author : main
+  const text = `[${escapeHtml(tag)}] ${escapeHtml(author)} : ${escapeHtml(main)}`;
   const result = await sendTelegramMessage(text, { parseMode: 'HTML', disablePreview: true });
   if (!result.ok) {
     console.error('[telegram/notify] send failed:', result.error);

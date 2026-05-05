@@ -14,7 +14,8 @@ export default function PostActions({ postId, basePath = '/community' }: { postI
     if (deleting) return;
     if (!confirm('이 글을 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
     setDeleting(true);
-    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    // soft-delete: deleted_at 만 set. 피드/리스트에서 자동 숨김 + 상세는 삭제 안내
+    const { error } = await supabase.from('posts').update({ deleted_at: new Date().toISOString() }).eq('id', postId);
     setDeleting(false);
     if (error) {
       alert(error.message);

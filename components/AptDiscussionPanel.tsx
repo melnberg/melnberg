@@ -9,6 +9,7 @@ import type { AptPin } from './AptMap';
 import { getAptListingPrice } from '@/lib/listing-price';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { linkify } from '@/lib/linkify';
 
 type Discussion = {
   id: number;
@@ -863,7 +864,7 @@ export default function AptDiscussionPanel({ apt, onClose }: { apt: AptPin; onCl
                 <li key={d.id} className="border border-navy/30 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(0,32,96,0.10)] hover:shadow-[0_2px_10px_rgba(0,32,96,0.14)] transition-shadow">
                   <h3 className="text-[15px] text-text leading-snug tracking-tight [&::first-line]:font-extrabold [&::first-line]:text-navy">{d.title}</h3>
                   {d.content && (
-                    <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap [&::first-line]:font-bold">{d.content}</p>
+                    <p className="text-[14px] text-text mt-1 leading-snug whitespace-pre-wrap [&::first-line]:font-bold">{linkify(d.content)}</p>
                   )}
                   <div className="text-[11px] text-muted mt-2 flex items-center gap-2">
                     <Nickname info={{ ...author, userId: d.author_id }} className="text-muted" />
