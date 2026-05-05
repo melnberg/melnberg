@@ -58,16 +58,32 @@ export default async function UserProfilePage({
   const tab: Tab = (['bio', 'posts', 'comments', 'occupier'] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : 'bio';
 
   const supabase = await createClient();
-  const [{ data: profileData }, me] = await Promise.all([
+  // base — schema.sql 부터 항상 존재
+  const [{ data: baseData }, me] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, display_name, naver_id, link_url, bio, is_solo, avatar_url, tier, tier_expires_at, created_at')
+      .select('id, display_name, tier, tier_expires_at, created_at')
       .eq('id', userId)
       .maybeSingle(),
     getCurrentUser(),
   ]);
-  const profile = profileData as ProfileRow | null;
-  if (!profile) notFound();
+  if (!baseData) notFound();
+
+  // 확장 컬럼 — 마이그레이션 미적용이어도 깨지지 않게 best-effort
+  const { data: extData } = await supabase
+    .from('profiles')
+    .select('naver_id, link_url, bio, is_solo, avatar_url')
+    .eq('id', userId)
+    .maybeSingle();
+  const ext = (extData ?? {}) as { naver_id?: string | null; link_url?: string | null; bio?: string | null; is_solo?: boolean | null; avatar_url?: string | null };
+  const profile: ProfileRow = {
+    ...(baseData as { id: string; display_name: string | null; tier: 'free' | 'paid'; tier_expires_at: string | null; created_at: string }),
+    naver_id: ext.naver_id ?? null,
+    link_url: ext.link_url ?? null,
+    bio: ext.bio ?? null,
+    is_solo: ext.is_solo ?? null,
+    avatar_url: ext.avatar_url ?? null,
+  };
 
   const isPaid = isActivePaid({ tier: profile.tier, tier_expires_at: profile.tier_expires_at });
   const isOwner = me?.id === profile.id;
