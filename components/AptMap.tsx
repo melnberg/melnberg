@@ -409,7 +409,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         image: imgs[f.brand] ?? imgs.hynix,
         map,
       }) as KakaoMarkerInst;
-      window.kakao.maps.event.addListener(marker, 'click', () => setSelectedFactory(f));
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          router.push(`/f/${f.id}`);
+        } else {
+          setSelectedFactory(f);
+        }
+      });
       factoryMarkersRef.current.push(marker);
     }
     return () => {
@@ -1124,7 +1130,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         image: img,
         map,
       }) as KakaoMarkerInst;
-      window.kakao.maps.event.addListener(marker, 'click', () => setSelectedEmart(e));
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          router.push(`/e/${e.id}`);
+        } else {
+          setSelectedEmart(e);
+        }
+      });
       emartMarkersRef.current.push(marker);
     }
     return () => {
@@ -1257,7 +1269,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           image: pickPin(p.household_count, occupied, listed),
           // 일단 숨김 — updateVisibility 가 viewport 안 + cap 안에 들면 노출
         }) as KakaoMarkerInst;
-        window.kakao.maps.event.addListener(marker, 'click', () => setSelected(p));
+        window.kakao.maps.event.addListener(marker, 'click', () => {
+          if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+            router.push(`/apt/${p.id}`);
+          } else {
+            setSelected(p);
+          }
+        });
 
         // 오버레이는 lazy 생성 — 줌 레벨이 라벨 노출 임계 도달했을 때만 createCustomOverlay.
         // DOM 수천개 영구 생성 방지. updateVisibility() 안에서 처리됨.
