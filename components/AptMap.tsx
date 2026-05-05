@@ -366,6 +366,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [recentHotdeals, setRecentHotdeals] = useState<HotdealItem[]>([]);
   type RankMode = 'score' | 'wealth' | 'trade' | 'hot' | 'activity' | 'quality' | 'sells' | 'offers' | 'hotdeals';
   const [rankMode, setRankMode] = useState<RankMode>('score');
+  // 마퀴 통일 속도 — 트랙 width 측정해서 px/s 기준 duration 계산
+  const marqueeTrackRef = useRef<HTMLDivElement>(null);
+  const [marqueeDuration, setMarqueeDuration] = useState(12);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -450,6 +453,23 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     }, 8000);
     return () => clearInterval(t);
   }, [ranking.length, wealthRanking.length, tradeHighlights.length, hotApts.length, activityStats, qualityAwards.length, todaySells.length, activeOffers.length, recentHotdeals.length]);
+
+  // 마퀴 트랙 width 측정 — 모드/데이터 변경 시 재계산
+  // 동일한 px/s 속도(=120px/s) 적용 → 모드 무관 같은 체감 속도
+  useEffect(() => {
+    const el = marqueeTrackRef.current;
+    if (!el) return;
+    // 다음 frame 에 측정 (DOM 반영 후)
+    const id = requestAnimationFrame(() => {
+      // scrollWidth 는 두 카피 합계. 절반(=한 사이클) 만 이동하니 그 절반 기준.
+      const halfWidth = el.scrollWidth / 2;
+      if (halfWidth <= 0) return;
+      const PX_PER_SEC = 120;
+      const dur = Math.max(8, halfWidth / PX_PER_SEC);
+      setMarqueeDuration(dur);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [rankMode, ranking, wealthRanking, tradeHighlights, hotApts, activityStats, qualityAwards, todaySells, activeOffers, recentHotdeals]);
 
   // 만원 단위 → 표시
   function fmtKRW(만원: number): string {
@@ -846,7 +866,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             {rankMode === 'hotdeals' && <span className="text-[#fed7aa] [text-shadow:0_0_6px_rgba(254,215,170,0.6)]">🛒 핫딜</span>}
           </button>
           <div className="marquee-mask flex-1 overflow-hidden">
-            <div className="marquee-track flex w-max">
+            <div
+              key={rankMode}
+              ref={marqueeTrackRef}
+              className="marquee-track marquee-slide-in flex w-max"
+              style={{ ['--marquee-duration' as string]: `${marqueeDuration}s` }}
+            >
               {[0, 1].map((copy) => (
                 <div key={copy} aria-hidden={copy === 1} className="flex gap-8 pr-8">
                   {rankMode === 'score' && ranking.map((r, i) => (

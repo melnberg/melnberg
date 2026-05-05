@@ -25,16 +25,28 @@
   animation: fadeInScale 220ms ease-out forwards;
 }
 
-/* 마퀴 (오른쪽 → 왼쪽 무한 스크롤). 트랙 안에 동일 콘텐츠 두 번 두면 끊김 없이 이어짐. */
+/* 마퀴 (오른쪽 → 왼쪽 무한 스크롤). 트랙 안에 동일 콘텐츠 두 번 두면 끊김 없이 이어짐.
+   animation-duration 은 컴포넌트가 측정한 width 기준으로 인라인 style 로 주입됨. */
 @keyframes marqueeRtl {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 .marquee-track {
   animation: marqueeRtl 12s linear infinite;
+  /* 인라인 style 의 --marquee-duration 가 있으면 덮어씀 */
+  animation-duration: var(--marquee-duration, 12s);
 }
 .marquee-mask:hover .marquee-track {
   animation-play-state: paused;
+}
+
+/* 모드 전환 시 아래에서 위로 슬라이드 인 */
+@keyframes marqueeSlideUpIn {
+  0%   { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.marquee-slide-in {
+  animation: marqueeSlideUpIn 350ms ease-out;
 }
 
 @layer base {
