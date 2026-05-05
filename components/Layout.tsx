@@ -47,6 +47,7 @@ export default async function Layout({ current, children }: { current?: string; 
       email: user.email ?? '',
       score,
       isPaid,
+      avatarUrl: profile?.avatar_url ?? null,
     };
   }
 

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 import NotificationsBell from './NotificationsBell';
 
-export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean };
+export type SidebarUser = { name: string; email: string; score?: number; isPaid?: boolean; avatarUrl?: string | null };
 export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
 
 type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[] };
@@ -54,9 +54,13 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                 onClick={() => setOpen(false)}
                 className="flex-1 min-w-0 flex items-center gap-3 no-underline"
               >
-                <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                  {(user.name[0] ?? '').toUpperCase()}
-                </div>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-border" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                    {(user.name[0] ?? '').toUpperCase()}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13px] font-bold text-text truncate">{user.name}</span>

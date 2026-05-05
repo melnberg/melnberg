@@ -10,7 +10,7 @@ type Comment = {
   author_id: string;
   content: string;
   created_at: string;
-  author?: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null } | null;
+  author?: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null } | null;
 };
 
 function relTime(iso: string): string {
@@ -61,9 +61,9 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
       if (ids.length > 0) {
         const { data: profs } = await supabase
           .from('profiles')
-          .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
+          .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
           .in('id', ids);
-        for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null }>) {
+        for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null }>) {
           authorMap.set(p.id, p);
         }
       }
@@ -93,7 +93,7 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
       // 작성자 본인 프로필 가져오기
       const { data: prof } = await supabase
         .from('profiles')
-        .select('display_name, link_url, tier, tier_expires_at, is_solo')
+        .select('display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
         .eq('id', me.id)
         .maybeSingle();
       setComments((prev) => [{ ...(data as { id: number; author_id: string; content: string; created_at: string }), author: prof as Comment['author'] }, ...(prev ?? [])]);
@@ -166,6 +166,7 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
                   isPaid: isAuthorPaid(c),
                   isSolo: !!c.author?.is_solo,
                   userId: c.author_id,
+                  avatarUrl: c.author?.avatar_url ?? null,
                 }} className="text-muted" />
                 <span>·</span>
                 <span>{relTime(c.created_at)}</span>

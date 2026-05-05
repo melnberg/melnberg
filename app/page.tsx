@@ -40,12 +40,12 @@ const fetchFeed = unstable_cache(
       ...((postComments ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
     ].filter(Boolean)));
 
-    type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null };
+    type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null };
     const profileMap = new Map<string, ProfRow>();
     if (allAuthorIds.length > 0) {
       const { data: profs } = await supabase
         .from('profiles')
-        .select('id, display_name, link_url, tier, tier_expires_at, is_solo')
+        .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
         .in('id', allAuthorIds);
       for (const p of (profs ?? []) as Array<{ id: string } & ProfRow>) {
         profileMap.set(p.id, p);
@@ -75,6 +75,7 @@ const fetchFeed = unstable_cache(
         author_link: prof?.link_url ?? null,
         author_is_paid: isActivePaid(prof),
         author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
       };
     });
 
@@ -100,6 +101,7 @@ const fetchFeed = unstable_cache(
         author_link: prof?.link_url ?? null,
         author_is_paid: isActivePaid(prof),
         author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
       };
     });
 
@@ -107,7 +109,7 @@ const fetchFeed = unstable_cache(
       const row = r as Record<string, unknown>;
       const prof = profileMap.get(row.author_id as string);
       return {
-        kind: 'post',
+        kind: 'post' as const,
         id: row.id as number,
         apt_master_id: 0,
         post_id: row.id as number,
@@ -120,6 +122,7 @@ const fetchFeed = unstable_cache(
         author_link: prof?.link_url ?? null,
         author_is_paid: isActivePaid(prof),
         author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
       };
     });
 
@@ -142,10 +145,11 @@ const fetchFeed = unstable_cache(
           created_at: row.created_at as string,
           apt_nm: null, dong: null, lat: null, lng: null,
           author_id: row.author_id as string,
-        author_name: prof?.display_name ?? null,
+          author_name: prof?.display_name ?? null,
           author_link: prof?.link_url ?? null,
           author_is_paid: isActivePaid(prof),
           author_is_solo: !!prof?.is_solo,
+          author_avatar_url: prof?.avatar_url ?? null,
         };
       });
 

@@ -201,6 +201,7 @@ export default function Nickname({
 
   return (
     <span className={`inline-flex items-center whitespace-nowrap ${className}`}>
+      {avatarNode}
       {nameNode}
       {badgeNode}
       {dotEl}

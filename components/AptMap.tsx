@@ -65,6 +65,7 @@ export type FeedItem = {
   author_link: string | null;
   author_is_paid: boolean;
   author_is_solo: boolean;
+  author_avatar_url: string | null;
 };
 
 export type AptPin = {
@@ -165,6 +166,8 @@ function writePinCache(key: string, pins: AptPin[]) {
 }
 
 export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   // 핀은 두 단계로 로드:
   //   1단계 (즉시): 큰 단지 + 점거 단지 — 작아서 빠름
   //   2단계 (1초 후): 100~999세대 중소형 — 화면이 응답성 갖춘 뒤 백그라운드
@@ -238,18 +241,24 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; clearTimeout(smallTimer); };
   }, [pinsFromProps]);
 
-  // Supabase Realtime — apt_master 변경 시 모든 클라이언트에 즉시 push
-  // 다른 사용자의 점거/강제집행도 본인 화면에 5분 기다림 없이 반영됨
+  // Supabase Realtime — apt_master + 글/댓글 테이블 변경 시 즉시 반영
+  // apt_master UPDATE: 점거인 변경 → 핀 갱신
+  // 글/댓글 INSERT: 피드 갱신 (RSC refresh)
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel('apt-master-realtime')
+      .channel('mlbg-realtime')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apt_master' }, () => {
         window.dispatchEvent(new Event('mlbg-pins-changed'));
+        router.refresh();
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'apt_discussions' }, () => router.refresh())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'apt_discussion_comments' }, () => router.refresh())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => router.refresh())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => router.refresh())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [router]);
 
   // 점거/강제집행 액션 후 핀 갱신 — 서버 unstable_cache + localStorage 모두 무효화 후 refetch
   useEffect(() => {
@@ -293,9 +302,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAiQuery] = useState('');
   const [occupiedOpen, setOccupiedOpen] = useState(false);
-  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean }>>(new Map());
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null }>>(new Map());
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ?apt={id} query 로 진입 시 해당 단지 패널 자동 열기 (알림 종 클릭 흐름)
@@ -461,21 +468,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const ids = Array.from(new Set(occupied.map((p) => p.occupier_id).filter(Boolean) as string[]));
     if (ids.length === 0) return;
     const supabase = createClient();
-    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at').in('id', ids);
-    const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean }>();
+    const { data } = await supabase.from('profiles').select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url').in('id', ids);
+    const map = new Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null }>();
     const now = Date.now();
-    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null }>) {
+    for (const r of (data ?? []) as Array<{ id: string; display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null }>) {
       if (r.display_name) {
         const isPaid = r.tier === 'paid' && (!r.tier_expires_at || new Date(r.tier_expires_at).getTime() > now);
-        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: false });
-      }
-    }
-    // is_solo 추가 (SQL 039 적용 후)
-    const { data: soloData } = await supabase.from('profiles').select('id, is_solo').in('id', ids);
-    if (soloData) {
-      for (const s of soloData as Array<{ id: string; is_solo: boolean | null }>) {
-        const cur = map.get(s.id);
-        if (cur) cur.isSolo = !!s.is_solo;
+        map.set(r.id, { name: r.display_name, link: r.link_url, isPaid, isSolo: !!r.is_solo, avatarUrl: r.avatar_url });
       }
     }
     setOccupierProfiles(map);
@@ -805,7 +804,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           {p.occupier_id ? (
                             <Nickname info={(() => {
                               const pf = occupierProfiles.get(p.occupier_id);
-                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo, userId: p.occupier_id } : { name: '...' };
+                              return pf ? { name: pf.name, link: pf.link, isPaid: pf.isPaid, isSolo: pf.isSolo, userId: p.occupier_id, avatarUrl: pf.avatarUrl } : { name: '...' };
                             })()} />
                           ) : ''}
                         </div>
@@ -857,7 +856,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo, userId: f.author_id }} />
+                            <Nickname info={{ name: f.author_name, link: f.author_link, isPaid: f.author_is_paid, isSolo: f.author_is_solo, userId: f.author_id, avatarUrl: f.author_avatar_url }} />
                           </span>
                         </div>
                         {/* 본문 영역 — 클릭 시 jumpToFeedItem 으로 이동 (글로) */}

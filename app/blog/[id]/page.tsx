@@ -89,6 +89,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
                   isPaid: post.author?.tier === 'paid' && (!post.author?.tier_expires_at || new Date(post.author.tier_expires_at).getTime() > Date.now()),
                   isSolo: !!post.author?.is_solo,
                   userId: post.author_id,
+                  avatarUrl: post.author?.avatar_url ?? null,
                 }} />
               </span>
               <span>·</span>
