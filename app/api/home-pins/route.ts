@@ -46,10 +46,11 @@ async function fetchSmall(): Promise<unknown[]> {
 }
 
 // 평당가는 별도 fetch — 073 적용된 환경만 데이터 채워짐. 미적용 환경에선 silent skip.
+// 주의: unstable_cache 가 Map 을 직렬화 못하므로 plain object 로 반환.
 type PyeongRow = { apt_nm: string; lawd_cd: string; dong_norm: string; pyeong_price: number };
-async function fetchPyeongMap(): Promise<Map<string, number>> {
+async function fetchPyeongDict(): Promise<Record<string, number>> {
   const supabase = createPublicClient();
-  const map = new Map<string, number>();
+  const dict: Record<string, number> = {};
   try {
     for (let offset = 0; offset < 200000; offset += 1000) {
       const { data, error } = await supabase
@@ -58,24 +59,25 @@ async function fetchPyeongMap(): Promise<Map<string, number>> {
         .range(offset, offset + 999);
       if (error || !data || data.length === 0) break;
       for (const r of data as PyeongRow[]) {
-        map.set(`${r.apt_nm}|${r.lawd_cd}|${r.dong_norm}`, r.pyeong_price);
+        dict[`${r.apt_nm}|${r.lawd_cd}|${r.dong_norm}`] = r.pyeong_price;
       }
       if (data.length < 1000) break;
     }
-  } catch { /* MV 미생성 환경에선 빈 map 반환 */ }
-  return map;
+  } catch { /* MV 미생성 환경에선 빈 dict 반환 */ }
+  return dict;
 }
 
 const fetchBigCached = unstable_cache(fetchBig, ['home-pins-big'], { revalidate: 300, tags: ['apt-master'] });
 const fetchSmallCached = unstable_cache(fetchSmall, ['home-pins-small'], { revalidate: 300, tags: ['apt-master'] });
-const fetchPyeongMapCached = unstable_cache(fetchPyeongMap, ['home-pins-pyeong'], { revalidate: 600, tags: ['apt-pyeong'] });
+const fetchPyeongDictCached = unstable_cache(fetchPyeongDict, ['home-pins-pyeong'], { revalidate: 600, tags: ['apt-pyeong'] });
 
 type PinRow = { apt_nm: string; lawd_cd: string; dong: string | null };
-function attachPyeong(rows: unknown[], pyeongMap: Map<string, number>): unknown[] {
-  if (pyeongMap.size === 0) return rows;
+function attachPyeong(rows: unknown[], dict: Record<string, number>): unknown[] {
+  const keys = Object.keys(dict ?? {});
+  if (keys.length === 0) return rows;
   return (rows as Array<PinRow & Record<string, unknown>>).map((p) => ({
     ...p,
-    pyeong_price: pyeongMap.get(`${p.apt_nm}|${p.lawd_cd}|${p.dong ?? ''}`) ?? null,
+    pyeong_price: dict[`${p.apt_nm}|${p.lawd_cd}|${p.dong ?? ''}`] ?? null,
   }));
 }
 
@@ -83,13 +85,15 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const detail = url.searchParams.get('detail') === '1';
   const fresh = url.searchParams.get('fresh') === '1';
-  const [pinsRaw, pyeongMap] = await Promise.all([
-    detail
-      ? (fresh ? fetchSmall() : fetchSmallCached())
-      : (fresh ? fetchBig() : fetchBigCached()),
-    fetchPyeongMapCached(),
-  ]);
-  const pins = attachPyeong(pinsRaw, pyeongMap);
+
+  // 핀 데이터는 필수, 평당가는 best-effort. 평당가 fetch 가 실패해도 핀은 표시.
+  const pinsPromise = detail
+    ? (fresh ? fetchSmall() : fetchSmallCached())
+    : (fresh ? fetchBig() : fetchBigCached());
+  const pyeongPromise = fetchPyeongDictCached().catch(() => ({} as Record<string, number>));
+
+  const [pinsRaw, pyeongDict] = await Promise.all([pinsPromise, pyeongPromise]);
+  const pins = attachPyeong(pinsRaw, pyeongDict);
   return NextResponse.json(
     { pins },
     {
