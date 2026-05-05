@@ -9,7 +9,7 @@ export default function TelegramFloatingLink() {
       href={TELEGRAM_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-[80px] right-5 z-40 flex items-center gap-2 bg-[#229ED9] hover:bg-[#1c87b8] text-white px-3.5 py-2 shadow-[0_4px_12px_rgba(34,158,217,0.45)] no-underline transition-colors"
+      className="floating-widget fixed bottom-[80px] right-5 z-40 flex items-center gap-2 bg-[#229ED9] hover:bg-[#1c87b8] text-white px-3.5 py-2 shadow-[0_4px_12px_rgba(34,158,217,0.45)] no-underline transition-colors"
       title="텔레그램 채널 구독 — 새 글·댓글 자동 알림"
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

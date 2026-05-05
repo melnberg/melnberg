@@ -6,9 +6,8 @@
    .map-minimal 클래스가 적용된 컨테이너에서, 1024px 미만에서만 적용. */
 @media (max-width: 1023px) {
   .map-minimal > .relative > *:not(:first-child) { display: none !important; }
-  /* 외부 floating 요소들 (TelegramFloatingLink, FeedbackWidget 등) 도 모바일 지도 모드에서 숨김 */
-  body.map-minimal-active .telegram-floating,
-  body.map-minimal-active .feedback-widget { display: none !important; }
+  /* 모바일 지도 모드에서 외부 floating widgets 숨김 */
+  body.map-minimal-active .floating-widget { display: none !important; }
 }
 
 /* AI 답변 로딩 라벨 — 그라데이션 흐름 + 슬라이드업 */
