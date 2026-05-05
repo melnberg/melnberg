@@ -1011,21 +1011,23 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: initialLevel }) as KakaoMapInst;
         mapInstRef.current = map;
 
-        // tier 기반 노출 — 원래 로직 복원
+        // tier 기반 노출.
+        // 모바일은 화면이 좁아 더 줌아웃 상태로 보는 경향 → 한 단계 더 관대하게.
         // tier 0 (≥2000세대): 항상 노출
-        // tier 1 (1000~1999): level <= 7
-        // tier 2 (300~999):   level <= 5
-        // tier 3 (<300):      level <= 4
+        // tier 1 (1000~1999): 데스크톱 lvl ≤ 5 / 모바일 lvl ≤ 7 (4km 줌에서도 보임)
+        // tier 2 (300~999):   데스크톱 lvl ≤ 4 / 모바일 lvl ≤ 5
+        // tier 3 (<300):      lvl ≤ 4 (양쪽 동일)
         // 점거/매물 핀은 tier 무관 항상 노출 (게임 정보)
         function tierFor(hh: number): 0 | 1 | 2 | 3 {
           return hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
         }
         function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
-          if (occupied || listed) return true;       // 점거·매물은 어떤 줌이든 항상 노출
-          if (tier === 0) return true;                // red/orange (2000+) — 항상
-          if (tier === 1 && lvl <= 5) return true;    // green (1000+) — 500m 까지 (1km 줌에선 숨김)
-          if (tier === 2 && lvl <= 4) return true;    // blue (300+) — 250m 까지
-          if (tier === 3 && lvl <= 4) return true;    // dot (<300) — 250m 까지
+          if (occupied || listed) return true;
+          if (tier === 0) return true;
+          const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+          if (tier === 1) return lvl <= (isMobile ? 7 : 5);
+          if (tier === 2) return lvl <= (isMobile ? 5 : 4);
+          if (tier === 3) return lvl <= 4;
           return false;
         }
         const updateVisibility = () => {
