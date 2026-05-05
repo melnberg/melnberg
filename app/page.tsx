@@ -30,9 +30,10 @@ async function fetchFeed(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(50)
         .then((r) => r, () => ({ data: null })),
+      // 임베드 없이 댓글만 조회 — posts 조인은 별도 쿼리에서 처리 (PostgREST 임베드 실패 시 silent fail 방지)
       supabase
         .from('comments')
-        .select('id, post_id, author_id, content, created_at, post:posts!post_id(title, category)')
+        .select('id, post_id, author_id, content, created_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -56,6 +57,19 @@ async function fetchFeed(): Promise<FeedItem[]> {
     ]);
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
+
+    // postComments 의 post_id → posts(title, category) 별도 조회 (임베드 회피)
+    const commentPostIds = Array.from(new Set(((postComments ?? []) as Array<{ post_id: number }>).map((c) => c.post_id).filter(Boolean)));
+    const commentPostMap = new Map<number, { title: string | null; category: string | null }>();
+    if (commentPostIds.length > 0) {
+      const { data: commentPosts } = await supabase
+        .from('posts')
+        .select('id, title, category')
+        .in('id', commentPostIds);
+      for (const p of (commentPosts ?? []) as Array<{ id: number; title: string | null; category: string | null }>) {
+        commentPostMap.set(p.id, { title: p.title, category: p.category });
+      }
+    }
 
     const allAuthorIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).author_id as string)),
@@ -189,15 +203,12 @@ async function fetchFeed(): Promise<FeedItem[]> {
 
     const postCommentItems: FeedItem[] = (postComments ?? [])
       .filter((r) => {
-        // PostgREST 임베드는 케이스 따라 object 또는 배열로 반환됨 — 양쪽 다 대응
-        const raw = (r as Record<string, unknown>).post;
-        const post = (Array.isArray(raw) ? raw[0] : raw) as { category?: string | null } | null;
+        const post = commentPostMap.get((r as Record<string, unknown>).post_id as number);
         return post?.category === 'community';
       })
       .map((r) => {
         const row = r as Record<string, unknown>;
-        const rawPost = row.post;
-        const post = (Array.isArray(rawPost) ? rawPost[0] : rawPost) as { title: string | null; category: string | null } | null;
+        const post = commentPostMap.get(row.post_id as number) ?? null;
         const prof = profileMap.get(row.author_id as string);
         return {
           kind: 'post_comment' as const,
