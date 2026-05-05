@@ -7,7 +7,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 
 export type FactoryItem = {
   id: number;
-  brand: 'hynix' | 'samsung' | 'costco' | 'union';
+  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo';
   name: string;
   address: string | null;
   lat: number;
@@ -31,6 +31,7 @@ const BRAND_META: Record<FactoryItem['brand'], { label: string; bg: string; icon
   samsung: { label: '삼성전자 캠퍼스', bg: '#1428A0', iconBg: '#dbeafe', pin: '/pins/factory-samsung.svg' },
   costco:  { label: '코스트코',         bg: '#005DAA', iconBg: '#dbeafe', pin: '/pins/factory-costco.svg' },
   union:   { label: '전국금속노조',     bg: '#0F3D8E', iconBg: '#dbeafe', pin: '/pins/factory-union.svg' },
+  cargo:   { label: '화물연대',         bg: '#1F8A4C', iconBg: '#dcfce7', pin: '/pins/factory-cargo.svg' },
 };
 
 function fmtKstShort(iso: string): string {

@@ -76,6 +76,15 @@ async function fetchFeed(): Promise<FeedItem[]> {
       .then((r) => r, () => ({ data: null }));
     const emartRows = ((emartOccs ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
 
+    // 최근 공장 분양 (하이닉스/삼성/코스트코/금속노조)
+    const { data: factoryOccs } = await supabase
+      .from('factory_occupations')
+      .select('id, factory_id, user_id, occupied_at, factory:factory_locations!factory_id(name, brand)')
+      .order('occupied_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const factoryRows = ((factoryOccs ?? []) as unknown as Array<{ id: number; factory_id: number; user_id: string; occupied_at: string; factory: unknown }>);
+
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
       .from('auction_bids')
@@ -130,6 +139,7 @@ async function fetchFeed(): Promise<FeedItem[]> {
       ...((offers ?? []).map((o) => (o as Record<string, unknown>).buyer_id as string)),
       ...bidRows.map((b) => b.bidder_id),
       ...emartRows.map((e) => e.user_id),
+      ...factoryRows.map((f) => f.user_id),
     ].filter(Boolean)));
 
     type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
@@ -399,23 +409,59 @@ async function fetchFeed(): Promise<FeedItem[]> {
     });
 
     // 시스템 공지 — 자동 작성된 일반 커뮤니티 글처럼 노출 (티 안 나게).
-    // 비활성화 시 NOTICE_ITEMS 를 빈 배열로 두면 됨.
+    const noticeBase = (id: number, title: string, content: string): FeedItem => ({
+      kind: 'notice' as const,
+      id,
+      apt_master_id: 0,
+      post_id: null,
+      title,
+      content,
+      created_at: new Date().toISOString(),
+      apt_nm: null, dong: null, lat: null, lng: null,
+      author_id: null, author_name: '멜른버그', author_link: null,
+      author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
+    });
     const NOTICE_ITEMS: FeedItem[] = [
-      {
-        kind: 'notice' as const,
-        id: 1,
-        apt_master_id: 0,
-        post_id: null,
-        title: '이마트 분양 시작',
-        content: '이마트 매장이 새 분양 대상으로 추가됐습니다.\n분양가 5 mlbg, 매일 1 mlbg 자동 수익 (24시간마다 청구). 5일이면 분양가 회수, 이후엔 순수익. 1인 1점포 제한.\n지도에서 노란 e 핀 클릭 → 분양받기.',
-        created_at: new Date().toISOString(),
-        apt_nm: null, dong: null, lat: null, lng: null,
-        author_id: null, author_name: '멜른버그', author_link: null,
-        author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
-      },
+      noticeBase(1, '이마트 분양 시작',
+        '이마트 매장이 분양 대상으로 추가됐습니다.\n분양가 5 mlbg, 매일 1 mlbg 자동 수익. 5일이면 회수. 1인 1점포.\n지도 노란 e 핀 클릭 → 분양받기.'),
+      noticeBase(2, 'SK하이닉스 분양 시작',
+        'SK하이닉스 이천·청주 캠퍼스가 분양 대상으로 추가됐습니다.\n분양가 1,000 mlbg, 매일 20 mlbg 자동 수익. 50일이면 회수.\n지도 빨간 H 핀 클릭 → 분양받기.'),
+      noticeBase(3, '삼성전자 분양 시작',
+        '삼성전자 평택 캠퍼스가 분양 대상으로 추가됐습니다.\n분양가 800 mlbg, 매일 20 mlbg 자동 수익. 40일이면 회수.\n지도 파란 S 핀 클릭 → 분양받기.'),
+      noticeBase(4, '코스트코 분양 시작',
+        '코스트코 6개 매장 (양재·상봉·의정부·일산·광명·하남) 이 분양 대상으로 추가됐습니다.\n분양가 50 mlbg, 매일 5 mlbg 자동 수익. 10일이면 회수.\n지도 파란 C 핀 클릭 → 분양받기.'),
+      noticeBase(5, '금속노조 분양 시작',
+        '전국금속노조 본부·경기지부·인천지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 진남색 금속 핀 클릭 → 분양받기.'),
+      noticeBase(6, '화물연대 분양 시작',
+        '화물연대 본부·경기지부·부산지부가 분양 대상으로 추가됐습니다.\n분양가 10 mlbg, 매일 1 mlbg 자동 수익. 10일이면 회수.\n지도 초록 화물 핀 클릭 → 분양받기.'),
     ];
 
     // 이마트 분양 → FeedItem
+    const factoryItems: FeedItem[] = factoryRows.map((r) => {
+      const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null } | null;
+      const prof = profileMap.get(r.user_id);
+      const brandLabel = f?.brand === 'hynix' ? 'SK하이닉스' : f?.brand === 'samsung' ? '삼성전자' : f?.brand === 'costco' ? '코스트코' : f?.brand === 'union' ? '금속노조' : f?.brand === 'cargo' ? '화물연대' : '공장';
+      return {
+        kind: 'emart_occupy' as const,    // 동일 렌더 재활용 (분양 뱃지)
+        id: 100000 + r.id,                 // emart 와 id 충돌 방지
+        apt_master_id: 0,
+        post_id: null,
+        title: `${brandLabel} ${f?.name ?? '시설'} 분양받음`,
+        content: null,
+        created_at: r.occupied_at,
+        emart_name: f?.name ?? undefined,
+        apt_nm: f?.name ?? null,
+        dong: null, lat: null, lng: null,
+        author_id: r.user_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+      };
+    });
+
     const emartItems: FeedItem[] = emartRows.map((r) => {
       const em = (Array.isArray(r.emart) ? r.emart[0] : r.emart) as { name?: string | null } | null;
       const prof = profileMap.get(r.user_id);
@@ -440,10 +486,10 @@ async function fetchFeed(): Promise<FeedItem[]> {
       };
     });
 
-    // 경매·공지는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 + 이마트 시간순
-    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems]
+    // 경매·공지는 강제로 피드 최상단 (시간 정렬 무시), 그 다음 일반 + 입찰 + 이마트/공장 시간순
+    const others = [...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 60 - auctionItems.length - NOTICE_ITEMS.length);
+      .slice(0, 80 - auctionItems.length - NOTICE_ITEMS.length);
     return [...NOTICE_ITEMS, ...auctionItems, ...others];
 }
 
