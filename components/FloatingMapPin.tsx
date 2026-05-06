@@ -61,10 +61,18 @@ export default function FloatingMapPin() {
     }
   }
 
-  // 알록달록 그라디언트 (지도 모드 진입 유도)
-  const colorfulCls = !isMap
-    ? 'bg-gradient-to-br from-[#fbbf24] via-[#ec4899] to-[#0070C0] text-white border-white shadow-[0_4px_16px_rgba(236,72,153,0.4)] animate-pulse'
-    : 'bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)]';
+  // 알록달록 그라디언트 (지도 모드 진입 유도) — inline style 로 강제 (Tailwind JIT 안 먹히는 사고 방지)
+  const colorfulStyle: React.CSSProperties = !isMap ? {
+    background: 'linear-gradient(135deg, #fbbf24 0%, #ec4899 50%, #0070C0 100%)',
+    color: '#ffffff',
+    borderColor: '#ffffff',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    boxShadow: '0 4px 16px rgba(236, 72, 153, 0.5)',
+  } : {};
+  const baseCls = isMap
+    ? 'bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+    : 'animate-pulse';
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2">
@@ -82,7 +90,8 @@ export default function FloatingMapPin() {
         href={isMap ? '/' : '/?view=map'}
         onClick={onClick}
         aria-label={isMap ? '피드로' : '지도로'}
-        className={`w-11 h-11 rounded-full flex items-center justify-center no-underline transition-all border-2 ${colorfulCls}`}
+        style={colorfulStyle}
+        className={`w-11 h-11 rounded-full flex items-center justify-center no-underline transition-all ${baseCls}`}
       >
         {isMap ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
