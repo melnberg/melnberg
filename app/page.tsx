@@ -178,6 +178,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       profsResp,
       aptCountResp,
       awardResp,
+      farmResp,
       discCommRows,
       postCommRows,
       emartCommCntRows,
@@ -199,6 +200,12 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         : Promise.resolve({ data: null }),
       awardRefIds.length > 0
         ? supabase.from('mlbg_award_log').select('kind, ref_id, earned').in('ref_id', awardRefIds)
+            .then((r) => r, () => ({ data: null }))
+        : Promise.resolve({ data: null }),
+      // 게시글 농사 보너스 — community/hotdeal 글의 댓글당 작성자 +0.5/+2 (1인 1글 1회).
+      // 피드 카드의 +N mlbg 표시에 합산.
+      postIds.length > 0
+        ? supabase.from('mlbg_farm_log').select('post_id, earned').in('post_id', postIds)
             .then((r) => r, () => ({ data: null }))
         : Promise.resolve({ data: null }),
       discIds.length > 0
@@ -241,6 +248,12 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const awardMap = new Map<string, number>();
     for (const r of (((awardResp as { data: unknown[] | null })?.data) ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
       awardMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
+    }
+
+    // farmMap 빌드 — post_id → 게시글 농사 합산
+    const farmMap = new Map<number, number>();
+    for (const r of (((farmResp as { data: unknown[] | null })?.data) ?? []) as Array<{ post_id: number; earned: number | string }>) {
+      farmMap.set(r.post_id, (farmMap.get(r.post_id) ?? 0) + Number(r.earned ?? 0));
     }
 
     // 댓글 카운트
@@ -331,7 +344,12 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
-        earned_mlbg: cat === 'hotdeal' ? earnedFor('hotdeal_post', row.id as number) : earnedFor('community_post', row.id as number),
+        earned_mlbg: (() => {
+          const base = (cat === 'hotdeal' ? earnedFor('hotdeal_post', row.id as number) : earnedFor('community_post', row.id as number)) ?? 0;
+          const farm = farmMap.get(row.id as number) ?? 0;
+          const total = base + farm;
+          return total > 0 ? total : null;
+        })(),
         comment_count: postCommCnt.get(row.id as number) ?? 0,
         post_category: cat,
       };
