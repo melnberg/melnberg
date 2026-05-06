@@ -185,7 +185,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                   <Link
                     href={`/community/${p.id}`}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-1.5 pl-12 pr-4 py-2 text-[12px] text-text hover:text-navy hover:bg-navy-soft no-underline"
+                    className="flex items-center gap-1.5 pl-12 pr-4 py-1.5 text-[12px] text-text hover:text-navy hover:bg-navy-soft no-underline"
                     title={`${p.id} · ${p.title}${p.author_name ? ` · ${p.author_name}` : ''}`}
                   >
                     <span className="text-muted tabular-nums flex-shrink-0">{p.id}</span>
@@ -259,7 +259,7 @@ function SItem({ href, label, price, active, icon, onClick, sub }: { href: strin
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 ${padX} py-3 text-sm no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors ${activeBg}`}
+      className={`flex items-center gap-3 ${padX} py-2 text-sm no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors ${activeBg}`}
     >
       {icon}
       <span>{label}</span>
@@ -274,7 +274,7 @@ function SectionToggle({ label, icon, open, onClick }: { label: string; icon: Re
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-6 py-3 text-sm font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors"
+      className="flex items-center gap-3 w-full px-6 py-2 text-sm font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors"
       aria-expanded={open}
     >
       {icon}
