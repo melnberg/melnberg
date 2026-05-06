@@ -15,9 +15,11 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#002060',
     lang: 'ko-KR',
     icons: [
-      // SVG — 모든 사이즈 자동 스케일 (모던 브라우저)
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      // PNG fallback 은 추후 192/512 추가 권장 (Android Chrome 설치 배너 안정성 ↑)
     ],
   };
 }

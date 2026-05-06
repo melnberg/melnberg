@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import PWAInstall from '@/components/PWAInstall';
 
 export const metadata: Metadata = {
   title: '멜른버그',
@@ -29,10 +30,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           crossOrigin=""
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
-        {/* iOS 홈 화면 추가 시 아이콘 — SVG 직접 (iOS 16+ 지원, 그 이하는 fallback 없음 → 기본 스크린샷) */}
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        {/* iOS 홈 화면 추가 시 아이콘 — 180×180 PNG 우선, SVG fallback */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <PWAInstall />
+      </body>
     </html>
   );
 }
