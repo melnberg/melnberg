@@ -50,7 +50,8 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
       .eq('category', category)
       .order('created_at', { ascending: false })
       .limit(limit);
-    data = fallback.data;
+    // 타입 불일치 (deleted_at 누락) — 클라 필터 단계에서 어차피 deleted_at 검사하므로 cast 안전.
+    data = fallback.data as unknown as typeof data;
     error = fallback.error;
   }
   if (error) {
