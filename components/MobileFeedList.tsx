@@ -239,6 +239,13 @@ export default function MobileFeedList({ items }: Props) {
                       ) : null}
                     </span>
                   </div>
+                  {/* 맛집 사진 — 1:1 정사각형 (Instagram 스타일) */}
+                  {f.kind === 'restaurant_register' && f.restaurant_photo_url && (
+                    <div className="mt-2 max-w-[400px] mx-auto aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={f.restaurant_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    </div>
+                  )}
                   {/* 메타 — 시각 + 보상 + 댓글 카운트 (우측) */}
                   <div className="text-[10px] text-muted mt-1.5 flex items-center gap-2">
                     <span>{relTime(f.created_at)} 전</span>

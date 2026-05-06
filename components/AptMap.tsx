@@ -120,6 +120,7 @@ export type FeedItem = {
   restaurant_id?: number;
   restaurant_name?: string | null;
   restaurant_recommended_menu?: string | null;
+  restaurant_photo_url?: string | null;
 };
 
 export type AptPin = {
@@ -1714,6 +1715,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">{renderFeedContentWithImages(fullContent)}</div>
                               )}
                             </>
+                          )}
+                          {/* 맛집 사진 — 1:1 정사각형 (Instagram 스타일) */}
+                          {f.kind === 'restaurant_register' && f.restaurant_photo_url && (
+                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={f.restaurant_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                            </div>
                           )}
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
                             <span>{feedRelTime(f.created_at)} 전</span>

@@ -867,15 +867,14 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const restaurantRegisterItems: FeedItem[] = restaurantPinRows.map((r) => {
       const prof = profileMap.get(r.author_id);
       const fullName = r.dong ? `${r.dong} ${r.name}` : r.name;
-      // photo_url 도 content 에 포함 — MobileFeedList 의 renderContentWithImages 가 자동 인라인 렌더
-      const contentWithPhoto = `${r.description}\n[메뉴] ${r.recommended_menu}${r.photo_url ? `\n${r.photo_url}` : ''}`;
+      // photo_url 은 별도 필드 (restaurant_photo_url) — MobileFeedList 가 1:1 정사각형으로 렌더
       return {
         kind: 'restaurant_register' as const,
         id: 800000 + r.id,
         apt_master_id: 0,
         post_id: null,
         title: `🍴 ${fullName}`,
-        content: contentWithPhoto,
+        content: `${r.description}\n[메뉴] ${r.recommended_menu}`,
         created_at: r.created_at,
         apt_nm: fullName,
         dong: r.dong ?? null,
@@ -890,6 +889,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         restaurant_id: r.id,
         restaurant_name: r.name,
         restaurant_recommended_menu: r.recommended_menu,
+        restaurant_photo_url: r.photo_url ?? null,
       } as FeedItem;
     });
 

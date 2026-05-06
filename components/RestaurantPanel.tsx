@@ -184,7 +184,9 @@ export default function RestaurantPanel({
 
       <div className="p-4">
         {restaurant.photo_url && (
-          <img src={restaurant.photo_url} alt="" className="w-full max-h-[260px] object-contain border border-border rounded-xl mb-3" />
+          <div className="aspect-square w-full bg-[#f0f0f0] rounded-xl overflow-hidden border border-border mb-3">
+            <img src={restaurant.photo_url} alt="" className="w-full h-full object-cover" />
+          </div>
         )}
         <div className="text-[12px] text-text leading-relaxed mb-2 whitespace-pre-wrap">{restaurant.description}</div>
         <div className="border-l-4 border-cyan bg-cyan/5 px-3 py-2 mb-3">

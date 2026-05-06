@@ -56,21 +56,28 @@ export default async function RestaurantsPage() {
             <ul className="grid gap-3 sm:grid-cols-2">
               {pins.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/restaurants/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 px-4 py-3 no-underline">
-                    <div className="flex items-baseline justify-between gap-2 mb-1">
-                      <h3 className="text-[15px] font-bold text-navy truncate">🍴 {p.dong ? `${p.dong} ${p.name}` : p.name}</h3>
-                      <span className="text-[10px] text-muted flex-shrink-0">❤ {p.like_count}</span>
-                    </div>
-                    {p.address && <div className="text-[10px] text-muted mb-1">{p.address}</div>}
-                    <p className="text-[12px] text-text leading-snug line-clamp-2 mb-1">{p.description}</p>
-                    <p className="text-[11px] text-cyan font-bold leading-snug line-clamp-1">메뉴 — {p.recommended_menu}</p>
-                    <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#f0f0f0] text-[10px] text-muted">
-                      <span>by {p.author_name ?? '익명'}</span>
-                      {p.occupier_id ? (
-                        <span className="text-[#92400e] font-bold">분양 완료 — {p.occupier_name ?? '익명'}</span>
-                      ) : (
-                        <span className="text-cyan font-bold">분양 가능 ({Number(p.occupy_price).toLocaleString()} mlbg)</span>
-                      )}
+                  <Link href={`/restaurants/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 no-underline overflow-hidden">
+                    {p.photo_url && (
+                      <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden">
+                        <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="px-4 py-3">
+                      <div className="flex items-baseline justify-between gap-2 mb-1">
+                        <h3 className="text-[15px] font-bold text-navy truncate">🍴 {p.dong ? `${p.dong} ${p.name}` : p.name}</h3>
+                        <span className="text-[10px] text-muted flex-shrink-0">❤ {p.like_count}</span>
+                      </div>
+                      {p.address && <div className="text-[10px] text-muted mb-1">{p.address}</div>}
+                      <p className="text-[12px] text-text leading-snug line-clamp-2 mb-1">{p.description}</p>
+                      <p className="text-[11px] text-cyan font-bold leading-snug line-clamp-1">메뉴 — {p.recommended_menu}</p>
+                      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#f0f0f0] text-[10px] text-muted">
+                        <span>by {p.author_name ?? '익명'}</span>
+                        {p.occupier_id ? (
+                          <span className="text-[#92400e] font-bold">분양 완료 — {p.occupier_name ?? '익명'}</span>
+                        ) : (
+                          <span className="text-cyan font-bold">분양 가능 ({Number(p.occupy_price).toLocaleString()} mlbg)</span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 </li>

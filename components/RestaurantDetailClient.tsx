@@ -116,7 +116,9 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
       </header>
 
       {pin.photo_url && (
-        <img src={pin.photo_url} alt="" className="w-full max-h-[480px] object-contain border border-border rounded-xl mb-6" />
+        <div className="aspect-square w-full max-w-[600px] mx-auto bg-[#f0f0f0] rounded-xl overflow-hidden border border-border mb-6">
+          <img src={pin.photo_url} alt="" className="w-full h-full object-cover" />
+        </div>
       )}
 
       <div className="text-[14px] text-text leading-relaxed mb-4 whitespace-pre-wrap">{pin.description}</div>
