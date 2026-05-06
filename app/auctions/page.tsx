@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { revalidateTag } from 'next/cache';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
+import AuctionCleanupTrigger from '@/components/AuctionCleanupTrigger';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const metadata = { title: '시한 경매 — 멜른버그' };
@@ -35,6 +36,7 @@ export default async function AuctionsPage() {
 
   return (
     <Layout>
+      <AuctionCleanupTrigger />
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/auctions', label: '시한 경매', bold: true }]} meta="Auctions" />
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">

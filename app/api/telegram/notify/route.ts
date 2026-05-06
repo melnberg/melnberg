@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'emart_occupy' | 'factory_occupy';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'auction_completed' | 'emart_occupy' | 'factory_occupy';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,14 +17,20 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'emart_occupy', 'factory_occupy'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'auction_completed', 'emart_occupy', 'factory_occupy'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
-  // 호출자 인증 (작성자만 본인 글 알림 가능)
+  // auction_completed 는 시스템 트리거 — 인증 없이 호출 가능. 단 DB 에서 status/notified_at 으로 1회성 보장.
+  // 그 외 kind 는 작성자 인증 필요.
   const sb = await createClient();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  const { data: { user: maybeUser } } = await sb.auth.getUser();
+  if (kind !== 'auction_completed' && !maybeUser) {
+    return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+  }
+  // auction_completed 가 아닌 경우엔 위 분기로 보장됨 → 아래에선 user 사용 가능.
+  // auction_completed 분기 안에선 user 직접 참조 안 함 (handler 에서 별도 처리).
+  const user = maybeUser as { id: string } & NonNullable<typeof maybeUser>;
 
   const admin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -184,6 +190,44 @@ export async function POST(req: NextRequest) {
     main = isLeader
       ? `${assetName} ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 갱신 (${bidderName} 님 · 누적 ${r.bid_count}건)`
       : `${assetName} ${Number(b.amount).toLocaleString()} mlbg 입찰 (${bidderName} 님 — 직후 ${Number(r.current_bid ?? 0).toLocaleString()} 으로 갱신됨)`;
+  } else if (kind === 'auction_completed') {
+    // 시스템 알림 — auction_cleanup endpoint 가 pop_unnotified_completed_auctions 후 호출.
+    // refId = auction_id. notified_at 마킹은 RPC 가 이미 했으므로 여기선 단순 발송.
+    const { data: auc } = await admin
+      .from('apt_auctions')
+      .select('id, asset_type, asset_id, current_bid, current_bidder_id, bid_count, status')
+      .eq('id', refId).maybeSingle();
+    const r = auc as { id: number; asset_type: 'apt' | 'factory' | 'emart'; asset_id: number; current_bid: number | null; current_bidder_id: string | null; bid_count: number; status: string } | null;
+    if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
+    if (r.status !== 'completed' || r.current_bidder_id == null) {
+      return NextResponse.json({ error: 'not a completed auction' }, { status: 400 });
+    }
+    let assetName = '자산';
+    if (r.asset_type === 'apt') {
+      const { data: apt } = await admin.from('apt_master').select('apt_nm').eq('id', r.asset_id).maybeSingle();
+      assetName = (apt as { apt_nm: string | null } | null)?.apt_nm ?? '단지';
+    } else if (r.asset_type === 'factory') {
+      const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', r.asset_id).maybeSingle();
+      const fr = f as { name: string | null; brand: string | null } | null;
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역' };
+      assetName = `${brandLabel[fr?.brand ?? ''] ?? ''} ${fr?.name ?? '시설'}`.trim();
+    } else if (r.asset_type === 'emart') {
+      const { data: e } = await admin.from('emart_locations').select('name').eq('id', r.asset_id).maybeSingle();
+      assetName = (e as { name: string | null } | null)?.name ?? '매장';
+    }
+    const { data: wpr } = await admin.from('profiles').select('display_name').eq('id', r.current_bidder_id).maybeSingle();
+    const winnerName = (wpr as { display_name?: string | null } | null)?.display_name ?? '익명';
+    tag = '🏆 경매 낙찰';
+    main = `${assetName} — ${winnerName} 님 ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 낙찰 (총 입찰 ${r.bid_count}건)`;
+
+    // auction_completed 는 user 가 null 일 수 있음 → 작성자명 fetch 건너뛰고 직접 발송
+    const text = `[${escapeHtml(tag)}] ${escapeHtml(main)}`;
+    const result = await sendTelegramMessage(text, { parseMode: 'HTML', disablePreview: true });
+    if (!result.ok) {
+      console.error('[telegram/notify] auction_completed send failed:', result.error);
+      return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true, message_id: result.message_id });
   } else if (kind === 'offer' || kind === 'snatch') {
     // refId = apt_listing_offers.id. 매수 호가 / 내놔 알림.
     const { data } = await admin

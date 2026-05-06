@@ -5,6 +5,7 @@ import MainTop from '@/components/MainTop';
 import AdminAuctionForm from '@/components/AdminAuctionForm';
 import TelegramResendButton from '@/components/TelegramResendButton';
 import Countdown from '@/components/Countdown';
+import AdminAuctionRowActions from '@/components/AdminAuctionRowActions';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 
@@ -111,7 +112,17 @@ export default async function AdminAuctionsPage() {
                         )}
                       </td>
                       <td className="py-1.5 px-2 text-center">
-                        {a.status === 'active' && <TelegramResendButton auctionId={a.id} />}
+                        {a.status === 'active' && (
+                          <div className="inline-flex flex-col gap-1 items-end">
+                            <TelegramResendButton auctionId={a.id} />
+                            <AdminAuctionRowActions
+                              auctionId={a.id}
+                              endsAt={a.ends_at}
+                              minBid={Number(a.min_bid)}
+                              bidCount={a.bid_count}
+                            />
+                          </div>
+                        )}
                       </td>
                     </tr>
                     );
