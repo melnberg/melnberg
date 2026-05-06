@@ -68,6 +68,9 @@ function hrefFor(f: FeedItem): string | null {
   if ((f.kind === 'restaurant_register' || f.kind === 'restaurant_comment') && f.restaurant_id) {
     return `/restaurants/${f.restaurant_id}`;
   }
+  if ((f.kind === 'kids_register' || f.kind === 'kids_comment') && f.kids_id) {
+    return `/kids/${f.kids_id}`;
+  }
   // 시설 — 풀페이지
   if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/e/${f.apt_master_id}`;
   if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/f/${f.apt_master_id}`;
@@ -104,6 +107,8 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
     case 'sell_complete': return { label: '거래성사', cls: 'bg-[#16a34a] text-white' };
     case 'restaurant_register': return { label: '맛집', cls: 'bg-[#fbbf24] text-[#78350f]' };
     case 'restaurant_comment':  return { label: '맛집댓글', cls: 'bg-[#fef3c7] text-[#78350f]' };
+    case 'kids_register': return { label: '육아장소', cls: 'bg-[#fbcfe8] text-[#831843]' };
+    case 'kids_comment':  return { label: '육아댓글', cls: 'bg-[#fdf2f8] text-[#831843]' };
     default: return null;
   }
 }
@@ -192,6 +197,8 @@ export default function MobileFeedList({ items }: Props) {
             : f.kind === 'sell_complete' ? '🤝 거래성사'
             : f.kind === 'restaurant_register' ? `🍴 ${f.restaurant_name ?? '맛집'}`
             : f.kind === 'restaurant_comment' ? `🍴 ${f.restaurant_name ?? '맛집'}`
+            : f.kind === 'kids_register' ? `👶 ${f.kids_name ?? '육아 장소'}`
+            : f.kind === 'kids_comment' ? `👶 ${f.kids_name ?? '육아 장소'}`
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
             : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
             : aptHeadLabel;
@@ -239,11 +246,17 @@ export default function MobileFeedList({ items }: Props) {
                       ) : null}
                     </span>
                   </div>
-                  {/* 맛집 사진 — 1:1 정사각형 (Instagram 스타일) */}
+                  {/* 맛집 / 육아 사진 — 1:1 정사각형 (Instagram 스타일) */}
                   {f.kind === 'restaurant_register' && f.restaurant_photo_url && (
                     <div className="mt-2 max-w-[400px] mx-auto aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={f.restaurant_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  {f.kind === 'kids_register' && f.kids_photo_url && (
+                    <div className="mt-2 max-w-[400px] mx-auto aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={f.kids_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </div>
                   )}
                   {/* 메타 — 시각 + 보상 + 댓글 카운트 (우측) */}

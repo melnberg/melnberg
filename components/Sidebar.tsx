@@ -172,6 +172,9 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 맛집 추천 */}
           <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<span className="text-[14px]">🍴</span>} onClick={() => setOpen(false)} />
 
+          {/* 육아 장소 */}
+          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<span className="text-[14px]">👶</span>} onClick={() => setOpen(false)} />
+
           {/* 핫딜 게시판 — 적립 보상 2.5x */}
           <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
 

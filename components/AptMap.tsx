@@ -7,6 +7,7 @@ import AptDiscussionPanel from './AptDiscussionPanel';
 import EmartPanel from './EmartPanel';
 import FactoryPanel, { type FactoryItem } from './FactoryPanel';
 import RestaurantPanel from './RestaurantPanel';
+import KidsPanel from './KidsPanel';
 import Countdown from './Countdown';
 import RewardTooltip from './RewardTooltip';
 import { notifyTelegram } from '@/lib/telegram-notify';
@@ -66,7 +67,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -121,6 +122,11 @@ export type FeedItem = {
   restaurant_name?: string | null;
   restaurant_recommended_menu?: string | null;
   restaurant_photo_url?: string | null;
+  /** kids_register / kids_comment 전용 */
+  kids_id?: number;
+  kids_name?: string | null;
+  kids_recommended_activity?: string | null;
+  kids_photo_url?: string | null;
 };
 
 export type AptPin = {
@@ -433,6 +439,31 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     } catch { /* silent */ }
   }
   useEffect(() => { refetchRestaurants(); }, []);
+
+  // 사용자 등록 육아 장소 핀
+  type KidsItem = {
+    id: number; name: string; description: string; recommended_activity: string;
+    lat: number; lng: number; photo_url: string | null; address: string | null;
+    dong: string | null;
+    occupy_price: number; daily_income: number; like_count: number;
+    author_id: string; author_name: string | null;
+    occupier_id: string | null; occupier_name: string | null;
+    listing_price: number | null;
+    created_at: string;
+  };
+  const [kidsList, setKidsList] = useState<KidsItem[]>([]);
+  const [selectedKids, setSelectedKids] = useState<KidsItem | null>(null);
+  const kidsMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  async function refetchKids() {
+    try {
+      const sbCli = createClient();
+      const { data } = await sbCli.rpc('list_recent_kids_pins', { p_limit: 100 });
+      const items = ((data ?? []) as KidsItem[]);
+      setKidsList(items);
+      setSelectedKids((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
+    } catch { /* silent */ }
+  }
+  useEffect(() => { refetchKids(); }, []);
   async function refetchFactory() {
     try {
       const r = await fetch('/api/factory-list', { cache: 'no-store' });
@@ -550,6 +581,60 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }
     }
   }, [searchParams, restaurantList]);
+
+  // 육아 장소 마커 — 분홍 핀 + 베이비 얼굴 SVG
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    for (const m of kidsMarkersRef.current) m.setMap(null);
+    kidsMarkersRef.current = [];
+    if (kidsList.length === 0) return;
+    const PIN_W = 32, PIN_H = 45;
+    // 분홍 핀 + 베이비 얼굴 (둥근 머리 + 눈 두 개 + 미소 + 머리 위 한 가닥)
+    const kidsPin = (occupied: boolean) => {
+      const flagSvg = occupied
+        ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
+        : '';
+      // 베이비 얼굴: head 7r, 머리 한가닥, 눈 dots, 미소 curve
+      const face = '<g><path d="M 16 6 q 0.5 -2 1.5 -3" stroke="#1a1d22" stroke-width="1.2" fill="none" stroke-linecap="round"/><circle cx="16" cy="16" r="6.5" fill="white" stroke="#1a1d22" stroke-width="1.5"/><circle cx="13.5" cy="15" r="0.8" fill="#1a1d22"/><circle cx="18.5" cy="15" r="0.8" fill="#1a1d22"/><path d="M 13 18 Q 16 21, 19 18" stroke="#1a1d22" stroke-width="1.3" fill="none" stroke-linecap="round"/></g>';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#fbcfe8" stroke="#1a1d22" stroke-width="2"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>${face}${flagSvg}</svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    };
+    const imgEmpty = new window.kakao.maps.MarkerImage(kidsPin(false), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    const imgOcc = new window.kakao.maps.MarkerImage(kidsPin(true), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    for (const k of kidsList) {
+      const pos = new window.kakao.maps.LatLng(k.lat, k.lng);
+      const fullName = k.dong ? `${k.dong} ${k.name}` : k.name;
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: fullName + (k.occupier_id ? ` — ${k.occupier_name ?? '점거됨'} 보유` : ` (${k.occupy_price.toLocaleString()} mlbg 분양)`),
+        clickable: true,
+        image: k.occupier_id ? imgOcc : imgEmpty,
+        map,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => { setSelectedKids(k); });
+      kidsMarkersRef.current.push(marker);
+    }
+    return () => {
+      for (const m of kidsMarkersRef.current) m.setMap(null);
+      kidsMarkersRef.current = [];
+    };
+  }, [kidsList, mapReady]);
+
+  // URL ?kids=ID — 외부 링크에서 핀 패널 자동 오픈
+  useEffect(() => {
+    const kidStr = searchParams.get('kids');
+    if (!kidStr) return;
+    const kid = Number(kidStr);
+    if (!Number.isFinite(kid)) return;
+    const k = kidsList.find((x) => x.id === kid);
+    if (k) {
+      setSelectedKids(k);
+      if (mapInstRef.current) {
+        (mapInstRef.current as { panTo: (p: unknown) => void }).panTo(new window.kakao.maps.LatLng(k.lat, k.lng));
+      }
+    }
+  }, [searchParams, kidsList]);
 
   async function refetchEmart() {
     try {
@@ -916,6 +1001,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
       }
       if (r) setSelectedRestaurant(r);
+      return;
+    }
+    // 육아 장소 등록/댓글 → 지도 이동 + KidsPanel 열기
+    if (item.kind === 'kids_register' || item.kind === 'kids_comment') {
+      const k = kidsList.find((x) => x.id === item.kids_id);
+      if (item.lat != null && item.lng != null && mapInstRef.current) {
+        const inst = mapInstRef.current;
+        inst.setLevel(3);
+        inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
+      }
+      if (k) setSelectedKids(k);
       return;
     }
     // 커뮤니티 글/댓글 → /community/{post_id} 로 이동
@@ -1716,11 +1812,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                               )}
                             </>
                           )}
-                          {/* 맛집 사진 — 1:1 정사각형 (Instagram 스타일) */}
+                          {/* 맛집 / 육아 사진 — 1:1 정사각형 (Instagram 스타일) */}
                           {f.kind === 'restaurant_register' && f.restaurant_photo_url && (
                             <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={f.restaurant_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          {f.kind === 'kids_register' && f.kids_photo_url && (
+                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={f.kids_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                             </div>
                           )}
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
@@ -1809,6 +1911,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {selectedEmart && <EmartPanel emart={selectedEmart} onClose={() => setSelectedEmart(null)} onChanged={refetchEmart} />}
       {selectedFactory && <FactoryPanel factory={selectedFactory} onClose={() => setSelectedFactory(null)} onChanged={refetchFactory} />}
       {selectedRestaurant && <RestaurantPanel restaurant={selectedRestaurant} onClose={() => setSelectedRestaurant(null)} onChanged={refetchRestaurants} />}
+      {selectedKids && <KidsPanel kids={selectedKids} onClose={() => setSelectedKids(null)} onChanged={refetchKids} />}
     </div>
   );
 }

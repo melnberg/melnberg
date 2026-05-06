@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made' | 'election_winner' | 'election_loser' | 'restaurant_comment';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made' | 'election_winner' | 'election_loser' | 'restaurant_comment' | 'restaurant_like' | 'kids_comment' | 'kids_like';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
@@ -133,7 +133,8 @@ export default function NotificationsBell() {
       return `/apt/${n.apt_master_id}`;
     }
     // 맛집 댓글 — comment_id 가 있으면 핀 페이지로 (홈 ?restaurant=ID 링크는 pin_id 가 필요한데 알림에 직접 없음 → 홈으로)
-    if (n.type === 'restaurant_comment') return '/restaurants';
+    if (n.type === 'restaurant_comment' || n.type === 'restaurant_like') return '/restaurants';
+    if (n.type === 'kids_comment' || n.type === 'kids_like') return '/kids';
     return '/';
   }
 
@@ -171,6 +172,9 @@ export default function NotificationsBell() {
                 n.type === 'election_winner' ? '🎉 선거 당선' :
                 n.type === 'election_loser' ? '선거 낙선' :
                 n.type === 'restaurant_comment' ? '🍴 맛집 댓글' :
+                n.type === 'restaurant_like' ? '🍴 맛집 좋아요' :
+                n.type === 'kids_comment' ? '👶 육아 장소 댓글' :
+                n.type === 'kids_like' ? '👶 육아 장소 좋아요' :
                 '건의 답글';
               return (
                 <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
@@ -204,6 +208,12 @@ export default function NotificationsBell() {
                         <span><span className="font-bold text-navy">{n.apt_name ?? '단지'}</span> — 매도 수락됨 (<b>{Number(n.listing_price ?? 0).toLocaleString()} mlbg</b>)</span>
                       ) : n.type === 'restaurant_comment' ? (
                         <span><span className="font-bold text-navy">🍴 {n.listing_message ?? '맛집'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
+                      ) : n.type === 'restaurant_like' ? (
+                        <span><span className="font-bold text-navy">🍴 {n.listing_message ?? '맛집'}</span> — 좋아요 ❤</span>
+                      ) : n.type === 'kids_comment' ? (
+                        <span><span className="font-bold text-navy">👶 {n.listing_message ?? '육아 장소'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
+                      ) : n.type === 'kids_like' ? (
+                        <span><span className="font-bold text-navy">👶 {n.listing_message ?? '육아 장소'}</span> — 좋아요 ❤</span>
                       ) : (
                         <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
                       )}

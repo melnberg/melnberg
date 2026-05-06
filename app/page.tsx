@@ -104,9 +104,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       return { ...r, _assetName: info.name, _assetLat: info.lat, _assetLng: info.lng, _assetDong: info.dong, _assetType: aType, _assetId: aId };
     });
 
-    // Phase B — 10개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
+    // Phase B — 12개 base fetch 단일 Promise.all 병렬화.
     const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp] = await Promise.all([
+    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp] = await Promise.all([
       supabase
         .from('emart_occupations')
         .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
@@ -166,6 +166,16 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      // 신규 등록 육아 장소
+      supabase.rpc('list_recent_kids_pins', { p_limit: 20 })
+        .then((r) => r, () => ({ data: null })),
+      // 육아 장소 댓글
+      supabase.from('kids_pin_comments')
+        .select('id, pin_id, author_id, content, created_at, pin:kids_pins!pin_id(name, dong, recommended_activity, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const emartRows = (((emartOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
     const annRows = ((annResp as { data: unknown[] | null })?.data ?? []) as Array<{ id: number; title: string; body: string | null; link_url: string | null; created_at: string }>;
@@ -200,6 +210,17 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const restaurantCommRows = (((restaurantCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
       id: number; pin_id: number; author_id: string; content: string; created_at: string;
       pin: { name: string | null; dong: string | null; recommended_menu: string | null; lat: number | null; lng: number | null } | null;
+    }>);
+    const kidsPinRows = (((kidsPinsResp as { data: unknown[] | null })?.data ?? []) as Array<{
+      id: number; name: string; description: string; recommended_activity: string;
+      lat: number; lng: number; photo_url: string | null;
+      dong: string | null;
+      author_id: string; author_name: string | null;
+      created_at: string;
+    }>);
+    const kidsCommRows = (((kidsCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
+      id: number; pin_id: number; author_id: string; content: string; created_at: string;
+      pin: { name: string | null; dong: string | null; recommended_activity: string | null; lat: number | null; lng: number | null } | null;
     }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
@@ -282,6 +303,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...factoryCommRows.map((c) => c.author_id),
       ...restaurantPinRows.map((r) => r.author_id),
       ...restaurantCommRows.map((c) => c.author_id),
+      ...kidsPinRows.map((r) => r.author_id),
+      ...kidsCommRows.map((c) => c.author_id),
     ].filter(Boolean)));
     const awardRefIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
@@ -922,8 +945,61 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
+    // 신규 등록 육아 장소 → FeedItem (kind 'kids_register')
+    const kidsRegisterItems: FeedItem[] = kidsPinRows.map((r) => {
+      const prof = profileMap.get(r.author_id);
+      const fullName = r.dong ? `${r.dong} ${r.name}` : r.name;
+      return {
+        kind: 'kids_register' as const,
+        id: 1000000 + r.id,
+        apt_master_id: 0, post_id: null,
+        title: `👶 ${fullName}`,
+        content: `${r.description}\n[활동] ${r.recommended_activity}`,
+        created_at: r.created_at,
+        apt_nm: fullName, dong: r.dong ?? null,
+        lat: r.lat, lng: r.lng,
+        author_id: r.author_id,
+        author_name: r.author_name ?? prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        kids_id: r.id,
+        kids_name: r.name,
+        kids_recommended_activity: r.recommended_activity,
+        kids_photo_url: r.photo_url ?? null,
+      } as FeedItem;
+    });
+
+    // 육아 장소 댓글 → FeedItem (kind 'kids_comment')
+    const kidsCommentItems: FeedItem[] = kidsCommRows.map((c) => {
+      const prof = profileMap.get(c.author_id);
+      const pin = c.pin;
+      const fullName = pin ? (pin.dong ? `${pin.dong} ${pin.name ?? ''}` : (pin.name ?? '')) : '육아 장소';
+      return {
+        kind: 'kids_comment' as const,
+        id: 1100000 + c.id,
+        apt_master_id: 0, post_id: null,
+        title: fullName,
+        content: c.content,
+        created_at: c.created_at,
+        apt_nm: fullName, dong: pin?.dong ?? null,
+        lat: pin?.lat ?? null, lng: pin?.lng ?? null,
+        author_id: c.author_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        kids_id: c.pin_id,
+        kids_name: fullName,
+      } as FeedItem;
+    });
+
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems]
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 100 - auctionItems.length);
     return [...auctionItems, ...others];

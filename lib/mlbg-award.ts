@@ -2,7 +2,7 @@
 // fire-and-forget 으로 사용 권장 — 작성 흐름을 막지 않음.
 // 평가 결과(earned, multiplier, reason)를 보여주고 싶으면 await 해서 반환값 사용.
 
-export type MlbgAwardKind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment' | 'factory_comment' | 'emart_comment' | 'auction_comment' | 'restaurant_comment';
+export type MlbgAwardKind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment' | 'factory_comment' | 'emart_comment' | 'auction_comment' | 'restaurant_comment' | 'kids_comment';
 
 export type MlbgAwardResult =
   | { ok: true; earned: number; multiplier: number; reason?: string; duplicated?: boolean }
