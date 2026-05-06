@@ -61,7 +61,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           </a>
         </div>
 
-        <div className="px-5 pt-4 pb-2">
+        <div className="px-4 pt-4 pb-2">
           {user ? (
             <div className="border border-border hover:border-navy transition-colors">
               {/* Row 1: 아바타 · 이름 + 배지 · 알림 종 */}
@@ -121,7 +121,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
               onClick={() => setOpen(false)}
               className="block bg-navy text-white text-center py-2.5 px-3 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
             >
-              로그인 / 회원가입
+              로그인
             </Link>
           )}
         </div>
