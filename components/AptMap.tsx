@@ -1809,7 +1809,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           <span className="ml-auto text-[11px] text-muted">{feedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {feedOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-60px)] overflow-y-auto">
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-90px)] overflow-y-auto">
             {feed.length === 0 ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">아직 작성된 글 없음</div>
             ) : (
