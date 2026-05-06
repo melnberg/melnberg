@@ -34,6 +34,7 @@ export function linkify(text: string | null | undefined): React.ReactNode {
         if (typeof p === 'string') return <React.Fragment key={i}>{p}</React.Fragment>;
         if (p.isImage) {
           // 이미지 — block 으로 자체 줄. max width 로 모바일 안전.
+          // onClick 제거 — Server Component 에서 렌더 시 함수 prop 직렬화 이슈 방지.
           return (
             <img
               key={i}
@@ -41,7 +42,6 @@ export function linkify(text: string | null | undefined): React.ReactNode {
               alt=""
               loading="lazy"
               className="block max-w-full h-auto my-3 border border-border"
-              onClick={(e) => e.stopPropagation()}
             />
           );
         }
@@ -52,7 +52,6 @@ export function linkify(text: string | null | undefined): React.ReactNode {
             target="_blank"
             rel="noopener noreferrer"
             className="text-cyan underline hover:text-navy break-all"
-            onClick={(e) => e.stopPropagation()}
           >
             {p.url}
           </a>
