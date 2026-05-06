@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 // 이 시간엔:
 //   - 본인 사진 첨부한 community 글 → +20 mlbg
 //   - 인사 글 댓글 → +1.5 mlbg (×3 가중치)
-// 사용자가 X 누르면 그 시간대 동안 숨김 (sessionStorage).
+// 사용자가 X 누르면 그 시간대 동안 숨김 (localStorage — 리프레시/어플 재시작 후에도 유지).
+// 다음 시간대 (period+date 다른 키) 진입 시 자연 부활.
 
 function getKstHour(): number {
   return parseInt(
@@ -45,10 +46,11 @@ export default function GreetingBonusBanner() {
         next = isGreetingTime(h);
       }
       setInfo(next);
-      // dismissed 키는 시간대 단위 — 다른 시간대 진입 시 다시 노출
+      // dismissed 키는 시간대 단위 — 다른 시간대 진입 시 다시 노출.
+      // localStorage 사용 — 리프레시/어플 재시작 후에도 dismiss 유지.
       const dismissKey = `mlbg.greeting.dismiss.${next.period ?? ''}.${new Date().toISOString().slice(0, 10)}`;
       try {
-        setDismissed(!!sessionStorage.getItem(dismissKey));
+        setDismissed(!!localStorage.getItem(dismissKey));
       } catch { /* SSR / blocked storage */ }
     }
     check();
@@ -60,7 +62,7 @@ export default function GreetingBonusBanner() {
     setDismissed(true);
     try {
       const dismissKey = `mlbg.greeting.dismiss.${info.period ?? ''}.${new Date().toISOString().slice(0, 10)}`;
-      sessionStorage.setItem(dismissKey, '1');
+      localStorage.setItem(dismissKey, '1');
     } catch { /* ignore */ }
   }
 
