@@ -7,11 +7,15 @@
 -- 피드 노출은 별도 (app/page.tsx 가 apt_listing_offers / apt_occupier_events 조회).
 -- ──────────────────────────────────────────────
 
--- 1) type check 확장
+-- 1) type check 확장 — 기존 타입 + 새 호가/수락 타입 모두 포함
 alter table public.notifications drop constraint if exists notifications_type_check;
 alter table public.notifications
   add constraint notifications_type_check
-  check (type in ('community_comment','apt_comment','offer_made','offer_accepted','snatch_made'));
+  check (type in (
+    'community_comment','apt_comment','apt_evicted','feedback_reply',
+    'admin_notice','bio_comment',
+    'offer_made','offer_accepted','snatch_made'
+  ));
 
 -- 2) 컬럼 추가 — 매수요청 정보 표시용
 alter table public.notifications
