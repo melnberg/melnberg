@@ -33,13 +33,22 @@ const fetchRecentPosts = unstable_cache(
   { revalidate: 30, tags: ['posts'] },
 );
 
+// Supabase 부하 시 Layout 이 페이지 전체를 막는 사고 방어 (2026-05-06).
+// 각 호출 5초 안에 못 끝나면 안전한 기본값으로 fallback.
+function withTimeout<T>(p: Promise<T>, fallback: T, ms = 5000): Promise<T> {
+  return Promise.race([
+    p.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
   // 모두 독립적인 쿼리 — 병렬 실행. cached 헬퍼라 페이지에서 또 호출해도 dedupe됨.
   const [user, profile, balance, recentPosts] = await Promise.all([
-    getCurrentUser(),
-    getCurrentProfile(),
-    getCurrentMlbgBalance(),
-    fetchRecentPosts(),
+    withTimeout(getCurrentUser(), null),
+    withTimeout(getCurrentProfile(), null),
+    withTimeout(getCurrentMlbgBalance(), 0),
+    withTimeout(fetchRecentPosts(), []),
   ]);
 
   let sidebarUser: SidebarUser | null = null;
