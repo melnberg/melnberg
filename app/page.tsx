@@ -63,80 +63,72 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     // 시한 경매 비활성 (2026-05-06) — 피드에서 제외. 재오픈 시 git history 에서 복구.
     const activeAuctions: Array<{ id: number; ends_at: string; current_bid: number | null; min_bid: number; bid_count: number; created_at: string; _assetName: string; _assetLat: number | null; _assetLng: number | null; _assetDong: string | null; _assetType: 'apt' | 'factory' | 'emart'; _assetId: number }> = [];
 
-    // 최근 이마트 분양 — 피드 일반 항목 (lat/lng 포함하여 클릭 시 지도 이동 가능)
-    const { data: emartOccs } = await supabase
-      .from('emart_occupations')
-      .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
-      .order('occupied_at', { ascending: false })
-      .limit(20)
-      .then((r) => r, () => ({ data: null }));
-    const emartRows = ((emartOccs ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
-
-    // 최근 파업 — 24시간 이내. RPC list_recent_strikes 가 자산명·점거자명 조인까지 처리.
-    const { data: strikeRowsRaw } = await supabase
-      .rpc('list_recent_strikes', { p_limit: 20 })
-      .then((r) => r, () => ({ data: null }));
-    const strikeRows = (strikeRowsRaw ?? []) as Array<{
+    // Phase B — 7개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
+    const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp] = await Promise.all([
+      supabase
+        .from('emart_occupations')
+        .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
+        .order('occupied_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .rpc('list_recent_strikes', { p_limit: 20 })
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .rpc('list_recent_bridge_tolls', { p_limit: 30 })
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .from('apt_occupier_events')
+        .select('id, apt_id, actor_id, actor_name, prev_occupier_id, prev_occupier_name, actor_score, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+        .eq('event', 'sell')
+        .gte('created_at', sellSince)
+        .order('created_at', { ascending: false })
+        .limit(30)
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .from('factory_occupations')
+        .select('id, factory_id, user_id, occupied_at, factory:factory_locations!factory_id(name, brand, lat, lng)')
+        .order('occupied_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .from('emart_comments')
+        .select('id, emart_id, author_id, content, created_at, emart:emart_locations!emart_id(name, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
+      supabase
+        .from('factory_comments')
+        .select('id, factory_id, author_id, content, created_at, factory:factory_locations!factory_id(name, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
+    ]);
+    const emartRows = (((emartOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
+    const strikeRows = (((strikeResp as { data: unknown[] | null })?.data ?? []) as Array<{
       id: number; asset_type: 'factory' | 'emart'; asset_id: number; asset_name: string | null;
       occupier_id: string; occupier_name: string | null;
       loss_pct: number; loss_mlbg: number; created_at: string;
-    }>;
-
-    // 최근 다리 통행료 — 24시간 이내 (RPC list_recent_bridge_tolls / SQL 132).
-    const { data: tollRowsRaw } = await supabase
-      .rpc('list_recent_bridge_tolls', { p_limit: 30 })
-      .then((r) => r, () => ({ data: null }));
-    const tollRows = (tollRowsRaw ?? []) as Array<{
+    }>);
+    const tollRows = (((tollResp as { data: unknown[] | null })?.data ?? []) as Array<{
       id: number; bridge_id: number; bridge_name: string | null;
       payer_id: string; payer_name: string | null;
       owner_id: string | null; owner_name: string | null;
       amount: number; created_at: string;
-    }>;
-
-    // 최근 거래성사 — apt_occupier_events 의 'sell' 이벤트 (24시간).
-    const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const { data: sellRowsRaw } = await supabase
-      .from('apt_occupier_events')
-      .select('id, apt_id, actor_id, actor_name, prev_occupier_id, prev_occupier_name, actor_score, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
-      .eq('event', 'sell')
-      .gte('created_at', sellSince)
-      .order('created_at', { ascending: false })
-      .limit(30)
-      .then((r) => r, () => ({ data: null }));
-    const sellRows = ((sellRowsRaw ?? []) as unknown as Array<{
+    }>);
+    const sellRows = (((sellResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
       id: number; apt_id: number;
       actor_id: string; actor_name: string | null;
       prev_occupier_id: string | null; prev_occupier_name: string | null;
       actor_score: number | null; created_at: string;
       apt_master: { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
     }>);
-
-    // 최근 공장 분양 (하이닉스/삼성/코스트코/금속노조/화물연대)
-    const { data: factoryOccs } = await supabase
-      .from('factory_occupations')
-      .select('id, factory_id, user_id, occupied_at, factory:factory_locations!factory_id(name, brand, lat, lng)')
-      .order('occupied_at', { ascending: false })
-      .limit(20)
-      .then((r) => r, () => ({ data: null }));
-    const factoryRows = ((factoryOccs ?? []) as unknown as Array<{ id: number; factory_id: number; user_id: string; occupied_at: string; factory: unknown }>);
-
-    // 시설 댓글 — 이마트/공장
-    const { data: emartCommRaw } = await supabase
-      .from('emart_comments')
-      .select('id, emart_id, author_id, content, created_at, emart:emart_locations!emart_id(name, lat, lng)')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20)
-      .then((r) => r, () => ({ data: null }));
-    const emartCommRows = ((emartCommRaw ?? []) as unknown as Array<{ id: number; emart_id: number; author_id: string; content: string; created_at: string; emart: unknown }>);
-    const { data: factoryCommRaw } = await supabase
-      .from('factory_comments')
-      .select('id, factory_id, author_id, content, created_at, factory:factory_locations!factory_id(name, lat, lng)')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20)
-      .then((r) => r, () => ({ data: null }));
-    const factoryCommRows = ((factoryCommRaw ?? []) as unknown as Array<{ id: number; factory_id: number; author_id: string; content: string; created_at: string; factory: unknown }>);
+    const factoryRows = (((factoryOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; factory_id: number; user_id: string; occupied_at: string; factory: unknown }>);
+    const emartCommRows = (((emartCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; author_id: string; content: string; created_at: string; emart: unknown }>);
+    const factoryCommRows = (((factoryCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; factory_id: number; author_id: string; content: string; created_at: string; factory: unknown }>);
 
     // 시한 경매 비활성 (2026-05-06) — 입찰 피드 제거. 재오픈 시 git history 에서 복구.
     const bidRows: Array<{ id: number; auction_id: number; bidder_id: string; amount: number; created_at: string }> = [];
