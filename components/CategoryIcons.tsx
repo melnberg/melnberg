@@ -21,14 +21,16 @@ export function KidsIcon({ className = 'w-[18px] h-[18px]' }: { className?: stri
   );
 }
 
-// 포크(왼쪽 말굽 + 손잡이) + 숟가락(타원 보울 + 손잡이) — 원래 사이드바 톤 유지하되 보울 완전히 그림
+// 포크(왼쪽 말굽 + 손잡이) + 숟가락(타원 보울 + 손잡이) — viewBox 24x24 안에 좌우 대칭 배치
 export function RestaurantIcon({ className = 'w-[18px] h-[18px]' }: { className?: string }) {
   return (
     <svg {...baseProps} className={`${className} flex-shrink-0 inline-block align-[-0.15em]`}>
-      <path d="M7 3v8a2 2 0 1 0 4 0V3" />
-      <line x1="9" y1="11" x2="9" y2="21" />
-      <ellipse cx="16" cy="7" rx="2.5" ry="4" />
-      <line x1="16" y1="11" x2="16" y2="21" />
+      {/* 포크: x=4~10 영역, 손잡이 x=7 */}
+      <path d="M5 3v8a2 2 0 1 0 4 0V3" />
+      <line x1="7" y1="11" x2="7" y2="21" />
+      {/* 숟가락: x=14~20 영역, 손잡이 x=17 */}
+      <ellipse cx="17" cy="7" rx="3" ry="4" />
+      <line x1="17" y1="11" x2="17" y2="21" />
     </svg>
   );
 }

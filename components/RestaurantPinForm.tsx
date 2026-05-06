@@ -249,6 +249,9 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
       {/* 사진 */}
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 * (5MB 이하)</label>
+        <div className="text-[11px] text-[#dc2626] font-semibold leading-snug mb-1">
+          ⚠ 지도 캡처 / 검색결과 스크린샷 금지. 실제 가게 사진만 올려주세요. 위반 시 운영자가 삭제함.
+        </div>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
           className="text-[12px]" />
