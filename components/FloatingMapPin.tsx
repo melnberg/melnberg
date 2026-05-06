@@ -74,7 +74,7 @@ export default function FloatingMapPin() {
     : 'animate-aurora';
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2">
+    <div className="fixed bottom-5 right-5 lg:bottom-auto lg:top-[100px] lg:right-2 z-50 flex items-center gap-2">
       {showHint && !isMap && (
         <button
           type="button"
