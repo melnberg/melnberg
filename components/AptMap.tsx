@@ -68,18 +68,26 @@ declare global {
 }
 
 // 모바일 핀 → 상세 라우팅 시 지도 복원용 상태 저장.
-// 핀 좌표 + 고정 줌이 아니라 사용자가 보던 그대로 (현재 중심 + 현재 줌) 를 저장해야
-// 뒤로가기 시 위치·줌 모두 동일하게 복원됨. 핀 좌표를 쓰면 사용자가 핀에서 떨어진 위치를 보고 있었을 때
-// 엉뚱한 위치로 이동하고, 고정 줌은 보던 줌 레벨이 강제로 바뀌는 문제 발생.
+// 사용자가 보던 그대로 (현재 중심 + 현재 줌) 저장.
 //
-// timestamp(t) 도 함께 저장 — 어플 종료/탭 닫힘으로 sessionStorage 가 살아남았을 때
-// 다음 진입에 stale 상태가 복원되는 사고 방지. MAP_RESTORE_TTL_MS 이내만 사용.
-const MAP_RESTORE_TTL_MS = 5 * 60 * 1000;
+// 복원 조건은 이중 방어:
+//   1) sid 매치 — 같은 SPA 세션 (모듈 평가 1회분) 안에서만 복원.
+//      브라우저/탭/어플 재시작 → 새 document → 모듈 재평가 → 새 토큰 → sid 불일치 → 차단.
+//   2) 60초 TTL — 어플 백그라운드 후 한참 뒤 복귀하는 케이스도 차단.
+//      "핀 → 상세 → 뒤로가기" 흐름은 보통 수 초 ~ 수십 초 내. 60초로 그 흐름만 통과.
+// 둘 다 통과 못하면 default 강남.
+const SESSION_TOKEN = typeof window === 'undefined'
+  ? ''
+  : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const MAP_RESTORE_TTL_MS = 60 * 1000;
 function saveCurrentMapState(inst: KakaoMapInst | null) {
   try {
     if (!inst) return;
     const c = inst.getCenter();
-    sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: c.getLat(), lng: c.getLng(), level: inst.getLevel(), t: Date.now() }));
+    sessionStorage.setItem('mlbg.mapState', JSON.stringify({
+      lat: c.getLat(), lng: c.getLng(), level: inst.getLevel(),
+      sid: SESSION_TOKEN, t: Date.now(),
+    }));
   } catch { /* sessionStorage 쓰기 실패 무시 */ }
 }
 
@@ -1305,13 +1313,14 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             const raw = sessionStorage.getItem('mlbg.mapState');
             if (raw) {
               const parsed = JSON.parse(raw);
-              // 5분 cap — 어플 종료 후 재실행 등에서 stale 복원 방지. "뒤로가기 직후" 만 발동.
+              // 이중 방어 — sid 매치 (같은 SPA 세션) AND 60초 TTL (백그라운드 후 복귀 차단)
+              const sidOk = parsed?.sid && parsed.sid === SESSION_TOKEN;
               const t = Number(parsed?.t);
               const fresh = Number.isFinite(t) && Date.now() - t <= MAP_RESTORE_TTL_MS;
-              if (fresh && Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+              if (sidOk && fresh && Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
                 savedState = { lat: parsed.lat, lng: parsed.lng, level: Number(parsed.level) || 4 };
               }
-              // 1회용 — 신선/만료 무관 즉시 제거
+              // 1회용 — 어떤 사유로든 즉시 제거 (다음 진입에 stale 복원 방지)
               sessionStorage.removeItem('mlbg.mapState');
             }
           } catch {}
