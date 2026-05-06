@@ -83,7 +83,7 @@ export default function GreetingBonusBanner() {
           type="button"
           onClick={dismiss}
           aria-label="닫기"
-          className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-[#78350f] hover:text-[#dc2626] text-[18px] leading-none bg-transparent border-none cursor-pointer"
+          className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-[#78350f] hover:text-white hover:bg-[#dc2626] text-[24px] font-bold leading-none bg-white/70 border-2 border-[#78350f] rounded-full cursor-pointer transition-colors"
         >
           ✕
         </button>
