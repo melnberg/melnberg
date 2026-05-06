@@ -398,6 +398,24 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 별도 overlaysRef 더 이상 필요 없음 — MarkerEntry.overlay 로 통합. 호환 위해 유지.
   const overlaysRef = useRef<KakaoOverlayInst[]>([]);
   const [mapReady, setMapReady] = useState(false);
+
+  // 핀 카테고리 필터 — 5개 토글 (아파트/시설/이마트/맛집/육아). localStorage 에 저장.
+  type PinFilters = { apt: boolean; facility: boolean; emart: boolean; restaurant: boolean; kids: boolean };
+  const DEFAULT_FILTERS: PinFilters = { apt: true, facility: true, emart: true, restaurant: true, kids: true };
+  const [pinFilters, setPinFilters] = useState<PinFilters>(() => {
+    if (typeof window === 'undefined') return DEFAULT_FILTERS;
+    try {
+      const saved = localStorage.getItem('mlbg.map.pinFilters');
+      if (saved) return { ...DEFAULT_FILTERS, ...JSON.parse(saved) };
+    } catch { /* ignore */ }
+    return DEFAULT_FILTERS;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mlbg.map.pinFilters', JSON.stringify(pinFilters)); } catch { /* ignore */ }
+  }, [pinFilters]);
+  function togglePinFilter(k: keyof PinFilters) {
+    setPinFilters((s) => ({ ...s, [k]: !s[k] }));
+  }
   const [selected, setSelected] = useState<AptPin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -483,7 +501,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     for (const m of factoryMarkersRef.current) m.setMap(null);
     factoryMarkersRef.current = [];
     if (factoryList.length === 0) return;
-    const PIN_W = 32, PIN_H = 45;
+    const PIN_W = 26, PIN_H = 36;
     const imgs: Record<string, KakaoMarkerImage> = {
       hynix:   new window.kakao.maps.MarkerImage('/pins/factory-hynix.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       samsung: new window.kakao.maps.MarkerImage('/pins/factory-samsung.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
@@ -534,7 +552,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     for (const m of restaurantMarkersRef.current) m.setMap(null);
     restaurantMarkersRef.current = [];
     if (restaurantList.length === 0) return;
-    const PIN_W = 32, PIN_H = 45;
+    const PIN_W = 26, PIN_H = 36;
     // 맛집 전용 SVG — 노란 핀 + 🍴 아이콘
     const restaurantPin = (occupied: boolean) => {
       const flagSvg = occupied
@@ -589,7 +607,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     for (const m of kidsMarkersRef.current) m.setMap(null);
     kidsMarkersRef.current = [];
     if (kidsList.length === 0) return;
-    const PIN_W = 32, PIN_H = 45;
+    const PIN_W = 26, PIN_H = 36;
     // 흰 핀 + 검정 베이비 얼굴 (귀 + 눈 + 미소) — 머리카락 한 가닥은 목매단 것처럼 보여서 제거
     const kidsPin = (occupied: boolean) => {
       const flagSvg = occupied
@@ -1377,7 +1395,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
     if (emartList.length === 0) return;
     // 물방울 모양 (32x45) — bottom 정점에 anchor
-    const PIN_W = 32, PIN_H = 45;
+    const PIN_W = 26, PIN_H = 36;
     const img = new window.kakao.maps.MarkerImage(
       '/pins/emart.svg',
       new window.kakao.maps.Size(PIN_W, PIN_H),
@@ -1463,7 +1481,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       return `${p.toLocaleString()}만/평`;
     }
 
-    const PIN_W = 32, PIN_H = 45;
+    const PIN_W = 26, PIN_H = 36;
     const makeImg = (color: string, occ: boolean, listed: boolean = false) => new window.kakao.maps.MarkerImage(
       buildPinSvg(color, occ, listed),
       new window.kakao.maps.Size(PIN_W, PIN_H),
@@ -1561,6 +1579,19 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; };
   }, [pins, mapReady]);
 
+  // 핀 필터 적용 — pinFilters 또는 마커 데이터 변경 시 setMap 토글.
+  // 마커 생성 useEffect 들이 자체 setMap(map) 호출하므로 이 effect 가 그 후 override.
+  // 데이터 deps (pins, emartList, ...) 가 들어있어 마커 재생성 직후에도 자동 재실행.
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    for (const e of markersRef.current)        e.marker.setMap(pinFilters.apt ? map : null);
+    for (const m of emartMarkersRef.current)   m.setMap(pinFilters.emart ? map : null);
+    for (const m of factoryMarkersRef.current) m.setMap(pinFilters.facility ? map : null);
+    for (const m of restaurantMarkersRef.current) m.setMap(pinFilters.restaurant ? map : null);
+    for (const m of kidsMarkersRef.current)    m.setMap(pinFilters.kids ? map : null);
+  }, [pinFilters, mapReady, pins, emartList, factoryList, restaurantList, kidsList]);
+
   if (error) {
     return (
       <div className="max-w-content mx-auto px-10 py-12">
@@ -1574,6 +1605,32 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       <div ref={mapRef} className="w-full h-screen bg-[#f0f0f0]" />
 
       {/* 상단 전광판 (스코어/부자/거래/핫/활동/품질/매매/호가/핫딜) — 2026-05-06 사용자 요청으로 제거. 복구 필요시 git show ae277a2:components/AptMap.tsx 참고 */}
+
+      {/* 우상단 — 핀 카테고리 필터 (5개 토글, localStorage 저장) */}
+      <div className="absolute top-2 right-2 z-20 bg-white/95 border border-border shadow-md p-1.5 flex flex-col gap-1">
+        <div className="text-[9px] font-bold text-muted uppercase tracking-wider px-1 pb-0.5 border-b border-[#f0f0f0]">핀 표시</div>
+        {([
+          { k: 'apt' as const, label: '아파트', dot: '#f97316' },
+          { k: 'facility' as const, label: '시설', dot: '#6b7280' },
+          { k: 'emart' as const, label: '이마트', dot: '#fbbf24' },
+          { k: 'restaurant' as const, label: '맛집', dot: '#f59e0b' },
+          { k: 'kids' as const, label: '육아', dot: '#f472b6' },
+        ]).map((it) => (
+          <button
+            key={it.k}
+            type="button"
+            onClick={() => togglePinFilter(it.k)}
+            className={`flex items-center gap-1.5 px-2 py-0.5 text-[11px] border cursor-pointer text-left ${
+              pinFilters[it.k]
+                ? 'bg-white text-text border-border hover:border-navy'
+                : 'bg-[#f5f5f5] text-muted border-[#e5e5e5] line-through'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: pinFilters[it.k] ? it.dot : '#cbd5e1' }} />
+            {it.label}
+          </button>
+        ))}
+      </div>
 
       {/* 좌상단 — 아파트 검색 + 정보 배지 스택 (화면 좌상단 끝에 딱 붙임) */}
       <div className="absolute top-0 left-0 z-20 flex flex-col w-[280px]">

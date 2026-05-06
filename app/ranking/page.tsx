@@ -17,10 +17,21 @@ type Row = {
   apt_value: number;
   apt_count: number;
   total_count: number;
+  prev_rank: number | null;
+  rank_delta: number | null;
 };
 
 function fmt(n: number | null | undefined): string {
   return Math.round(Number(n ?? 0)).toLocaleString();
+}
+
+// rank_delta 표시 — 한국식 (상승 빨강 ▲ / 하락 파랑 ▼)
+// 어제 스냅샷에 없던 신규는 NEW 라벨, 변동 없으면 −
+function DeltaCell({ delta }: { delta: number | null }) {
+  if (delta === null) return <span className="text-[10px] text-muted">NEW</span>;
+  if (delta === 0) return <span className="text-[10px] text-muted">−</span>;
+  if (delta > 0) return <span className="text-[10px] text-[#dc2626] tabular-nums">▲{delta}</span>;
+  return <span className="text-[10px] text-[#0070C0] tabular-nums">▼{Math.abs(delta)}</span>;
 }
 
 export default async function RankingPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
@@ -44,7 +55,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
             <h1 className="text-[24px] sm:text-[28px] font-bold text-navy tracking-tight">자산 순위</h1>
             <span className="text-[11px] text-muted">총 {Number(totalCount).toLocaleString()}명</span>
           </div>
-          <p className="text-sm text-muted mb-6">현금성 mlbg + 보유 부동산 분양가 합계 기준. 1등부터 끝까지 다 표시.</p>
+          <p className="text-sm text-muted mb-6">현금성 mlbg + 보유 부동산 분양가 합계 기준. 매일 아침 7시 갱신, 어제 대비 순위 변동 표시.</p>
 
           {rows.length === 0 ? (
             <div className="text-[13px] text-muted text-center py-16 border border-border">데이터가 없어요.</div>
@@ -56,6 +67,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                   <thead className="bg-bg/40 text-[10px] text-muted uppercase tracking-wider">
                     <tr>
                       <th className="text-left px-3 py-1.5 w-[50px]">순위</th>
+                      <th className="text-left px-3 py-1.5 w-[60px]">변동</th>
                       <th className="text-left px-3 py-1.5">닉네임</th>
                       <th className="text-right px-3 py-1.5">총자산</th>
                       <th className="text-right px-3 py-1.5">현금성 (mlbg)</th>
@@ -67,6 +79,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                     {rows.map((r) => (
                       <tr key={r.user_id} className="border-t border-border hover:bg-navy-soft/40">
                         <td className="px-3 py-1 text-text tabular-nums">{r.rank}</td>
+                        <td className="px-3 py-1"><DeltaCell delta={r.rank_delta} /></td>
                         <td className="px-3 py-1 text-text truncate max-w-[200px]">{r.display_name ?? '익명'}</td>
                         <td className="px-3 py-1 text-right text-text tabular-nums">{fmt(r.total_wealth)}</td>
                         <td className="px-3 py-1 text-right text-text tabular-nums">{fmt(r.mlbg_balance)}</td>
@@ -87,6 +100,7 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                 {rows.map((r) => (
                   <li key={r.user_id} className="flex items-center gap-2 px-3 py-1.5 bg-white border-b border-border">
                     <span className="text-[12px] text-text tabular-nums w-[28px] flex-shrink-0">{r.rank}</span>
+                    <span className="w-[36px] flex-shrink-0"><DeltaCell delta={r.rank_delta} /></span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] text-text truncate flex-1 min-w-0">{r.display_name ?? '익명'}</span>
