@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
@@ -21,6 +21,41 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const [isPaidOnly, setIsPaidOnly] = useState(initial?.is_paid_only ?? (category === 'blog'));
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 이미지 업로드 → 본문에 URL 삽입. linkify 가 자동으로 <img> 렌더.
+  async function handleImageUpload(file: File) {
+    if (uploading) return;
+    if (file.size > 5 * 1024 * 1024) { setErr('5MB 이하 이미지만 가능합니다.'); return; }
+    setErr(null);
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setErr('로그인이 필요합니다.'); setUploading(false); return; }
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { contentType: file.type });
+    setUploading(false);
+    if (upErr) { setErr(`업로드 실패: ${upErr.message}`); return; }
+    const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+    // 본문에 별도 줄로 URL 삽입 — linkify 가 .jpg/.png/.webp/.gif 끝나면 <img> 로 렌더
+    const insert = `\n${publicUrl}\n`;
+    const ta = textareaRef.current;
+    if (ta) {
+      const start = ta.selectionStart ?? content.length;
+      const end = ta.selectionEnd ?? content.length;
+      const next = content.slice(0, start) + insert + content.slice(end);
+      setContent(next);
+      // 커서 위치 이동
+      requestAnimationFrame(() => {
+        const pos = start + insert.length;
+        ta.focus(); ta.setSelectionRange(pos, pos);
+      });
+    } else {
+      setContent((c) => c + insert);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,12 +135,36 @@ export default function PostForm({ initial, category = 'community', redirectBase
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="content" className="text-[11px] font-bold tracking-widest uppercase text-muted">내용</label>
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor="content" className="text-[11px] font-bold tracking-widest uppercase text-muted">내용</label>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImageUpload(f);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="text-[11px] font-bold tracking-wide text-navy hover:text-navy-dark cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-transparent border border-border hover:border-navy px-3 py-1"
+            >
+              {uploading ? '업로드 중...' : '📷 사진 추가'}
+            </button>
+          </div>
+        </div>
         <textarea
           id="content"
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="내용을 입력하세요"
+          placeholder="내용을 입력하세요. 사진은 우측 상단 [📷 사진 추가] 버튼으로 업로드."
           required
           rows={14}
           className="border border-border border-b-2 border-b-navy px-3.5 py-3 text-[15px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
