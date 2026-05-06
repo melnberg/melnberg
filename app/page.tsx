@@ -60,14 +60,50 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
 
-    // 진행중 경매 — 모두 강제 노출 (피드 상단)
-    const { data: activeAuctions } = await supabase
+    // 진행중 경매 — 모두 강제 노출 (피드 상단). asset_type 별로 위치/이름 후처리.
+    const { data: activeAuctionsRaw } = await supabase
       .from('apt_auctions')
-      .select('id, apt_id, ends_at, min_bid, current_bid, current_bidder_id, bid_count, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+      .select('id, apt_id, asset_type, asset_id, ends_at, min_bid, current_bid, current_bidder_id, bid_count, created_at')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(10)
       .then((r) => r, () => ({ data: null }));
+    type RawAuc = { id: number; apt_id: number | null; asset_type: 'apt' | 'factory' | 'emart' | null; asset_id: number | null; ends_at: string; min_bid: number; current_bid: number | null; current_bidder_id: string | null; bid_count: number; created_at: string };
+    const aucList = (activeAuctionsRaw ?? []) as RawAuc[];
+    // 자산 타입별로 id 모으기 → 일괄 fetch
+    const aucAptIds: number[] = [], aucFactoryIds: number[] = [], aucEmartIds: number[] = [];
+    for (const a of aucList) {
+      const aType = a.asset_type ?? 'apt';
+      const aId = a.asset_id ?? a.apt_id ?? 0;
+      if (aType === 'apt' && aId) aucAptIds.push(aId);
+      else if (aType === 'factory' && aId) aucFactoryIds.push(aId);
+      else if (aType === 'emart' && aId) aucEmartIds.push(aId);
+    }
+    const aucAssetMap = new Map<string, { name: string; lat: number | null; lng: number | null; dong: string | null }>();
+    if (aucAptIds.length > 0) {
+      const { data } = await supabase.from('apt_master').select('id, apt_nm, dong, lat, lng').in('id', aucAptIds);
+      for (const r of (data ?? []) as Array<{ id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null }>) {
+        aucAssetMap.set(`apt:${r.id}`, { name: r.apt_nm ?? '단지', lat: r.lat, lng: r.lng, dong: r.dong });
+      }
+    }
+    if (aucFactoryIds.length > 0) {
+      const { data } = await supabase.from('factory_locations').select('id, name, lat, lng').in('id', aucFactoryIds);
+      for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+        aucAssetMap.set(`factory:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
+      }
+    }
+    if (aucEmartIds.length > 0) {
+      const { data } = await supabase.from('emart_locations').select('id, name, lat, lng').in('id', aucEmartIds);
+      for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+        aucAssetMap.set(`emart:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
+      }
+    }
+    const activeAuctions = aucList.map((r) => {
+      const aType = r.asset_type ?? 'apt';
+      const aId = r.asset_id ?? r.apt_id ?? 0;
+      const info = aucAssetMap.get(`${aType}:${aId}`) ?? { name: '자산', lat: null, lng: null, dong: null };
+      return { ...r, _assetName: info.name, _assetLat: info.lat, _assetLng: info.lng, _assetDong: info.dong, _assetType: aType, _assetId: aId };
+    });
 
     // 최근 이마트 분양 — 피드 일반 항목 (lat/lng 포함하여 클릭 시 지도 이동 가능)
     const { data: emartOccs } = await supabase
@@ -117,18 +153,51 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const auctionIds = Array.from(new Set(bidRows.map((b) => b.auction_id)));
     const auctionAptMap = new Map<number, { apt_nm: string | null; lat: number | null; lng: number | null; dong: string | null; apt_master_id: number }>();
     if (auctionIds.length > 0) {
+      // asset_type 별로 자산 정보 fetch — apt_master / factory_locations / emart_locations
       const { data: aucRows } = await supabase
         .from('apt_auctions')
-        .select('id, apt_id, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+        .select('id, apt_id, asset_type, asset_id')
         .in('id', auctionIds);
-      for (const r of (aucRows ?? []) as unknown as Array<{ id: number; apt_id: number; apt_master: unknown }>) {
-        const am = (Array.isArray(r.apt_master) ? r.apt_master[0] : r.apt_master) as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+      type AucMeta = { id: number; apt_id: number | null; asset_type: 'apt' | 'factory' | 'emart' | null; asset_id: number | null };
+      const aucMetas = (aucRows ?? []) as AucMeta[];
+      const aIds: number[] = [], fIds: number[] = [], eIds: number[] = [];
+      for (const r of aucMetas) {
+        const t = r.asset_type ?? 'apt';
+        const aid = r.asset_id ?? r.apt_id ?? 0;
+        if (!aid) continue;
+        if (t === 'apt') aIds.push(aid);
+        else if (t === 'factory') fIds.push(aid);
+        else if (t === 'emart') eIds.push(aid);
+      }
+      const assetMap = new Map<string, { name: string | null; dong: string | null; lat: number | null; lng: number | null }>();
+      if (aIds.length > 0) {
+        const { data } = await supabase.from('apt_master').select('id, apt_nm, dong, lat, lng').in('id', aIds);
+        for (const r of (data ?? []) as Array<{ id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null }>) {
+          assetMap.set(`apt:${r.id}`, { name: r.apt_nm, dong: r.dong, lat: r.lat, lng: r.lng });
+        }
+      }
+      if (fIds.length > 0) {
+        const { data } = await supabase.from('factory_locations').select('id, name, lat, lng').in('id', fIds);
+        for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+          assetMap.set(`factory:${r.id}`, { name: r.name, dong: null, lat: r.lat, lng: r.lng });
+        }
+      }
+      if (eIds.length > 0) {
+        const { data } = await supabase.from('emart_locations').select('id, name, lat, lng').in('id', eIds);
+        for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+          assetMap.set(`emart:${r.id}`, { name: r.name, dong: null, lat: r.lat, lng: r.lng });
+        }
+      }
+      for (const r of aucMetas) {
+        const t = r.asset_type ?? 'apt';
+        const aid = r.asset_id ?? r.apt_id ?? 0;
+        const info = assetMap.get(`${t}:${aid}`) ?? { name: null, dong: null, lat: null, lng: null };
         auctionAptMap.set(r.id, {
-          apt_nm: am?.apt_nm ?? null,
-          dong: am?.dong ?? null,
-          lat: am?.lat ?? null,
-          lng: am?.lng ?? null,
-          apt_master_id: r.apt_id,
+          apt_nm: info.name,
+          dong: info.dong,
+          lat: info.lat,
+          lng: info.lng,
+          apt_master_id: t === 'apt' ? aid : 0,
         });
       }
     }
@@ -412,23 +481,22 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     });
 
     // 진행중 경매 → FeedItem (강제 상단 노출)
-    const auctionItems: FeedItem[] = ((activeAuctions ?? []) as Array<Record<string, unknown>>).map((r) => {
-      const am = r.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+    const auctionItems: FeedItem[] = activeAuctions.map((r) => {
       const price = Number(r.current_bid ?? r.min_bid ?? 0);
       return {
         kind: 'auction' as const,
-        id: r.id as number,
-        auction_id: r.id as number,
-        apt_master_id: r.apt_id as number,
+        id: r.id,
+        auction_id: r.id,
+        apt_master_id: r._assetType === 'apt' ? r._assetId : 0,
         post_id: null,
-        title: `🔥 ${am?.apt_nm ?? '단지'} LIVE 경매`,
+        title: `🔥 ${r._assetName} LIVE 경매`,
         content: `현재가 ${price.toLocaleString()} mlbg · 입찰 ${(r.bid_count ?? 0)}건`,
-        created_at: r.created_at as string,
-        ends_at: r.ends_at as string,
-        apt_nm: am?.apt_nm ?? null,
-        dong: am?.dong ?? null,
-        lat: am?.lat ?? null,
-        lng: am?.lng ?? null,
+        created_at: r.created_at,
+        ends_at: r.ends_at,
+        apt_nm: r._assetName,
+        dong: r._assetDong,
+        lat: r._assetLat,
+        lng: r._assetLng,
         author_id: null,
         author_name: null,
         author_link: null,

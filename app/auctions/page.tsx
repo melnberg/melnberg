@@ -8,11 +8,18 @@ export const metadata = { title: '시한 경매 — 멜른버그' };
 export const dynamic = 'force-dynamic';
 
 type AuctionRow = {
-  id: number; apt_id: number; apt_nm: string | null;
+  id: number;
+  asset_type: 'apt' | 'factory' | 'emart' | null;
+  asset_id: number | null;
+  asset_name: string | null;
+  apt_id: number | null;
+  apt_nm: string | null;
   starts_at: string; ends_at: string;
   min_bid: number; current_bid: number | null; current_bidder_name: string | null;
   status: 'active' | 'completed' | 'cancelled'; bid_count: number;
 };
+
+const ASSET_TYPE_BADGE: Record<string, string> = { apt: '단지', factory: '시설', emart: '이마트' };
 
 export default async function AuctionsPage() {
   const supabase = createPublicClient();
@@ -32,7 +39,7 @@ export default async function AuctionsPage() {
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">시한 경매</h1>
-          <p className="text-sm text-muted mb-8">어드민이 등록한 단지를 시한 경매로. 종료 5분 전 입찰 시 +5분 자동 연장.</p>
+          <p className="text-sm text-muted mb-8">어드민이 등록한 단지·시설을 시한 경매로. 종료 5분 전 입찰 시 +5분 자동 연장.</p>
 
           {active.length > 0 && (
             <section className="mb-12">
@@ -42,7 +49,10 @@ export default async function AuctionsPage() {
                   <li key={a.id}>
                     <Link href={`/auctions/${a.id}`} className="block border border-[#dc2626]/40 bg-[#fef2f2] hover:bg-[#fee2e2] hover:border-[#dc2626] px-5 py-4 no-underline">
                       <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                        <div className="text-[16px] font-bold text-navy truncate flex-1">{a.apt_nm ?? '단지'}</div>
+                        <div className="text-[16px] font-bold text-navy truncate flex-1">
+                          <span className="text-[10px] font-bold tracking-widest uppercase text-cyan mr-2">[{ASSET_TYPE_BADGE[a.asset_type ?? 'apt']}]</span>
+                          {a.asset_name ?? a.apt_nm ?? '자산'}
+                        </div>
                         <div className="text-[12px] font-bold text-[#dc2626] tracking-widest uppercase">LIVE 🔴</div>
                       </div>
                       <div className="flex items-baseline justify-between gap-4 flex-wrap mt-2 text-[12px]">
@@ -73,7 +83,10 @@ export default async function AuctionsPage() {
                   <li key={a.id}>
                     <Link href={`/auctions/${a.id}`} className="block border border-border bg-white hover:bg-bg/40 px-5 py-3 no-underline">
                       <div className="flex items-baseline justify-between gap-4 flex-wrap">
-                        <div className="text-[14px] font-bold text-text truncate flex-1">{a.apt_nm ?? '단지'}</div>
+                        <div className="text-[14px] font-bold text-text truncate flex-1">
+                          <span className="text-[9px] font-bold tracking-widest uppercase text-muted mr-2">[{ASSET_TYPE_BADGE[a.asset_type ?? 'apt']}]</span>
+                          {a.asset_name ?? a.apt_nm ?? '자산'}
+                        </div>
                         <div className="text-[10px] text-muted tracking-widest uppercase">{a.status === 'completed' ? 'COMPLETED' : 'CANCELLED'}</div>
                       </div>
                       <div className="text-[11px] text-muted mt-1">

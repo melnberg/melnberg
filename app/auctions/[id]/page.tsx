@@ -10,7 +10,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type Auction = {
-  id: number; apt_id: number;
+  id: number; apt_id: number | null;
+  asset_type: 'apt' | 'factory' | 'emart';
+  asset_id: number;
   starts_at: string; ends_at: string;
   min_bid: number; current_bid: number | null;
   current_bidder_id: string | null;
@@ -22,6 +24,13 @@ type Bid = {
   id: number; bidder_id: string; amount: number; created_at: string;
 };
 
+const FACTORY_BRAND_LABEL: Record<string, string> = {
+  hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코',
+  union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역',
+};
+
+type AssetInfo = { name: string; sub: string | null; typeBadge: string };
+
 export default async function AuctionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const numId = Number(id);
@@ -30,28 +39,53 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   const supabase = createPublicClient();
   // 만료된 경매 자동 종료 (각 페이지 진입마다 한 번)
   const completeRes = await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
-  // 경매 종료 처리되면 apt_master 변경 → home-pins 캐시 무효화
   if (completeRes && (completeRes as { data?: number })?.data && Number((completeRes as { data: number }).data) > 0) {
     revalidateTag('apt-master');
   }
 
-  const [{ data: auc }, { data: aptRow }, { data: bidRows }] = await Promise.all([
-    supabase.from('apt_auctions').select('id, apt_id, starts_at, ends_at, min_bid, current_bid, current_bidder_id, status, bid_count').eq('id', numId).maybeSingle(),
-    supabase.from('apt_master').select('id, apt_nm, dong, lawd_cd, household_count, kapt_build_year').eq('id', numId).maybeSingle().then(async (r) => {
-      // 위 쿼리는 임시 — apt_id 가 numId 와 다를 수 있으니 두 번째 fetch
-      return r;
-    }),
+  const [{ data: auc }, { data: bidRows }] = await Promise.all([
+    supabase.from('apt_auctions').select('id, apt_id, asset_type, asset_id, starts_at, ends_at, min_bid, current_bid, current_bidder_id, status, bid_count').eq('id', numId).maybeSingle(),
     supabase.from('auction_bids').select('id, bidder_id, amount, created_at').eq('auction_id', numId).order('created_at', { ascending: false }).limit(20),
   ]);
 
   if (!auc) notFound();
   const auction = auc as unknown as Auction;
-  // apt 정보를 정확한 apt_id 로 다시 fetch
-  const { data: apt } = await supabase
-    .from('apt_master')
-    .select('id, apt_nm, dong, lawd_cd, household_count, kapt_build_year')
-    .eq('id', auction.apt_id)
-    .maybeSingle();
+
+  // 자산 타입별 정보 fetch
+  let asset: AssetInfo = { name: '경매 자산', sub: null, typeBadge: '자산' };
+  if (auction.asset_type === 'apt') {
+    const { data: apt } = await supabase
+      .from('apt_master')
+      .select('apt_nm, dong, household_count')
+      .eq('id', auction.asset_id)
+      .maybeSingle();
+    const a = apt as { apt_nm?: string | null; dong?: string | null; household_count?: number | null } | null;
+    asset = {
+      name: a?.apt_nm ?? '단지',
+      sub: [a?.dong, a?.household_count ? `${Number(a.household_count).toLocaleString()}세대` : null].filter(Boolean).join(' · ') || null,
+      typeBadge: '단지',
+    };
+  } else if (auction.asset_type === 'factory') {
+    const { data: f } = await supabase
+      .from('factory_locations')
+      .select('name, brand, address, occupy_price')
+      .eq('id', auction.asset_id)
+      .maybeSingle();
+    const r = f as { name?: string | null; brand?: string | null; address?: string | null; occupy_price?: number | null } | null;
+    asset = {
+      name: r?.name ?? '시설',
+      sub: r?.address ?? null,
+      typeBadge: FACTORY_BRAND_LABEL[r?.brand ?? ''] ?? '시설',
+    };
+  } else if (auction.asset_type === 'emart') {
+    const { data: e } = await supabase
+      .from('emart_locations')
+      .select('name, address')
+      .eq('id', auction.asset_id)
+      .maybeSingle();
+    const r = e as { name?: string | null; address?: string | null } | null;
+    asset = { name: r?.name ?? '이마트', sub: r?.address ?? null, typeBadge: '이마트' };
+  }
   // 최근 입찰자 닉네임 조회
   const bidderIds = Array.from(new Set([
     auction.current_bidder_id,
@@ -74,22 +108,22 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   }
 
   const isActive = auction.status === 'active';
-  const aptName = (apt as { apt_nm?: string | null } | null)?.apt_nm ?? '단지';
 
   return (
     <Layout>
       <MainTop crumbs={[
         { href: '/', label: '멜른버그' },
         { href: '/auctions', label: '시한 경매' },
-        { label: aptName, bold: true },
+        { label: asset.name, bold: true },
       ]} meta="Auction" />
 
       <section className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
           {/* 헤더 */}
           <div className="mb-6 pb-4 border-b border-border">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-[24px] font-bold text-navy tracking-tight">{aptName}</h1>
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <span className="text-[10px] font-bold tracking-widest uppercase bg-cyan/15 text-cyan px-2 py-1">{asset.typeBadge}</span>
+              <h1 className="text-[24px] font-bold text-navy tracking-tight">{asset.name}</h1>
               <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 ${
                 isActive ? 'bg-[#dc2626] text-white' : 'bg-[#e5e5e5] text-muted'
               }`}>
@@ -97,10 +131,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
               </span>
             </div>
             <div className="flex items-center gap-4 text-[12px] text-muted flex-wrap">
-              {(apt as { dong?: string | null } | null)?.dong && <span>{(apt as { dong?: string | null }).dong}</span>}
-              {(apt as { household_count?: number | null } | null)?.household_count && (
-                <span>{Number((apt as { household_count?: number }).household_count).toLocaleString()}세대</span>
-              )}
+              {asset.sub && <span>{asset.sub}</span>}
               <span>입찰 {auction.bid_count}건</span>
             </div>
           </div>

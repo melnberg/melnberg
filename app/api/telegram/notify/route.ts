@@ -85,14 +85,31 @@ export async function POST(req: NextRequest) {
     }
     const { data: auc } = await admin
       .from('apt_auctions')
-      .select('id, apt_id, ends_at, min_bid, status, apt_master:apt_master!apt_id(apt_nm)')
+      .select('id, asset_type, asset_id, ends_at, min_bid, status')
       .eq('id', refId).maybeSingle();
-    const r = auc as { id: number; apt_id: number; ends_at: string; min_bid: number; status: string; apt_master: { apt_nm: string | null } | null } | null;
+    const r = auc as { id: number; asset_type: 'apt' | 'factory' | 'emart'; asset_id: number; ends_at: string; min_bid: number; status: string } | null;
     if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
+    // 자산 타입별 이름 fetch
+    let assetName = '자산';
+    let typePrefix = '';
+    if (r.asset_type === 'apt') {
+      const { data: apt } = await admin.from('apt_master').select('apt_nm').eq('id', r.asset_id).maybeSingle();
+      assetName = (apt as { apt_nm: string | null } | null)?.apt_nm ?? '단지';
+    } else if (r.asset_type === 'factory') {
+      const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', r.asset_id).maybeSingle();
+      const fr = f as { name: string | null; brand: string | null } | null;
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역' };
+      typePrefix = brandLabel[fr?.brand ?? ''] ?? '시설';
+      assetName = fr?.name ?? '시설';
+    } else if (r.asset_type === 'emart') {
+      const { data: e } = await admin.from('emart_locations').select('name').eq('id', r.asset_id).maybeSingle();
+      typePrefix = '이마트';
+      assetName = (e as { name: string | null } | null)?.name ?? '매장';
+    }
     tag = '🔥 LIVE 경매';
-    const aptName = r.apt_master?.apt_nm ?? '단지';
+    const fullName = typePrefix ? `${typePrefix} ${assetName}` : assetName;
     const endsKr = new Date(r.ends_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' });
-    main = `${aptName} 시작가 ${Number(r.min_bid).toLocaleString()} mlbg · ${endsKr} 종료`;
+    main = `${fullName} 시작가 ${Number(r.min_bid).toLocaleString()} mlbg · ${endsKr} 종료`;
   } else if (kind === 'factory_occupy') {
     // refId = factory_locations.id. 본인 occupier 검증.
     const { data: occ } = await admin
@@ -140,19 +157,33 @@ export async function POST(req: NextRequest) {
 
     const { data: auc } = await admin
       .from('apt_auctions')
-      .select('id, apt_id, current_bid, current_bidder_id, ends_at, bid_count, apt_master:apt_master!apt_id(apt_nm)')
+      .select('id, asset_type, asset_id, current_bid, current_bidder_id, ends_at, bid_count')
       .eq('id', refId).maybeSingle();
-    const r = auc as { id: number; apt_id: number; current_bid: number | null; current_bidder_id: string | null; ends_at: string; bid_count: number; apt_master: { apt_nm: string | null } | null } | null;
+    const r = auc as { id: number; asset_type: 'apt' | 'factory' | 'emart'; asset_id: number; current_bid: number | null; current_bidder_id: string | null; ends_at: string; bid_count: number } | null;
     if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
 
-    const aptName = r.apt_master?.apt_nm ?? '단지';
+    // 자산 이름
+    let assetName = '자산';
+    if (r.asset_type === 'apt') {
+      const { data: apt } = await admin.from('apt_master').select('apt_nm').eq('id', r.asset_id).maybeSingle();
+      assetName = (apt as { apt_nm: string | null } | null)?.apt_nm ?? '단지';
+    } else if (r.asset_type === 'factory') {
+      const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', r.asset_id).maybeSingle();
+      const fr = f as { name: string | null; brand: string | null } | null;
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역' };
+      assetName = `${brandLabel[fr?.brand ?? ''] ?? ''} ${fr?.name ?? '시설'}`.trim();
+    } else if (r.asset_type === 'emart') {
+      const { data: e } = await admin.from('emart_locations').select('name').eq('id', r.asset_id).maybeSingle();
+      assetName = (e as { name: string | null } | null)?.name ?? '매장';
+    }
+
     const { data: pr } = await admin.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
     const bidderName = (pr as { display_name?: string | null } | null)?.display_name ?? '익명';
     const isLeader = r.current_bidder_id === user.id;
     tag = '⚡ 경매 입찰';
     main = isLeader
-      ? `${aptName} ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 갱신 (${bidderName} 님 · 누적 ${r.bid_count}건)`
-      : `${aptName} ${Number(b.amount).toLocaleString()} mlbg 입찰 (${bidderName} 님 — 직후 ${Number(r.current_bid ?? 0).toLocaleString()} 으로 갱신됨)`;
+      ? `${assetName} ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 갱신 (${bidderName} 님 · 누적 ${r.bid_count}건)`
+      : `${assetName} ${Number(b.amount).toLocaleString()} mlbg 입찰 (${bidderName} 님 — 직후 ${Number(r.current_bid ?? 0).toLocaleString()} 으로 갱신됨)`;
   } else if (kind === 'offer' || kind === 'snatch') {
     // refId = apt_listing_offers.id. 매수 호가 / 내놔 알림.
     const { data } = await admin
