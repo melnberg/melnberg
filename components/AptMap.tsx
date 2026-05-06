@@ -235,6 +235,7 @@ function writePinCache(key: string, pins: AptPin[]) {
 }
 
 // 본문에 섞인 이미지 URL → <img> 인라인 렌더 (피드 카드 공용).
+// 이미지 클릭은 부모 카드 jumpToFeedItem 으로 전파 → 게시글 페이지로 이동.
 const FEED_IMG_URL_RE = /(https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?)/gi;
 function renderFeedContentWithImages(text: string): React.ReactNode {
   if (!text) return null;
@@ -242,10 +243,8 @@ function renderFeedContentWithImages(text: string): React.ReactNode {
   return parts.map((p, i) => {
     if (i % 2 === 1) {
       return (
-        <a key={i} href={p} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block my-1">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p} alt="" loading="lazy" className="max-w-full max-h-[200px] object-contain border border-border rounded-xl" />
-        </a>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={i} src={p} alt="" loading="lazy" className="block my-1 max-w-full max-h-[200px] object-contain border border-border rounded-xl" />
       );
     }
     return p ? <span key={i}>{p}</span> : null;
