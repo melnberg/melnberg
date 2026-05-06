@@ -119,7 +119,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
             <Link
               href="/login"
               onClick={() => setOpen(false)}
-              className="flex items-center justify-center bg-navy text-white h-[40px] mt-2 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
+              className="flex items-center justify-center bg-navy text-white h-[32px] mt-2 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
             >
               로그인
             </Link>
