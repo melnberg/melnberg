@@ -44,7 +44,9 @@ export default function MobileTopBar() {
       window.history.pushState({}, '', '/');
       window.dispatchEvent(new PopStateEvent('popstate'));
     } else {
-      startTransition(() => router.refresh());
+      // 피드 모드 — 명시적 hard reload (router.refresh 는 silent 라 사용자 무반응 인식)
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      window.location.href = '/';
     }
   }
 
