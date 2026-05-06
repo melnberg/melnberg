@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.webkit.WebView;
+import android.widget.Toast;
 
 import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
@@ -75,10 +76,50 @@ public class MainActivity extends BridgeActivity {
                 // 1.5초 후 스피너 자동 종료 (페이지 로드 끝날 때쯤)
                 refresh.postDelayed(() -> refresh.setRefreshing(false), 1500);
             });
-            // 페이지 위쪽에서만 발동 — 컨텐츠 스크롤 중엔 비활성화
-            refresh.setOnChildScrollUpCallback((p, c) -> webView.getScrollY() > 0);
+            // 페이지 위쪽에서만 발동 — 컨텐츠 스크롤 중엔 비활성화.
+            // 지도 화면 (홈 ?view=map / ?apt= / ?emart= / ?factory=) 에선 카카오맵 자체 패닝과
+            // 충돌해 위→아래 드래그 시 새로고침이 떠 지도 못 움직이는 문제 → URL 기반으로 차단.
+            refresh.setOnChildScrollUpCallback((p, c) -> {
+                if (isMapScreen(webView.getUrl())) return true;
+                return webView.getScrollY() > 0;
+            });
 
             parentGroup.addView(refresh, idx, lp);
+        }
+    }
+
+    // 지도 화면 판정 — SwipeRefresh 와 카카오맵 패닝의 제스처 충돌 방지용.
+    // 홈 + view=map / 핀 selected (?apt= ?emart= ?factory=) 면 지도가 전체 화면을 차지함.
+    // /apt/{id} 등 디테일 페이지는 페이지 자체가 스크롤되므로 기존 scrollY 체크로 충분 → 여기 포함 X.
+    private boolean isMapScreen(String url) {
+        if (url == null) return false;
+        if (url.contains("view=map")) return true;
+        if (url.contains("?apt=") || url.contains("&apt=")) return true;
+        if (url.contains("?emart=") || url.contains("&emart=")) return true;
+        if (url.contains("?factory=") || url.contains("&factory=")) return true;
+        return false;
+    }
+
+    // 뒤로가기:
+    //   1) WebView history 있으면 → goBack (Next.js client-side 라우팅 포함)
+    //   2) 홈/피드 (history 없음) 에서:
+    //      - 처음 누름 → "한번 더 누르면 종료" Toast
+    //      - 2초 안에 다시 누름 → 실제 종료
+    private long lastBackMs = 0L;
+
+    @Override
+    public void onBackPressed() {
+        WebView webView = getBridge().getWebView();
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastBackMs < 2000) {
+            super.onBackPressed();
+        } else {
+            lastBackMs = now;
+            Toast.makeText(this, "뒤로가기를 한번 더 누르면 앱이 종료됩니다", Toast.LENGTH_SHORT).show();
         }
     }
 }
