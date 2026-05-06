@@ -590,14 +590,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     kidsMarkersRef.current = [];
     if (kidsList.length === 0) return;
     const PIN_W = 32, PIN_H = 45;
-    // 분홍 핀 + 베이비 얼굴 (둥근 머리 + 눈 두 개 + 미소 + 머리 위 한 가닥)
+    // 흰 핀 + 검정 베이비 얼굴 (귀 + 머리 한가닥 + 눈 + 미소) — 사용자 제공 아이콘 톤
     const kidsPin = (occupied: boolean) => {
       const flagSvg = occupied
         ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
         : '';
-      // 베이비 얼굴: head 7r, 머리 한가닥, 눈 dots, 미소 curve
-      const face = '<g><path d="M 16 6 q 0.5 -2 1.5 -3" stroke="#1a1d22" stroke-width="1.2" fill="none" stroke-linecap="round"/><circle cx="16" cy="16" r="6.5" fill="white" stroke="#1a1d22" stroke-width="1.5"/><circle cx="13.5" cy="15" r="0.8" fill="#1a1d22"/><circle cx="18.5" cy="15" r="0.8" fill="#1a1d22"/><path d="M 13 18 Q 16 21, 19 18" stroke="#1a1d22" stroke-width="1.3" fill="none" stroke-linecap="round"/></g>';
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#fbcfe8" stroke="#1a1d22" stroke-width="2"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>${face}${flagSvg}</svg>`;
+      // 베이비 얼굴 (검정 stroke 만): 머리 한가닥 위 + 둥근 머리 + 양쪽 귀 + 눈 + 미소
+      const face = '<g stroke="#1a1d22" stroke-linecap="round" stroke-linejoin="round" fill="none">'
+        + '<path d="M 16 7 q 1 -2 0.5 -3.5" stroke-width="1.4"/>'
+        + '<circle cx="16" cy="16" r="7" stroke-width="1.6"/>'
+        + '<path d="M 9.5 16.5 q -1.5 0.5 -1 2 q 0.5 1 1.5 0.5" stroke-width="1.2"/>'
+        + '<path d="M 22.5 16.5 q 1.5 0.5 1 2 q -0.5 1 -1.5 0.5" stroke-width="1.2"/>'
+        + '<circle cx="13.5" cy="15.5" r="0.9" fill="#1a1d22" stroke="none"/>'
+        + '<circle cx="18.5" cy="15.5" r="0.9" fill="#1a1d22" stroke="none"/>'
+        + '<path d="M 13 18.5 Q 16 21, 19 18.5" stroke-width="1.4"/>'
+        + '</g>';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#ffffff" stroke="#1a1d22" stroke-width="2"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>${face}${flagSvg}</svg>`;
       return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
     };
     const imgEmpty = new window.kakao.maps.MarkerImage(kidsPin(false), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
