@@ -6,6 +6,7 @@ import Link from 'next/link';
 import AptDiscussionPanel from './AptDiscussionPanel';
 import EmartPanel from './EmartPanel';
 import FactoryPanel, { type FactoryItem } from './FactoryPanel';
+import RestaurantPanel from './RestaurantPanel';
 import Countdown from './Countdown';
 import RewardTooltip from './RewardTooltip';
 import { notifyTelegram } from '@/lib/telegram-notify';
@@ -402,6 +403,30 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [factoryList, setFactoryList] = useState<FactoryItem[]>([]);
   const [selectedFactory, setSelectedFactory] = useState<FactoryItem | null>(null);
   const factoryMarkersRef = useRef<KakaoMarkerInst[]>([]);
+
+  // 사용자 등록 맛집 핀
+  type RestaurantItem = {
+    id: number; name: string; description: string; recommended_menu: string;
+    lat: number; lng: number; photo_url: string | null; address: string | null;
+    occupy_price: number; daily_income: number; like_count: number;
+    author_id: string; author_name: string | null;
+    occupier_id: string | null; occupier_name: string | null;
+    listing_price: number | null;
+    created_at: string;
+  };
+  const [restaurantList, setRestaurantList] = useState<RestaurantItem[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<RestaurantItem | null>(null);
+  const restaurantMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  async function refetchRestaurants() {
+    try {
+      const sbCli = createClient();
+      const { data } = await sbCli.rpc('list_recent_restaurant_pins', { p_limit: 100 });
+      const items = ((data ?? []) as RestaurantItem[]);
+      setRestaurantList(items);
+      setSelectedRestaurant((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
+    } catch { /* silent */ }
+  }
+  useEffect(() => { refetchRestaurants(); }, []);
   async function refetchFactory() {
     try {
       const r = await fetch('/api/factory-list', { cache: 'no-store' });
@@ -464,6 +489,59 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       factoryMarkersRef.current = [];
     };
   }, [factoryList, mapReady]);
+
+  // 맛집 핀 마커 — 노란색 (#fbbf24) buildPinSvg 사용
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    for (const m of restaurantMarkersRef.current) m.setMap(null);
+    restaurantMarkersRef.current = [];
+    if (restaurantList.length === 0) return;
+    const PIN_W = 32, PIN_H = 45;
+    // 맛집 전용 SVG — 노란 핀 + 🍴 아이콘
+    const restaurantPin = (occupied: boolean) => {
+      const flagSvg = occupied
+        ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
+        : '';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#fbbf24" stroke="#1a1d22" stroke-width="2"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/><text x="16" y="22" font-size="14" text-anchor="middle" fill="#1a1d22">🍴</text>${flagSvg}</svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    };
+    const imgEmpty = new window.kakao.maps.MarkerImage(restaurantPin(false), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    const imgOcc = new window.kakao.maps.MarkerImage(restaurantPin(true), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    for (const r of restaurantList) {
+      const pos = new window.kakao.maps.LatLng(r.lat, r.lng);
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: r.name + (r.occupier_id ? ` — ${r.occupier_name ?? '점거됨'} 보유` : ` (${r.occupy_price.toLocaleString()} mlbg 분양)`),
+        clickable: true,
+        image: r.occupier_id ? imgOcc : imgEmpty,
+        map,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        setSelectedRestaurant(r);
+      });
+      restaurantMarkersRef.current.push(marker);
+    }
+    return () => {
+      for (const m of restaurantMarkersRef.current) m.setMap(null);
+      restaurantMarkersRef.current = [];
+    };
+  }, [restaurantList, mapReady]);
+
+  // URL ?restaurant=ID — 외부 링크에서 핀 패널 자동 오픈
+  useEffect(() => {
+    const ridStr = searchParams.get('restaurant');
+    if (!ridStr) return;
+    const rid = Number(ridStr);
+    if (!Number.isFinite(rid)) return;
+    const r = restaurantList.find((x) => x.id === rid);
+    if (r) {
+      setSelectedRestaurant(r);
+      if (mapInstRef.current) {
+        (mapInstRef.current as { panTo: (p: unknown) => void }).panTo(new window.kakao.maps.LatLng(r.lat, r.lng));
+      }
+    }
+  }, [searchParams, restaurantList]);
 
   async function refetchEmart() {
     try {
@@ -1704,6 +1782,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
       {selectedEmart && <EmartPanel emart={selectedEmart} onClose={() => setSelectedEmart(null)} onChanged={refetchEmart} />}
       {selectedFactory && <FactoryPanel factory={selectedFactory} onClose={() => setSelectedFactory(null)} onChanged={refetchFactory} />}
+      {selectedRestaurant && <RestaurantPanel restaurant={selectedRestaurant} onClose={() => setSelectedRestaurant(null)} onChanged={refetchRestaurants} />}
     </div>
   );
 }
