@@ -4,9 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment' | 'factory_comment' | 'emart_comment' | 'auction_comment';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'hotdeal_post' | 'hotdeal_comment' | 'factory_comment' | 'emart_comment' | 'auction_comment' | 'restaurant_comment';
 
-const VALID_KINDS: Kind[] = ['apt_post', 'apt_comment', 'community_post', 'community_comment', 'hotdeal_post', 'hotdeal_comment', 'factory_comment', 'emart_comment', 'auction_comment'];
+const VALID_KINDS: Kind[] = ['apt_post', 'apt_comment', 'community_post', 'community_comment', 'hotdeal_post', 'hotdeal_comment', 'factory_comment', 'emart_comment', 'auction_comment', 'restaurant_comment'];
 
 // 결정론적 정책 — AI 평가 제거. 줄 수 + 시간대/사진 보너스 기반.
 //   글 (community):     2 mlbg (기본) / 20 mlbg (출퇴근 인사 보너스)
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
     factory_comment: 'factory_comments',
     emart_comment: 'emart_comments',
     auction_comment: 'auction_comments',
+    restaurant_comment: 'restaurant_pin_comments',
   };
   const table = tableMap[kind];
   const { data: row, error: rowErr } = await admin.from(table).select('author_id').eq('id', refId).maybeSingle();
