@@ -256,7 +256,7 @@ function renderFeedContentWithImages(text: string): React.ReactNode {
     if (i % 2 === 1) {
       return (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={i} src={p} alt="" loading="lazy" className="block my-1 max-w-full max-h-[200px] object-contain border border-border rounded-xl" />
+        <img key={i} src={p} alt="" loading="lazy" className="block my-1 max-w-full max-h-[200px] object-contain border border-border" />
       );
     }
     return p ? <span key={i}>{p}</span> : null;
@@ -1809,7 +1809,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           <span className="ml-auto text-[11px] text-muted">{feedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {feedOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-95px)] overflow-y-auto">
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
             {feed.length === 0 ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">아직 작성된 글 없음</div>
             ) : (
