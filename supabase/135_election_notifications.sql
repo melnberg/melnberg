@@ -16,7 +16,8 @@ alter table public.notifications
     'election_winner','election_loser'
   ));
 
--- 2) 정산 함수 재정의 — 알림 INSERT 포함
+-- 2) 정산 함수 재정의 — 당선: 분양가의 10배 일시 보상 / 낙선: 분양금 몰수 + 삭제
+-- 일 수익은 그대로 1 mlbg/일 유지.
 create or replace function public.settle_local_election_2026(p_winners jsonb)
 returns table(region_code text, winner_brand text, loser_brand text, message text)
 language plpgsql security definer set search_path = public as $$
@@ -28,6 +29,7 @@ declare
   v_loser_loc record;
   v_winner_occ record;
   v_loser_occ record;
+  v_winner_payout numeric;
 begin
   for r in
     select distinct f.region_code from public.factory_locations f
@@ -56,20 +58,22 @@ begin
       from public.factory_occupations fo
       where fo.factory_id = v_loser_loc.id;
 
-    -- 당선: daily_income 10 으로 상향 + 점거자에게 알림
-    update public.factory_locations
-      set daily_income = 10
-      where id = v_winner_loc.id;
-
+    -- 당선: 분양가의 10배 일시 보상 (일 수익은 그대로). 핀은 유지.
     if v_winner_occ.user_id is not null then
-      insert into public.notifications(recipient_id, type, apt_master_id, actor_name, comment_excerpt)
+      v_winner_payout := v_winner_loc.occupy_price * 10;
+      update public.profiles
+        set mlbg_balance = coalesce(mlbg_balance, 0) + v_winner_payout
+        where id = v_winner_occ.user_id;
+
+      insert into public.notifications(recipient_id, type, apt_master_id, actor_name, comment_excerpt, listing_price)
       values (
         v_winner_occ.user_id, 'election_winner', v_winner_loc.id, '6/3 지방선거 결과',
-        v_winner_loc.name || ' 당선! 🎉 일 수익이 1 → 10 mlbg 로 10배 인상됐어요.'
+        v_winner_loc.name || ' 당선! 🎉 분양가의 10배 ' || v_winner_payout || ' mlbg 일시 지급. 일 수익은 그대로 유지.',
+        v_winner_payout
       );
     end if;
 
-    -- 낙선: 점거자에게 알림 → 그 다음 occupations / listings / location 삭제
+    -- 낙선: 점거자에게 알림 → 그 다음 occupations / listings / location 삭제 (분양금 몰수)
     if v_loser_occ.user_id is not null then
       insert into public.notifications(recipient_id, type, apt_master_id, actor_name, comment_excerpt, listing_price)
       values (
@@ -99,7 +103,7 @@ values (
   E'서울 24개 구청 + 서울시청에 더불어민주당(파랑) · 국민의힘(빨강) 핀이 각 1개씩 추가됐어요.\n\n' ||
   E'· 분양가 200 mlbg / 일 수익 1 mlbg\n' ||
   E'· 같은 구청에는 한 사람이 한 핀만 분양 가능 (당 골라야 함)\n' ||
-  E'· 6/3 지방선거 결과 — 당선당 핀 일 수익 10배 (10 mlbg/일) / 낙선당 핀 분양금 몰수 + 사라짐\n\n' ||
+  E'· 6/3 지방선거 결과 — 당선당 점거자에게 분양가의 10배 (2,000 mlbg) 일시 보상, 핀 유지 / 낙선당 분양금 200 mlbg 몰수 + 핀 삭제\n\n' ||
   E'지도에서 구청 위치 클릭 → 분양받기.',
   '/',
   coalesce(

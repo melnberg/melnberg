@@ -181,7 +181,9 @@ end;
 $$;
 grant execute on function public.buy_factory(bigint) to authenticated;
 
--- 5) 6/3 지방선거 정산 함수 — 당선당 daily_income ×10, 낙선당 비용 몰수 + 삭제
+-- 5) 6/3 지방선거 정산 함수 — 당선: 분양가 10배 일시 보상 (핀 유지) / 낙선: 분양금 몰수 + 핀 삭제
+-- 일 수익은 그대로 1 mlbg/일 유지.
+-- ※ 알림 INSERT 는 SQL 135 의 재정의 버전에 포함됨. 134 단독 실행 시엔 알림 없음.
 -- 사용:
 --   select public.settle_local_election_2026('{
 --     "11680": "party_dem",
@@ -195,6 +197,9 @@ declare
   r record;
   v_winner text;
   v_loser text;
+  v_winner_loc record;
+  v_winner_occ record;
+  v_winner_payout numeric;
 begin
   for r in
     select distinct f.region_code from public.factory_locations f
@@ -207,10 +212,19 @@ begin
     end if;
     v_loser := case when v_winner = 'party_dem' then 'party_ppl' else 'party_dem' end;
 
-    -- 당선: daily_income 10 으로 상향
-    update public.factory_locations
-      set daily_income = 10
-      where region_code = r.region_code and brand = v_winner;
+    -- 당선: 분양가의 10배 일시 보상 (핀 유지, 일 수익 그대로)
+    select f.* into v_winner_loc
+      from public.factory_locations f
+      where f.region_code = r.region_code and f.brand = v_winner;
+    select fo.* into v_winner_occ
+      from public.factory_occupations fo
+      where fo.factory_id = v_winner_loc.id;
+    if v_winner_occ.user_id is not null then
+      v_winner_payout := v_winner_loc.occupy_price * 10;
+      update public.profiles
+        set mlbg_balance = coalesce(mlbg_balance, 0) + v_winner_payout
+        where id = v_winner_occ.user_id;
+    end if;
 
     -- 낙선: 점거자 환불 없이 occupations 삭제 + 매물 삭제 + location 삭제
     delete from public.factory_occupations fo
