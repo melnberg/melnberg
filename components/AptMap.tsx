@@ -67,25 +67,21 @@ declare global {
   }
 }
 
-// 모바일 핀 → 상세 라우팅 시 지도 복원용 상태 저장.
-// 사용자가 보던 그대로 (현재 중심 + 현재 줌) 저장.
+// 모바일 핀 → 상세 → 뒤로가기 시 지도 위치·줌 복원.
 //
-// 복원 조건 — 삼중 방어:
-//   1) sid 매치 — 같은 SPA 세션 (모듈 평가 1회분) 안에서만 복원.
-//      브라우저/탭/어플 process kill → 새 document → 모듈 재평가 → 새 토큰 → sid 불일치 → 차단.
-//   2) 30초 TTL — "핀 → 상세 → 뒤로가기" 는 보통 수 초 ~ 30초. 30초 내만 통과.
-//   3) visibilitychange:hidden 시 즉시 삭제 — 어플 백그라운드/탭 hide 갔다 오면 fresh entry 로 취급.
-//      어플 process 가 살아있어 sid 같고 TTL 안이라도, 그 사이 사용자가 다른 곳에 갔다 왔으면 복원 X.
-// 셋 다 통과 못하면 default 강남.
-const SESSION_TOKEN = typeof window === 'undefined'
-  ? ''
-  : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const MAP_RESTORE_TTL_MS = 30 * 1000;
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      try { sessionStorage.removeItem('mlbg.mapState'); } catch {}
-    }
+// 핵심 — popstate 이벤트 기반:
+//   router.push (forward) 는 pushState → popstate 안 발화.
+//   사용자의 진짜 back 동작 (시스템 back, 브라우저 back 버튼) 만 popstate 발화.
+//   ⇒ "사용자가 직전에 back 했고 sessionStorage 에 저장된 데이터 있음" 일 때만 복원.
+//
+// 어플 첫 실행 / 모바일웹 fresh entry 에선 popstate 가 발화한 적 없으므로
+// 무조건 default 강남. sessionStorage 가 어떻게 살아있든 상관없이.
+let mlbgPopstateFired = false;
+let mlbgPopstateAt = 0;
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    mlbgPopstateFired = true;
+    mlbgPopstateAt = Date.now();
   });
 }
 function saveCurrentMapState(inst: KakaoMapInst | null) {
@@ -94,7 +90,6 @@ function saveCurrentMapState(inst: KakaoMapInst | null) {
     const c = inst.getCenter();
     sessionStorage.setItem('mlbg.mapState', JSON.stringify({
       lat: c.getLat(), lng: c.getLng(), level: inst.getLevel(),
-      sid: SESSION_TOKEN, t: Date.now(),
     }));
   } catch { /* sessionStorage 쓰기 실패 무시 */ }
 }
@@ -1312,26 +1307,37 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         //   2) sessionStorage mlbg.mapState (모바일 핀 → 상세 → 뒤로가기 복원)
         //   3) 강남 일대 default
         // 이로써 apt 핀 클릭 시 '강남 1초 flash' 차단 + 뒤로가기 시 보던 핀 위치 유지.
-        // 진단 — sessionStorage 복원 로직 임시 제거. URL 의 lat/lng 만 또는 default 강남.
-        // 양재 비추는 원인 격리 — 이래도 양재면 sessionStorage 외 원인.
-        try { sessionStorage.removeItem('mlbg.mapState'); } catch {}
+        // 초기 중심 — 우선순위:
+        //   1) URL ?lat=&lng= (디테일 페이지 → 지도 핀 흐름)
+        //   2) popstate 직후 + sessionStorage 데이터 (사용자가 진짜 back 함 → 보던 위치 복원)
+        //   3) 강남역 default
+        // popstate 가 안 났으면 sessionStorage 에 뭐가 있든 무시 → 첫/fresh entry = 강남 보장.
         const urlLat = Number(searchParams.get('lat'));
         const urlLng = Number(searchParams.get('lng'));
         const hasUrlCoords = Number.isFinite(urlLat) && Number.isFinite(urlLng) && urlLat !== 0 && urlLng !== 0;
+        let savedState: { lat: number; lng: number; level: number } | null = null;
+        // popstate 5초 안에 mount 됐을 때만 복원 시도 (back → / 이동은 즉시)
+        const isBackNav = mlbgPopstateFired && Date.now() - mlbgPopstateAt < 5000;
+        if (!hasUrlCoords && isBackNav) {
+          try {
+            const raw = sessionStorage.getItem('mlbg.mapState');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+                savedState = { lat: parsed.lat, lng: parsed.lng, level: Number(parsed.level) || 4 };
+              }
+            }
+          } catch {}
+        }
+        // 1회용 — 사용했든 만료됐든 항상 정리. popstate flag 도 reset.
+        try { sessionStorage.removeItem('mlbg.mapState'); } catch {}
+        mlbgPopstateFired = false;
         const center = hasUrlCoords
           ? new window.kakao.maps.LatLng(urlLat, urlLng)
-          : new window.kakao.maps.LatLng(37.498, 127.027);
-        const initialLevel = hasUrlCoords ? 4 : 6;
-        // 진단용 — production 콘솔에 찍어 사용자가 dev tools 로 확인 가능
-        if (typeof console !== 'undefined') {
-          console.log('[mlbg.map.init]', {
-            urlLat, urlLng, hasUrlCoords,
-            centerLat: hasUrlCoords ? urlLat : 37.498,
-            centerLng: hasUrlCoords ? urlLng : 127.027,
-            level: initialLevel,
-            search: typeof window !== 'undefined' ? window.location.search : '',
-          });
-        }
+          : savedState
+            ? new window.kakao.maps.LatLng(savedState.lat, savedState.lng)
+            : new window.kakao.maps.LatLng(37.498, 127.027);
+        const initialLevel = hasUrlCoords ? 4 : (savedState?.level ?? 6);
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: initialLevel }) as KakaoMapInst;
         mapInstRef.current = map;
 
