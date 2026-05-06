@@ -1312,33 +1312,26 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         //   2) sessionStorage mlbg.mapState (모바일 핀 → 상세 → 뒤로가기 복원)
         //   3) 강남 일대 default
         // 이로써 apt 핀 클릭 시 '강남 1초 flash' 차단 + 뒤로가기 시 보던 핀 위치 유지.
+        // 진단 — sessionStorage 복원 로직 임시 제거. URL 의 lat/lng 만 또는 default 강남.
+        // 양재 비추는 원인 격리 — 이래도 양재면 sessionStorage 외 원인.
+        try { sessionStorage.removeItem('mlbg.mapState'); } catch {}
         const urlLat = Number(searchParams.get('lat'));
         const urlLng = Number(searchParams.get('lng'));
         const hasUrlCoords = Number.isFinite(urlLat) && Number.isFinite(urlLng) && urlLat !== 0 && urlLng !== 0;
-        let savedState: { lat: number; lng: number; level: number } | null = null;
-        if (!hasUrlCoords) {
-          try {
-            const raw = sessionStorage.getItem('mlbg.mapState');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              // 이중 방어 — sid 매치 (같은 SPA 세션) AND 60초 TTL (백그라운드 후 복귀 차단)
-              const sidOk = parsed?.sid && parsed.sid === SESSION_TOKEN;
-              const t = Number(parsed?.t);
-              const fresh = Number.isFinite(t) && Date.now() - t <= MAP_RESTORE_TTL_MS;
-              if (sidOk && fresh && Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
-                savedState = { lat: parsed.lat, lng: parsed.lng, level: Number(parsed.level) || 4 };
-              }
-              // 1회용 — 어떤 사유로든 즉시 제거 (다음 진입에 stale 복원 방지)
-              sessionStorage.removeItem('mlbg.mapState');
-            }
-          } catch {}
-        }
         const center = hasUrlCoords
           ? new window.kakao.maps.LatLng(urlLat, urlLng)
-          : savedState
-            ? new window.kakao.maps.LatLng(savedState.lat, savedState.lng)
-            : new window.kakao.maps.LatLng(37.498, 127.027);
-        const initialLevel = hasUrlCoords ? 4 : (savedState?.level ?? 6);
+          : new window.kakao.maps.LatLng(37.498, 127.027);
+        const initialLevel = hasUrlCoords ? 4 : 6;
+        // 진단용 — production 콘솔에 찍어 사용자가 dev tools 로 확인 가능
+        if (typeof console !== 'undefined') {
+          console.log('[mlbg.map.init]', {
+            urlLat, urlLng, hasUrlCoords,
+            centerLat: hasUrlCoords ? urlLat : 37.498,
+            centerLng: hasUrlCoords ? urlLng : 127.027,
+            level: initialLevel,
+            search: typeof window !== 'undefined' ? window.location.search : '',
+          });
+        }
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: initialLevel }) as KakaoMapInst;
         mapInstRef.current = map;
 
