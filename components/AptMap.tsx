@@ -906,6 +906,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       if (f) setSelectedFactory(f);
       return;
     }
+    // 맛집 등록/댓글 → 지도 이동 + RestaurantPanel 열기
+    if (item.kind === 'restaurant_register' || item.kind === 'restaurant_comment') {
+      const r = restaurantList.find((x) => x.id === item.restaurant_id);
+      if (item.lat != null && item.lng != null && mapInstRef.current) {
+        const inst = mapInstRef.current;
+        inst.setLevel(3);
+        inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
+      }
+      if (r) setSelectedRestaurant(r);
+      return;
+    }
     // 커뮤니티 글/댓글 → /community/{post_id} 로 이동
     if ((item.kind === 'post' || item.kind === 'post_comment') && item.post_id) {
       router.push(`/community/${item.post_id}`);

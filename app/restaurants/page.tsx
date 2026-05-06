@@ -56,7 +56,7 @@ export default async function RestaurantsPage() {
             <ul className="grid gap-3 sm:grid-cols-2">
               {pins.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/?restaurant=${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 px-4 py-3 no-underline">
+                  <Link href={`/restaurants/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 px-4 py-3 no-underline">
                     <div className="flex items-baseline justify-between gap-2 mb-1">
                       <h3 className="text-[15px] font-bold text-navy truncate">🍴 {p.dong ? `${p.dong} ${p.name}` : p.name}</h3>
                       <span className="text-[10px] text-muted flex-shrink-0">❤ {p.like_count}</span>

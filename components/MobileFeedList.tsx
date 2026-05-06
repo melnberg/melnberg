@@ -66,7 +66,7 @@ function hrefFor(f: FeedItem): string | null {
     f.kind === 'sell_complete'
   ) return f.apt_master_id ? `/apt/${f.apt_master_id}` : null;
   if ((f.kind === 'restaurant_register' || f.kind === 'restaurant_comment') && f.restaurant_id) {
-    return `/?restaurant=${f.restaurant_id}`;
+    return `/restaurants/${f.restaurant_id}`;
   }
   // 시설 — 풀페이지
   if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/e/${f.apt_master_id}`;
