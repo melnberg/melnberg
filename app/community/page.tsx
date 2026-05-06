@@ -38,6 +38,16 @@ export default async function CommunityPage() {
 
       <section className="pb-6">
         <div className="max-w-content mx-auto px-4 lg:px-10">
+          <div className="mb-4 px-4 py-3 bg-navy-soft border border-navy/30 text-[12px] leading-relaxed text-text">
+            <b className="text-navy">커뮤니티 부여 규칙</b>
+            <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
+              <li>글 작성: <b>+2 mlbg</b></li>
+              <li>댓글 작성: <b>+0.5 mlbg</b></li>
+              <li>🌅 <b>출퇴근 인사 보너스</b>: KST <b>07~09시 / 18~20시</b> 안에서 본인이 직접 찍은 사진 첨부한 글 → <b>+20 mlbg</b> (퍼온 사진은 인정 안 됨)</li>
+              <li>인사 글 댓글: 같은 시간대 안에서 작성 시 <b>+1.5 mlbg</b> (×3 가중치)</li>
+              <li>🌾 <b>게시글 농사</b>: 다른 사람이 내 글에 첫 댓글 달면 <b>+0.5 mlbg</b> 가산 (1인당 1회)</li>
+            </ul>
+          </div>
           {posts.length === 0 ? (
             <div className="text-center py-20">
               <p className="text-muted text-[15px] mb-6">아직 게시된 글이 없습니다.</p>

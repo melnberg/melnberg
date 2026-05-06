@@ -415,6 +415,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       party_sd:    new window.kakao.maps.MarkerImage('/pins/factory-party-sd.svg',    new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       park:        new window.kakao.maps.MarkerImage('/pins/factory-park.svg',        new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       amusement:   new window.kakao.maps.MarkerImage('/pins/factory-amusement.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      bridge:      new window.kakao.maps.MarkerImage('/pins/factory-bridge.svg',      new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
     };
     for (const f of factoryList) {
       const pos = new window.kakao.maps.LatLng(f.lat, f.lng);

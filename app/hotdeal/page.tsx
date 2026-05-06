@@ -42,11 +42,13 @@ export default async function HotdealPage() {
       <section className="py-6">
         <div className="max-w-content mx-auto px-10">
           <div className="mb-4 px-4 py-3 bg-[#fef3c7] border border-[#fde68a] text-[12px] leading-relaxed text-[#78350f]">
-            <b>핫딜 게시판 안내</b>
+            <b>핫딜 게시판 부여 규칙</b>
             <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
-              <li>만두·쇼핑·먹거리·생활용품 등 회원 간 알면 좋은 핫한 정보 공유</li>
-              <li>적립 mlbg: 일반 커뮤글의 <b>2.5배 (글 5 / 댓글 1)</b></li>
-              <li>AI 평가는 동일 — 정성껏 쓴 분석은 최대 1.5배, 한두 줄 짧은 글은 0.1배</li>
+              <li>핫한 거래·할인·생활정보 공유</li>
+              <li>글 작성: <b>+7 mlbg</b></li>
+              <li>댓글 작성: <b>+1 mlbg</b></li>
+              <li>🌾 <b>게시글 농사</b>: 다른 사람이 내 글에 첫 댓글 달면 <b>+2 mlbg</b> 가산 (1인당 1회)</li>
+              <li>좋아요(♡) 누르면 작성자에게 +N (좋아요 수 기록만, 추가 적립 없음)</li>
             </ul>
           </div>
           {posts.length === 0 ? (

@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     } else if (r.asset_type === 'factory') {
       const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', r.asset_id).maybeSingle();
       const fr = f as { name: string | null; brand: string | null } | null;
-      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산' };
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산', bridge: '다리' };
       typePrefix = brandLabel[fr?.brand ?? ''] ?? '시설';
       assetName = fr?.name ?? '시설';
     } else if (r.asset_type === 'emart') {
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
     } else if (r.asset_type === 'factory') {
       const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', r.asset_id).maybeSingle();
       const fr = f as { name: string | null; brand: string | null } | null;
-      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산' };
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산', bridge: '다리' };
       assetName = `${brandLabel[fr?.brand ?? ''] ?? ''} ${fr?.name ?? '시설'}`.trim();
     } else if (r.asset_type === 'emart') {
       const { data: e } = await admin.from('emart_locations').select('name').eq('id', r.asset_id).maybeSingle();
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
     } else if (r.asset_type === 'factory') {
       const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', r.asset_id).maybeSingle();
       const fr = f as { name: string | null; brand: string | null } | null;
-      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산' };
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산', bridge: '다리' };
       assetName = `${brandLabel[fr?.brand ?? ''] ?? ''} ${fr?.name ?? '시설'}`.trim();
     } else if (r.asset_type === 'emart') {
       const { data: e } = await admin.from('emart_locations').select('name').eq('id', r.asset_id).maybeSingle();
@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
     if (e.asset_type === 'factory') {
       const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', e.asset_id).maybeSingle();
       const fr = f as { name: string | null; brand: string | null } | null;
-      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산' };
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산', bridge: '다리' };
       assetName = `${brandLabel[fr?.brand ?? ''] ?? ''} ${fr?.name ?? '시설'}`.trim();
     } else {
       const { data: m } = await admin.from('emart_locations').select('name').eq('id', e.asset_id).maybeSingle();

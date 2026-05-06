@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">
+  <defs>
+    <radialGradient id="brGloss" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/>
+  <path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#0EA5E9" stroke="#1a1d22" stroke-width="2"/>
+  <path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#brGloss)" stroke="none"/>
+  <!-- 다리 — 아치 + 데크 + 두 기둥 -->
+  <g fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 21 Q 16 11, 25 21" />
+    <line x1="7" y1="21" x2="25" y2="21"/>
+    <line x1="11" y1="14" x2="11" y2="21"/>
+    <line x1="21" y1="14" x2="21" y2="21"/>
+  </g>
+</svg>

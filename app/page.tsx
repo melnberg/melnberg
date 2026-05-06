@@ -611,7 +611,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const factoryItems: FeedItem[] = factoryRows.map((r) => {
       const f = (Array.isArray(r.factory) ? r.factory[0] : r.factory) as { name?: string | null; brand?: string | null; lat?: number | null; lng?: number | null } | null;
       const prof = profileMap.get(r.user_id);
-      const brandLabelMap: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산' };
+      const brandLabelMap: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역', party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당', party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당', park: '공원', amusement: '놀이동산', bridge: '다리' };
       const brandLabel = brandLabelMap[f?.brand ?? ''] ?? '시설';
       return {
         kind: 'factory_occupy' as const,

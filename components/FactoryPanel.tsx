@@ -10,7 +10,7 @@ import RewardTooltip from './RewardTooltip';
 
 export type FactoryItem = {
   id: number;
-  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station' | 'party_dem' | 'party_ppl' | 'party_jhs' | 'party_ref' | 'party_jin' | 'party_basic' | 'party_sd' | 'park' | 'amusement';
+  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station' | 'party_dem' | 'party_ppl' | 'party_jhs' | 'party_ref' | 'party_jin' | 'party_basic' | 'party_sd' | 'park' | 'amusement' | 'bridge';
   name: string;
   address: string | null;
   lat: number;
@@ -46,6 +46,7 @@ const BRAND_META: Record<FactoryItem['brand'], { label: string; bg: string; icon
   party_sd:    { label: '사회민주당',   bg: '#C32A45', iconBg: '#fee2e2', pin: '/pins/factory-party-sd.svg' },
   park:        { label: '공원',         bg: '#16A34A', iconBg: '#dcfce7', pin: '/pins/factory-park.svg' },
   amusement:   { label: '놀이동산',     bg: '#F59E0B', iconBg: '#fef3c7', pin: '/pins/factory-amusement.svg' },
+  bridge:      { label: '다리',         bg: '#0EA5E9', iconBg: '#e0f2fe', pin: '/pins/factory-bridge.svg' },
 };
 
 function fmtKstShort(iso: string): string {
