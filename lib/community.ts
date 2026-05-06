@@ -32,16 +32,18 @@ export type CommunityComment = {
 export async function listPosts(category: PostCategory = 'community', limit = 50): Promise<CommunityPost[]> {
   const supabase = await createClient();
   // deleted_at IS NULL — soft-delete 된 글은 리스트에서 숨김.
-  // SQL 064 미적용 환경 안전을 위해 실패 시 deleted_at 필터 없이 재시도.
+  // SQL 064 미적용 환경 안전을 위해 실패 시 deleted_at 컬럼 select 만 빼고 재시도, 클라 필터.
+  // select 에 deleted_at 추가해서 fallback 시에도 클라 필터 가능하도록.
   let { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
+    .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
     .eq('category', category)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) {
-    // deleted_at 컬럼 없을 가능성 → fallback
+    console.error('listPosts primary query error, falling back:', error);
+    // deleted_at 컬럼 없을 가능성 → fallback (deleted_at 없이 select)
     const fallback = await supabase
       .from('posts')
       .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
@@ -55,7 +57,10 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
     console.error('listPosts error', error);
     return [];
   }
-  const rows = (data ?? []).map((p: Record<string, unknown>) => {
+  // 안전망 — server 쿼리에서 필터됐어도, 결과에 deleted_at 있는 row 가 섞여 있으면 클라이언트에서 제거.
+  // 일부 RLS/캐시 상황에서 필터가 무시되는 사고 재발 방지.
+  const filtered = (data ?? []).filter((p: Record<string, unknown>) => !p.deleted_at);
+  const rows = filtered.map((p: Record<string, unknown>) => {
     const commentsArr = p.comments as Array<{ count: number }> | undefined;
     const commentCount = commentsArr?.[0]?.count ?? 0;
     const { comments, ...rest } = p;
