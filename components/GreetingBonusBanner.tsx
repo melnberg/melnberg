@@ -27,8 +27,23 @@ export default function GreetingBonusBanner() {
 
   useEffect(() => {
     function check() {
-      const h = getKstHour();
-      const next = isGreetingTime(h);
+      // 디버그 강제 노출: ?debug=greeting (또는 ?debug=greeting-evening)
+      let next = { active: false, period: null as '아침 출근' | '저녁 퇴근' | null };
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        const dbg = sp.get('debug');
+        if (dbg === 'greeting' || dbg === 'greeting-morning') {
+          next = { active: true, period: '아침 출근' };
+        } else if (dbg === 'greeting-evening') {
+          next = { active: true, period: '저녁 퇴근' };
+        } else {
+          const h = getKstHour();
+          next = isGreetingTime(h);
+        }
+      } catch {
+        const h = getKstHour();
+        next = isGreetingTime(h);
+      }
       setInfo(next);
       // dismissed 키는 시간대 단위 — 다른 시간대 진입 시 다시 노출
       const dismissKey = `mlbg.greeting.dismiss.${next.period ?? ''}.${new Date().toISOString().slice(0, 10)}`;
