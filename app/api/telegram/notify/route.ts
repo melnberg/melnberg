@@ -121,21 +121,38 @@ export async function POST(req: NextRequest) {
     tag = '🛒 이마트 분양';
     main = `${em?.name ?? '이마트'}`;
   } else if (kind === 'auction_bid') {
-    // 입찰자 본인만 — 현재가 갱신 알림. 락은 race-y 하지만 latest current_bidder_id 검증으로 가벼운 boundary.
+    // race condition fix — current_bidder_id 직접 비교 시, 알림 호출 직전에 다른 사용자가 outbid 하면
+    // current_bidder_id !== user.id 가 되어 정당한 입찰 알림이 누락됨. (실제 사고: 반포리체 후상 누락 2026-05-06)
+    // 본인의 60초 이내 최근 입찰 row 존재 여부로 권한 검증 → race 가 와도 알림 발송 보장.
+    const { data: myBid } = await admin
+      .from('auction_bids')
+      .select('id, amount, created_at')
+      .eq('auction_id', refId)
+      .eq('bidder_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const b = myBid as { id: number; amount: number; created_at: string } | null;
+    if (!b) return NextResponse.json({ error: 'no bid by user' }, { status: 403 });
+    if (Date.now() - new Date(b.created_at).getTime() > 60_000) {
+      return NextResponse.json({ error: 'bid too old (>60s)' }, { status: 403 });
+    }
+
     const { data: auc } = await admin
       .from('apt_auctions')
       .select('id, apt_id, current_bid, current_bidder_id, ends_at, bid_count, apt_master:apt_master!apt_id(apt_nm)')
       .eq('id', refId).maybeSingle();
     const r = auc as { id: number; apt_id: number; current_bid: number | null; current_bidder_id: string | null; ends_at: string; bid_count: number; apt_master: { apt_nm: string | null } | null } | null;
     if (!r) return NextResponse.json({ error: 'auction not found' }, { status: 404 });
-    if (r.current_bidder_id !== user.id) {
-      return NextResponse.json({ error: 'not latest bidder' }, { status: 403 });
-    }
+
     const aptName = r.apt_master?.apt_nm ?? '단지';
     const { data: pr } = await admin.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
     const bidderName = (pr as { display_name?: string | null } | null)?.display_name ?? '익명';
+    const isLeader = r.current_bidder_id === user.id;
     tag = '⚡ 경매 입찰';
-    main = `${aptName} ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 갱신 (${bidderName} 님 · 누적 ${r.bid_count}건)`;
+    main = isLeader
+      ? `${aptName} ${Number(r.current_bid ?? 0).toLocaleString()} mlbg 갱신 (${bidderName} 님 · 누적 ${r.bid_count}건)`
+      : `${aptName} ${Number(b.amount).toLocaleString()} mlbg 입찰 (${bidderName} 님 — 직후 ${Number(r.current_bid ?? 0).toLocaleString()} 으로 갱신됨)`;
   } else if (kind === 'offer' || kind === 'snatch') {
     // refId = apt_listing_offers.id. 매수 호가 / 내놔 알림.
     const { data } = await admin
