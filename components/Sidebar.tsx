@@ -128,46 +128,44 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 블로그 메뉴 가림 (2026-05-06). 다시 보려면 주석 해제. */}
           {/* <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} /> */}
 
-          <SectionToggle
-            label="상담"
-            icon={<ConsultIcon />}
-            open={consultOpen}
-            onClick={() => setConsultOpen((v) => !v)}
-          />
-          {consultOpen && consults.map((p) => (
-            <SItem
-              key={p.id}
-              href={`/pay/${p.id}`}
-              label={p.name}
-              price={p.price.toLocaleString('en-US')}
-              active={current === p.filename}
-              icon={p.id === 'short-consult' ? <ChatShortIcon /> : <ChatLongIcon />}
-              onClick={() => setOpen(false)}
-              sub
-            />
-          ))}
-
+          {/* 멤버십 — 상담 2개 + 멤버십 2개 모두 하위 */}
           <SectionToggle
             label="멤버십"
             icon={<MembershipIcon />}
-            open={membershipOpen}
-            onClick={() => setMembershipOpen((v) => !v)}
+            open={membershipOpen || consultOpen}
+            onClick={() => { const next = !(membershipOpen || consultOpen); setMembershipOpen(next); setConsultOpen(next); }}
           />
-          {membershipOpen && memberships.map((p) => (
-            <SItem
-              key={p.id}
-              href={`/pay/${p.id}`}
-              label={p.id === 'new-membership' ? '2분기 신규가입' : '2분기 갱신'}
-              price={p.price.toLocaleString('en-US')}
-              active={current === p.filename}
-              icon={p.id === 'new-membership' ? <StarIcon /> : <RenewIcon />}
-              onClick={() => setOpen(false)}
-              sub
-            />
-          ))}
+          {(membershipOpen || consultOpen) && (
+            <>
+              {memberships.map((p) => (
+                <SItem
+                  key={p.id}
+                  href={`/pay/${p.id}`}
+                  label={p.id === 'new-membership' ? '2분기 신규가입' : '2분기 갱신'}
+                  price={p.price.toLocaleString('en-US')}
+                  active={current === p.filename}
+                  icon={p.id === 'new-membership' ? <StarIcon /> : <RenewIcon />}
+                  onClick={() => setOpen(false)}
+                  sub
+                />
+              ))}
+              {consults.map((p) => (
+                <SItem
+                  key={p.id}
+                  href={`/pay/${p.id}`}
+                  label={p.name}
+                  price={p.price.toLocaleString('en-US')}
+                  active={current === p.filename}
+                  icon={p.id === 'short-consult' ? <ChatShortIcon /> : <ChatLongIcon />}
+                  onClick={() => setOpen(false)}
+                  sub
+                />
+              ))}
+            </>
+          )}
 
-          {/* 시한 경매 */}
-          <SItem href="/auctions" label="시한 경매" active={current === 'auctions'} icon={<AuctionIcon />} onClick={() => setOpen(false)} />
+          {/* 시한 경매 — 매일 진행 X 라 메뉴 숨김. 진행 시 주석 해제 */}
+          {/* <SItem href="/auctions" label="시한 경매" active={current === 'auctions'} icon={<AuctionIcon />} onClick={() => setOpen(false)} /> */}
 
           {/* 맛집 추천 */}
           <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<span className="text-[14px]">🍴</span>} onClick={() => setOpen(false)} />
