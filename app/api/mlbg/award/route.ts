@@ -34,8 +34,10 @@ function hasOwnUploadedImage(content: string, userId: string): boolean {
 
 function evaluateAward(kind: Kind, content: string): { earned: number; reason: string } {
   if (kind.endsWith('_comment')) {
-    // 댓글 base — community 0.5, hotdeal 1, 그 외 0.5
-    const earned = kind === 'hotdeal_comment' ? 1 : 0.5;
+    // 댓글 base — community 0.5, hotdeal 1, apt 1, 그 외 (factory/emart) 0.5
+    const earned = kind === 'hotdeal_comment' ? 1
+                 : kind === 'apt_comment' ? 1
+                 : 0.5;
     return { earned, reason: '댓글' };
   }
   const text = (content ?? '').trim();

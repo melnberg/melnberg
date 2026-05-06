@@ -2,20 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 
 // 단지 리뷰 [찐리뷰♡] 버튼.
 // 누구나 누름 (본인 글 제외). 좋아요 ON → 글 작성자 +3 mlbg / OFF → -3 mlbg 회수.
+// 활동 직전 다리 통행료 (한강 횡단 시) 자동 검사·결제.
 // 안내 문구로 차감 위협 노출 (실제 차감 X — 위협용).
 export default function AptReviewLikeButton({
   discussionId,
   authorId,
   initialCount,
   currentUserId,
+  aptLat,
+  aptLng,
 }: {
   discussionId: number;
   authorId: string;
   initialCount: number;
   currentUserId: string | null;
+  aptLat?: number | null;
+  aptLng?: number | null;
 }) {
   const supabase = createClient();
   const [liked, setLiked] = useState(false);
@@ -45,6 +51,13 @@ export default function AptReviewLikeButton({
     if (!currentUserId) { alert('로그인 후 누를 수 있어요.'); return; }
     if (isAuthor) { alert('본인 리뷰엔 못 눌러요.'); return; }
     setBusy(true);
+    // 다리 통행료 사전 검사 (한강 횡단 시)
+    const tollOk = await checkAndPayBridgeToll(aptLat ?? null, aptLng ?? null);
+    if (!tollOk.ok) {
+      setBusy(false);
+      if (tollOk.message) alert(tollOk.message);
+      return;
+    }
     const prev = liked;
     const prevC = count;
     setLiked(!prev);

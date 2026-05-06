@@ -10,6 +10,7 @@ import { getAptListingPrice } from '@/lib/listing-price';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
@@ -412,6 +413,12 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     if (!userId) { setSubmitErr('로그인이 필요해요.'); return; }
     const text = body.trim();
     if (!text) { setSubmitErr('내용을 입력해주세요.'); return; }
+    // 다리 통행료 사전 검사 (한강 횡단 시) — 글 수정도 동일 로직 적용
+    const tollOk = await checkAndPayBridgeToll(apt.lat, apt.lng);
+    if (!tollOk.ok) {
+      if (tollOk.message) setSubmitErr(tollOk.message);
+      return;
+    }
     const newlineIdx = text.indexOf('\n');
     const titleLine = newlineIdx === -1 ? text : text.slice(0, newlineIdx).trim();
     const restLines = newlineIdx === -1 ? null : text.slice(newlineIdx + 1).trim() || null;
@@ -916,6 +923,8 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
                       authorId={d.author_id}
                       initialCount={d.like_count ?? 0}
                       currentUserId={userId ?? null}
+                      aptLat={apt.lat}
+                      aptLng={apt.lng}
                     />
                   </div>
 
