@@ -7,6 +7,7 @@ import TelegramFloatingLink from './TelegramFloatingLink';
 import FloatingMapPin from './FloatingMapPin';
 import LiveActivityToaster from './LiveActivityToaster';
 import MobileTopBar from './MobileTopBar';
+import GreetingBonusBanner from './GreetingBonusBanner';
 
 // 사이드바 최신글 — 120초 캐싱 (모든 페이지 공통). DB 부하 감소 위해 30→120 확대 (2026-05-06).
 // 새 글 작성 시 revalidateTag('posts') 로 즉시 갱신되므로 사용자 체감 거의 없음.
@@ -70,6 +71,7 @@ export default async function Layout({ current, children }: { current?: string; 
       <Sidebar current={current} user={sidebarUser} recentPosts={recentPosts} />
       <main className="flex-1 min-w-0 flex flex-col">
         <MobileTopBar />
+        <GreetingBonusBanner />
         {children}
       </main>
       <TelegramFloatingLink />
