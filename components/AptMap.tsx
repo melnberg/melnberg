@@ -70,16 +70,24 @@ declare global {
 // 모바일 핀 → 상세 라우팅 시 지도 복원용 상태 저장.
 // 사용자가 보던 그대로 (현재 중심 + 현재 줌) 저장.
 //
-// 복원 조건은 이중 방어:
+// 복원 조건 — 삼중 방어:
 //   1) sid 매치 — 같은 SPA 세션 (모듈 평가 1회분) 안에서만 복원.
-//      브라우저/탭/어플 재시작 → 새 document → 모듈 재평가 → 새 토큰 → sid 불일치 → 차단.
-//   2) 60초 TTL — 어플 백그라운드 후 한참 뒤 복귀하는 케이스도 차단.
-//      "핀 → 상세 → 뒤로가기" 흐름은 보통 수 초 ~ 수십 초 내. 60초로 그 흐름만 통과.
-// 둘 다 통과 못하면 default 강남.
+//      브라우저/탭/어플 process kill → 새 document → 모듈 재평가 → 새 토큰 → sid 불일치 → 차단.
+//   2) 30초 TTL — "핀 → 상세 → 뒤로가기" 는 보통 수 초 ~ 30초. 30초 내만 통과.
+//   3) visibilitychange:hidden 시 즉시 삭제 — 어플 백그라운드/탭 hide 갔다 오면 fresh entry 로 취급.
+//      어플 process 가 살아있어 sid 같고 TTL 안이라도, 그 사이 사용자가 다른 곳에 갔다 왔으면 복원 X.
+// 셋 다 통과 못하면 default 강남.
 const SESSION_TOKEN = typeof window === 'undefined'
   ? ''
   : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const MAP_RESTORE_TTL_MS = 60 * 1000;
+const MAP_RESTORE_TTL_MS = 30 * 1000;
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      try { sessionStorage.removeItem('mlbg.mapState'); } catch {}
+    }
+  });
+}
 function saveCurrentMapState(inst: KakaoMapInst | null) {
   try {
     if (!inst) return;
