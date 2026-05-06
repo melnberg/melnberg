@@ -39,21 +39,16 @@ export function linkify(text: string | null | undefined): React.ReactNode {
       {parts.map((p, i) => {
         if (typeof p === 'string') return <React.Fragment key={i}>{p}</React.Fragment>;
         if (p.isImage) {
-          // 이미지 — SNS 스타일. 부모 div 로 폭 강제 + img 자체도 inline style.
-          // 세로 사진이 화면 절반 차지하던 사고 (2026-05-06) 해결.
+          // 이미지 — SNS 스타일. globals.css 의 .mlbg-post-img 가 !important 로 강제.
+          // 인라인 style / Tailwind arbitrary class 가 안 먹던 사고 (2026-05-06) 의 최종 안전망.
           return (
-            <span
+            <img
               key={i}
-              style={{ display: 'block', maxWidth: '480px', margin: '12px auto' }}
-            >
-              <img
-                src={p.href}
-                alt=""
-                loading="lazy"
-                style={{ display: 'block', width: '100%', height: 'auto', maxHeight: '400px', objectFit: 'contain' }}
-                className="border border-border rounded-xl"
-              />
-            </span>
+              src={p.href}
+              alt=""
+              loading="lazy"
+              className="mlbg-post-img"
+            />
           );
         }
         return (

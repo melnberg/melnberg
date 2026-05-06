@@ -187,3 +187,16 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* 글 본문 인라인 이미지 (lib/linkify.tsx) — SNS 카드 스타일 강제.
+   인라인 style 이 어떤 이유로 안 먹는 사고 방지용 안전망. */
+.mlbg-post-img {
+  display: block !important;
+  max-width: 480px !important;
+  max-height: 400px !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 12px auto !important;
+  object-fit: contain !important;
+  border-radius: 12px !important;
+}
