@@ -579,7 +579,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         map,
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
-        setSelectedRestaurant(r);
+        // 모바일: 패널이 피드/검색 UI 에 가려지므로 상세 페이지로 이동
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          router.push(`/restaurants/${r.id}`);
+        } else {
+          setSelectedRestaurant(r);
+        }
       });
       restaurantMarkersRef.current.push(marker);
     }
@@ -640,7 +645,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         image: k.occupier_id ? imgOcc : imgEmpty,
         map,
       }) as KakaoMarkerInst;
-      window.kakao.maps.event.addListener(marker, 'click', () => { setSelectedKids(k); });
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          router.push(`/kids/${k.id}`);
+        } else {
+          setSelectedKids(k);
+        }
+      });
       kidsMarkersRef.current.push(marker);
     }
     return () => {
