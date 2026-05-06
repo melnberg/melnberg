@@ -104,9 +104,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       return { ...r, _assetName: info.name, _assetLat: info.lat, _assetLng: info.lng, _assetDong: info.dong, _assetType: aType, _assetId: aId };
     });
 
-    // Phase B — 8개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
+    // Phase B — 10개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
     const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp] = await Promise.all([
+    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp] = await Promise.all([
       supabase
         .from('emart_occupations')
         .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
@@ -154,6 +154,18 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      // 신규 등록된 맛집 핀 (피드)
+      supabase
+        .rpc('list_recent_restaurant_pins', { p_limit: 20 })
+        .then((r) => r, () => ({ data: null })),
+      // 맛집 댓글
+      supabase
+        .from('restaurant_pin_comments')
+        .select('id, pin_id, author_id, content, created_at, pin:restaurant_pins!pin_id(name, recommended_menu, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const emartRows = (((emartOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
     const annRows = ((annResp as { data: unknown[] | null })?.data ?? []) as Array<{ id: number; title: string; body: string | null; link_url: string | null; created_at: string }>;
@@ -178,6 +190,16 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const factoryRows = (((factoryOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; factory_id: number; user_id: string; occupied_at: string; factory: unknown }>);
     const emartCommRows = (((emartCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; author_id: string; content: string; created_at: string; emart: unknown }>);
     const factoryCommRows = (((factoryCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; factory_id: number; author_id: string; content: string; created_at: string; factory: unknown }>);
+    const restaurantPinRows = (((restaurantPinsResp as { data: unknown[] | null })?.data ?? []) as Array<{
+      id: number; name: string; description: string; recommended_menu: string;
+      lat: number; lng: number; photo_url: string | null;
+      author_id: string; author_name: string | null;
+      created_at: string;
+    }>);
+    const restaurantCommRows = (((restaurantCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
+      id: number; pin_id: number; author_id: string; content: string; created_at: string;
+      pin: { name: string | null; recommended_menu: string | null; lat: number | null; lng: number | null } | null;
+    }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
@@ -257,6 +279,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...factoryRows.map((f) => f.user_id),
       ...emartCommRows.map((c) => c.author_id),
       ...factoryCommRows.map((c) => c.author_id),
+      ...restaurantPinRows.map((r) => r.author_id),
+      ...restaurantCommRows.map((c) => c.author_id),
     ].filter(Boolean)));
     const awardRefIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
@@ -838,8 +862,63 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
-    // 경매는 강제 최상단 유지. 사이트 공지·일반·입찰·이마트·공장·파업·통행료·거래성사 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems]
+    // 신규 등록 맛집 핀 → FeedItem (kind 'restaurant_register')
+    const restaurantRegisterItems: FeedItem[] = restaurantPinRows.map((r) => {
+      const prof = profileMap.get(r.author_id);
+      return {
+        kind: 'restaurant_register' as const,
+        id: 800000 + r.id,
+        apt_master_id: 0,
+        post_id: null,
+        title: `🍴 ${r.name}`,
+        content: `${r.description}\n[메뉴] ${r.recommended_menu}`,
+        created_at: r.created_at,
+        apt_nm: r.name,
+        dong: null,
+        lat: r.lat, lng: r.lng,
+        author_id: r.author_id,
+        author_name: r.author_name ?? prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        restaurant_id: r.id,
+        restaurant_name: r.name,
+        restaurant_recommended_menu: r.recommended_menu,
+      } as FeedItem;
+    });
+
+    // 맛집 댓글 → FeedItem (kind 'restaurant_comment')
+    const restaurantCommentItems: FeedItem[] = restaurantCommRows.map((c) => {
+      const prof = profileMap.get(c.author_id);
+      const pin = c.pin;
+      return {
+        kind: 'restaurant_comment' as const,
+        id: 900000 + c.id,
+        apt_master_id: 0,
+        post_id: null,
+        title: pin?.name ?? '맛집',
+        content: c.content,
+        created_at: c.created_at,
+        apt_nm: pin?.name ?? null,
+        dong: null,
+        lat: pin?.lat ?? null,
+        lng: pin?.lng ?? null,
+        author_id: c.author_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        restaurant_id: c.pin_id,
+        restaurant_name: pin?.name ?? null,
+      } as FeedItem;
+    });
+
+    // 경매는 강제 최상단 유지. 그 외 모두 시간순.
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 100 - auctionItems.length);
     return [...auctionItems, ...others];
