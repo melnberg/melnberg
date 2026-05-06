@@ -50,6 +50,8 @@ grant execute on function public.snapshot_wealth_ranking() to service_role;
 -- rank_delta < 0  : 어제보다 순위 하락 (파란 ↓)
 -- rank_delta = 0  : 변동 없음 (−)
 -- rank_delta = null: 어제 스냅샷에 없던 신규 (NEW)
+-- returns table 컬럼 추가는 create or replace 로 안 됨 → drop 필요
+drop function if exists public.get_wealth_ranking_paged(int, int);
 create or replace function public.get_wealth_ranking_paged(
   p_offset int default 0,
   p_limit int default 50
