@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
 import type { RestaurantItem } from './RestaurantPanel';
@@ -106,7 +107,12 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
           </button>
         </div>
         {pin.address && <div className="text-[12px] text-muted">{pin.address}</div>}
-        <div className="text-[11px] text-muted mt-1">등록 by <b className="text-navy">{pin.author_name ?? '익명'}</b></div>
+        <div className="text-[11px] text-muted mt-1 flex items-center gap-2">
+          <span>등록 by <b className="text-navy">{pin.author_name ?? '익명'}</b></span>
+          {isAuthor && (
+            <Link href={`/restaurants/${pin.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</Link>
+          )}
+        </div>
       </header>
 
       {pin.photo_url && (

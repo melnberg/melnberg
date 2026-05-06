@@ -193,7 +193,12 @@ export default function RestaurantPanel({
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-muted mb-3">
-          <span>등록 by <b className="text-navy">{restaurant.author_name ?? '익명'}</b></span>
+          <span className="flex items-center gap-2">
+            <span>등록 by <b className="text-navy">{restaurant.author_name ?? '익명'}</b></span>
+            {isAuthor && (
+              <a href={`/restaurants/${restaurant.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</a>
+            )}
+          </span>
           <button onClick={toggleLike} disabled={isAuthor || busy}
             className={`flex items-center gap-1 px-2 py-1 border ${liked ? 'border-[#dc2626] bg-[#fef2f2] text-[#dc2626]' : 'border-border bg-white text-muted hover:border-[#dc2626] hover:text-[#dc2626]'} ${isAuthor ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
             <span>❤</span> <span className="tabular-nums">{likeCount}</span>
