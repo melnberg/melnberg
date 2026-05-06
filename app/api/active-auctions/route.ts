@@ -6,8 +6,8 @@ export const revalidate = 0;
 
 export async function GET() {
   const supabase = createPublicClient();
-  // 만료 경매 자동 종료
-  await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
+  // 만료 경매 자동 종료는 /api/cron/complete-auctions 으로 이전 (read-only 만 유지).
+  // 매 요청마다 실행 시 25초 timeout death spiral → middleware 504 폭발 (2026-05-06 사고).
   const { data } = await supabase
     .rpc('list_recent_auctions', { p_limit: 30 })
     .then((r) => r, () => ({ data: null }));
