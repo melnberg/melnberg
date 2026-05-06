@@ -5,6 +5,7 @@ import MainTop from '@/components/MainTop';
 import AdminPanel from '@/components/AdminPanel';
 import LaunchTelegramButton from '@/components/LaunchTelegramButton';
 import LaunchPartiesTelegramButton from '@/components/LaunchPartiesTelegramButton';
+import AdminAnnouncementForm from '@/components/AdminAnnouncementForm';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 import { type ProfileWithTier, type PaymentRecord } from '@/lib/tier';
@@ -84,6 +85,10 @@ export default async function AdminPage() {
             </div>
           </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>
+
+          <div className="mb-8">
+            <AdminAnnouncementForm />
+          </div>
 
           <AdminPanel profiles={profiles} payments={payments} />
         </div>

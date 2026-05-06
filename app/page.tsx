@@ -566,6 +566,28 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       author_id: null, author_name: '분양홍보팀', author_link: null,
       author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
     });
+    // 사이트 공지 (어드민이 작성한 동적 공지) — 카페 새 글 푸시 등
+    const { data: annRows } = await supabase
+      .from('site_announcements')
+      .select('id, title, body, link_url, created_at')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const announcementItems: FeedItem[] = ((annRows ?? []) as Array<{ id: number; title: string; body: string | null; link_url: string | null; created_at: string }>).map((a) => ({
+      kind: 'notice' as const,
+      id: 500000 + a.id,
+      apt_master_id: 0,
+      post_id: null,
+      title: a.title,
+      content: a.body,
+      created_at: a.created_at,
+      apt_nm: null, dong: null, lat: null, lng: null,
+      author_id: null, author_name: '공지', author_link: null,
+      author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
+      notice_href: a.link_url ?? undefined,
+    }));
+
     const NOTICE_ITEMS: FeedItem[] = [
       noticeBase(1, LAUNCH_TS, '이마트 분양 시작',
         '이마트 매장이 분양 대상으로 추가됐습니다.\n분양가 5 mlbg, 매일 1 mlbg 자동 수익. 5일이면 회수. 1인 1점포.\n지도 노란 e 핀 클릭 → 분양받기.'),
@@ -719,8 +741,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       strike_loss_mlbg: Number(s.loss_mlbg),
     } as FeedItem));
 
-    // 경매는 강제 최상단 유지. 공지·일반·입찰·이마트·공장·파업은 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems]
+    // 경매는 강제 최상단 유지. 사이트 공지·일반·입찰·이마트·공장·파업은 모두 시간순.
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 100 - auctionItems.length);
     return [...auctionItems, ...others];
