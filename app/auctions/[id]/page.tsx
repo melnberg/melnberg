@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AuctionBidForm from '@/components/AuctionBidForm';
+import AuctionCommentSection from '@/components/AuctionCommentSection';
 import { createPublicClient } from '@/lib/supabase/public';
 import { createClient } from '@/lib/supabase/server';
 
@@ -99,9 +100,12 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   const userClient = await createClient();
   const { data: { user } } = await userClient.auth.getUser();
   let myBalance: number | null = null;
+  let currentUserName: string | null = null;
   if (user) {
-    const { data: prof } = await userClient.from('profiles').select('mlbg_balance').eq('id', user.id).maybeSingle();
-    myBalance = prof ? Number((prof as { mlbg_balance?: number | null }).mlbg_balance ?? 0) : 0;
+    const { data: prof } = await userClient.from('profiles').select('mlbg_balance, display_name').eq('id', user.id).maybeSingle();
+    const p = prof as { mlbg_balance?: number | null; display_name?: string | null } | null;
+    myBalance = p ? Number(p.mlbg_balance ?? 0) : 0;
+    currentUserName = p?.display_name ?? null;
   }
 
   const isActive = auction.status === 'active';
@@ -166,6 +170,13 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
               </ul>
             )}
           </section>
+
+          {/* 경매 채팅 — 입찰자/관전자 댓글 + 0.5 mlbg 보상 */}
+          <AuctionCommentSection
+            auctionId={auction.id}
+            currentUserId={user?.id ?? null}
+            currentUserName={currentUserName}
+          />
         </div>
       </section>
     </Layout>
