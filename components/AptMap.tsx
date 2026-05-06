@@ -1633,7 +1633,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
       {/* 우하단 핀 필터 — 기본은 케밥 버튼만, 누르면 chip 5개가 위로 펼쳐짐.
           FloatingMapPin (bottom-5 right-5) 위에 세로 일렬 정렬. 화면 가림 최소화. */}
-      <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col items-end gap-1.5">
+      <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col items-center gap-1.5">
         {filterOpen && ([
           { k: 'apt' as const, label: '집', from: '#fdba74', to: '#ea580c' },
           { k: 'facility' as const, label: '시설', from: '#9ca3af', to: '#4b5563' },
@@ -1674,22 +1674,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             </button>
           );
         })}
-        {/* 케밥(점 3개) 토글 — 항상 표시. 누르면 위 chip 펼침/접힘 */}
+        {/* 케밥(점 3개) 토글 — FloatingMapPin (w-11 h-11 rounded-full) 과 동일 크기·모양·중심축 */}
         <button
           type="button"
           onClick={() => setFilterOpen((v) => !v)}
           aria-label="핀 필터 토글"
           aria-expanded={filterOpen}
-          className="w-9 h-9 rounded-sm cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-          style={{
-            backgroundColor: '#ffffff',
-            borderWidth: '1px',
-            borderStyle: 'solid',
-            borderColor: 'rgba(0,0,0,0.15)',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-          }}
+          className="w-11 h-11 rounded-full cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 transition-transform bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#374151" aria-hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <circle cx="12" cy="5" r="2" />
             <circle cx="12" cy="12" r="2" />
             <circle cx="12" cy="19" r="2" />
