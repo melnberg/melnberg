@@ -1629,14 +1629,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
           data-keep-on-mobile-map — 모바일 미니멀 지도 모드에서 숨김 처리되지 않도록 예외.
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
-      {/* FloatingMapPin (Layout fixed bottom-5 right-5, 44×44) 위에 같은 폭으로 stack — 우하단 한 줄 정렬 */}
+      {/* FloatingMapPin (fixed bottom-5 right-5, 44×44, 흰테두리+오로라) 와 같은 vertical axis.
+          right-5 + w-11 동일 → 중심축 일치. 색상 그라데이션 + 흰테두리 + 그림자로 통일감. */}
       <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col gap-1.5">
         {([
-          { k: 'apt' as const, label: '집', color: '#f97316' },
-          { k: 'facility' as const, label: '시설', color: '#6b7280' },
-          { k: 'emart' as const, label: '마트', color: '#fbbf24' },
-          { k: 'restaurant' as const, label: '맛집', color: '#f59e0b' },
-          { k: 'kids' as const, label: '육아', color: '#f472b6' },
+          { k: 'apt' as const, label: '집', from: '#fdba74', to: '#ea580c' },
+          { k: 'facility' as const, label: '시설', from: '#9ca3af', to: '#4b5563' },
+          { k: 'emart' as const, label: '마트', from: '#fde68a', to: '#d97706' },
+          { k: 'restaurant' as const, label: '맛집', from: '#fbbf24', to: '#b45309' },
+          { k: 'kids' as const, label: '육아', from: '#fbcfe8', to: '#db2777' },
         ]).map((it) => {
           const on = pinFilters[it.k];
           return (
@@ -1645,11 +1646,26 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               type="button"
               onClick={() => togglePinFilter(it.k)}
               aria-pressed={on}
-              className={`w-11 h-11 text-[12px] font-bold rounded-md shadow cursor-pointer transition-all flex items-center justify-center border-2 border-[#1a1d22] ${on ? '' : 'line-through'}`}
+              className={`w-11 h-11 text-[12px] font-bold rounded-full cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 ${on ? '' : 'line-through'}`}
               style={
                 on
-                  ? { backgroundColor: it.color, color: '#fff' }
-                  : { backgroundColor: '#fff', color: '#9ca3af' }
+                  ? {
+                      background: `linear-gradient(135deg, ${it.from} 0%, ${it.to} 100%)`,
+                      color: '#fff',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: '#ffffff',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06)',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.25)',
+                    }
+                  : {
+                      backgroundColor: '#ffffff',
+                      color: '#9ca3af',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: '#ffffff',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06)',
+                    }
               }
             >
               {it.label}
