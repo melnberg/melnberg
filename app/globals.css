@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 /* 모바일 미니멀 지도 모드 — 첫번째 자식(map div)만 보이고 나머지 오버레이 모두 숨김.
-   .map-minimal 클래스가 적용된 컨테이너에서, 1024px 미만에서만 적용. */
+   .map-minimal 클래스가 적용된 컨테이너에서, 1024px 미만에서만 적용.
+   data-keep-on-mobile-map 속성이 붙은 요소는 예외 (예: 핀 카테고리 필터). */
 @media (max-width: 1023px) {
-  .map-minimal > .relative > *:not(:first-child) { display: none !important; }
+  .map-minimal > .relative > *:not(:first-child):not([data-keep-on-mobile-map]) { display: none !important; }
 }
 
 /* AI 답변 로딩 라벨 — 그라데이션 흐름 + 슬라이드업 */

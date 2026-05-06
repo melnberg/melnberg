@@ -1627,8 +1627,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
       {/* 우상단 — 핀 카테고리 필터 (5개 토글, localStorage 저장).
           카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
+          data-keep-on-mobile-map — 모바일 미니멀 지도 모드에서 숨김 처리되지 않도록 예외.
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
-      <div className="absolute top-14 right-2 z-40 bg-white border border-[#e5e7eb] shadow-[0_4px_16px_rgba(0,0,0,0.12)] rounded-lg overflow-hidden w-[100px] sm:w-[110px]">
+      <div data-keep-on-mobile-map className="absolute top-14 right-2 z-40 bg-white border border-[#e5e7eb] shadow-[0_4px_16px_rgba(0,0,0,0.12)] rounded-lg overflow-hidden w-[100px] sm:w-[110px]">
         <div className="text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-wider px-3 py-1.5 bg-bg/40 border-b border-[#f0f0f0]">핀 표시</div>
         <div className="flex flex-col p-1 gap-0.5">
           {([
