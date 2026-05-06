@@ -9,6 +9,10 @@
 alter table public.restaurant_pins
   add column if not exists dong text;
 
+-- 시그니처 바뀜 → 기존 함수 DROP 필수
+drop function if exists public.register_restaurant_pin(text, text, text, numeric, numeric, text, text);
+drop function if exists public.list_recent_restaurant_pins(int);
+
 -- register_restaurant_pin 재정의 — p_dong 추가
 create or replace function public.register_restaurant_pin(
   p_name text, p_description text, p_recommended_menu text,
