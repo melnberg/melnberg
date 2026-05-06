@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AdminPanel from '@/components/AdminPanel';
 import LaunchTelegramButton from '@/components/LaunchTelegramButton';
+import LaunchPartiesTelegramButton from '@/components/LaunchPartiesTelegramButton';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 import { type ProfileWithTier, type PaymentRecord } from '@/lib/tier';
@@ -79,6 +80,7 @@ export default async function AdminPage() {
               <a href="/admin/apt-master" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">아파트 마스터</a>
               <a href="/admin/feedback" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">건의사항</a>
               <LaunchTelegramButton />
+              <LaunchPartiesTelegramButton />
             </div>
           </div>
           <p className="text-sm text-muted mb-8">회원 등급 관리 + 결제 기록.</p>
