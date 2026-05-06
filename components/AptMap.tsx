@@ -1945,8 +1945,28 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           )}
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
                             <span>{feedRelTime(f.created_at)} 전</span>
-                            {typeof f.earned_mlbg === 'number' && (
+                            {typeof f.earned_mlbg === 'number' ? (
                               <RewardTooltip earned={f.earned_mlbg} kind={f.kind === 'discussion' ? 'apt_post' : f.kind === 'comment' ? 'apt_comment' : f.kind === 'post' ? 'community_post' : f.kind === 'post_comment' ? 'community_comment' : f.kind === 'factory_comment' ? 'factory_comment' : f.kind === 'emart_comment' ? 'emart_comment' : undefined} />
+                            ) : (
+                              (() => {
+                                // 절대규칙 — 모든 피드 게시글에 mlbg 보상 표시
+                                // earned_mlbg 없는 종류 (listing, offer, snatch, auction, restaurant_register, kids_register, etc.) 의 fallback
+                                let txt = '';
+                                if (f.kind === 'restaurant_register' || f.kind === 'kids_register') txt = '+30 mlbg';
+                                else if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment') txt = '+0.5 mlbg';
+                                else if (f.kind === 'listing') txt = typeof f.listing_price === 'number' ? `호가 ${f.listing_price.toLocaleString()} mlbg` : '매물 등록';
+                                else if (f.kind === 'offer') txt = typeof f.listing_price === 'number' ? `매수 ${f.listing_price.toLocaleString()} mlbg` : '매수 호가';
+                                else if (f.kind === 'snatch') txt = '내놔 (무상)';
+                                else if (f.kind === 'auction') txt = typeof f.listing_price === 'number' ? `현재가 ${f.listing_price.toLocaleString()} mlbg` : '경매 진행';
+                                else if (f.kind === 'auction_bid') txt = '입찰';
+                                else if (f.kind === 'auction_won') txt = '🏆 낙찰';
+                                else if (f.kind === 'sell_complete') txt = typeof f.sell_price === 'number' ? `${f.sell_price.toLocaleString()} mlbg 거래` : '거래 성사';
+                                else if (f.kind === 'emart_occupy' || f.kind === 'factory_occupy') txt = '분양 (−mlbg)';
+                                else if (f.kind === 'strike') txt = typeof f.strike_loss_mlbg === 'number' ? `−${f.strike_loss_mlbg.toLocaleString()} mlbg` : '−mlbg';
+                                else if (f.kind === 'bridge_toll') txt = typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
+                                else if (f.kind === 'notice') txt = '공지';
+                                return txt ? <span className="text-cyan font-bold tabular-nums">{txt}</span> : null;
+                              })()
                             )}
                           </div>
                         </div>
