@@ -14,6 +14,7 @@ import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
 import RewardTooltip from './RewardTooltip';
+import AptReviewLikeButton from './AptReviewLikeButton';
 
 type Discussion = {
   id: number;
@@ -21,6 +22,7 @@ type Discussion = {
   content: string | null;
   vote_up_count: number;
   vote_down_count: number;
+  like_count?: number;
   created_at: string;
   author_id: string;
 };
@@ -141,7 +143,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     const [{ data: dData, error: dErr }, { data: { user } }, { data: occData }, { data: listingData }] = await Promise.all([
       supabase
         .from('apt_discussions')
-        .select('id, title, content, vote_up_count, vote_down_count, created_at, author_id')
+        .select('id, title, content, vote_up_count, vote_down_count, like_count, created_at, author_id')
         .eq('apt_master_id', apt.id)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -909,13 +911,12 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
                       </svg>
                       <span>댓글 {dComments.length}</span>
                     </button>
-                    <button type="button" onClick={() => vote(d.id, 'up')}
-                      className={`flex items-center gap-1.5 text-[13px] font-medium transition-colors ${myVote === 'up' ? 'text-red-500' : 'text-text hover:text-red-500'}`}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill={myVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                      </svg>
-                      <span>{d.vote_up_count}</span>
-                    </button>
+                    <AptReviewLikeButton
+                      discussionId={d.id}
+                      authorId={d.author_id}
+                      initialCount={d.like_count ?? 0}
+                      currentUserId={userId ?? null}
+                    />
                   </div>
 
                   {/* 댓글 목록 + 입력 */}
