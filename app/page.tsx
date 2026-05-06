@@ -63,9 +63,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     // 시한 경매 비활성 (2026-05-06) — 피드에서 제외. 재오픈 시 git history 에서 복구.
     const activeAuctions: Array<{ id: number; ends_at: string; current_bid: number | null; min_bid: number; bid_count: number; created_at: string; _assetName: string; _assetLat: number | null; _assetLng: number | null; _assetDong: string | null; _assetType: 'apt' | 'factory' | 'emart'; _assetId: number }> = [];
 
-    // Phase B — 7개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
+    // Phase B — 8개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
     const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp] = await Promise.all([
+    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp] = await Promise.all([
       supabase
         .from('emart_occupations')
         .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
@@ -106,8 +106,16 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      supabase
+        .from('site_announcements')
+        .select('id, title, body, link_url, created_at')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const emartRows = (((emartOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
+    const annRows = ((annResp as { data: unknown[] | null })?.data ?? []) as Array<{ id: number; title: string; body: string | null; link_url: string | null; created_at: string }>;
     const strikeRows = (((strikeResp as { data: unknown[] | null })?.data ?? []) as Array<{
       id: number; asset_type: 'factory' | 'emart'; asset_id: number; asset_name: string | null;
       occupier_id: string; occupier_name: string | null;
@@ -133,19 +141,12 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     // 시한 경매 비활성 (2026-05-06) — 입찰 피드 제거. 재오픈 시 git history 에서 복구.
     const bidRows: Array<{ id: number; auction_id: number; bidder_id: string; amount: number; created_at: string }> = [];
 
-    // postComments 의 post_id → posts(title, category) 별도 조회 (임베드 회피)
-    const commentPostIds = Array.from(new Set(((postComments ?? []) as Array<{ post_id: number }>).map((c) => c.post_id).filter(Boolean)));
-    const commentPostMap = new Map<number, { title: string | null; category: string | null }>();
-    if (commentPostIds.length > 0) {
-      const { data: commentPosts } = await supabase
-        .from('posts')
-        .select('id, title, category')
-        .in('id', commentPostIds);
-      for (const p of (commentPosts ?? []) as Array<{ id: number; title: string | null; category: string | null }>) {
-        commentPostMap.set(p.id, { title: p.title, category: p.category });
-      }
-    }
+    // Phase C — 의존 metadata 8개 쿼리 단일 Promise.all 병렬화 (2026-05-06).
+    // 이전: commentPostMap → profileMap (2개) → awardMap → commentCounts (4개 parallel) — 4단계 직렬
+    // 변경: 모두 한 단계로 합침 (2단계 → 1단계)
+    type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
 
+    const commentPostIds = Array.from(new Set(((postComments ?? []) as Array<{ post_id: number }>).map((c) => c.post_id).filter(Boolean)));
     const allAuthorIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).author_id as string)),
       ...((cmts ?? []).map((c) => (c as Record<string, unknown>).author_id as string)),
@@ -159,31 +160,6 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...emartCommRows.map((c) => c.author_id),
       ...factoryCommRows.map((c) => c.author_id),
     ].filter(Boolean)));
-
-    type ProfRow = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null; apt_count: number | null };
-    const profileMap = new Map<string, ProfRow>();
-    if (allAuthorIds.length > 0) {
-      const [{ data: profs }, aptCountResp] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
-          .in('id', allAuthorIds),
-        // SQL 062 적용되면 값이 들어오고, 미적용이면 error → 빈 Map 처리
-        supabase.from('profiles').select('id, apt_count').in('id', allAuthorIds)
-          .then((r) => r, () => ({ data: null })),
-      ]);
-      const aptCountMap = new Map<string, number>();
-      for (const r of ((aptCountResp as { data: unknown[] | null }).data ?? []) as Array<{ id: string; apt_count: number | null }>) {
-        aptCountMap.set(r.id, r.apt_count ?? 0);
-      }
-      for (const p of (profs ?? []) as Array<{ id: string } & Omit<ProfRow, 'apt_count'>>) {
-        profileMap.set(p.id, { ...p, apt_count: aptCountMap.get(p.id) ?? null });
-      }
-    }
-    const now = Date.now();
-    const isActivePaid = (p: ProfRow | undefined) => !!p && p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > now);
-
-    // 각 글·댓글의 AI 평가 mlbg 적립 정보 조회 (kind, ref_id 매칭)
     const awardRefIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
       ...((cmts ?? []).map((c) => (c as Record<string, unknown>).id as number)),
@@ -192,25 +168,39 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...emartCommRows.map((c) => c.id),
       ...factoryCommRows.map((c) => c.id),
     ]));
-    const awardMap = new Map<string, number>();
-    if (awardRefIds.length > 0) {
-      const { data: awardRows } = await supabase
-        .from('mlbg_award_log')
-        .select('kind, ref_id, earned')
-        .in('ref_id', awardRefIds)
-        .then((r) => r, () => ({ data: null }));
-      for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
-        awardMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
-      }
-    }
-
-    // 댓글 카운트 — 단지 토론 / 커뮤니티 글 / 시설 분양 별로 부모 id → count 매핑
     const discIds = (discs ?? []).map((d) => (d as { id: number }).id);
     const postIds = (posts ?? []).map((p) => (p as { id: number }).id);
     const emartIds = emartRows.map((e) => e.emart_id);
     const factoryIds = factoryRows.map((f) => f.factory_id);
 
-    const [discCommRows, postCommRows, emartCommCntRows, factoryCommCntRows] = await Promise.all([
+    const [
+      commentPostsResp,
+      profsResp,
+      aptCountResp,
+      awardResp,
+      discCommRows,
+      postCommRows,
+      emartCommCntRows,
+      factoryCommCntRows,
+    ] = await Promise.all([
+      commentPostIds.length > 0
+        ? supabase.from('posts').select('id, title, category').in('id', commentPostIds)
+            .then((r) => r, () => ({ data: null }))
+        : Promise.resolve({ data: null }),
+      allAuthorIds.length > 0
+        ? supabase.from('profiles')
+            .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
+            .in('id', allAuthorIds)
+            .then((r) => r, () => ({ data: null }))
+        : Promise.resolve({ data: null }),
+      allAuthorIds.length > 0
+        ? supabase.from('profiles').select('id, apt_count').in('id', allAuthorIds)
+            .then((r) => r, () => ({ data: null }))
+        : Promise.resolve({ data: null }),
+      awardRefIds.length > 0
+        ? supabase.from('mlbg_award_log').select('kind, ref_id, earned').in('ref_id', awardRefIds)
+            .then((r) => r, () => ({ data: null }))
+        : Promise.resolve({ data: null }),
       discIds.length > 0
         ? supabase.from('apt_discussion_comments').select('discussion_id').in('discussion_id', discIds).is('deleted_at', null)
             .then((r) => (r.data ?? []) as Array<{ discussion_id: number }>, () => [] as Array<{ discussion_id: number }>)
@@ -228,6 +218,32 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
             .then((r) => (r.data ?? []) as Array<{ factory_id: number }>, () => [] as Array<{ factory_id: number }>)
         : Promise.resolve([] as Array<{ factory_id: number }>),
     ]);
+
+    // commentPostMap 빌드
+    const commentPostMap = new Map<number, { title: string | null; category: string | null }>();
+    for (const p of (((commentPostsResp as { data: unknown[] | null })?.data) ?? []) as Array<{ id: number; title: string | null; category: string | null }>) {
+      commentPostMap.set(p.id, { title: p.title, category: p.category });
+    }
+
+    // profileMap 빌드
+    const profileMap = new Map<string, ProfRow>();
+    const aptCountMap = new Map<string, number>();
+    for (const r of (((aptCountResp as { data: unknown[] | null })?.data) ?? []) as Array<{ id: string; apt_count: number | null }>) {
+      aptCountMap.set(r.id, r.apt_count ?? 0);
+    }
+    for (const p of (((profsResp as { data: unknown[] | null })?.data) ?? []) as Array<{ id: string } & Omit<ProfRow, 'apt_count'>>) {
+      profileMap.set(p.id, { ...p, apt_count: aptCountMap.get(p.id) ?? null });
+    }
+    const now = Date.now();
+    const isActivePaid = (p: ProfRow | undefined) => !!p && p.tier === 'paid' && (!p.tier_expires_at || new Date(p.tier_expires_at).getTime() > now);
+
+    // awardMap 빌드
+    const awardMap = new Map<string, number>();
+    for (const r of (((awardResp as { data: unknown[] | null })?.data) ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
+      awardMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
+    }
+
+    // 댓글 카운트
     const discCommCnt = new Map<number, number>();
     for (const r of discCommRows) discCommCnt.set(r.discussion_id, (discCommCnt.get(r.discussion_id) ?? 0) + 1);
     const postCommCnt = new Map<number, number>();
@@ -459,15 +475,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       author_id: null, author_name: '분양홍보팀', author_link: null,
       author_is_paid: true, author_is_solo: false, author_avatar_url: null, author_apt_count: null,
     });
-    // 사이트 공지 (어드민이 작성한 동적 공지) — 카페 새 글 푸시 등
-    const { data: annRows } = await supabase
-      .from('site_announcements')
-      .select('id, title, body, link_url, created_at')
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(20)
-      .then((r) => r, () => ({ data: null }));
-    const announcementItems: FeedItem[] = ((annRows ?? []) as Array<{ id: number; title: string; body: string | null; link_url: string | null; created_at: string }>).map((a) => ({
+    // 사이트 공지 → FeedItem (annRows 는 Phase B Promise.all 에서 fetch 됨)
+    const announcementItems: FeedItem[] = annRows.map((a) => ({
       kind: 'notice' as const,
       id: 500000 + a.id,
       apt_master_id: 0,
