@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { fileToWebp } from '@/lib/image-to-webp';
 
 type Props = {
   initial: {
@@ -72,9 +73,14 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setMsg({ type: 'error', text: '로그인이 필요합니다.' }); return; }
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      // 용량관리 — webp 변환 + 가로 max 512px 로 압축
+      const converted = await fileToWebp(file, { maxWidth: 512, quality: 0.85 }).catch(() => null);
+      const blob = converted?.blob ?? file;
+      const isWebp = blob !== file;
+      const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+      const contentType = isWebp ? 'image/webp' : file.type;
       const path = `${user.id}/avatar.${ext}`;
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type });
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType });
       if (upErr) { setMsg({ type: 'error', text: `업로드 실패: ${upErr.message}` }); return; }
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
       const finalUrl = `${publicUrl}?v=${Date.now()}`;

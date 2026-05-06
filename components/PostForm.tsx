@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { fileToWebp } from '@/lib/image-to-webp';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
@@ -33,9 +34,14 @@ export default function PostForm({ initial, category = 'community', redirectBase
     setUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErr('로그인이 필요합니다.'); setUploading(false); return; }
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+    // 용량관리 — webp 로 변환 후 업로드. gif 는 원본 유지.
+    const converted = await fileToWebp(file).catch(() => null);
+    const blob = converted?.blob ?? file;
+    const isWebp = blob !== file;
+    const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+    const contentType = isWebp ? 'image/webp' : file.type;
     const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage.from('post-images').upload(path, file, { contentType: file.type });
+    const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
     setUploading(false);
     if (upErr) { setErr(`업로드 실패: ${upErr.message}`); return; }
     const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
