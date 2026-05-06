@@ -1644,11 +1644,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               type="button"
               onClick={() => togglePinFilter(it.k)}
               aria-pressed={on}
-              className={`w-12 h-9 lg:w-14 lg:h-10 text-[12px] lg:text-[13px] font-bold rounded-md shadow cursor-pointer transition-all flex items-center justify-center ${on ? '' : 'line-through'}`}
+              className={`w-10 h-10 lg:w-12 lg:h-12 text-[12px] lg:text-[13px] font-bold rounded-md shadow cursor-pointer transition-all flex items-center justify-center border-2 border-[#1a1d22] ${on ? '' : 'line-through'}`}
               style={
                 on
                   ? { backgroundColor: it.color, color: '#fff' }
-                  : { backgroundColor: '#fff', color: '#9ca3af', borderWidth: 1, borderStyle: 'solid', borderColor: '#e5e7eb' }
+                  : { backgroundColor: '#fff', color: '#9ca3af' }
               }
             >
               {it.label}
