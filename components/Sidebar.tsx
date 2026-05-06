@@ -52,7 +52,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
     <>
       <aside
         style={{ overscrollBehavior: 'contain' }}
-        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[160px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
+        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[140px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
         <div className="px-6 py-5 flex items-center border-b border-border">
           <a href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
