@@ -159,7 +159,7 @@ export default function AuctionBidForm({
               최소 입찰가 <span className="font-bold tabular-nums text-text">{Number(minimumNext).toLocaleString()} mlbg</span>
               {myBalance != null && <span className="ml-2">· 내 잔액 <span className="font-bold tabular-nums text-cyan">{myBalance.toLocaleString()} mlbg</span></span>}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-stretch">
               <input
                 type="number"
                 min={minimumNext}
@@ -167,13 +167,13 @@ export default function AuctionBidForm({
                 value={bidInput}
                 onChange={(e) => setBidInput(e.target.value)}
                 placeholder={`${Number(minimumNext).toLocaleString()} 이상`}
-                className="flex-1 px-3 py-2 border-2 border-border focus:border-navy text-[14px] font-bold tabular-nums outline-none rounded-none"
+                className="flex-1 min-w-0 px-3 py-2 border-2 border-border focus:border-navy text-[14px] font-bold tabular-nums outline-none rounded-none"
               />
               <button
                 type="button"
                 onClick={handleBid}
                 disabled={busy || !bidInput.trim()}
-                className="bg-[#dc2626] text-white px-6 py-2 text-[13px] font-bold tracking-wide cursor-pointer hover:bg-[#b91c1c] disabled:opacity-40 disabled:cursor-not-allowed border-none"
+                className="flex-shrink-0 whitespace-nowrap bg-[#dc2626] text-white px-6 py-2 text-[13px] font-bold tracking-wide cursor-pointer hover:bg-[#b91c1c] disabled:opacity-40 disabled:cursor-not-allowed border-none"
               >
                 {busy ? '...' : '입찰'}
               </button>
