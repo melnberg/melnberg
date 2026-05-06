@@ -1278,13 +1278,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           return hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
         }
         function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
-          if (occupied || listed) return true;
+          // 줌아웃 시 화면 꽉 차는 문제 해결 (2026-05-06).
+          // tier 0 (2000+) 도 무제한 표시 X. 점거/매물은 한 단계만 더 관대.
+          // PC : tier0=lvl<=8, tier1=lvl<=5, tier2=lvl<=4, tier3=lvl<=3
+          // 모바: tier0=lvl<=7, tier1=lvl<=5, tier2=lvl<=4, tier3=lvl<=3
           const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-          if (tier === 0) return true;
-          if (tier === 1) return lvl <= (isMobile ? 7 : 5);
-          if (tier === 2) return lvl <= (isMobile ? 5 : 4);
-          if (tier === 3) return lvl <= 4;
-          return false;
+          const max = isMobile
+            ? (tier === 0 ? 7 : tier === 1 ? 5 : tier === 2 ? 4 : 3)
+            : (tier === 0 ? 8 : tier === 1 ? 5 : tier === 2 ? 4 : 3);
+          // 점거/매물 — 일반 단지보다 한 단계 더 멀리(줌아웃)에서도 보이게
+          const bonus = (occupied || listed) ? 1 : 0;
+          return lvl <= max + bonus;
         }
         const updateVisibility = () => {
           const lvl = map.getLevel();
@@ -1580,16 +1584,27 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   }, [pins, mapReady]);
 
   // 핀 필터 적용 — pinFilters 또는 마커 데이터 변경 시 setMap 토글.
-  // 마커 생성 useEffect 들이 자체 setMap(map) 호출하므로 이 effect 가 그 후 override.
-  // 데이터 deps (pins, emartList, ...) 가 들어있어 마커 재생성 직후에도 자동 재실행.
+  // 아파트는 줌 레벨 기반 가시성 로직 (updateVisibility) 이 별도로 있어서,
+  //   - OFF: 모든 마커·오버레이 숨김
+  //   - ON : updateVisibility 가 줌·tier 기준으로 다시 결정하도록 'mlbg-markers-updated' 이벤트 발화
+  // 나머지 카테고리는 줌 무관 → 단순 setMap 토글.
   useEffect(() => {
     if (!mapReady || !mapInstRef.current) return;
     const map = mapInstRef.current;
-    for (const e of markersRef.current)        e.marker.setMap(pinFilters.apt ? map : null);
-    for (const m of emartMarkersRef.current)   m.setMap(pinFilters.emart ? map : null);
-    for (const m of factoryMarkersRef.current) m.setMap(pinFilters.facility ? map : null);
+
+    if (pinFilters.apt) {
+      window.dispatchEvent(new Event('mlbg-markers-updated'));
+    } else {
+      for (const e of markersRef.current) {
+        e.marker.setMap(null);
+        if (e.overlay) e.overlay.setMap(null);
+      }
+    }
+
+    for (const m of emartMarkersRef.current)      m.setMap(pinFilters.emart ? map : null);
+    for (const m of factoryMarkersRef.current)    m.setMap(pinFilters.facility ? map : null);
     for (const m of restaurantMarkersRef.current) m.setMap(pinFilters.restaurant ? map : null);
-    for (const m of kidsMarkersRef.current)    m.setMap(pinFilters.kids ? map : null);
+    for (const m of kidsMarkersRef.current)       m.setMap(pinFilters.kids ? map : null);
   }, [pinFilters, mapReady, pins, emartList, factoryList, restaurantList, kidsList]);
 
   if (error) {
@@ -1606,30 +1621,39 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
       {/* 상단 전광판 (스코어/부자/거래/핫/활동/품질/매매/호가/핫딜) — 2026-05-06 사용자 요청으로 제거. 복구 필요시 git show ae277a2:components/AptMap.tsx 참고 */}
 
-      {/* 우상단 — 핀 카테고리 필터 (5개 토글, localStorage 저장) */}
-      <div className="absolute top-2 right-2 z-20 bg-white/95 border border-border shadow-md p-1.5 flex flex-col gap-1">
-        <div className="text-[9px] font-bold text-muted uppercase tracking-wider px-1 pb-0.5 border-b border-[#f0f0f0]">핀 표시</div>
-        {([
-          { k: 'apt' as const, label: '아파트', dot: '#f97316' },
-          { k: 'facility' as const, label: '시설', dot: '#6b7280' },
-          { k: 'emart' as const, label: '이마트', dot: '#fbbf24' },
-          { k: 'restaurant' as const, label: '맛집', dot: '#f59e0b' },
-          { k: 'kids' as const, label: '육아', dot: '#f472b6' },
-        ]).map((it) => (
-          <button
-            key={it.k}
-            type="button"
-            onClick={() => togglePinFilter(it.k)}
-            className={`flex items-center gap-1.5 px-2 py-0.5 text-[11px] border cursor-pointer text-left ${
-              pinFilters[it.k]
-                ? 'bg-white text-text border-border hover:border-navy'
-                : 'bg-[#f5f5f5] text-muted border-[#e5e5e5] line-through'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: pinFilters[it.k] ? it.dot : '#cbd5e1' }} />
-            {it.label}
-          </button>
-        ))}
+      {/* 우상단 — 핀 카테고리 필터 (5개 토글, localStorage 저장).
+          카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
+          모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
+      <div className="absolute top-14 right-2 z-40 bg-white border border-[#e5e7eb] shadow-[0_4px_16px_rgba(0,0,0,0.12)] rounded-lg overflow-hidden w-[100px] sm:w-[110px]">
+        <div className="text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-wider px-3 py-1.5 bg-bg/40 border-b border-[#f0f0f0]">핀 표시</div>
+        <div className="flex flex-col p-1 gap-0.5">
+          {([
+            { k: 'apt' as const, label: '아파트', dot: '#f97316' },
+            { k: 'facility' as const, label: '시설', dot: '#6b7280' },
+            { k: 'emart' as const, label: '이마트', dot: '#fbbf24' },
+            { k: 'restaurant' as const, label: '맛집', dot: '#f59e0b' },
+            { k: 'kids' as const, label: '육아', dot: '#f472b6' },
+          ]).map((it) => {
+            const on = pinFilters[it.k];
+            return (
+              <button
+                key={it.k}
+                type="button"
+                onClick={() => togglePinFilter(it.k)}
+                aria-pressed={on}
+                className={`flex items-center gap-2 px-2 py-1 text-[11px] sm:text-[12px] rounded cursor-pointer text-left transition-colors ${
+                  on ? 'text-text font-semibold hover:bg-[#f5f9ff]' : 'text-muted hover:bg-[#f5f5f5]'
+                }`}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-opacity"
+                  style={{ backgroundColor: it.dot, opacity: on ? 1 : 0.25 }}
+                />
+                <span className={on ? '' : 'line-through'}>{it.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* 좌상단 — 아파트 검색 + 정보 배지 스택 (화면 좌상단 끝에 딱 붙임) */}

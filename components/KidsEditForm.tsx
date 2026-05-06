@@ -46,6 +46,19 @@ export default function KidsEditForm({ pin, currentUserId }: { pin: Pin; current
         const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
         newPhotoUrl = publicUrl;
       } catch (e) { setErr(`사진 업로드 실패: ${e instanceof Error ? e.message : String(e)}`); setBusy(false); return; }
+      // AI 검증 — 새 사진 올린 경우에만
+      try {
+        const r = await fetch('/api/check-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoUrl: newPhotoUrl }),
+        });
+        const j = await r.json() as { verdict?: 'screenshot' | 'real'; reason?: string };
+        if (j.verdict === 'screenshot') {
+          setErr(`AI 검증 실패 — 지도/스크린샷 사진은 등록 불가${j.reason ? ` (${j.reason})` : ''}. 캡처 말고 사진을 올려주세요.`);
+          setBusy(false); return;
+        }
+      } catch { /* fail-open */ }
     }
     const { data, error } = await supabase.rpc('update_kids_pin', {
       p_pin_id: pin.id, p_name: name.trim(), p_description: description.trim(),
@@ -94,6 +107,10 @@ export default function KidsEditForm({ pin, currentUserId }: { pin: Pin; current
       </div>
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 (변경 시만 새 파일 선택)</label>
+        <div className="text-[11px] text-[#dc2626] font-semibold leading-snug mb-1">
+          ⚠ 새 사진은 AI 검사 후 적용됨. 지도 캡처 / 검색결과 스크린샷은 자동 차단.<br />
+          캡처 말고 사진을 올려주세요.
+        </div>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }} className="text-[12px]" />
         {photoPreview && <img src={photoPreview} alt="" className="max-w-[300px] max-h-[200px] object-contain border border-border mt-2 rounded-xl" />}
       </div>
