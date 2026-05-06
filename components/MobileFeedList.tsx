@@ -34,7 +34,7 @@ function renderContentWithImages(text: string): React.ReactNode {
       return (
         <a key={i} href={p} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block my-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p} alt="" loading="lazy" className="max-w-full max-h-[260px] object-contain border border-border" />
+          <img src={p} alt="" loading="lazy" className="max-w-full max-h-[260px] object-contain border border-border rounded-xl" />
         </a>
       );
     }
