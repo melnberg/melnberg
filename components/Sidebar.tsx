@@ -52,7 +52,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
     <>
       <aside
         style={{ overscrollBehavior: 'contain' }}
-        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[130px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
+        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[180px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
         <div className="px-6 py-5 flex items-center border-b border-border">
           <a href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
@@ -182,29 +182,8 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 핫딜 게시판 — 적립 보상 2.5x */}
           <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
 
-          {/* 커뮤니티 — 메뉴 맨 아래 + 최신글 미리보기 */}
+          {/* 커뮤니티 — 좁은 사이드바엔 미리보기 제외 (글 클릭은 페이지에서) */}
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
-          {recentPosts.length > 0 && (
-            <ul className="bg-[#fafafa]">
-              {recentPosts.map((p) => (
-                <li key={p.id} className="border-b border-[#ececec] last:border-b-0">
-                  <Link
-                    href={`/community/${p.id}`}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-1.5 pl-12 pr-4 py-1.5 text-[12px] text-text hover:text-navy hover:bg-navy-soft no-underline"
-                    title={`${p.id} · ${p.title}${p.author_name ? ` · ${p.author_name}` : ''}`}
-                  >
-                    <span className="text-muted tabular-nums flex-shrink-0">{p.id}</span>
-                    <span className="inline-block w-px h-3 bg-border flex-shrink-0" />
-                    <span className="flex-1 min-w-0 truncate">{p.title}</span>
-                    {p.author_name && (
-                      <span className="text-cyan font-bold flex-shrink-0 max-w-[60px] truncate">{p.author_name}</span>
-                    )}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </nav>
 
         {/* 사이드바 하단 상담문의(오픈채팅) 섹션 — 임시 숨김. 추후 부활 시 false → true */}
@@ -258,19 +237,19 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
 }
 
 function SItem({ href, label, price, active, icon, onClick, sub }: { href: string; label: string; price?: string; active?: boolean; icon: React.ReactNode; onClick?: () => void; sub?: boolean }) {
-  const padX = sub ? 'pl-12 pr-6' : 'px-6';
+  const padX = sub ? 'pl-9 pr-4' : 'px-4';
   const subBg = sub ? 'bg-[#fafafa]' : '';
   const activeBg = active ? 'bg-navy-soft text-navy font-bold border-navy' : `text-text font-medium border-transparent hover:bg-navy-soft ${subBg}`;
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 ${padX} py-2 text-sm no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors ${activeBg}`}
+      className={`flex items-center gap-2.5 ${padX} py-2 text-[13px] no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors whitespace-nowrap ${activeBg}`}
     >
       {icon}
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
       {price && <span className={`ml-auto text-[11px] font-semibold ${active ? 'text-navy' : 'text-muted'}`}>{price}</span>}
-      {active && <span className="absolute right-5 text-lg leading-none text-navy">›</span>}
+      {active && <span className="absolute right-3 text-lg leading-none text-navy">›</span>}
     </Link>
   );
 }
@@ -280,7 +259,7 @@ function SectionToggle({ label, icon, open, onClick }: { label: string; icon: Re
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 w-full px-6 py-2 text-sm font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors"
+      className="flex items-center gap-2.5 w-full px-4 py-2 text-[13px] font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors whitespace-nowrap"
       aria-expanded={open}
     >
       {icon}
