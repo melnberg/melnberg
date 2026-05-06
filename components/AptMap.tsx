@@ -397,6 +397,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const markersRef = useRef<MarkerEntry[]>([]);
   // 별도 overlaysRef 더 이상 필요 없음 — MarkerEntry.overlay 로 통합. 호환 위해 유지.
   const overlaysRef = useRef<KakaoOverlayInst[]>([]);
+  // updateVisibility 를 외부에서 직접 호출하기 위한 ref (필터 토글 시 줌 기반 가시성 재적용용)
+  const updateAptVisibilityRef = useRef<(() => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   // 핀 카테고리 필터 — 5개 토글 (아파트/시설/이마트/맛집/육아). localStorage 에 저장.
@@ -1322,6 +1324,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         };
         window.kakao.maps.event.addListener(map, 'zoom_changed', updateVisibility);
         window.addEventListener('mlbg-markers-updated', updateVisibility);
+        updateAptVisibilityRef.current = updateVisibility;
 
         setMapReady(true);
       })
@@ -1585,15 +1588,16 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
   // 핀 필터 적용 — pinFilters 또는 마커 데이터 변경 시 setMap 토글.
   // 아파트는 줌 레벨 기반 가시성 로직 (updateVisibility) 이 별도로 있어서,
-  //   - OFF: 모든 마커·오버레이 숨김
-  //   - ON : updateVisibility 가 줌·tier 기준으로 다시 결정하도록 'mlbg-markers-updated' 이벤트 발화
+  //   - OFF: 모든 마커·오버레이 즉시 숨김
+  //   - ON : updateVisibility 직접 호출 (ref 로 노출됨) → 줌·tier 기준 재결정
   // 나머지 카테고리는 줌 무관 → 단순 setMap 토글.
   useEffect(() => {
     if (!mapReady || !mapInstRef.current) return;
     const map = mapInstRef.current;
 
     if (pinFilters.apt) {
-      window.dispatchEvent(new Event('mlbg-markers-updated'));
+      // ref 로 직접 호출 — dispatchEvent 보다 확실. 마커 재생성 직후 ref 가 set 되었을 수도 있어 즉시 호출.
+      updateAptVisibilityRef.current?.();
     } else {
       for (const e of markersRef.current) {
         e.marker.setMap(null);
