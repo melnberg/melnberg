@@ -129,14 +129,15 @@ export default function AdminAuctionForm() {
     }
 
     setBusy(true);
-    const rpcArgs: Record<string, unknown> = {
+    // PostgREST 의 default param 매칭 이슈 회피 — p_starts_at 을 항상 명시 (null 이라도).
+    // 누락 시 "Could not find the function ... in the schema cache" 에러가 일부 환경에서 발생.
+    const { data, error } = await supabase.rpc('create_auction', {
       p_asset_type: picked.type,
       p_asset_id: picked.row.id,
       p_duration_minutes: durNum,
       p_min_bid: bidNum,
-    };
-    if (startsIso) rpcArgs.p_starts_at = startsIso;
-    const { data, error } = await supabase.rpc('create_auction', rpcArgs);
+      p_starts_at: startsIso,
+    });
     setBusy(false);
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_auction_id: number | null; out_message: string | null } | undefined;
