@@ -1646,25 +1646,25 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               type="button"
               onClick={() => togglePinFilter(it.k)}
               aria-pressed={on}
-              className={`w-11 h-11 text-[12px] font-bold rounded-full cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 ${on ? '' : 'line-through'}`}
+              className={`w-9 h-9 text-[11px] font-bold rounded-sm cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 ${on ? '' : 'line-through'}`}
               style={
                 on
                   ? {
                       background: `linear-gradient(135deg, ${it.from} 0%, ${it.to} 100%)`,
                       color: '#fff',
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                       borderStyle: 'solid',
-                      borderColor: '#ffffff',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06)',
+                      borderColor: 'rgba(0,0,0,0.15)',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                       textShadow: '0 1px 2px rgba(0,0,0,0.25)',
                     }
                   : {
                       backgroundColor: '#ffffff',
                       color: '#9ca3af',
-                      borderWidth: '2px',
+                      borderWidth: '1px',
                       borderStyle: 'solid',
-                      borderColor: '#ffffff',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06)',
+                      borderColor: 'rgba(0,0,0,0.15)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                     }
               }
             >

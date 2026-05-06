@@ -32,6 +32,18 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
     }
   }, [open]);
 
+  // 모바일 사이드바 열린 상태에서 body 스크롤 잠금. 사이드바 안 스크롤만 동작하게.
+  // overscroll-behavior 만으로는 body 가 같이 움직이는 문제 방지 안 됨 → body overflow:hidden 강제.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+    if (open && isMobile) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [open]);
+
   // current 가 해당 섹션 아이템으로 바뀌면 자동으로 펼침 (네비게이션 후 하위메뉴 유지)
   useEffect(() => { if (isConsultActive) setConsultOpen(true); }, [isConsultActive]);
   useEffect(() => { if (isMembershipActive) setMembershipOpen(true); }, [isMembershipActive]);
@@ -39,6 +51,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
   return (
     <>
       <aside
+        style={{ overscrollBehavior: 'contain' }}
         className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[260px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
         <div className="px-6 py-5 flex items-center border-b border-border">
