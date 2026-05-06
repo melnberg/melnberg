@@ -320,6 +320,17 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
             <div className="text-[11px] text-muted leading-relaxed">24시간마다 +{factory.daily_income} 누적. {ownerLabel}이 직접 청구.</div>
           </div>
 
+          {(factory.brand === 'party_dem' || factory.brand === 'party_ppl') && (
+            <div className="border-l-4 border-[#dc2626] bg-[#fef2f2] px-4 py-3 mb-4">
+              <div className="text-[12px] font-bold text-[#dc2626] mb-1">🗳️ 6/3 지방선거 정산 규칙</div>
+              <ul className="text-[11px] text-[#7f1d1d] leading-relaxed list-disc list-inside space-y-0.5">
+                <li><b>당선당</b> 점거자: 분양가의 <b>10배 ({(factory.occupy_price * 10).toLocaleString()} mlbg)</b> 일시 보상, 핀 유지</li>
+                <li><b>낙선당</b> 점거자: 분양금 <b>{factory.occupy_price.toLocaleString()} mlbg 몰수</b> + 핀 사라짐</li>
+                <li>같은 구청에는 한 사람이 한 핀만 분양 가능</li>
+              </ul>
+            </div>
+          )}
+
           <div className="grid gap-2 mb-4">
             {isMine ? (
               <>
