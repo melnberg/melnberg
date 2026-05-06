@@ -23,6 +23,25 @@ function inlineKindFor(f: FeedItem): { kind: InlineKind; parentId: number } | nu
 
 type Props = { items: FeedItem[] };
 
+// 본문에 섞여 있는 이미지 URL (http(s)://...jpg|jpeg|png|gif|webp[?…]) 을 <img> 로 치환.
+// 그 외 URL/텍스트는 그대로 출력.
+const IMG_URL_RE = /(https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?)/gi;
+function renderContentWithImages(text: string): React.ReactNode {
+  if (!text) return null;
+  const parts = text.split(IMG_URL_RE);
+  return parts.map((p, i) => {
+    if (i % 2 === 1) {
+      return (
+        <a key={i} href={p} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block my-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p} alt="" loading="lazy" className="max-w-full max-h-[260px] object-contain border border-border" />
+        </a>
+      );
+    }
+    return p ? <span key={i}>{p}</span> : null;
+  });
+}
+
 function relTime(iso: string): string {
   const d = new Date(iso); const diff = Date.now() - d.getTime();
   const sec = Math.floor(diff / 1000);
@@ -208,7 +227,7 @@ export default function MobileFeedList({ items }: Props) {
                       {(fullContent || f.title) ? (
                         <>
                           {f.title && !fullContent && <span>{f.title}</span>}
-                          {fullContent && <span>{fullContent}</span>}
+                          {fullContent && <span>{renderContentWithImages(fullContent)}</span>}
                         </>
                       ) : null}
                     </span>

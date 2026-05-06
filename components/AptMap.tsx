@@ -234,6 +234,24 @@ function writePinCache(key: string, pins: AptPin[]) {
   try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), pins })); } catch { /* quota */ }
 }
 
+// 본문에 섞인 이미지 URL → <img> 인라인 렌더 (피드 카드 공용).
+const FEED_IMG_URL_RE = /(https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?)/gi;
+function renderFeedContentWithImages(text: string): React.ReactNode {
+  if (!text) return null;
+  const parts = text.split(FEED_IMG_URL_RE);
+  return parts.map((p, i) => {
+    if (i % 2 === 1) {
+      return (
+        <a key={i} href={p} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="block my-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={p} alt="" loading="lazy" className="max-w-full max-h-[200px] object-contain border border-border" />
+        </a>
+      );
+    }
+    return p ? <span key={i}>{p}</span> : null;
+  });
+}
+
 export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1051,8 +1069,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           if (occupied || listed) return true;
           const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
           if (tier === 0) {
-            // 주황 (2000~2999): PC 에서 level >= 5 (1KM 이상 줌아웃) 시 숨김 — 빨강(3000+) 만 노출
-            if (!isMobile && lvl >= 5 && hh < 3000) return false;
+            // 주황 (2000~2999): PC 에서 1KM 이상 줌아웃 시 숨김 — 빨강(3000+) 만 노출
+            // Kakao 최신 SDK: lvl 5=500m, lvl 6=1KM, lvl 7=2KM. 따라서 lvl >= 6 부터 hide.
+            if (!isMobile && lvl >= 6 && hh < 3000) return false;
             return true;
           }
           if (tier === 1) return lvl <= (isMobile ? 7 : 5);
@@ -1701,7 +1720,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           ) : isFacilityComment ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
-                              <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>
+                              <span className="whitespace-pre-wrap break-words">{fullContent ? renderFeedContentWithImages(fullContent) : f.title}</span>
                             </div>
                           ) : isAuctionBid ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
@@ -1727,7 +1746,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           ) : isComment ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
-                              <span className="whitespace-pre-wrap break-words">{fullContent || f.title}</span>
+                              <span className="whitespace-pre-wrap break-words">{fullContent ? renderFeedContentWithImages(fullContent) : f.title}</span>
                             </div>
                           ) : isListing ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
@@ -1754,7 +1773,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             <>
                               <div className="text-[12px] text-text leading-snug mb-0.5 break-words">{f.title}</div>
                               {fullContent && (
-                                <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">{fullContent}</div>
+                                <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">{renderFeedContentWithImages(fullContent)}</div>
                               )}
                             </>
                           )}
