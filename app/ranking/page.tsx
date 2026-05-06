@@ -50,31 +50,31 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
             <div className="text-[13px] text-muted text-center py-16 border border-border">데이터가 없어요.</div>
           ) : (
             <>
-              {/* 데스크톱 — 테이블 */}
+              {/* 데스크톱 — 테이블 (드라이/엑셀 톤, 볼드 X, 패딩 축소) */}
               <div className="hidden md:block">
-                <table className="w-full text-[13px] border border-border bg-white">
-                  <thead className="bg-bg/40 text-[11px] text-muted uppercase tracking-wider">
+                <table className="w-full text-[12px] border border-border bg-white">
+                  <thead className="bg-bg/40 text-[10px] text-muted uppercase tracking-wider">
                     <tr>
-                      <th className="text-left px-4 py-3 w-[60px]">순위</th>
-                      <th className="text-left px-4 py-3">닉네임</th>
-                      <th className="text-right px-4 py-3">총자산</th>
-                      <th className="text-right px-4 py-3">현금성 (mlbg)</th>
-                      <th className="text-right px-4 py-3">부동산 ({rows[0]?.apt_count != null ? '단지수 / 가치' : ''})</th>
-                      <th className="text-right px-4 py-3 w-[80px]">상세</th>
+                      <th className="text-left px-3 py-1.5 w-[50px]">순위</th>
+                      <th className="text-left px-3 py-1.5">닉네임</th>
+                      <th className="text-right px-3 py-1.5">총자산</th>
+                      <th className="text-right px-3 py-1.5">현금성 (mlbg)</th>
+                      <th className="text-right px-3 py-1.5">부동산 (단지수 / 가치)</th>
+                      <th className="text-right px-3 py-1.5 w-[90px]">상세</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((r) => (
                       <tr key={r.user_id} className="border-t border-border hover:bg-navy-soft/40">
-                        <td className="px-4 py-3 font-bold text-navy tabular-nums">{r.rank}</td>
-                        <td className="px-4 py-3 font-semibold text-text truncate max-w-[200px]">{r.display_name ?? '익명'}</td>
-                        <td className="px-4 py-3 text-right font-bold text-navy tabular-nums">{fmt(r.total_wealth)}</td>
-                        <td className="px-4 py-3 text-right text-text tabular-nums">{fmt(r.mlbg_balance)}</td>
-                        <td className="px-4 py-3 text-right text-muted tabular-nums">
-                          {r.apt_count > 0 ? <>{r.apt_count}개 / <span className="text-text">{fmt(r.apt_value)}</span></> : '—'}
+                        <td className="px-3 py-1 text-text tabular-nums">{r.rank}</td>
+                        <td className="px-3 py-1 text-text truncate max-w-[200px]">{r.display_name ?? '익명'}</td>
+                        <td className="px-3 py-1 text-right text-text tabular-nums">{fmt(r.total_wealth)}</td>
+                        <td className="px-3 py-1 text-right text-text tabular-nums">{fmt(r.mlbg_balance)}</td>
+                        <td className="px-3 py-1 text-right text-text tabular-nums">
+                          {r.apt_count > 0 ? `${r.apt_count}개 / ${fmt(r.apt_value)}` : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <Link href={`/u/${r.user_id}`} className="text-cyan font-bold no-underline hover:underline text-[12px]">상세보기</Link>
+                        <td className="px-3 py-1 text-right">
+                          <Link href={`/u/${r.user_id}?tab=assets`} className="inline-block px-2 py-0.5 text-[11px] border border-border bg-white text-text no-underline hover:border-navy hover:text-navy">상세보기</Link>
                         </td>
                       </tr>
                     ))}
@@ -82,22 +82,23 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
                 </table>
               </div>
 
-              {/* 모바일 — 카드 */}
-              <ul className="md:hidden flex flex-col gap-2">
+              {/* 모바일 — 카드 (드라이 톤, 패딩 축소, 상세보기 버튼 분리) */}
+              <ul className="md:hidden flex flex-col">
                 {rows.map((r) => (
-                  <li key={r.user_id}>
-                    <Link href={`/u/${r.user_id}`} className="block bg-white border border-border hover:border-navy no-underline px-4 py-3">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-[16px] font-bold text-navy tabular-nums w-[40px] flex-shrink-0">{r.rank}</span>
-                        <span className="text-[14px] font-bold text-text truncate flex-1 min-w-0">{r.display_name ?? '익명'}</span>
-                        <span className="text-[14px] font-bold text-navy tabular-nums flex-shrink-0">{fmt(r.total_wealth)}</span>
+                  <li key={r.user_id} className="flex items-center gap-2 px-3 py-1.5 bg-white border-b border-border">
+                    <span className="text-[12px] text-text tabular-nums w-[28px] flex-shrink-0">{r.rank}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-text truncate flex-1 min-w-0">{r.display_name ?? '익명'}</span>
+                        <span className="text-[13px] text-text tabular-nums flex-shrink-0">{fmt(r.total_wealth)}</span>
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-muted pl-[52px]">
-                        <span>현금성 <b className="text-text font-semibold tabular-nums">{fmt(r.mlbg_balance)}</b></span>
+                      <div className="flex items-center gap-2 text-[10px] text-muted">
+                        <span className="tabular-nums">{fmt(r.mlbg_balance)} mlbg</span>
                         <span>·</span>
-                        <span>부동산 <b className="text-text font-semibold tabular-nums">{r.apt_count > 0 ? `${r.apt_count}개 / ${fmt(r.apt_value)}` : '—'}</b></span>
+                        <span className="tabular-nums">{r.apt_count > 0 ? `${r.apt_count}개 / ${fmt(r.apt_value)}` : '—'}</span>
                       </div>
-                    </Link>
+                    </div>
+                    <Link href={`/u/${r.user_id}?tab=assets`} className="flex-shrink-0 px-2 py-0.5 text-[11px] border border-border bg-white text-text no-underline hover:border-navy hover:text-navy">상세</Link>
                   </li>
                 ))}
               </ul>
