@@ -1629,7 +1629,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
           data-keep-on-mobile-map — 모바일 미니멀 지도 모드에서 숨김 처리되지 않도록 예외.
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
-      <div data-keep-on-mobile-map="" className="absolute bottom-24 right-2 z-40 flex flex-col gap-1.5">
+      {/* FloatingMapPin (Layout fixed bottom-5 right-5, 44×44) 위에 같은 폭으로 stack — 우하단 한 줄 정렬 */}
+      <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col gap-1.5">
         {([
           { k: 'apt' as const, label: '집', color: '#f97316' },
           { k: 'facility' as const, label: '시설', color: '#6b7280' },
@@ -1644,7 +1645,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               type="button"
               onClick={() => togglePinFilter(it.k)}
               aria-pressed={on}
-              className={`w-10 h-10 lg:w-12 lg:h-12 text-[12px] lg:text-[13px] font-bold rounded-md shadow cursor-pointer transition-all flex items-center justify-center border-2 border-[#1a1d22] ${on ? '' : 'line-through'}`}
+              className={`w-11 h-11 text-[12px] font-bold rounded-md shadow cursor-pointer transition-all flex items-center justify-center border-2 border-[#1a1d22] ${on ? '' : 'line-through'}`}
               style={
                 on
                   ? { backgroundColor: it.color, color: '#fff' }
