@@ -1,31 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-
-const TIP_DISMISSED_KEY = 'mlbg_feedback_tip_dismissed_v1';
 
 export default function FeedbackWidget() {
   const supabase = createClient();
   const [open, setOpen] = useState(false);
-  const [tipOpen, setTipOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  // 첫 방문자는 말풍선 한 번 띄움
-  useEffect(() => {
-    try {
-      if (typeof window === 'undefined') return;
-      if (!localStorage.getItem(TIP_DISMISSED_KEY)) setTipOpen(true);
-    } catch {}
-  }, []);
-
-  function dismissTip() {
-    setTipOpen(false);
-    try { localStorage.setItem(TIP_DISMISSED_KEY, '1'); } catch {}
-  }
 
   async function submit() {
     if (busy) return;
@@ -104,17 +88,9 @@ export default function FeedbackWidget() {
         </div>
       ) : (
         <>
-          {tipOpen && (
-            <div className="relative bg-[#1a1d22] text-white text-[12px] font-medium px-3 py-2 pr-7 shadow-[0_4px_12px_rgba(0,0,0,0.2)]" style={{ borderRadius: '6px' }}>
-              오류·불편사항이 있다면 알려주세요
-              <button type="button" onClick={dismissTip} aria-label="닫기" className="absolute right-1.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white text-[12px] leading-none">✕</button>
-              {/* 화살표 */}
-              <div className="absolute -right-1.5 bottom-3 w-3 h-3 bg-[#1a1d22] rotate-45" />
-            </div>
-          )}
           <button
             type="button"
-            onClick={() => { setOpen(true); dismissTip(); }}
+            onClick={() => setOpen(true)}
             aria-label="오류·불편사항 신고"
             className="w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy flex items-center justify-center transition-colors flex-shrink-0"
           >
