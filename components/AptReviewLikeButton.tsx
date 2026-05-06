@@ -112,7 +112,6 @@ export default function AptReviewLikeButton({
         <span className="absolute z-50 bottom-full mb-1 left-1/2 -translate-x-1/2 w-[220px] bg-navy text-white text-[10px] leading-relaxed px-3 py-2 shadow-xl pointer-events-none">
           누를 때마다 <b className="text-cyan">작성자 +3 mlbg</b>.<br />
           찐리뷰 아닌데 누르면 누른 사람 <b className="text-[#fbbf24]">-1 mlbg</b>.
-          <span className="block text-white/60 text-[9px] mt-0.5">(차감은 안 함, 양심에 맡김)</span>
         </span>
       )}
     </span>

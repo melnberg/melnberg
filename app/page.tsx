@@ -14,7 +14,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp] = await Promise.all([
       supabase
         .from('apt_discussions')
-        .select('id, apt_master_id, author_id, title, content, created_at, apt_master(apt_nm, dong, lat, lng)')
+        .select('id, apt_master_id, author_id, title, content, like_count, created_at, apt_master(apt_nm, dong, lat, lng)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50),

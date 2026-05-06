@@ -104,6 +104,8 @@ export type FeedItem = {
   /** strike 전용 — 손실 % 와 mlbg 액수 */
   strike_loss_pct?: number;
   strike_loss_mlbg?: number;
+  /** discussion 전용 — 찐리뷰 좋아요 카운트 */
+  discussion_like_count?: number;
 };
 
 export type AptPin = {
