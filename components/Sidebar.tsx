@@ -54,17 +54,17 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
         style={{ overscrollBehavior: 'contain' }}
         className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[140px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
-        <div className="px-4 flex items-center border-b border-border h-[66px]">
+        <div className="px-4 flex items-center h-[66px]">
           <a href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
-            <img src="/logo.svg" alt="멜른버그" className="w-7 h-7 flex-shrink-0" />
+            <img src="/logo.svg" alt="멜른버그" className="w-9 h-9 flex-shrink-0" />
             <span className="text-[14px] font-bold text-navy tracking-tight whitespace-nowrap">멜른버그</span>
           </a>
         </div>
 
-        <div className="px-4 py-0">
-          {user ? (
+        {/* 로그인 사용자 정보 — 로그인 시에만 상단에 노출 */}
+        {user && (
+          <div className="px-4 py-2">
             <div className="border border-border hover:border-navy transition-colors">
-              {/* Row 1: 아바타 · 이름 + 배지 · 알림 종 */}
               <div className="flex items-center gap-2.5 px-3 pt-2.5 pb-1.5">
                 <Link
                   href="/me"
@@ -89,7 +89,6 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                 </Link>
                 <NotificationsBell />
               </div>
-              {/* Row 2: mlbg 잔액 · 마이페이지 링크 */}
               <Link
                 href="/me"
                 onClick={() => setOpen(false)}
@@ -100,11 +99,9 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                 ) : <span />}
                 <span className="text-muted hover:text-navy">마이페이지 →</span>
               </Link>
-              {/* 출석 체크 — 박스 안 하단 */}
               <div className="px-3 pb-2 pt-1">
                 <CheckinButton />
               </div>
-              {/* 어드민 진입 — admin 만 노출 */}
               {user.isAdmin && (
                 <Link
                   href="/admin"
@@ -115,19 +112,10 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                 </Link>
               )}
             </div>
-          ) : (
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center bg-navy text-white h-[32px] mt-2 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
-            >
-              로그인
-            </Link>
-          )}
-        </div>
+          </div>
+        )}
 
-        <nav className="flex-1 py-1 pb-4 flex flex-col">
-          <div className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
+        <nav className="flex-1 pb-4 flex flex-col">
           <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
           <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
           {/* 블로그 메뉴 가림 (2026-05-06). 다시 보려면 주석 해제. */}
@@ -185,6 +173,26 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 커뮤니티 — 좁은 사이드바엔 미리보기 제외 (글 클릭은 페이지에서) */}
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
         </nav>
+
+        {/* 비로그인 — 사이드바 맨 아래 [로그인 (흰)] [회원가입 (네이비)] 스택 */}
+        {!user && (
+          <div className="px-4 pb-4 pt-2 flex flex-col gap-2 border-t border-border">
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center bg-white border border-border text-text h-[34px] text-[12px] font-bold tracking-wide no-underline hover:border-navy hover:text-navy transition-colors"
+            >
+              로그인
+            </Link>
+            <Link
+              href="/signup"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center bg-navy text-white h-[34px] text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
+            >
+              회원가입
+            </Link>
+          </div>
+        )}
 
         {/* 사이드바 하단 상담문의(오픈채팅) 섹션 — 임시 숨김. 추후 부활 시 false → true */}
         {false && (
