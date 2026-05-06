@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { revalidateTag } from 'next/cache';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import AuctionBidForm from '@/components/AuctionBidForm';
@@ -37,11 +36,7 @@ export default async function AuctionDetailPage({ params }: { params: Promise<{ 
   if (!Number.isFinite(numId)) notFound();
 
   const supabase = createPublicClient();
-  // 만료된 경매 자동 종료 (각 페이지 진입마다 한 번)
-  const completeRes = await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
-  if (completeRes && (completeRes as { data?: number })?.data && Number((completeRes as { data: number }).data) > 0) {
-    revalidateTag('apt-master');
-  }
+  // 만료 경매 처리는 /api/cron/complete-auctions (5분 cron) 으로 이관 (death spiral 방지, 2026-05-06).
 
   const [{ data: auc }, { data: bidRows }] = await Promise.all([
     supabase.from('apt_auctions').select('id, apt_id, asset_type, asset_id, starts_at, ends_at, min_bid, current_bid, current_bidder_id, status, bid_count').eq('id', numId).maybeSingle(),

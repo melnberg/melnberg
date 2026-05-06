@@ -8,8 +8,8 @@ import FloatingMapPin from './FloatingMapPin';
 import LiveActivityToaster from './LiveActivityToaster';
 import MobileTopBar from './MobileTopBar';
 
-// 사이드바 최신글 — 30초 캐싱. 모든 페이지 공통이라 cache hit 비율 매우 높음.
-// unstable_cache 내부에서는 cookies() 의존 클라이언트 못 씀 → public anon 클라이언트 사용
+// 사이드바 최신글 — 120초 캐싱 (모든 페이지 공통). DB 부하 감소 위해 30→120 확대 (2026-05-06).
+// 새 글 작성 시 revalidateTag('posts') 로 즉시 갱신되므로 사용자 체감 거의 없음.
 const fetchRecentPosts = unstable_cache(
   async (): Promise<SidebarRecentPost[]> => {
     const supabase = createPublicClient();
@@ -30,7 +30,7 @@ const fetchRecentPosts = unstable_cache(
     });
   },
   ['sidebar-recent-posts'],
-  { revalidate: 30, tags: ['posts'] },
+  { revalidate: 120, tags: ['posts'] },
 );
 
 // Supabase 부하 시 Layout 이 페이지 전체를 막는 사고 방어 (2026-05-06).

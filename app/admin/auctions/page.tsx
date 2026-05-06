@@ -36,7 +36,7 @@ export default async function AdminAuctionsPage() {
   if (!user) redirect('/login?next=/admin/auctions');
   if (!(await isCurrentUserAdmin())) redirect('/');
 
-  await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
+  // 만료 경매 처리는 /api/cron/complete-auctions (5분 cron) 으로 이관 (death spiral 방지, 2026-05-06).
   const { data } = await supabase.rpc('list_recent_auctions', { p_limit: 50 }).then((r) => r, () => ({ data: null }));
   const rows = (data ?? []) as AuctionRow[];
 

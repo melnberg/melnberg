@@ -1,8 +1,6 @@
 import Link from 'next/link';
-import { revalidateTag } from 'next/cache';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import AuctionCleanupTrigger from '@/components/AuctionCleanupTrigger';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const metadata = { title: '시한 경매 — 멜른버그' };
@@ -24,11 +22,7 @@ const ASSET_TYPE_BADGE: Record<string, string> = { apt: '단지', factory: '시�
 
 export default async function AuctionsPage() {
   const supabase = createPublicClient();
-  // 만료 경매 자동 종료 처리 (페이지 로드 시 한 번). 종료 발생 시 home-pins 캐시 무효화.
-  const completeRes = await supabase.rpc('complete_expired_auctions').then((r) => r, () => null);
-  if (completeRes && Number((completeRes as { data?: number })?.data ?? 0) > 0) {
-    revalidateTag('apt-master');
-  }
+  // 만료 경매 처리는 /api/cron/complete-auctions (5분 cron) 으로 이관 (death spiral 방지, 2026-05-06).
   const { data } = await supabase.rpc('list_recent_auctions', { p_limit: 50 }).then((r) => r, () => ({ data: null }));
   const rows = (data ?? []) as AuctionRow[];
   const active = rows.filter((r) => r.status === 'active');
@@ -36,7 +30,6 @@ export default async function AuctionsPage() {
 
   return (
     <Layout>
-      <AuctionCleanupTrigger />
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/auctions', label: '시한 경매', bold: true }]} meta="Auctions" />
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">

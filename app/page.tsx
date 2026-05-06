@@ -832,8 +832,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     return [...auctionItems, ...others];
 }
 
-// 30초 캐싱. mutation (글/댓글/매물 등) 시 클라이언트가 /api/revalidate-home 호출 → revalidateTag('home-feed') 로 즉시 무효화.
-const fetchFeed = unstable_cache(fetchFeedRaw, ['home-feed-v1'], { revalidate: 30, tags: ['home-feed'] });
+// 90초 캐싱 (DB 부하 감소 위해 30→90 확대 — 2026-05-06).
+// mutation (글/댓글/매물 등) 시 클라이언트가 /api/revalidate-home 호출 → revalidateTag('home-feed') 로 즉시 무효화되므로 사용자 체감 거의 없음.
+const fetchFeed = unstable_cache(fetchFeedRaw, ['home-feed-v1'], { revalidate: 90, tags: ['home-feed'] });
 
 // Supabase 부하 시 fetchFeed 가 30초+ 걸려 페이지 전체가 안 떠지는 사고 방어 (2026-05-06).
 // 8초 안에 못 받으면 빈 피드로 일단 렌더 — 클라가 30초 후 재방문 시 캐시 갱신됨.
