@@ -1629,7 +1629,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
           data-keep-on-mobile-map — 모바일 미니멀 지도 모드에서 숨김 처리되지 않도록 예외.
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
-      <div data-keep-on-mobile-map="" className="absolute top-2 lg:top-14 right-2 z-40 flex flex-col gap-1.5">
+      <div data-keep-on-mobile-map="" className="absolute bottom-24 right-2 z-40 flex flex-col gap-1.5">
         {([
           { k: 'apt' as const, label: '집', color: '#f97316' },
           { k: 'facility' as const, label: '시설', color: '#6b7280' },
