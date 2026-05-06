@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/complete-auctions",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-mv",
+      "schedule": "0 19 * * *"
     }
   ]
 }

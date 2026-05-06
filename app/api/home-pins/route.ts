@@ -98,8 +98,9 @@ export async function GET(request: Request) {
     const pins = attachPyeong(pinsRaw, pyeongDict);
     return NextResponse.json(
       { pins },
-      // 60초 edge cache + 300초 stale-while-revalidate. 빠르면서 캐시 포이즌 안 됨 (success 만 캐시).
-      { headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' } },
+      // 5분 edge cache + 30분 stale-while-revalidate (DB 부하 감소 위해 60s→300s 확대, 2026-05-06).
+      // 핀 데이터는 점거/매물 변경 외엔 거의 안 바뀜. mutation 시엔 별도 revalidate 안 해도 5분 후 자동 갱신.
+      { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=1800' } },
     );
   } catch (err) {
     // 200 + 빈 배열로 절대 안 내려감 → 클라가 화면 비우는 사고 차단.
