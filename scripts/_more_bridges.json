@@ -1,0 +1,5 @@
+[
+  {"brand":"bridge","name":"일산대교","address":"경기 김포시·고양시","lat":37.6511,"lng":126.7169,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"미사대교","address":"경기 하남시·남양주시","lat":37.5863,"lng":127.1983,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"팔당대교","address":"경기 하남시·남양주시","lat":37.5459,"lng":127.2376,"occupy_price":100,"daily_income":5}
+]

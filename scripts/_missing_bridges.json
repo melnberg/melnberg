@@ -1,0 +1,9 @@
+[
+  {"brand":"bridge","name":"잠실철교","address":"서울 송파구·광진구","lat":37.5291,"lng":127.0986,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"강동대교","address":"서울 강동구·경기 구리","lat":37.5778,"lng":127.1613,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"고덕토평대교","address":"서울 강동구·경기 구리","lat":37.5714,"lng":127.1494,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"구리암사대교","address":"서울 강동구·경기 구리","lat":37.5699,"lng":127.1314,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"월드컵대교","address":"서울 영등포구·마포구","lat":37.5560,"lng":126.8852,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"방화대교","address":"서울 강서구·경기 고양","lat":37.5885,"lng":126.8274,"occupy_price":100,"daily_income":5},
+  {"brand":"bridge","name":"행주대교","address":"서울 강서구·경기 고양","lat":37.5980,"lng":126.8096,"occupy_price":100,"daily_income":5}
+]
