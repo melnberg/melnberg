@@ -468,12 +468,13 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       const row = r as Record<string, unknown>;
       const am = row.apt_master as { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
       const prof = profileMap.get(row.seller_id as string);
+      const aptLabel = am?.apt_nm ? (am.dong ? `${am.dong} ${am.apt_nm}` : am.apt_nm) : '단지';
       return {
         kind: 'listing' as const,
         id: row.apt_id as number,
         apt_master_id: row.apt_id as number,
         post_id: null,
-        title: `🏷️ ${am?.apt_nm ?? '단지'} 매물`,
+        title: `🏷️ ${aptLabel} 매물`,
         content: `호가 ${Number(row.price).toLocaleString()} mlbg — 잔액 충분하면 즉시 매수 가능`,
         created_at: row.listed_at as string,
         apt_nm: am?.apt_nm ?? null,
@@ -497,7 +498,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       const prof = profileMap.get(row.buyer_id as string);
       const k = row.kind as 'offer' | 'snatch';
       const price = Number(row.price ?? 0);
-      const aptName = am?.apt_nm ?? '단지';
+      const aptName = am?.apt_nm ? (am.dong ? `${am.dong} ${am.apt_nm}` : am.apt_nm) : '단지';
       const title = k === 'snatch' ? `${aptName} 내놔 요청 (무상)` : `${aptName} 매수 호가 ${price.toLocaleString()} mlbg`;
       const msg = (row.message as string | null) ?? null;
       return {
@@ -796,6 +797,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     // 거래성사 → FeedItem (kind 'sell_complete')
     const sellItems: FeedItem[] = sellRows.map((s) => {
       const am = s.apt_master ?? null;
+      const aptLabel = am?.apt_nm ? (am.dong ? `${am.dong} ${am.apt_nm}` : am.apt_nm) : '단지';
       const price = Number(s.actor_score ?? 0);
       const isSnatch = price === 0;
       return {
@@ -805,8 +807,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         post_id: null,
         title: '🤝 거래성사',
         content: isSnatch
-          ? `${s.prev_occupier_name ?? '이전점거자'} → ${s.actor_name ?? '신규점거자'} | ${am?.apt_nm ?? '단지'} | 내놔 (무상)`
-          : `${s.prev_occupier_name ?? '매도인'} → ${s.actor_name ?? '매수인'} | ${am?.apt_nm ?? '단지'} | ${price.toLocaleString()} mlbg`,
+          ? `${s.prev_occupier_name ?? '이전점거자'} → ${s.actor_name ?? '신규점거자'} | ${aptLabel} | 내놔 (무상)`
+          : `${s.prev_occupier_name ?? '매도인'} → ${s.actor_name ?? '매수인'} | ${aptLabel} | ${price.toLocaleString()} mlbg`,
         created_at: s.created_at,
         apt_nm: am?.apt_nm ?? null,
         dong: am?.dong ?? null,

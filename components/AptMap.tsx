@@ -1677,13 +1677,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isEmartOccupy = f.kind === 'emart_occupy';
                   const isFactoryOccupy = f.kind === 'factory_occupy';
                   const isFacilityComment = f.kind === 'emart_comment' || f.kind === 'factory_comment';
+                  // 단지 관련 kind 의 헤드라벨엔 동 prefix (예: "역삼동 역삼래미안")
+                  const aptHeadLabel = f.apt_nm ? (f.dong ? `${f.dong} ${f.apt_nm}` : f.apt_nm) : '';
                   const headLabel = isNotice ? '분양 공지'
                     : f.kind === 'strike' ? '💥 파업'
                     : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
                     : f.kind === 'sell_complete' ? '🤝 거래성사'
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
                     : isCommunity ? '커뮤니티'
-                    : (f.apt_nm ?? '(단지 정보 없음)');
+                    : (aptHeadLabel || '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
                       <div className={`px-3 py-2.5 ${

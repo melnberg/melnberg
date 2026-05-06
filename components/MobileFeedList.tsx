@@ -181,13 +181,15 @@ export default function MobileFeedList({ items }: Props) {
         {items.map((f) => {
           const href = hrefFor(f);
           const badge = badgeFor(f);
+          // 단지 관련 kind 의 헤드라벨엔 동 prefix (예: "역삼동 역삼래미안")
+          const aptHeadLabel = f.apt_nm ? (f.dong ? `${f.dong} ${f.apt_nm}` : f.apt_nm) : '';
           const headLabel = f.kind === 'notice' ? '분양 공지'
             : f.kind === 'strike' ? '💥 파업'
             : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
             : f.kind === 'sell_complete' ? '🤝 거래성사'
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
             : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
-            : (f.apt_nm ?? '');
+            : aptHeadLabel;
           const fullContent = (f.content ?? '').trim();
           const isAuctionLive = f.kind === 'auction';
           const isStrike = f.kind === 'strike';
