@@ -116,22 +116,13 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
               )}
             </div>
           ) : (
-            <div className="flex gap-2">
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="flex-1 flex items-center justify-center bg-white border border-border text-text py-2.5 px-3 text-[12px] font-bold tracking-wide no-underline hover:border-navy hover:text-navy transition-colors"
-              >
-                로그인
-              </Link>
-              <Link
-                href="/signup"
-                onClick={() => setOpen(false)}
-                className="flex-1 flex items-center justify-center bg-navy text-white py-2.5 px-3 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
-              >
-                회원가입
-              </Link>
-            </div>
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="block bg-navy text-white text-center py-2.5 px-3 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark transition-colors"
+            >
+              로그인 / 회원가입
+            </Link>
           )}
         </div>
 
