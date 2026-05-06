@@ -78,6 +78,7 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
     case 'emart_occupy':
     case 'factory_occupy': return { label: '분양',  cls: 'bg-[#F5A623] text-white' };
     case 'notice':        return { label: '공지',   cls: 'bg-navy text-white' };
+    case 'strike':        return { label: '파업',   cls: 'bg-[#dc2626] text-white animate-pulse' };
     default: return null;
   }
 }
@@ -159,6 +160,7 @@ export default function MobileFeedList({ items }: Props) {
           const href = hrefFor(f);
           const badge = badgeFor(f);
           const headLabel = f.kind === 'notice' ? '분양 공지'
+            : f.kind === 'strike' ? '💥 파업'
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
             : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
             : (f.apt_nm ?? '');

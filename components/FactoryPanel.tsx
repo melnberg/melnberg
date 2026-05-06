@@ -48,6 +48,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   const supabase = createClient();
   const [busy, setBusy] = useState(false);
   const [currentUid, setCurrentUid] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sellPriceInput, setSellPriceInput] = useState('');
   const [sellDescInput, setSellDescInput] = useState('');
   const [sellPanelOpen, setSellPanelOpen] = useState(false);
@@ -58,8 +59,39 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   const meta = BRAND_META[factory.brand];
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUid(data?.user?.id ?? null), () => {});
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+      setCurrentUid(user?.id ?? null);
+      if (user) {
+        const { data: prof } = await supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+        if (!cancelled) setIsAdmin(!!(prof as { is_admin?: boolean } | null)?.is_admin);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [supabase]);
+
+  // 파업 — 어드민이 점거자 잔액에서 % 차감
+  async function handleStrike() {
+    if (busy) return;
+    if (!factory.occupier_id) { alert('점거자가 없는 시설은 파업 못 함'); return; }
+    const pctInput = window.prompt(`${factory.name} 점거자 잔액의 몇 % 를 차감할까요? (빈 값 = 기본값 사용)`, '');
+    if (pctInput === null) return;
+    const pct = pctInput.trim() === '' ? null : Number(pctInput);
+    if (pct !== null && (!Number.isFinite(pct) || pct < 0 || pct > 100)) { alert('0~100 사이 숫자'); return; }
+    setBusy(true);
+    const { data, error } = await supabase.rpc('strike_asset', { p_asset_type: 'factory', p_asset_id: factory.id, p_pct: pct });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_loss_pct: number; out_loss_mlbg: number; out_occupier_name: string | null; out_event_id: number | null; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '파업 실패'); return; }
+    alert(`💥 파업 완료 — ${row.out_occupier_name ?? '점거자'} 님 ${Number(row.out_loss_pct)}% (${Number(row.out_loss_mlbg).toLocaleString()} mlbg) 차감`);
+    if (row.out_event_id) notifyTelegram('strike', row.out_event_id);
+    revalidateHome();
+    onChanged();
+    router.refresh();
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -218,6 +250,18 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
             </h1>
             {factory.address && <div className="text-[11px] text-white/80 truncate">{factory.address}</div>}
           </div>
+          {/* 어드민 — 파업 버튼. 점거자 있을 때만 활성. */}
+          {isAdmin && factory.occupier_id && (
+            <button
+              type="button"
+              onClick={handleStrike}
+              disabled={busy}
+              title="점거자에게 손실 부여"
+              className="text-[10px] font-bold tracking-wider uppercase bg-[#dc2626] hover:bg-[#b91c1c] text-white px-2 py-1 cursor-pointer border-none disabled:opacity-50 flex-shrink-0"
+            >
+              💥 파업
+            </button>
+          )}
           <button type="button" onClick={onClose} aria-label={inline ? '뒤로' : '닫기'} className="text-white/90 hover:text-white px-1 cursor-pointer bg-transparent border-none flex items-center justify-center">
             {inline ? (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>

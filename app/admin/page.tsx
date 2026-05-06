@@ -75,6 +75,7 @@ export default async function AdminPage() {
               <a href="/admin/cafe-posts" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">카페 글 관리</a>
               <a href="/admin/cafe-members" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">카페 유료회원</a>
               <a href="/admin/auctions" className="px-3 py-1.5 border border-[#dc2626] bg-[#dc2626] text-white text-[12px] font-bold no-underline hover:bg-[#b91c1c]">시한 경매</a>
+              <a href="/admin/strikes" className="px-3 py-1.5 border border-[#dc2626] bg-[#dc2626] text-white text-[12px] font-bold no-underline hover:bg-[#b91c1c]">💥 파업</a>
               <a href="/admin/apt-master" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">아파트 마스터</a>
               <a href="/admin/feedback" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">건의사항</a>
               <LaunchTelegramButton />

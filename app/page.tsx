@@ -114,6 +114,16 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       .then((r) => r, () => ({ data: null }));
     const emartRows = ((emartOccs ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
 
+    // 최근 파업 — 24시간 이내. RPC list_recent_strikes 가 자산명·점거자명 조인까지 처리.
+    const { data: strikeRowsRaw } = await supabase
+      .rpc('list_recent_strikes', { p_limit: 20 })
+      .then((r) => r, () => ({ data: null }));
+    const strikeRows = (strikeRowsRaw ?? []) as Array<{
+      id: number; asset_type: 'factory' | 'emart'; asset_id: number; asset_name: string | null;
+      occupier_id: string; occupier_name: string | null;
+      loss_pct: number; loss_mlbg: number; created_at: string;
+    }>;
+
     // 최근 공장 분양 (하이닉스/삼성/코스트코/금속노조/화물연대)
     const { data: factoryOccs } = await supabase
       .from('factory_occupations')
@@ -687,8 +697,29 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       }),
     ];
 
-    // 경매는 강제 최상단 유지. 공지·일반·입찰·이마트·공장은 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems]
+    // 파업 이벤트 → FeedItem (kind 'strike')
+    const strikeItems: FeedItem[] = strikeRows.map((s) => ({
+      kind: 'strike' as const,
+      id: 400000 + s.id,
+      apt_master_id: 0,
+      post_id: null,
+      title: '💥 파업',
+      content: `[${s.asset_name ?? '자산'}] ${s.occupier_name ?? '점거자'} 님 ${Number(s.loss_pct)}% 삭감 (${Number(s.loss_mlbg).toLocaleString()} mlbg)`,
+      created_at: s.created_at,
+      apt_nm: s.asset_name ?? null,
+      dong: null,
+      lat: null, lng: null,
+      author_id: s.occupier_id,
+      author_name: s.occupier_name,
+      author_link: null,
+      author_is_paid: false, author_is_solo: false,
+      author_avatar_url: null, author_apt_count: null,
+      strike_loss_pct: Number(s.loss_pct),
+      strike_loss_mlbg: Number(s.loss_mlbg),
+    } as FeedItem));
+
+    // 경매는 강제 최상단 유지. 공지·일반·입찰·이마트·공장·파업은 모두 시간순.
+    const others = [...NOTICE_ITEMS, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 100 - auctionItems.length);
     return [...auctionItems, ...others];

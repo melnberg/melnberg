@@ -5,7 +5,7 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'auction_completed' | 'emart_occupy' | 'factory_occupy';
+type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'auction_completed' | 'emart_occupy' | 'factory_occupy' | 'strike';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'auction_completed', 'emart_occupy', 'factory_occupy'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'auction_completed', 'emart_occupy', 'factory_occupy', 'strike'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -228,6 +228,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
     }
     return NextResponse.json({ ok: true, message_id: result.message_id });
+  } else if (kind === 'strike') {
+    // refId = strike_events.id. 어드민이 파업 누르면 호출.
+    const { data: ev } = await admin
+      .from('strike_events')
+      .select('id, asset_type, asset_id, occupier_id, loss_pct, loss_mlbg, created_by')
+      .eq('id', refId).maybeSingle();
+    const e = ev as { id: number; asset_type: 'factory' | 'emart'; asset_id: number; occupier_id: string; loss_pct: number; loss_mlbg: number; created_by: string } | null;
+    if (!e) return NextResponse.json({ error: 'strike not found' }, { status: 404 });
+    if (e.created_by !== user.id) return NextResponse.json({ error: 'not creator' }, { status: 403 });
+    let assetName = '자산';
+    if (e.asset_type === 'factory') {
+      const { data: f } = await admin.from('factory_locations').select('name, brand').eq('id', e.asset_id).maybeSingle();
+      const fr = f as { name: string | null; brand: string | null } | null;
+      const brandLabel: Record<string, string> = { hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코', union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역' };
+      assetName = `${brandLabel[fr?.brand ?? ''] ?? ''} ${fr?.name ?? '시설'}`.trim();
+    } else {
+      const { data: m } = await admin.from('emart_locations').select('name').eq('id', e.asset_id).maybeSingle();
+      assetName = (m as { name: string | null } | null)?.name ?? '매장';
+    }
+    const { data: op } = await admin.from('profiles').select('display_name').eq('id', e.occupier_id).maybeSingle();
+    const opName = (op as { display_name: string | null } | null)?.display_name ?? '점거자';
+    tag = '💥 파업';
+    main = `${assetName} — ${opName} 님 ${Number(e.loss_pct)}% (${Number(e.loss_mlbg).toLocaleString()} mlbg) 삭감`;
   } else if (kind === 'offer' || kind === 'snatch') {
     // refId = apt_listing_offers.id. 매수 호가 / 내놔 알림.
     const { data } = await admin

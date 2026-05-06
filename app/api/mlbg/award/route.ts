@@ -9,7 +9,8 @@ type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' 
 const VALID_KINDS: Kind[] = ['apt_post', 'apt_comment', 'community_post', 'community_comment', 'hotdeal_post', 'hotdeal_comment', 'factory_comment', 'emart_comment'];
 
 // 결정론적 정책 — AI 평가 제거. 줄 수 기반 고정 지급.
-//   글 (community/hotdeal): 기본 2 mlbg
+//   글 (community): 2 mlbg
+//   글 (hotdeal):   7 mlbg (핫한 정보 공유 보상 강화)
 //   글 (apt):
 //     1줄: 0 mlbg (지급 없음)
 //     2~4줄: 2 mlbg (기본)
@@ -35,6 +36,7 @@ function evaluateAward(kind: Kind, content: string): { earned: number; reason: s
     const earned = lines >= 10 ? 5 : lines >= 5 ? 3 : lines >= 2 ? 2 : 0;
     return { earned, reason: `단지 토론 (${lines}줄 환산)` };
   }
+  if (kind === 'hotdeal_post') return { earned: 7, reason: '핫딜 글 (강화 보상)' };
   return { earned: 2, reason: '글 작성 기본' };
 }
 

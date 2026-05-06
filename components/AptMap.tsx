@@ -65,7 +65,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -101,6 +101,9 @@ export type FeedItem = {
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
   post_category?: 'community' | 'hotdeal';
+  /** strike 전용 — 손실 % 와 mlbg 액수 */
+  strike_loss_pct?: number;
+  strike_loss_mlbg?: number;
 };
 
 export type AptPin = {
