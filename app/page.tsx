@@ -161,7 +161,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       // 맛집 댓글
       supabase
         .from('restaurant_pin_comments')
-        .select('id, pin_id, author_id, content, created_at, pin:restaurant_pins!pin_id(name, recommended_menu, lat, lng)')
+        .select('id, pin_id, author_id, content, created_at, pin:restaurant_pins!pin_id(name, dong, recommended_menu, lat, lng)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -193,12 +193,13 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const restaurantPinRows = (((restaurantPinsResp as { data: unknown[] | null })?.data ?? []) as Array<{
       id: number; name: string; description: string; recommended_menu: string;
       lat: number; lng: number; photo_url: string | null;
+      dong: string | null;
       author_id: string; author_name: string | null;
       created_at: string;
     }>);
     const restaurantCommRows = (((restaurantCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
       id: number; pin_id: number; author_id: string; content: string; created_at: string;
-      pin: { name: string | null; recommended_menu: string | null; lat: number | null; lng: number | null } | null;
+      pin: { name: string | null; dong: string | null; recommended_menu: string | null; lat: number | null; lng: number | null } | null;
     }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
@@ -865,16 +866,17 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     // 신규 등록 맛집 핀 → FeedItem (kind 'restaurant_register')
     const restaurantRegisterItems: FeedItem[] = restaurantPinRows.map((r) => {
       const prof = profileMap.get(r.author_id);
+      const fullName = r.dong ? `${r.dong} ${r.name}` : r.name;
       return {
         kind: 'restaurant_register' as const,
         id: 800000 + r.id,
         apt_master_id: 0,
         post_id: null,
-        title: `🍴 ${r.name}`,
+        title: `🍴 ${fullName}`,
         content: `${r.description}\n[메뉴] ${r.recommended_menu}`,
         created_at: r.created_at,
-        apt_nm: r.name,
-        dong: null,
+        apt_nm: fullName,
+        dong: r.dong ?? null,
         lat: r.lat, lng: r.lng,
         author_id: r.author_id,
         author_name: r.author_name ?? prof?.display_name ?? null,
@@ -893,16 +895,17 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const restaurantCommentItems: FeedItem[] = restaurantCommRows.map((c) => {
       const prof = profileMap.get(c.author_id);
       const pin = c.pin;
+      const fullName = pin ? (pin.dong ? `${pin.dong} ${pin.name ?? ''}` : (pin.name ?? '')) : '맛집';
       return {
         kind: 'restaurant_comment' as const,
         id: 900000 + c.id,
         apt_master_id: 0,
         post_id: null,
-        title: pin?.name ?? '맛집',
+        title: fullName,
         content: c.content,
         created_at: c.created_at,
-        apt_nm: pin?.name ?? null,
-        dong: null,
+        apt_nm: fullName,
+        dong: pin?.dong ?? null,
         lat: pin?.lat ?? null,
         lng: pin?.lng ?? null,
         author_id: c.author_id,
@@ -913,7 +916,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
         restaurant_id: c.pin_id,
-        restaurant_name: pin?.name ?? null,
+        restaurant_name: fullName,
       } as FeedItem;
     });
 

@@ -412,6 +412,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   type RestaurantItem = {
     id: number; name: string; description: string; recommended_menu: string;
     lat: number; lng: number; photo_url: string | null; address: string | null;
+    dong: string | null;
     occupy_price: number; daily_income: number; like_count: number;
     author_id: string; author_name: string | null;
     occupier_id: string | null; occupier_name: string | null;
@@ -515,9 +516,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     const imgOcc = new window.kakao.maps.MarkerImage(restaurantPin(true), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
     for (const r of restaurantList) {
       const pos = new window.kakao.maps.LatLng(r.lat, r.lng);
+      const fullName = r.dong ? `${r.dong} ${r.name}` : r.name;
       const marker = new window.kakao.maps.Marker({
         position: pos,
-        title: r.name + (r.occupier_id ? ` — ${r.occupier_name ?? '점거됨'} 보유` : ` (${r.occupy_price.toLocaleString()} mlbg 분양)`),
+        title: fullName + (r.occupier_id ? ` — ${r.occupier_name ?? '점거됨'} 보유` : ` (${r.occupy_price.toLocaleString()} mlbg 분양)`),
         clickable: true,
         image: r.occupier_id ? imgOcc : imgEmpty,
         map,

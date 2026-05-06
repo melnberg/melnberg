@@ -15,6 +15,7 @@ type Pin = {
   lng: number;
   photo_url: string | null;
   address: string | null;
+  dong: string | null;
   occupy_price: number;
   daily_income: number;
   like_count: number;
@@ -57,7 +58,7 @@ export default async function RestaurantsPage() {
                 <li key={p.id}>
                   <Link href={`/?restaurant=${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 px-4 py-3 no-underline">
                     <div className="flex items-baseline justify-between gap-2 mb-1">
-                      <h3 className="text-[15px] font-bold text-navy truncate">🍴 {p.name}</h3>
+                      <h3 className="text-[15px] font-bold text-navy truncate">🍴 {p.dong ? `${p.dong} ${p.name}` : p.name}</h3>
                       <span className="text-[10px] text-muted flex-shrink-0">❤ {p.like_count}</span>
                     </div>
                     {p.address && <div className="text-[10px] text-muted mb-1">{p.address}</div>}

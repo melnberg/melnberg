@@ -7,6 +7,7 @@ import { awardMlbg } from '@/lib/mlbg-award';
 export type RestaurantItem = {
   id: number; name: string; description: string; recommended_menu: string;
   lat: number; lng: number; photo_url: string | null; address: string | null;
+  dong: string | null;
   occupy_price: number; daily_income: number; like_count: number;
   author_id: string; author_name: string | null;
   occupier_id: string | null; occupier_name: string | null;
@@ -174,7 +175,7 @@ export default function RestaurantPanel({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-[18px]">🍴</span>
           <div className="min-w-0">
-            <div className="font-bold text-[15px] truncate">{restaurant.name}</div>
+            <div className="font-bold text-[15px] truncate">{restaurant.dong ? `${restaurant.dong} ${restaurant.name}` : restaurant.name}</div>
             {restaurant.address && <div className="text-[10px] text-[#78350f] truncate">{restaurant.address}</div>}
           </div>
         </div>

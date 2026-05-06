@@ -40,6 +40,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [address, setAddress] = useState('');
+  const [dong, setDong] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +69,11 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
           const geocoder = new geocoderClass();
           geocoder.coord2Address(newLng, newLat, (result, status) => {
             if (status === window.kakao.maps.services.Status.OK && result[0]) {
-              setAddress(result[0].road_address?.address_name ?? result[0].address?.address_name ?? '');
+              const r0 = result[0] as { road_address?: { address_name: string } | null; address?: { address_name: string; region_3depth_name?: string } | null };
+              setAddress(r0.road_address?.address_name ?? r0.address?.address_name ?? '');
+              // 행정동 추출 (address.region_3depth_name = "ㅇㅇ동")
+              const dongName = r0.address?.region_3depth_name ?? '';
+              if (dongName) setDong(dongName);
             }
           });
         }
@@ -109,6 +114,10 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
     setMarker(Number(p.y), Number(p.x));
     setSearchResults([]);
     setSearchQuery('');
+    // 행정동 추출 — 카카오 검색결과 address_name 에서 'ㅇㅇ동' 토큰 찾기
+    const tokens = (p.address_name || '').split(/\s+/);
+    const dongToken = tokens.reverse().find((t) => /[가-힣]+동$/.test(t));
+    if (dongToken) setDong(dongToken);
   }
 
   async function handlePhoto(file: File) {
@@ -157,6 +166,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
       p_lat: lat, p_lng: lng,
       p_photo_url: photoUrl,
       p_address: address || null,
+      p_dong: dong || null,
     });
     setBusy(false);
     if (error) { setErr(error.message); return; }
