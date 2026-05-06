@@ -139,6 +139,19 @@ export default function KidsPinForm({ currentUserId }: { currentUserId: string }
       setErr(`사진 업로드 실패: ${e instanceof Error ? e.message : String(e)}`);
       setBusy(false); return;
     }
+    // AI 사진 검증 — 지도 캡처/스크린샷이면 등록 차단
+    try {
+      const r = await fetch('/api/check-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoUrl }),
+      });
+      const j = await r.json() as { verdict?: 'screenshot' | 'real'; reason?: string };
+      if (j.verdict === 'screenshot') {
+        setErr(`AI 검증 실패 — 지도/스크린샷 사진은 등록 불가${j.reason ? ` (${j.reason})` : ''}. 실제 장소 사진으로 다시 올려주세요.`);
+        setBusy(false); return;
+      }
+    } catch { /* AI 호출 실패 시 fail-open — 등록 진행 */ }
     const { data, error } = await supabase.rpc('register_kids_pin', {
       p_name: name.trim(),
       p_description: description.trim(),
@@ -211,7 +224,8 @@ export default function KidsPinForm({ currentUserId }: { currentUserId: string }
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 * (5MB 이하)</label>
         <div className="text-[11px] text-[#dc2626] font-semibold leading-snug mb-1">
-          ⚠ 지도 캡처 / 검색결과 스크린샷 금지. 실제 장소 사진만 올려주세요. 위반 시 운영자가 삭제함.
+          ⚠ 지도 캡처 / 검색결과 스크린샷 금지. 실제 장소 사진만 올려주세요.<br />
+          위반 시 AI 에이전트가 자동 감지·삭제하고 받은 +30 mlbg 도 회수됨.
         </div>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
