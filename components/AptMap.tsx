@@ -16,7 +16,7 @@ import Nickname from './Nickname';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
-type KakaoLatLng = { __latlng: never };
+type KakaoLatLng = { getLat: () => number; getLng: () => number };
 type KakaoMarker = { __marker: never };
 type KakaoMap = { __map: never };
 type KakaoCluster = { getCenter: () => KakaoLatLng };
@@ -55,6 +55,7 @@ type KakaoMaps = {
 type KakaoMapInst = KakaoMap & {
   getLevel: () => number;
   setLevel: (level: number, opts?: { anchor?: KakaoLatLng }) => void;
+  getCenter: () => KakaoLatLng;
   setCenter: (latlng: KakaoLatLng) => void;
   panTo: (latlng: KakaoLatLng) => void;
 };
@@ -64,6 +65,18 @@ declare global {
   interface Window {
     kakao: { maps: KakaoMaps };
   }
+}
+
+// 모바일 핀 → 상세 라우팅 시 지도 복원용 상태 저장.
+// 핀 좌표 + 고정 줌이 아니라 사용자가 보던 그대로 (현재 중심 + 현재 줌) 를 저장해야
+// 뒤로가기 시 위치·줌 모두 동일하게 복원됨. 핀 좌표를 쓰면 사용자가 핀에서 떨어진 위치를 보고 있었을 때
+// 엉뚱한 위치로 이동하고, 고정 줌은 보던 줌 레벨이 강제로 바뀌는 문제 발생.
+function saveCurrentMapState(inst: KakaoMapInst | null) {
+  try {
+    if (!inst) return;
+    const c = inst.getCenter();
+    sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: c.getLat(), lng: c.getLng(), level: inst.getLevel() }));
+  } catch { /* sessionStorage 쓰기 실패 무시 */ }
 }
 
 export type FeedItem = {
@@ -536,7 +549,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: f.lat, lng: f.lng, level: 4 })); } catch {}
+          saveCurrentMapState(mapInstRef.current);
           router.push(`/f/${f.id}`);
         } else {
           setSelectedFactory(f);
@@ -582,8 +595,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       window.kakao.maps.event.addListener(marker, 'click', () => {
         // 모바일: 패널이 피드/검색 UI 에 가려지므로 상세 페이지로 이동
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-          // 뒤로가기 시 지도가 이 핀 위치로 복원되도록 sessionStorage 에 저장
-          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: r.lat, lng: r.lng, level: 4 })); } catch {}
+          // 뒤로가기 시 보던 지도 위치·줌 그대로 복원
+          saveCurrentMapState(mapInstRef.current);
           router.push(`/restaurants/${r.id}`);
         } else {
           setSelectedRestaurant(r);
@@ -650,7 +663,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: k.lat, lng: k.lng, level: 4 })); } catch {}
+          saveCurrentMapState(mapInstRef.current);
           router.push(`/kids/${k.id}`);
         } else {
           setSelectedKids(k);
@@ -1454,7 +1467,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: e.lat, lng: e.lng, level: 4 })); } catch {}
+          saveCurrentMapState(mapInstRef.current);
           router.push(`/e/${e.id}`);
         } else {
           setSelectedEmart(e);
@@ -1594,7 +1607,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => {
           if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-            try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: p.lat, lng: p.lng, level: 4 })); } catch {}
+            saveCurrentMapState(mapInstRef.current);
             router.push(`/apt/${p.id}`);
           } else {
             setSelected(p);
