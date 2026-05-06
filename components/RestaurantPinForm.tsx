@@ -134,6 +134,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
     if (!name.trim()) { setErr('가게명 필수'); return; }
     if (!description.trim()) { setErr('설명 필수'); return; }
     if (!recommendedMenu.trim()) { setErr('추천메뉴 필수'); return; }
+    if (!photoFile) { setErr('사진 필수 (가게 외관 또는 메뉴)'); return; }
     if (lat == null || lng == null) { setErr('지도에서 위치를 선택하세요'); return; }
 
     setBusy(true);
@@ -245,7 +246,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
 
       {/* 사진 */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 (선택, 5MB 이하)</label>
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 * (5MB 이하)</label>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
           className="text-[12px]" />
