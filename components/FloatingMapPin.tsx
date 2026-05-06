@@ -18,11 +18,11 @@ export default function FloatingMapPin() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  // useSearchParams 가 pushState 를 추적 못하므로 popstate 로 직접 동기화
   const initialIsMap = pathname === '/' && (
     sp.get('view') === 'map' || !!sp.get('apt') || !!sp.get('emart') || !!sp.get('factory')
   );
   const [isMap, setIsMap] = useState(initialIsMap);
+  const [showHint, setShowHint] = useState(false);
   useEffect(() => { setIsMap(initialIsMap); }, [initialIsMap]);
   useEffect(() => {
     function sync() { setIsMap(urlIsMap()); }
@@ -30,8 +30,28 @@ export default function FloatingMapPin() {
     return () => window.removeEventListener('popstate', sync);
   }, []);
 
+  // [지도] 말풍선 — 하루 1회 노출 (피드 화면에 있을 때만)
+  useEffect(() => {
+    if (isMap) return;
+    try {
+      const key = `mlbg.maphint.${new Date().toISOString().slice(0, 10)}`;
+      if (!sessionStorage.getItem(key) && !localStorage.getItem(key)) {
+        setShowHint(true);
+      }
+    } catch { /* SSR / blocked storage */ }
+  }, [isMap]);
+
+  function dismissHint() {
+    setShowHint(false);
+    try {
+      const key = `mlbg.maphint.${new Date().toISOString().slice(0, 10)}`;
+      localStorage.setItem(key, '1');
+    } catch { /* ignore */ }
+  }
+
   function onClick(e: React.MouseEvent) {
     e.preventDefault();
+    dismissHint();
     if (pathname === '/') {
       const next = isMap ? '/' : '/?view=map';
       window.history.pushState({}, '', next);
@@ -41,26 +61,40 @@ export default function FloatingMapPin() {
     }
   }
 
+  // 알록달록 그라디언트 (지도 모드 진입 유도)
+  const colorfulCls = !isMap
+    ? 'bg-gradient-to-br from-[#fbbf24] via-[#ec4899] to-[#0070C0] text-white border-white shadow-[0_4px_16px_rgba(236,72,153,0.4)] animate-pulse'
+    : 'bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)]';
+
   return (
-    <a
-      href={isMap ? '/' : '/?view=map'}
-      onClick={onClick}
-      aria-label={isMap ? '피드로' : '지도로'}
-      className="fixed bottom-5 right-5 z-50 w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center no-underline"
-    >
-      {isMap ? (
-        // 집(홈=피드) 아이콘 — 외곽 + 문 모두 stroke 로 그림
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-          <polyline points="9 22 9 12 15 12 15 22" />
-        </svg>
-      ) : (
-        // 지도핀
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
+    <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2">
+      {showHint && !isMap && (
+        <button
+          type="button"
+          onClick={dismissHint}
+          aria-label="안내 닫기"
+          className="bg-navy text-white text-[12px] font-bold px-3 py-1.5 rounded-full shadow-lg cursor-pointer border-none animate-bounce"
+        >
+          [지도] 보기 →
+        </button>
       )}
-    </a>
+      <a
+        href={isMap ? '/' : '/?view=map'}
+        onClick={onClick}
+        aria-label={isMap ? '피드로' : '지도로'}
+        className={`w-11 h-11 rounded-full flex items-center justify-center no-underline transition-all border-2 ${colorfulCls}`}
+      >
+        {isMap ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 2 C 7.6 2, 4 5.6, 4 10 C 4 16, 12 22, 12 22 C 12 22, 20 16, 20 10 C 20 5.6, 16.4 2, 12 2 Z M 12 12 C 10.3 12, 9 10.7, 9 9 C 9 7.3, 10.3 6, 12 6 C 13.7 6, 15 7.3, 15 9 C 15 10.7, 13.7 12, 12 12 Z" />
+          </svg>
+        )}
+      </a>
+    </div>
   );
 }

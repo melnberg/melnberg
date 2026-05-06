@@ -142,7 +142,6 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                   key={p.id}
                   href={`/pay/${p.id}`}
                   label={p.id === 'new-membership' ? '2분기 신규가입' : '2분기 갱신'}
-                  price={p.price.toLocaleString('en-US')}
                   active={current === p.filename}
                   icon={p.id === 'new-membership' ? <StarIcon /> : <RenewIcon />}
                   onClick={() => setOpen(false)}
@@ -154,7 +153,6 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
                   key={p.id}
                   href={`/pay/${p.id}`}
                   label={p.name}
-                  price={p.price.toLocaleString('en-US')}
                   active={current === p.filename}
                   icon={p.id === 'short-consult' ? <ChatShortIcon /> : <ChatLongIcon />}
                   onClick={() => setOpen(false)}
@@ -168,10 +166,10 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* <SItem href="/auctions" label="시한 경매" active={current === 'auctions'} icon={<AuctionIcon />} onClick={() => setOpen(false)} /> */}
 
           {/* 맛집 추천 */}
-          <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<span className="text-[14px]">🍴</span>} onClick={() => setOpen(false)} />
+          <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} />
 
           {/* 육아 장소 */}
-          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<span className="text-[14px]">👶</span>} onClick={() => setOpen(false)} />
+          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} />
 
           {/* 핫딜 게시판 — 적립 보상 2.5x */}
           <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
@@ -310,6 +308,10 @@ const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1
 const StarIcon = () => <svg {...iconProps}><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>;
 const RenewIcon = () => <svg {...iconProps}><path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" /></svg>;
 const ConsultIcon = () => <svg {...iconProps}><path d="M3 18v-7a9 9 0 0 1 18 0v7" /><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3v4z" /><path d="M3 19a2 2 0 0 0 2 2h1v-6H3v4z" /></svg>;
+// 포크 + 나이프 (식기) — 맛집
+const RestaurantIcon = () => <svg {...iconProps}><path d="M7 3v8a2 2 0 1 0 4 0V3" /><line x1="9" y1="11" x2="9" y2="21" /><path d="M16 3c-1 1-2 3-2 5s1 3 2 3v10" /></svg>;
+// 베이비 머리 (둥근 머리 + 머리 한가닥 + 눈 + 미소) — 육아 장소
+const KidsIcon = () => <svg {...iconProps}><path d="M12 4q1-2 0-3" /><circle cx="12" cy="13" r="7" /><circle cx="9.5" cy="12.5" r="0.7" fill="currentColor" /><circle cx="14.5" cy="12.5" r="0.7" fill="currentColor" /><path d="M9 15.5 Q 12 18 15 15.5" /></svg>;
 const MembershipIcon = () => <svg {...iconProps}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /><line x1="6" y1="15" x2="10" y2="15" /></svg>;
 
 const AiIcon = () => <svg {...iconProps} viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>
