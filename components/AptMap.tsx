@@ -1635,11 +1635,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           FloatingMapPin (bottom-5 right-5) 위에 세로 일렬 정렬. 화면 가림 최소화. */}
       <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col items-center gap-1.5">
         {filterOpen && ([
-          { k: 'apt' as const, label: '집', color: '#ea580c' },
-          { k: 'facility' as const, label: '시설', color: '#4b5563' },
-          { k: 'emart' as const, label: '마트', color: '#d97706' },
-          { k: 'restaurant' as const, label: '맛집', color: '#b45309' },
-          { k: 'kids' as const, label: '육아', color: '#db2777' },
+          { k: 'apt' as const, label: '집' },
+          { k: 'facility' as const, label: '시설' },
+          { k: 'emart' as const, label: '마트' },
+          { k: 'restaurant' as const, label: '맛집' },
+          { k: 'kids' as const, label: '육아' },
         ]).map((it) => {
           const on = pinFilters[it.k];
           return (
@@ -1651,8 +1651,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               className={`w-11 h-11 text-[11px] font-bold rounded-full cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 shadow-md ${on ? '' : 'line-through'}`}
               style={
                 on
-                  ? { backgroundColor: it.color, color: '#fff' }
-                  : { backgroundColor: '#ffffff', color: '#9ca3af', borderWidth: '1px', borderStyle: 'solid', borderColor: 'rgba(0,0,0,0.15)' }
+                  ? { backgroundColor: '#8e8e93', color: '#ffffff' }
+                  : { backgroundColor: '#f2f2f7', color: '#8e8e93' }
               }
             >
               {it.label}
