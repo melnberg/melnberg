@@ -5,12 +5,17 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Capacitor — 브리지 클래스가 obfuscation 되면 WebView↔Native 통신 깨짐
+-keep class com.getcapacitor.** { *; }
+-keep class com.melnberg.app.** { *; }
+
+# WebView JS 인터페이스 — Capacitor 가 사용
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# AndroidX SwipeRefreshLayout
+-keep class androidx.swiperefreshlayout.** { *; }
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.

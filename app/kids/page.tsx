@@ -31,7 +31,7 @@ export default async function KidsPage() {
             <h1 className="text-[28px] font-bold text-navy tracking-tight inline-flex items-center gap-2"><KidsIcon className="w-[26px] h-[26px]" /> 육아 장소 추천</h1>
             <Link href="/kids/new" className="bg-navy text-white px-4 py-2 text-[12px] font-bold no-underline hover:bg-navy-dark whitespace-nowrap">+ 장소 등록</Link>
           </div>
-          <p className="text-sm text-muted mb-6">아이들 데리고 갈 만한 곳 정보 공유. 1인 5개 / 등록 시 +30 mlbg / 분양 100 / 일 수익 1.</p>
+          <p className="text-sm text-muted mb-6">아이들 데리고 갈 만한 곳 정보 공유. 등록 시 +30 mlbg / 분양 100 / 일 수익 1.</p>
           {pins.length === 0 ? (
             <div className="text-[13px] text-muted text-center py-16 border border-border">아직 등록된 장소가 없어요.</div>
           ) : (

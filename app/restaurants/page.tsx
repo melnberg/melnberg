@@ -46,7 +46,7 @@ export default async function RestaurantsPage() {
             </Link>
           </div>
           <p className="text-sm text-muted mb-6">
-            누구나 등록 가능 (1인 5개). 등록 시 +30 mlbg. 누구나 분양받기 (100 mlbg / 일 1 mlbg).
+            누구나 등록 가능. 등록 시 +30 mlbg. 누구나 분양받기 (100 mlbg / 일 1 mlbg).
           </p>
 
           {pins.length === 0 ? (

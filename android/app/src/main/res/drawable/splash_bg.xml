@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스플래시 배경 — 단색 네이비
+  (로고는 Android 12+ 시스템 splash 가 표시. 이 drawable 은 windowBackground 로만 사용
+   하므로 단색이 가장 안전 — bitmap 이 액티비티 열림 애니메이션 중에 깜빡이는 현상 회피)
+-->
+<color xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#000000" />
