@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fileToWebp } from '@/lib/image-to-webp';
+import { revalidateHome } from '@/lib/revalidate-home';
 
 // Kakao SDK 글로벌
 declare global { interface Window { kakao: typeof window.kakao } }
@@ -174,6 +175,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_id: number | null; out_message: string | null } | undefined;
     if (!row?.out_success) { setErr(row?.out_message ?? '등록 실패'); return; }
     alert('등록 완료. +30 mlbg 지급됨.');
+    revalidateHome();
     router.push('/restaurants');
     router.refresh();
   }
