@@ -14,20 +14,26 @@ function isImageUrl(url: string): boolean {
 export function linkify(text: string | null | undefined): React.ReactNode {
   if (!text) return text ?? null;
   const parts: Array<string | { url: string; href: string; isImage: boolean }> = [];
-  let last = 0;
-  for (const m of text.matchAll(URL_RE)) {
-    const idx = m.index ?? 0;
-    if (idx > last) parts.push(text.slice(last, idx));
-    const raw = m[0];
-    const trailMatch = raw.match(/[.,!?:;]+$/);
-    const url = trailMatch ? raw.slice(0, raw.length - trailMatch[0].length) : raw;
-    const trail = trailMatch ? trailMatch[0] : '';
-    const href = url.startsWith('http') ? url : `https://${url}`;
-    parts.push({ url, href, isImage: isImageUrl(url) });
-    if (trail) parts.push(trail);
-    last = idx + raw.length;
+  try {
+    let last = 0;
+    for (const m of text.matchAll(URL_RE)) {
+      const idx = m.index ?? 0;
+      if (idx > last) parts.push(text.slice(last, idx));
+      const raw = m[0];
+      const trailMatch = raw.match(/[.,!?:;]+$/);
+      const url = trailMatch ? raw.slice(0, raw.length - trailMatch[0].length) : raw;
+      const trail = trailMatch ? trailMatch[0] : '';
+      const href = url.startsWith('http') ? url : `https://${url}`;
+      parts.push({ url, href, isImage: isImageUrl(url) });
+      if (trail) parts.push(trail);
+      last = idx + raw.length;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+  } catch (e) {
+    // 정규식·문자열 처리 실패 시 원문 그대로 반환 (server render 안 깨짐 보장)
+    console.error('[linkify] parse error:', e);
+    return text;
   }
-  if (last < text.length) parts.push(text.slice(last));
   return (
     <>
       {parts.map((p, i) => {

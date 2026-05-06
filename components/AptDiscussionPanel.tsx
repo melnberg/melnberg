@@ -559,6 +559,10 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
         </button>
       )}
 
+      {/* 단일 스크롤 컨테이너 — 단지 정보 + 점거인 + 매물 + 호가이력 + 댓글 + 차트 + 점거히스토리 + 글 토론
+          모두 한 번에 overflow-y-auto. 작은 모니터에서 스크롤 안 되던 사고 방지. */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+
       <div className="px-6 py-4 border-b border-border">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -847,7 +851,8 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* 토론 글 영역 — 위 wrapper 안의 자식이라 별도 overflow 불필요 */}
+      <div>
         {loading && <div className="px-6 py-12 text-sm text-muted">불러오는 중...</div>}
         {err && <div className="px-6 py-12 text-sm text-red-600">에러: {err}</div>}
 
@@ -1074,8 +1079,10 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
         )}
       </div>
 
+      </div>{/* 단일 overflow-y-auto 컨테이너 닫음 */}
+
       {!writing && (
-        <div className="border-t border-border px-6 py-4">
+        <div className="border-t border-border px-6 py-4 flex-shrink-0">
           {userId ? (
             <button type="button" onClick={() => setWriting(true)}
               className="w-full bg-navy text-white py-3 px-4 text-sm font-bold tracking-wide hover:bg-navy-dark transition-colors">
