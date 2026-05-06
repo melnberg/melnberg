@@ -1674,13 +1674,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             </button>
           );
         })}
-        {/* 케밥(점 3개) 토글 — FloatingMapPin (w-11 h-11 rounded-full) 과 동일 크기·모양·중심축 */}
+        {/* 케밥(점 3개) 토글 — 단색 네이비 동그라미 (FloatingMapPin 과 같은 44×44) */}
         <button
           type="button"
           onClick={() => setFilterOpen((v) => !v)}
           aria-label="핀 필터 토글"
           aria-expanded={filterOpen}
-          className="w-11 h-11 rounded-full cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 transition-transform bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy"
+          className="w-11 h-11 rounded-full cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 transition-transform bg-navy text-white hover:bg-navy-dark shadow-md"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <circle cx="12" cy="5" r="2" />
