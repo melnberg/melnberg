@@ -39,15 +39,16 @@ export function linkify(text: string | null | undefined): React.ReactNode {
       {parts.map((p, i) => {
         if (typeof p === 'string') return <React.Fragment key={i}>{p}</React.Fragment>;
         if (p.isImage) {
-          // 이미지 — SNS 스타일. 폭 480px / 높이 400px 캡, object-contain 으로 비율 유지, 가운데 정렬.
-          // 세로 사진이 화면 절반 차지하던 사고 (2026-05-06) 방지.
+          // 이미지 — SNS 스타일. 인라인 style 로 강제 적용 (Tailwind JIT arbitrary class 안 먹는 사고 방지).
+          // 세로 사진이 화면 절반 차지하던 사고 (2026-05-06) 해결.
           return (
             <img
               key={i}
               src={p.href}
               alt=""
               loading="lazy"
-              className="block w-auto max-w-full sm:max-w-[480px] max-h-[400px] h-auto object-contain my-3 mx-auto border border-border rounded-xl"
+              style={{ maxWidth: '480px', maxHeight: '400px', width: 'auto', height: 'auto', objectFit: 'contain' }}
+              className="block my-3 mx-auto border border-border rounded-xl"
             />
           );
         }
