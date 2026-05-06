@@ -107,6 +107,7 @@ export default function KidsDetailClient({ pin }: { pin: KidsItem }) {
         {pin.address && <div className="text-[12px] text-muted">{pin.address}</div>}
         <div className="text-[11px] text-muted mt-1 flex items-center gap-2">
           <span>등록 by <b className="text-navy">{pin.author_name ?? '익명'}</b></span>
+          <span className="tabular-nums">+30 mlbg</span>
           {isAuthor && <Link href={`/kids/${pin.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</Link>}
         </div>
       </header>
@@ -143,6 +144,7 @@ export default function KidsDetailClient({ pin }: { pin: KidsItem }) {
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="font-bold text-navy">{c.author_name ?? '회원'}</span>
                   <span className="text-muted text-[10px]">{relTime(c.created_at)} 전</span>
+                  <span className="text-muted text-[10px] tabular-nums">+0.5 mlbg</span>
                 </div>
                 <p className="text-text leading-relaxed whitespace-pre-wrap break-words">{c.content}</p>
               </li>

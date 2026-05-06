@@ -89,6 +89,26 @@ function rewardKind(f: FeedItem): React.ComponentProps<typeof RewardTooltip>['ki
   return undefined;
 }
 
+// 절대규칙 — 모든 피드 게시글에 mlbg 보상/금액 표시.
+// earned_mlbg 가 없는 종류 (listing, offer, snatch, auction, restaurant_register, kids_register 등)
+// 의 fallback. PC 피드 (AptMap.tsx) 와 동일 로직 — 새 종류 추가 시 양쪽 모두 갱신.
+function fallbackRewardText(f: FeedItem): string {
+  if (f.kind === 'restaurant_register' || f.kind === 'kids_register') return '+30 mlbg';
+  if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment') return '+0.5 mlbg';
+  if (f.kind === 'listing') return typeof f.listing_price === 'number' ? `호가 ${f.listing_price.toLocaleString()} mlbg` : '매물 등록';
+  if (f.kind === 'offer') return typeof f.listing_price === 'number' ? `매수 ${f.listing_price.toLocaleString()} mlbg` : '매수 호가';
+  if (f.kind === 'snatch') return '내놔 (무상)';
+  if (f.kind === 'auction') return typeof f.listing_price === 'number' ? `현재가 ${f.listing_price.toLocaleString()} mlbg` : '경매 진행';
+  if (f.kind === 'auction_bid') return '입찰';
+  if (f.kind === 'auction_won') return '🏆 낙찰';
+  if (f.kind === 'sell_complete') return typeof f.sell_price === 'number' ? `${f.sell_price.toLocaleString()} mlbg 거래` : '거래 성사';
+  if (f.kind === 'emart_occupy' || f.kind === 'factory_occupy') return '분양 (−mlbg)';
+  if (f.kind === 'strike') return typeof f.strike_loss_mlbg === 'number' ? `−${f.strike_loss_mlbg.toLocaleString()} mlbg` : '−mlbg';
+  if (f.kind === 'bridge_toll') return typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
+  if (f.kind === 'notice') return '공지';
+  return '';
+}
+
 function badgeFor(f: FeedItem): { label: string; cls: string } | null {
   switch (f.kind) {
     case 'auction':       return { label: 'LIVE',   cls: 'bg-[#dc2626] text-white animate-pulse' };
@@ -289,9 +309,12 @@ export default function MobileFeedList({ items }: Props) {
                   {/* 메타 — 시각 + 보상 + 댓글 카운트 (우측) */}
                   <div className="text-[10px] text-muted mt-1.5 flex items-center gap-2">
                     <span>{relTime(f.created_at)} 전</span>
-                    {typeof f.earned_mlbg === 'number' && (
+                    {typeof f.earned_mlbg === 'number' ? (
                       <RewardTooltip earned={f.earned_mlbg} kind={rewardKind(f)} />
-                    )}
+                    ) : (() => {
+                      const txt = fallbackRewardText(f);
+                      return txt ? <span className="tabular-nums">{txt}</span> : null;
+                    })()}
                     {inlineCfg && (
                       <button
                         type="button"

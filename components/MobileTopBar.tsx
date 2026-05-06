@@ -1,9 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
 // 모든 모바일 화면 상단 공통 멜른버그 타이틀 바 (sticky, 52px, lg 미만).
 // 동작:
@@ -28,19 +26,12 @@ export default function MobileTopBar() {
   const [, startTransition] = useTransition();
   // hydration 안전성을 위해 initial state 는 양쪽 false. mount 후 popstate 와 동일 로직으로 동기화.
   const [{ isHome, isHomeMap }, setState] = useState({ isHome: false, isHomeMap: false });
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     const sync = () => setState(readState());
     sync();
     window.addEventListener('popstate', sync);
     return () => window.removeEventListener('popstate', sync);
-  }, []);
-
-  // 로그인 여부 — 우측 로그인 버튼 표시용
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
   }, []);
 
   function onClick(e: React.MouseEvent) {
@@ -60,7 +51,7 @@ export default function MobileTopBar() {
   }
 
   return (
-    <div className="flex lg:hidden sticky top-0 z-30 h-[52px] w-full bg-white/85 backdrop-blur-sm border-b border-border items-center justify-center flex-shrink-0 relative">
+    <div className="flex lg:hidden sticky top-0 z-30 h-[52px] w-full bg-white/85 backdrop-blur-sm border-b border-border items-center justify-center flex-shrink-0">
       <a
         href="/"
         onClick={onClick}
@@ -70,14 +61,6 @@ export default function MobileTopBar() {
         <img src="/logo.svg" alt="" className="w-7 h-7 flex-shrink-0" />
         <span className="text-[17px] font-bold text-navy tracking-tight">멜른버그</span>
       </a>
-      {loggedIn === false && (
-        <Link
-          href="/login"
-          className="absolute right-3 top-1/2 -translate-y-1/2 bg-navy text-white px-3 py-1.5 text-[12px] font-bold tracking-wide no-underline hover:bg-navy-dark"
-        >
-          로그인
-        </Link>
-      )}
     </div>
   );
 }

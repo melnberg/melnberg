@@ -536,6 +536,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: f.lat, lng: f.lng, level: 4 })); } catch {}
           router.push(`/f/${f.id}`);
         } else {
           setSelectedFactory(f);
@@ -581,6 +582,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       window.kakao.maps.event.addListener(marker, 'click', () => {
         // 모바일: 패널이 피드/검색 UI 에 가려지므로 상세 페이지로 이동
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          // 뒤로가기 시 지도가 이 핀 위치로 복원되도록 sessionStorage 에 저장
+          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: r.lat, lng: r.lng, level: 4 })); } catch {}
           router.push(`/restaurants/${r.id}`);
         } else {
           setSelectedRestaurant(r);
@@ -647,6 +650,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: k.lat, lng: k.lng, level: 4 })); } catch {}
           router.push(`/kids/${k.id}`);
         } else {
           setSelectedKids(k);
@@ -1270,15 +1274,33 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     loadKakaoSdk()
       .then(() => {
         if (cancelled || !mapRef.current || mapInstRef.current) return;
-        // 초기 중심 — URL 에 ?lat=&lng= 가 있으면 그 위치로 (디테일 페이지 → 지도 핀 흐름).
-        // 없으면 강남 일대 default. 이로써 apt 핀 클릭 시 '강남 1초 flash' 차단.
+        // 초기 중심 — 우선순위:
+        //   1) URL ?lat=&lng= (디테일 페이지 → 지도 핀 흐름)
+        //   2) sessionStorage mlbg.mapState (모바일 핀 → 상세 → 뒤로가기 복원)
+        //   3) 강남 일대 default
+        // 이로써 apt 핀 클릭 시 '강남 1초 flash' 차단 + 뒤로가기 시 보던 핀 위치 유지.
         const urlLat = Number(searchParams.get('lat'));
         const urlLng = Number(searchParams.get('lng'));
         const hasUrlCoords = Number.isFinite(urlLat) && Number.isFinite(urlLng) && urlLat !== 0 && urlLng !== 0;
+        let savedState: { lat: number; lng: number; level: number } | null = null;
+        if (!hasUrlCoords) {
+          try {
+            const raw = sessionStorage.getItem('mlbg.mapState');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+                savedState = { lat: parsed.lat, lng: parsed.lng, level: Number(parsed.level) || 4 };
+              }
+              sessionStorage.removeItem('mlbg.mapState');
+            }
+          } catch {}
+        }
         const center = hasUrlCoords
           ? new window.kakao.maps.LatLng(urlLat, urlLng)
-          : new window.kakao.maps.LatLng(37.498, 127.027);
-        const initialLevel = hasUrlCoords ? 4 : 6;
+          : savedState
+            ? new window.kakao.maps.LatLng(savedState.lat, savedState.lng)
+            : new window.kakao.maps.LatLng(37.498, 127.027);
+        const initialLevel = hasUrlCoords ? 4 : (savedState?.level ?? 6);
         const map = new window.kakao.maps.Map(mapRef.current, { center, level: initialLevel }) as KakaoMapInst;
         mapInstRef.current = map;
 
@@ -1432,6 +1454,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }) as KakaoMarkerInst;
       window.kakao.maps.event.addListener(marker, 'click', () => {
         if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: e.lat, lng: e.lng, level: 4 })); } catch {}
           router.push(`/e/${e.id}`);
         } else {
           setSelectedEmart(e);
@@ -1571,6 +1594,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         }) as KakaoMarkerInst;
         window.kakao.maps.event.addListener(marker, 'click', () => {
           if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+            try { sessionStorage.setItem('mlbg.mapState', JSON.stringify({ lat: p.lat, lng: p.lng, level: 4 })); } catch {}
             router.push(`/apt/${p.id}`);
           } else {
             setSelected(p);

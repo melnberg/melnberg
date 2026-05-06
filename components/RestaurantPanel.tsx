@@ -198,6 +198,7 @@ export default function RestaurantPanel({
         <div className="flex items-center justify-between text-[11px] text-muted mb-3">
           <span className="flex items-center gap-2">
             <span>등록 by <b className="text-navy">{restaurant.author_name ?? '익명'}</b></span>
+            <span className="tabular-nums">+30 mlbg</span>
             {isAuthor && (
               <a href={`/restaurants/${restaurant.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</a>
             )}
@@ -245,6 +246,7 @@ export default function RestaurantPanel({
                   <div className="flex items-baseline gap-2 mb-0.5">
                     <span className="font-bold text-navy">{c.author_name ?? '회원'}</span>
                     <span className="text-muted text-[10px]">{relTime(c.created_at)} 전</span>
+                    <span className="text-muted text-[10px] tabular-nums">+0.5 mlbg</span>
                   </div>
                   <p className="text-text leading-snug whitespace-pre-wrap break-words">{c.content}</p>
                 </li>
