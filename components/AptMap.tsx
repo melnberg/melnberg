@@ -1648,11 +1648,22 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               type="button"
               onClick={() => togglePinFilter(it.k)}
               aria-pressed={on}
-              className={`w-11 h-11 text-[11px] font-bold rounded-full cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 shadow-md ${on ? '' : 'line-through'}`}
+              className={`w-11 h-11 text-[11px] font-bold rounded-full cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 ${on ? '' : 'line-through'}`}
               style={
                 on
-                  ? { backgroundColor: '#8e8e93', color: '#ffffff' }
-                  : { backgroundColor: '#f2f2f7', color: '#8e8e93' }
+                  ? {
+                      // 메탈 그레이 — 위에서 highlight, 아래로 살짝 어두워짐. 안쪽 테두리 highlight 로 입체감.
+                      background: 'linear-gradient(180deg, #a8a8ad 0%, #8e8e93 55%, #6c6c70 100%)',
+                      color: '#ffffff',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.18)',
+                      textShadow: '0 1px 1px rgba(0,0,0,0.25)',
+                    }
+                  : {
+                      // 옅은 메탈 — 흰색 highlight 선, 살짝 회색 그라데이션
+                      background: 'linear-gradient(180deg, #ffffff 0%, #f2f2f7 50%, #e5e5ea 100%)',
+                      color: '#8e8e93',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.10)',
+                    }
               }
             >
               {it.label}
