@@ -67,7 +67,7 @@ export default async function Layout({ current, children }: { current?: string; 
   }
 
   return (
-    <div className="flex min-h-screen lg:pl-[60px]">
+    <div className="flex min-h-screen">
       <Sidebar current={current} user={sidebarUser} recentPosts={recentPosts} />
       <main className="flex-1 min-w-0 flex flex-col">
         <MobileTopBar />
