@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">멜른버그</string>
+    <string name="title_activity_main">멜른버그</string>
+    <string name="package_name">com.melnberg.app</string>
+    <string name="custom_url_scheme">com.melnberg.app</string>
+</resources>

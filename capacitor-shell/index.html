@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>멜른버그</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #002060; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; }
+    .wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+    .logo { width: 64px; height: 64px; }
+    .title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .sub { font-size: 13px; opacity: 0.7; }
+  </style>
+  <script>
+    // Capacitor 가 server.url 을 가리키는 게 정상 동작.
+    // 이 파일은 라이브 URL 도달 실패 시 fallback 화면.
+    setTimeout(function() { location.replace('https://melnberg.vercel.app'); }, 50);
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <img src="/logo.svg" alt="" class="logo" onerror="this.style.display='none'" />
+    <div class="title">멜른버그</div>
+    <div class="sub">불러오는 중…</div>
+  </div>
+</body>
+</html>
