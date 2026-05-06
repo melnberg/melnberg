@@ -91,7 +91,8 @@ $$;
 grant execute on function public.settle_local_election_2026(jsonb) to service_role;
 
 -- 3) 핀 발효 사이트 공지 — 홈 피드 상단에 노출
--- created_by NOT NULL 이라 어드민 uuid (imeunjong@gmail.com) 로 채움.
+-- created_by NOT NULL 이라 기존 site_announcements 의 created_by (어드민) 재사용.
+-- 그것도 없으면 auth.users 첫 row.
 insert into public.site_announcements(title, body, link_url, created_by)
 values (
   '🏛️ 서울 25개 구청·시청 정당핀 분양 시작',
@@ -101,7 +102,10 @@ values (
   E'· 6/3 지방선거 결과 — 당선당 핀 일 수익 10배 (10 mlbg/일) / 낙선당 핀 분양금 몰수 + 사라짐\n\n' ||
   E'지도에서 구청 위치 클릭 → 분양받기.',
   '/',
-  (select id from auth.users where email = 'imeunjong@gmail.com' limit 1)
+  coalesce(
+    (select created_by from public.site_announcements where created_by is not null order by created_at desc limit 1),
+    (select id from auth.users order by created_at asc limit 1)
+  )
 );
 
 notify pgrst, 'reload schema';
