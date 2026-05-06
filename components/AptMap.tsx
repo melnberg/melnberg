@@ -1932,13 +1932,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           )}
                           {/* 맛집 / 육아 사진 — 1:1 정사각형 (Instagram 스타일) */}
                           {f.kind === 'restaurant_register' && f.restaurant_photo_url && (
-                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] overflow-hidden border border-border">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={f.restaurant_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                             </div>
                           )}
                           {f.kind === 'kids_register' && f.kids_photo_url && (
-                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] overflow-hidden border border-border">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={f.kids_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                             </div>
