@@ -335,21 +335,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => { cancelled = true; clearTimeout(smallTimer); };
   }, [pinsFromProps]);
 
-  // Supabase Realtime — apt_master + 글/댓글 테이블 변경 시 즉시 반영
-  // apt_master UPDATE: 점거인 변경 → 핀 갱신
-  // 글/댓글 INSERT: 피드 갱신 (RSC refresh)
+  // Supabase Realtime — apt_master 만 구독 (점거/매물 변경 즉시 반영, 게임성 유지).
+  // 글/댓글은 빈도가 너무 높아 WAL 부하 폭증 → 90초 피드 캐시로 자연 갱신 (2026-05-06 사고 후).
+  // 본인 행동은 router.refresh() + refetch* 로 즉시 반영되므로 영향 없음.
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel('mlbg-realtime')
+      .channel('mlbg-pins')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'apt_master' }, () => {
         window.dispatchEvent(new Event('mlbg-pins-changed'));
         router.refresh();
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'apt_discussions' }, () => router.refresh())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'apt_discussion_comments' }, () => router.refresh())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => router.refresh())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, () => router.refresh())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [router]);
