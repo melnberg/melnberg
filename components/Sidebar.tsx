@@ -125,7 +125,8 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           <div className="px-6 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">메뉴</div>
           <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
           <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} />
+          {/* 블로그 메뉴 가림 (2026-05-06). 다시 보려면 주석 해제. */}
+          {/* <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} /> */}
 
           <SectionToggle
             label="상담"
@@ -220,7 +221,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
             </div>
             <div className="flex border-t border-border pt-3">
               <Link href="/" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy">홈</Link>
-              <Link href="/blog" className="flex-1 text-center text-[11px] text-muted no-underline py-1 hover:text-navy border-l border-border">블로그</Link>
+              {/* 블로그 링크 가림 — Sidebar 상단 메뉴와 동일 처리 */}
             </div>
           </div>
         )}
