@@ -45,7 +45,8 @@ function hrefFor(f: FeedItem): string | null {
   // 단지 토론·매물·호가 — 모두 단지 페이지 /apt/{apt_master_id} 로 통합
   if (
     f.kind === 'discussion' || f.kind === 'comment' ||
-    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch'
+    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch' ||
+    f.kind === 'sell_complete'
   ) return f.apt_master_id ? `/apt/${f.apt_master_id}` : null;
   // 시설 — 풀페이지
   if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/e/${f.apt_master_id}`;
@@ -79,6 +80,8 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
     case 'factory_occupy': return { label: '분양',  cls: 'bg-[#F5A623] text-white' };
     case 'notice':        return { label: '공지',   cls: 'bg-navy text-white' };
     case 'strike':        return { label: '파업',   cls: 'bg-[#dc2626] text-white animate-pulse' };
+    case 'bridge_toll':   return { label: '통행료', cls: 'bg-[#0070C0] text-white' };
+    case 'sell_complete': return { label: '거래성사', cls: 'bg-[#16a34a] text-white' };
     default: return null;
   }
 }
@@ -161,6 +164,8 @@ export default function MobileFeedList({ items }: Props) {
           const badge = badgeFor(f);
           const headLabel = f.kind === 'notice' ? '분양 공지'
             : f.kind === 'strike' ? '💥 파업'
+            : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
+            : f.kind === 'sell_complete' ? '🤝 거래성사'
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
             : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
             : (f.apt_nm ?? '');

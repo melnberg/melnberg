@@ -65,7 +65,7 @@ declare global {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -106,6 +106,15 @@ export type FeedItem = {
   strike_loss_mlbg?: number;
   /** discussion 전용 — 찐리뷰 좋아요 카운트 */
   discussion_like_count?: number;
+  /** bridge_toll 전용 — 다리명 / 통행료 / 통행자·소유주 닉네임 */
+  bridge_name?: string | null;
+  bridge_toll_amount?: number;
+  bridge_payer_name?: string | null;
+  bridge_owner_name?: string | null;
+  /** sell_complete 전용 — 매도가 (snatch 면 0) */
+  sell_price?: number;
+  sell_buyer_name?: string | null;
+  sell_seller_name?: string | null;
 };
 
 export type AptPin = {
@@ -1646,6 +1655,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const isFactoryOccupy = f.kind === 'factory_occupy';
                   const isFacilityComment = f.kind === 'emart_comment' || f.kind === 'factory_comment';
                   const headLabel = isNotice ? '분양 공지'
+                    : f.kind === 'strike' ? '💥 파업'
+                    : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
+                    : f.kind === 'sell_complete' ? '🤝 거래성사'
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
                     : isCommunity ? '커뮤니티'
                     : (f.apt_nm ?? '(단지 정보 없음)');

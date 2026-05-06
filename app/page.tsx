@@ -124,6 +124,35 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       loss_pct: number; loss_mlbg: number; created_at: string;
     }>;
 
+    // 최근 다리 통행료 — 24시간 이내 (RPC list_recent_bridge_tolls / SQL 132).
+    const { data: tollRowsRaw } = await supabase
+      .rpc('list_recent_bridge_tolls', { p_limit: 30 })
+      .then((r) => r, () => ({ data: null }));
+    const tollRows = (tollRowsRaw ?? []) as Array<{
+      id: number; bridge_id: number; bridge_name: string | null;
+      payer_id: string; payer_name: string | null;
+      owner_id: string | null; owner_name: string | null;
+      amount: number; created_at: string;
+    }>;
+
+    // 최근 거래성사 — apt_occupier_events 의 'sell' 이벤트 (24시간).
+    const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: sellRowsRaw } = await supabase
+      .from('apt_occupier_events')
+      .select('id, apt_id, actor_id, actor_name, prev_occupier_id, prev_occupier_name, actor_score, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+      .eq('event', 'sell')
+      .gte('created_at', sellSince)
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .then((r) => r, () => ({ data: null }));
+    const sellRows = ((sellRowsRaw ?? []) as unknown as Array<{
+      id: number; apt_id: number;
+      actor_id: string; actor_name: string | null;
+      prev_occupier_id: string | null; prev_occupier_name: string | null;
+      actor_score: number | null; created_at: string;
+      apt_master: { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+    }>);
+
     // 최근 공장 분양 (하이닉스/삼성/코스트코/금속노조/화물연대)
     const { data: factoryOccs } = await supabase
       .from('factory_occupations')
@@ -741,8 +770,61 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       strike_loss_mlbg: Number(s.loss_mlbg),
     } as FeedItem));
 
-    // 경매는 강제 최상단 유지. 사이트 공지·일반·입찰·이마트·공장·파업은 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems]
+    // 다리 통행료 → FeedItem (kind 'bridge_toll')
+    const tollItems: FeedItem[] = tollRows.map((t) => ({
+      kind: 'bridge_toll' as const,
+      id: 600000 + t.id,
+      apt_master_id: 0,
+      post_id: null,
+      title: '🌉 통행료',
+      content: `${t.payer_name ?? '익명'} → ${t.owner_name ?? '미점거'} | ${t.bridge_name ?? '다리'} | ${Number(t.amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} mlbg`,
+      created_at: t.created_at,
+      apt_nm: t.bridge_name ?? null,
+      dong: null,
+      lat: null, lng: null,
+      author_id: t.payer_id,
+      author_name: t.payer_name,
+      author_link: null,
+      author_is_paid: false, author_is_solo: false,
+      author_avatar_url: null, author_apt_count: null,
+      bridge_name: t.bridge_name,
+      bridge_toll_amount: Number(t.amount),
+      bridge_payer_name: t.payer_name,
+      bridge_owner_name: t.owner_name,
+    } as FeedItem));
+
+    // 거래성사 → FeedItem (kind 'sell_complete')
+    const sellItems: FeedItem[] = sellRows.map((s) => {
+      const am = s.apt_master ?? null;
+      const price = Number(s.actor_score ?? 0);
+      const isSnatch = price === 0;
+      return {
+        kind: 'sell_complete' as const,
+        id: 700000 + s.id,
+        apt_master_id: s.apt_id,
+        post_id: null,
+        title: '🤝 거래성사',
+        content: isSnatch
+          ? `${s.prev_occupier_name ?? '이전점거자'} → ${s.actor_name ?? '신규점거자'} | ${am?.apt_nm ?? '단지'} | 내놔 (무상)`
+          : `${s.prev_occupier_name ?? '매도인'} → ${s.actor_name ?? '매수인'} | ${am?.apt_nm ?? '단지'} | ${price.toLocaleString()} mlbg`,
+        created_at: s.created_at,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+        author_id: s.actor_id,
+        author_name: s.actor_name,
+        author_link: null,
+        author_is_paid: false, author_is_solo: false,
+        author_avatar_url: null, author_apt_count: null,
+        sell_price: price,
+        sell_buyer_name: s.actor_name,
+        sell_seller_name: s.prev_occupier_name,
+      } as FeedItem;
+    });
+
+    // 경매는 강제 최상단 유지. 사이트 공지·일반·입찰·이마트·공장·파업·통행료·거래성사 모두 시간순.
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 100 - auctionItems.length);
     return [...auctionItems, ...others];

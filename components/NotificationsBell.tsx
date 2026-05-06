@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
@@ -16,6 +16,9 @@ type Notification = {
   actor_name: string | null;
   created_at: string;
   read_at: string | null;
+  listing_offer_id?: number | null;
+  listing_price?: number | null;
+  listing_message?: string | null;
 };
 
 function relTime(iso: string): string {
@@ -126,8 +129,8 @@ export default function NotificationsBell() {
     if (n.type === 'feedback_reply') return '/me/feedback';
     if (n.type === 'admin_notice') return '/me';
     if (n.type === 'bio_comment' && currentUserId) return `/u/${currentUserId}?tab=bio`;
-    if ((n.type === 'apt_comment' || n.type === 'apt_evicted') && n.apt_master_id) {
-      return `/?apt=${n.apt_master_id}`;
+    if ((n.type === 'apt_comment' || n.type === 'apt_evicted' || n.type === 'offer_made' || n.type === 'offer_accepted' || n.type === 'snatch_made') && n.apt_master_id) {
+      return `/apt/${n.apt_master_id}`;
     }
     return '/';
   }
@@ -160,6 +163,9 @@ export default function NotificationsBell() {
                 n.type === 'apt_evicted' ? '강제집행' :
                 n.type === 'admin_notice' ? '관리자 알림' :
                 n.type === 'bio_comment' ? '자기소개 댓글' :
+                n.type === 'offer_made' ? '매수요청' :
+                n.type === 'snatch_made' ? '내놔요청' :
+                n.type === 'offer_accepted' ? '매도수락' :
                 '건의 답글';
               return (
                 <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
@@ -185,6 +191,12 @@ export default function NotificationsBell() {
                         <span className="text-text">{n.comment_excerpt ?? '관리자 알림'}</span>
                       ) : n.type === 'bio_comment' ? (
                         <>내 자기소개 댓글: <span className="text-muted">{n.comment_excerpt ?? ''}</span></>
+                      ) : n.type === 'offer_made' ? (
+                        <span><span className="font-bold text-navy">{n.apt_name ?? '단지'}</span> — 매수호가 <b>{Number(n.listing_price ?? 0).toLocaleString()} mlbg</b>{n.listing_message ? <> · <span className="text-muted">{n.listing_message}</span></> : null}</span>
+                      ) : n.type === 'snatch_made' ? (
+                        <span><span className="font-bold text-navy">{n.apt_name ?? '단지'}</span> — 내놔 요청 (무상){n.listing_message ? <> · <span className="text-muted">{n.listing_message}</span></> : null}</span>
+                      ) : n.type === 'offer_accepted' ? (
+                        <span><span className="font-bold text-navy">{n.apt_name ?? '단지'}</span> — 매도 수락됨 (<b>{Number(n.listing_price ?? 0).toLocaleString()} mlbg</b>)</span>
                       ) : (
                         <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
                       )}
