@@ -123,13 +123,13 @@ export default function InlineCommentBox({
 
       {currentUserId ? (
         <form onSubmit={submit} className="flex gap-2 items-stretch">
-          <input
-            type="text"
+          <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="댓글 작성..."
+            placeholder="댓글 작성... (Enter = 줄바꿈)"
             maxLength={500}
-            className="flex-1 min-w-0 border border-border px-3 py-2 text-[13px] outline-none focus:border-navy"
+            rows={1}
+            className="flex-1 min-w-0 border border-border px-3 py-2 text-[13px] outline-none focus:border-navy resize-y leading-relaxed"
           />
           <button
             type="submit"

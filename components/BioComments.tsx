@@ -129,14 +129,13 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
         <p className="text-[12px] text-muted mb-3">조합원만 댓글을 달 수 있습니다.</p>
       ) : (
         <div className="flex gap-2 mb-4">
-          <input
-            type="text"
+          <textarea
             value={content}
             onChange={(e) => { setContent(e.target.value); setErr(null); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-            placeholder="자기소개에 한마디 (예: 착한 사람이에요 ✨)"
+            placeholder="자기소개에 한마디 (예: 착한 사람이에요 ✨) — Enter = 줄바꿈"
             maxLength={500}
-            className="flex-1 border border-border px-3 py-2 text-[13px] outline-none focus:border-navy"
+            rows={1}
+            className="flex-1 border border-border px-3 py-2 text-[13px] outline-none focus:border-navy resize-y leading-relaxed"
           />
           <button
             type="button"

@@ -439,14 +439,13 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
             </div>
             {currentUid ? (
               <div className="px-3 py-2 border-t border-border flex gap-2">
-                <input
-                  type="text"
+                <textarea
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') postComment(); }}
-                  placeholder="댓글 남기기..."
+                  placeholder="댓글 남기기... (Enter = 줄바꿈)"
                   maxLength={500}
-                  className="flex-1 px-2 py-1.5 border border-border focus:border-navy text-[12px] outline-none rounded-none"
+                  rows={1}
+                  className="flex-1 px-2 py-1.5 border border-border focus:border-navy text-[12px] outline-none rounded-none resize-y leading-relaxed"
                 />
                 <button type="button" onClick={postComment} disabled={busy || !commentInput.trim()} className="bg-navy text-white border-none px-3 py-1.5 text-[12px] font-bold hover:bg-navy-dark disabled:opacity-40 cursor-pointer">등록</button>
               </div>

@@ -1007,15 +1007,14 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
                             {/* 답글 입력 폼 */}
                             {isReplying && userId && (
                               <div className="mt-1.5 ml-3 pl-2.5 border-l-2 border-navy/30 flex gap-1.5">
-                                <input
-                                  type="text"
+                                <textarea
                                   value={replyBody}
                                   onChange={(e) => setReplyBody(e.target.value)}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitReply(d.id, c.id); } }}
-                                  placeholder="답글을 입력..."
+                                  placeholder="답글을 입력... (Enter = 줄바꿈)"
                                   maxLength={500}
+                                  rows={1}
                                   autoFocus
-                                  className="flex-1 px-2.5 py-1.5 border border-border bg-white text-[12px] focus:outline-none focus:border-navy"
+                                  className="flex-1 px-2.5 py-1.5 border border-border bg-white text-[12px] focus:outline-none focus:border-navy resize-y leading-relaxed"
                                 />
                                 <button type="button" onClick={() => submitReply(d.id, c.id)}
                                   className="px-3 py-1.5 bg-navy text-white text-[12px] font-bold hover:bg-navy-dark">
@@ -1028,14 +1027,13 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
                       })}
                       {userId ? (
                         <div className="flex gap-1.5 mt-2">
-                          <input
-                            type="text"
+                          <textarea
                             value={commentBody.get(d.id) ?? ''}
                             onChange={(e) => setCommentBody((prev) => { const m = new Map(prev); m.set(d.id, e.target.value); return m; })}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submitComment(d.id); } }}
-                            placeholder="댓글을 입력..."
+                            placeholder="댓글을 입력... (Enter = 줄바꿈)"
                             maxLength={500}
-                            className="flex-1 px-2.5 py-1.5 border border-border bg-white text-[12px] focus:outline-none focus:border-navy"
+                            rows={1}
+                            className="flex-1 px-2.5 py-1.5 border border-border bg-white text-[12px] focus:outline-none focus:border-navy resize-y leading-relaxed"
                           />
                           <button type="button" onClick={() => submitComment(d.id)}
                             className="px-3 py-1.5 bg-navy text-white text-[12px] font-bold hover:bg-navy-dark">
