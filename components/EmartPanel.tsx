@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import RewardTooltip from './RewardTooltip';
 
 export type EmartItem = {
@@ -215,6 +216,12 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
   async function postComment() {
     const txt = commentInput.trim();
     if (!txt || busy) return;
+    // 다리 통행료 사전 검사 (한강 횡단 시)
+    const tollOk = await checkAndPayBridgeToll(emart.lat, emart.lng);
+    if (!tollOk.ok) {
+      if (tollOk.message) alert(tollOk.message);
+      return;
+    }
     setBusy(true);
     const { data: ins, error } = await supabase.from('emart_comments').insert({ emart_id: emart.id, author_id: currentUid, content: txt }).select('id').single();
     setBusy(false);

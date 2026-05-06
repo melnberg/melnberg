@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import RewardTooltip from './RewardTooltip';
 
 export type FactoryItem = {
@@ -221,6 +222,12 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   async function postComment() {
     const txt = commentInput.trim();
     if (!txt || busy) return;
+    // 다리 통행료 사전 검사 (한강 횡단 시)
+    const tollOk = await checkAndPayBridgeToll(factory.lat, factory.lng);
+    if (!tollOk.ok) {
+      if (tollOk.message) alert(tollOk.message);
+      return;
+    }
     setBusy(true);
     const { data: ins, error } = await supabase.from('factory_comments').insert({ factory_id: factory.id, author_id: currentUid, content: txt }).select('id').single();
     setBusy(false);
