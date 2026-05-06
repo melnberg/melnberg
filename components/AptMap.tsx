@@ -590,14 +590,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     kidsMarkersRef.current = [];
     if (kidsList.length === 0) return;
     const PIN_W = 32, PIN_H = 45;
-    // 흰 핀 + 검정 베이비 얼굴 (귀 + 머리 한가닥 + 눈 + 미소) — 사용자 제공 아이콘 톤
+    // 흰 핀 + 검정 베이비 얼굴 (귀 + 눈 + 미소) — 머리카락 한 가닥은 목매단 것처럼 보여서 제거
     const kidsPin = (occupied: boolean) => {
       const flagSvg = occupied
         ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
         : '';
-      // 베이비 얼굴 (검정 stroke 만): 머리 한가닥 위 + 둥근 머리 + 양쪽 귀 + 눈 + 미소
       const face = '<g stroke="#1a1d22" stroke-linecap="round" stroke-linejoin="round" fill="none">'
-        + '<path d="M 16 7 q 1 -2 0.5 -3.5" stroke-width="1.4"/>'
         + '<circle cx="16" cy="16" r="7" stroke-width="1.6"/>'
         + '<path d="M 9.5 16.5 q -1.5 0.5 -1 2 q 0.5 1 1.5 0.5" stroke-width="1.2"/>'
         + '<path d="M 22.5 16.5 q 1.5 0.5 1 2 q -0.5 1 -1.5 0.5" stroke-width="1.2"/>'

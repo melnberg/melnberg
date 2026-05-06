@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
+import { RestaurantIcon } from '@/components/CategoryIcons';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const metadata = { title: '맛집 추천 — 멜른버그' };
@@ -39,7 +40,7 @@ export default async function RestaurantsPage() {
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">
           <div className="flex items-center justify-between gap-4 mb-2">
-            <h1 className="text-[28px] font-bold text-navy tracking-tight">🍴 맛집 추천</h1>
+            <h1 className="text-[28px] font-bold text-navy tracking-tight inline-flex items-center gap-2"><RestaurantIcon className="w-[26px] h-[26px]" /> 맛집 추천</h1>
             <Link href="/restaurants/new" className="bg-navy text-white px-4 py-2 text-[12px] font-bold no-underline hover:bg-navy-dark whitespace-nowrap">
               + 맛집 등록
             </Link>
@@ -64,7 +65,7 @@ export default async function RestaurantsPage() {
                     )}
                     <div className="px-4 py-3">
                       <div className="flex items-baseline justify-between gap-2 mb-1">
-                        <h3 className="text-[15px] font-bold text-navy truncate">🍴 {p.dong ? `${p.dong} ${p.name}` : p.name}</h3>
+                        <h3 className="text-[15px] font-bold text-navy truncate inline-flex items-center gap-1.5"><RestaurantIcon className="w-[14px] h-[14px]" /> <span className="truncate">{p.dong ? `${p.dong} ${p.name}` : p.name}</span></h3>
                         <span className="text-[10px] text-muted flex-shrink-0">❤ {p.like_count}</span>
                       </div>
                       {p.address && <div className="text-[10px] text-muted mb-1">{p.address}</div>}

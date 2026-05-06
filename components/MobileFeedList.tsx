@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
 import InlineCommentBox, { type InlineKind } from './InlineCommentBox';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
 import { createClient } from '@/lib/supabase/client';
+import { KidsIcon, RestaurantIcon } from './CategoryIcons';
 
 const SCROLL_KEY = 'mlbg.feed.scroll';
 const LAST_CLICK_KEY = 'mlbg.feed.lastClick';
@@ -113,11 +114,37 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
   }
 }
 
+// 점진적 노출 — 초기 30개만 렌더, 바닥 근처 도달 시 30개씩 추가.
+// 한번에 300개 다 렌더하면 모바일에서 스크롤 끊김 + 메모리 부담. IntersectionObserver 로 부드럽게.
+const INITIAL_VISIBLE = 30;
+const REVEAL_STEP = 30;
+
 export default function MobileFeedList({ items }: Props) {
   const [lastClickKey, setLastClickKey] = useState<string | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [me, setMe] = useState<{ id: string; name: string } | null>(null);
+  const [visibleCount, setVisibleCount] = useState(Math.min(INITIAL_VISIBLE, items.length));
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // items 가 새로 들어오면 visibleCount 재초기화 (다른 정렬/필터 적용 시 대비)
+  useEffect(() => {
+    setVisibleCount(Math.min(INITIAL_VISIBLE, items.length));
+  }, [items]);
+
+  // 바닥 근처 도달 → 30개씩 추가 노출
+  useEffect(() => {
+    if (visibleCount >= items.length) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setVisibleCount((c) => Math.min(c + REVEAL_STEP, items.length));
+      }
+    }, { rootMargin: '600px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visibleCount, items.length]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -186,19 +213,19 @@ export default function MobileFeedList({ items }: Props) {
     <div className="bg-white">
       {/* 상단 멜른버그 바는 Layout 의 MobileTopBar 가 모든 화면 공통으로 처리 — 여기선 제거 */}
       <ul>
-        {items.map((f) => {
+        {items.slice(0, visibleCount).map((f) => {
           const href = hrefFor(f);
           const badge = badgeFor(f);
           // 단지 관련 kind 의 헤드라벨엔 동 prefix (예: "역삼동 역삼래미안")
           const aptHeadLabel = f.apt_nm ? (f.dong ? `${f.dong} ${f.apt_nm}` : f.apt_nm) : '';
-          const headLabel = f.kind === 'notice' ? '분양 공지'
+          const headLabel: React.ReactNode = f.kind === 'notice' ? '분양 공지'
             : f.kind === 'strike' ? '💥 파업'
             : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
             : f.kind === 'sell_complete' ? '🤝 거래성사'
-            : f.kind === 'restaurant_register' ? `🍴 ${f.restaurant_name ?? '맛집'}`
-            : f.kind === 'restaurant_comment' ? `🍴 ${f.restaurant_name ?? '맛집'}`
-            : f.kind === 'kids_register' ? `👶 ${f.kids_name ?? '육아 장소'}`
-            : f.kind === 'kids_comment' ? `👶 ${f.kids_name ?? '육아 장소'}`
+            : f.kind === 'restaurant_register' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>
+            : f.kind === 'restaurant_comment' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>
+            : f.kind === 'kids_register' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>
+            : f.kind === 'kids_comment' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
             : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
             : aptHeadLabel;
@@ -295,6 +322,11 @@ export default function MobileFeedList({ items }: Props) {
           );
         })}
       </ul>
+      {visibleCount < items.length && (
+        <div ref={sentinelRef} className="px-4 py-6 text-center text-[12px] text-muted">
+          불러오는 중… ({visibleCount}/{items.length})
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
+import { KidsIcon } from './CategoryIcons';
 
 export type KidsItem = {
   id: number; name: string; description: string; recommended_activity: string;
@@ -166,7 +167,7 @@ export default function KidsPanel({
     <div className="absolute top-4 right-4 z-[60] bg-white border-2 border-navy shadow-2xl w-[400px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] overflow-y-auto">
       <div className="bg-[#fbcfe8] text-[#1a1d22] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[18px]">👶</span>
+          <KidsIcon className="w-[20px] h-[20px]" />
           <div className="min-w-0">
             <div className="font-bold text-[15px] truncate">{kids.dong ? `${kids.dong} ${kids.name}` : kids.name}</div>
             {kids.address && <div className="text-[10px] text-[#831843] truncate">{kids.address}</div>}

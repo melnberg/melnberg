@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import RestaurantEditForm from '@/components/RestaurantEditForm';
+import { RestaurantIcon } from '@/components/CategoryIcons';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export default async function RestaurantEditPage({ params }: { params: Promise<{
 
       <section className="py-8">
         <div className="max-w-[760px] mx-auto px-6">
-          <h1 className="text-[22px] font-bold text-navy mb-2">🍴 맛집 수정</h1>
+          <h1 className="text-[22px] font-bold text-navy mb-2 inline-flex items-center gap-2"><RestaurantIcon className="w-[20px] h-[20px]" /> 맛집 수정</h1>
           <p className="text-[12px] text-muted mb-6">위치는 수정 불가. 가게명/설명/추천메뉴/사진만 변경 가능.</p>
           <RestaurantEditForm pin={pin} currentUserId={user.id} />
         </div>

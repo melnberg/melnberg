@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
+import { KidsIcon, RestaurantIcon } from './CategoryIcons';
 
 type Notification = {
   id: number;
@@ -207,13 +208,13 @@ export default function NotificationsBell() {
                       ) : n.type === 'offer_accepted' ? (
                         <span><span className="font-bold text-navy">{n.apt_name ?? '단지'}</span> — 매도 수락됨 (<b>{Number(n.listing_price ?? 0).toLocaleString()} mlbg</b>)</span>
                       ) : n.type === 'restaurant_comment' ? (
-                        <span><span className="font-bold text-navy">🍴 {n.listing_message ?? '맛집'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
+                        <span><span className="font-bold text-navy inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {n.listing_message ?? '맛집'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
                       ) : n.type === 'restaurant_like' ? (
-                        <span><span className="font-bold text-navy">🍴 {n.listing_message ?? '맛집'}</span> — 좋아요 ❤</span>
+                        <span><span className="font-bold text-navy inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {n.listing_message ?? '맛집'}</span> — 좋아요 ❤</span>
                       ) : n.type === 'kids_comment' ? (
-                        <span><span className="font-bold text-navy">👶 {n.listing_message ?? '육아 장소'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
+                        <span><span className="font-bold text-navy inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {n.listing_message ?? '육아 장소'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
                       ) : n.type === 'kids_like' ? (
-                        <span><span className="font-bold text-navy">👶 {n.listing_message ?? '육아 장소'}</span> — 좋아요 ❤</span>
+                        <span><span className="font-bold text-navy inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {n.listing_message ?? '육아 장소'}</span> — 좋아요 ❤</span>
                       ) : (
                         <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
                       )}

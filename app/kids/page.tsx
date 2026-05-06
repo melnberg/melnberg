@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
+import { KidsIcon } from '@/components/CategoryIcons';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const metadata = { title: '육아 장소 추천 — 멜른버그' };
@@ -27,7 +28,7 @@ export default async function KidsPage() {
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">
           <div className="flex items-center justify-between gap-4 mb-2">
-            <h1 className="text-[28px] font-bold text-navy tracking-tight">👶 육아 장소 추천</h1>
+            <h1 className="text-[28px] font-bold text-navy tracking-tight inline-flex items-center gap-2"><KidsIcon className="w-[26px] h-[26px]" /> 육아 장소 추천</h1>
             <Link href="/kids/new" className="bg-navy text-white px-4 py-2 text-[12px] font-bold no-underline hover:bg-navy-dark whitespace-nowrap">+ 장소 등록</Link>
           </div>
           <p className="text-sm text-muted mb-6">아이들 데리고 갈 만한 곳 정보 공유. 1인 5개 / 등록 시 +30 mlbg / 분양 100 / 일 수익 1.</p>
@@ -41,7 +42,7 @@ export default async function KidsPage() {
                     {p.photo_url && <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden"><img src={p.photo_url} alt="" className="w-full h-full object-cover" /></div>}
                     <div className="px-4 py-3">
                       <div className="flex items-baseline justify-between gap-2 mb-1">
-                        <h3 className="text-[15px] font-bold text-navy truncate">👶 {p.dong ? `${p.dong} ${p.name}` : p.name}</h3>
+                        <h3 className="text-[15px] font-bold text-navy truncate inline-flex items-center gap-1.5"><KidsIcon className="w-[14px] h-[14px]" /> <span className="truncate">{p.dong ? `${p.dong} ${p.name}` : p.name}</span></h3>
                         <span className="text-[10px] text-muted flex-shrink-0">❤ {p.like_count}</span>
                       </div>
                       {p.address && <div className="text-[10px] text-muted mb-1">{p.address}</div>}

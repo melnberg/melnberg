@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
+import { KidsIcon } from './CategoryIcons';
 import type { KidsItem } from './KidsPanel';
 
 type Comment = { id: number; author_id: string; content: string; created_at: string; author_name?: string | null };
@@ -95,7 +96,7 @@ export default function KidsDetailClient({ pin }: { pin: KidsItem }) {
     <article>
       <header className="pb-4 mb-6 border-b border-border">
         <div className="flex items-baseline gap-2 mb-2 flex-wrap">
-          <span className="text-[18px]">👶</span>
+          <KidsIcon className="w-[20px] h-[20px] text-navy" />
           <h1 className="text-[24px] font-bold text-navy tracking-tight">{fullName}</h1>
           <span className="text-[10px] text-muted">·</span>
           <button onClick={toggleLike} disabled={isAuthor || busy}

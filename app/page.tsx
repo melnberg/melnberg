@@ -1001,7 +1001,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
     const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 100 - auctionItems.length);
+      .slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];
 }
 
