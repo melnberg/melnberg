@@ -28,6 +28,8 @@ type Picked =
 const FACTORY_BRAND_LABEL: Record<string, string> = {
   hynix: 'SK하이닉스', samsung: '삼성전자', costco: '코스트코',
   union: '금속노조', cargo: '화물연대', terminal: '터미널', station: '기차역',
+  party_dem: '더불어민주당', party_ppl: '국민의힘', party_jhs: '조국혁신당',
+  party_ref: '개혁신당', party_jin: '진보당', party_basic: '기본소득당', party_sd: '사회민주당',
 };
 
 export default function AdminAuctionForm() {

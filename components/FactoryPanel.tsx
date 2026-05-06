@@ -10,7 +10,7 @@ import RewardTooltip from './RewardTooltip';
 
 export type FactoryItem = {
   id: number;
-  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station';
+  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station' | 'party_dem' | 'party_ppl' | 'party_jhs' | 'party_ref' | 'party_jin' | 'party_basic' | 'party_sd';
   name: string;
   address: string | null;
   lat: number;
@@ -37,6 +37,13 @@ const BRAND_META: Record<FactoryItem['brand'], { label: string; bg: string; icon
   cargo:   { label: '화물연대',         bg: '#1F8A4C', iconBg: '#dcfce7', pin: '/pins/factory-cargo.svg' },
   terminal:{ label: '버스터미널',       bg: '#7C3AED', iconBg: '#ede9fe', pin: '/pins/factory-terminal.svg' },
   station: { label: '기차역',           bg: '#0F766E', iconBg: '#ccfbf1', pin: '/pins/factory-station.svg' },
+  party_dem:   { label: '더불어민주당', bg: '#004EA2', iconBg: '#dbeafe', pin: '/pins/factory-party-dem.svg' },
+  party_ppl:   { label: '국민의힘',     bg: '#E61E2B', iconBg: '#fee2e2', pin: '/pins/factory-party-ppl.svg' },
+  party_jhs:   { label: '조국혁신당',   bg: '#1F2D5C', iconBg: '#e0e7ff', pin: '/pins/factory-party-jhs.svg' },
+  party_ref:   { label: '개혁신당',     bg: '#FF7920', iconBg: '#fed7aa', pin: '/pins/factory-party-ref.svg' },
+  party_jin:   { label: '진보당',       bg: '#D32030', iconBg: '#fee2e2', pin: '/pins/factory-party-jin.svg' },
+  party_basic: { label: '기본소득당',   bg: '#009E73', iconBg: '#dcfce7', pin: '/pins/factory-party-basic.svg' },
+  party_sd:    { label: '사회민주당',   bg: '#C32A45', iconBg: '#fee2e2', pin: '/pins/factory-party-sd.svg' },
 };
 
 function fmtKstShort(iso: string): string {

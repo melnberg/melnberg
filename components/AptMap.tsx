@@ -406,6 +406,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       cargo:    new window.kakao.maps.MarkerImage('/pins/factory-cargo.svg',    new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       terminal: new window.kakao.maps.MarkerImage('/pins/factory-terminal.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       station:  new window.kakao.maps.MarkerImage('/pins/factory-station.svg',  new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_dem:   new window.kakao.maps.MarkerImage('/pins/factory-party-dem.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_ppl:   new window.kakao.maps.MarkerImage('/pins/factory-party-ppl.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_jhs:   new window.kakao.maps.MarkerImage('/pins/factory-party-jhs.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_ref:   new window.kakao.maps.MarkerImage('/pins/factory-party-ref.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_jin:   new window.kakao.maps.MarkerImage('/pins/factory-party-jin.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_basic: new window.kakao.maps.MarkerImage('/pins/factory-party-basic.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      party_sd:    new window.kakao.maps.MarkerImage('/pins/factory-party-sd.svg',    new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
     };
     for (const f of factoryList) {
       const pos = new window.kakao.maps.LatLng(f.lat, f.lng);
