@@ -36,7 +36,11 @@ function relTime(iso: string): string {
 // 피드 아이템 → 풀페이지 라우트 (모바일 SNS 모델)
 function hrefFor(f: FeedItem): string | null {
   if ((f.kind === 'auction' || f.kind === 'auction_bid') && f.auction_id) return `/auctions/${f.auction_id}`;
-  if (f.kind === 'post' || f.kind === 'post_comment') return f.post_id ? `/community/${f.post_id}` : null;
+  if (f.kind === 'post' || f.kind === 'post_comment') {
+    if (!f.post_id) return null;
+    const base = f.post_category === 'hotdeal' ? '/hotdeal' : '/community';
+    return `${base}/${f.post_id}`;
+  }
   if (f.kind === 'notice' && f.notice_href) return f.notice_href;
   // 단지 토론·매물·호가 — 모두 단지 페이지 /apt/{apt_master_id} 로 통합
   if (
@@ -49,11 +53,12 @@ function hrefFor(f: FeedItem): string | null {
   return null;
 }
 
-function rewardKind(k: FeedItem['kind']): React.ComponentProps<typeof RewardTooltip>['kind'] {
+function rewardKind(f: FeedItem): React.ComponentProps<typeof RewardTooltip>['kind'] {
+  const k = f.kind;
   if (k === 'discussion') return 'apt_post';
   if (k === 'comment') return 'apt_comment';
-  if (k === 'post') return 'community_post';
-  if (k === 'post_comment') return 'community_comment';
+  if (k === 'post') return f.post_category === 'hotdeal' ? 'hotdeal_post' : 'community_post';
+  if (k === 'post_comment') return f.post_category === 'hotdeal' ? 'hotdeal_comment' : 'community_comment';
   if (k === 'factory_comment') return 'factory_comment';
   if (k === 'emart_comment') return 'emart_comment';
   return undefined;
@@ -155,7 +160,7 @@ export default function MobileFeedList({ items }: Props) {
           const badge = badgeFor(f);
           const headLabel = f.kind === 'notice' ? '분양 공지'
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
-            : (f.kind === 'post' || f.kind === 'post_comment') ? '커뮤니티'
+            : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
             : (f.apt_nm ?? '');
           const fullContent = (f.content ?? '').trim();
           const isAuctionLive = f.kind === 'auction';
@@ -204,7 +209,7 @@ export default function MobileFeedList({ items }: Props) {
                   <div className="text-[10px] text-muted mt-1.5 flex items-center gap-2">
                     <span>{relTime(f.created_at)} 전</span>
                     {typeof f.earned_mlbg === 'number' && (
-                      <RewardTooltip earned={f.earned_mlbg} kind={rewardKind(f.kind)} />
+                      <RewardTooltip earned={f.earned_mlbg} kind={rewardKind(f)} />
                     )}
                     {inlineCfg && (
                       <button

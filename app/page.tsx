@@ -26,8 +26,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .limit(50),
       supabase
         .from('posts')
-        .select('id, author_id, title, content, created_at')
-        .eq('category', 'community')
+        .select('id, author_id, title, content, category, created_at')
+        .in('category', ['community', 'hotdeal'])
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -371,6 +371,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const postItems: FeedItem[] = (posts ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const prof = profileMap.get(row.author_id as string);
+      const cat = (row.category as 'community' | 'hotdeal' | undefined) ?? 'community';
       return {
         kind: 'post' as const,
         id: row.id as number,
@@ -387,20 +388,22 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
-        earned_mlbg: earnedFor('community_post', row.id as number),
+        earned_mlbg: cat === 'hotdeal' ? earnedFor('hotdeal_post', row.id as number) : earnedFor('community_post', row.id as number),
         comment_count: postCommCnt.get(row.id as number) ?? 0,
+        post_category: cat,
       };
     });
 
     const postCommentItems: FeedItem[] = (postComments ?? [])
       .filter((r) => {
         const post = commentPostMap.get((r as Record<string, unknown>).post_id as number);
-        return post?.category === 'community';
+        return post?.category === 'community' || post?.category === 'hotdeal';
       })
       .map((r) => {
         const row = r as Record<string, unknown>;
         const post = commentPostMap.get(row.post_id as number) ?? null;
         const prof = profileMap.get(row.author_id as string);
+        const cat = (post?.category as 'community' | 'hotdeal' | undefined) ?? 'community';
         return {
           kind: 'post_comment' as const,
           id: row.id as number,
@@ -417,7 +420,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
           author_is_solo: !!prof?.is_solo,
           author_avatar_url: prof?.avatar_url ?? null,
           author_apt_count: prof?.apt_count ?? null,
-          earned_mlbg: earnedFor('community_comment', row.id as number),
+          earned_mlbg: cat === 'hotdeal' ? earnedFor('hotdeal_comment', row.id as number) : earnedFor('community_comment', row.id as number),
+          post_category: cat,
         };
       });
 

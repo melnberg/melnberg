@@ -6,6 +6,8 @@ import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
 import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
+import RewardTooltip from '@/components/RewardTooltip';
+import PostLikeButton from '@/components/PostLikeButton';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
@@ -30,6 +32,25 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
 
   const [post, comments] = await Promise.all([getPost(numId, 'hotdeal'), listComments(numId)]);
   if (!post) notFound();
+
+  // mlbg 적립 — 본글 + 댓글 한 번에 fetch
+  const sbPub = await createClient();
+  const commentIds = comments.map((c) => c.id);
+  const { data: awardRows } = await sbPub
+    .from('mlbg_award_log')
+    .select('kind, ref_id, earned')
+    .in('ref_id', [numId, ...commentIds])
+    .then((r) => r, () => ({ data: null }));
+  const earnedMap = new Map<string, number>();
+  for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
+    earnedMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
+  }
+  const postEarned = earnedMap.get(`hotdeal_post:${numId}`) ?? earnedMap.get(`community_post:${numId}`) ?? 0;
+  const commentEarnedMap: Record<number, number> = {};
+  for (const cid of commentIds) {
+    const v = earnedMap.get(`hotdeal_comment:${cid}`) ?? earnedMap.get(`community_comment:${cid}`);
+    if (v && v > 0) commentEarnedMap[cid] = v;
+  }
   if (post.deleted_at) {
     return (
       <Layout current="hotdeal">
@@ -82,7 +103,10 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
       <article className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
           <header className="pb-6 mb-6 border-b border-[#fde68a]">
-            <div className="inline-block bg-[#fef3c7] text-[#78350f] text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 mb-2">HOT DEAL</div>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="inline-block bg-[#fef3c7] text-[#78350f] text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">HOT DEAL</div>
+              <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+            </div>
             <h1 className="text-[28px] font-bold text-[#92400e] tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
               <span className="font-bold text-navy">
@@ -94,6 +118,12 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
                 <>
                   <span>·</span>
                   <span>수정됨</span>
+                </>
+              )}
+              {postEarned > 0 && (
+                <>
+                  <span>·</span>
+                  <RewardTooltip earned={postEarned} kind="hotdeal_post" />
                 </>
               )}
               {isAuthor && (

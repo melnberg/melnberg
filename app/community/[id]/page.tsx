@@ -5,6 +5,7 @@ import MainTop from '@/components/MainTop';
 import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
 import RewardTooltip from '@/components/RewardTooltip';
+import PostLikeButton from '@/components/PostLikeButton';
 import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
@@ -110,7 +111,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <div className="max-w-[760px] mx-auto px-6">
           {/* 헤더 */}
           <header className="pb-6 mb-6 border-b border-border">
-            <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight break-keep flex-1">{post.title}</h1>
+              <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+            </div>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
               <span className="font-bold text-navy">
                 <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
