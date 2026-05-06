@@ -36,10 +36,10 @@ export default async function AdminAuctionsPage() {
   if (!user) redirect('/login?next=/admin/auctions');
   if (!(await isCurrentUserAdmin())) redirect('/');
 
-  // 2026-05-06: 시한 경매 일시 비활성. 새 경매 등록 폼 비활성, 기존 데이터는 조회용으로만 표시.
+  // 만료 경매 처리는 /api/cron/complete-auctions (5분 cron) 으로 분리됨.
   const { data } = await supabase.rpc('list_recent_auctions', { p_limit: 50 }).then((r) => r, () => ({ data: null }));
   const rows = (data ?? []) as AuctionRow[];
-  const isDisabled = true;
+  const isDisabled = false;
 
   return (
     <Layout>

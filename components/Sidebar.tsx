@@ -165,8 +165,8 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
             />
           ))}
 
-          {/* 시한 경매 — 일시 비활성 (2026-05-06) */}
-          {/* <SItem href="/auctions" label="시한 경매" active={current === 'auctions'} icon={<AuctionIcon />} onClick={() => setOpen(false)} /> */}
+          {/* 시한 경매 */}
+          <SItem href="/auctions" label="시한 경매" active={current === 'auctions'} icon={<AuctionIcon />} onClick={() => setOpen(false)} />
 
           {/* 핫딜 게시판 — 적립 보상 2.5x */}
           <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />

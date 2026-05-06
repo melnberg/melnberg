@@ -60,8 +60,49 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
 
-    // 시한 경매 비활성 (2026-05-06) — 피드에서 제외. 재오픈 시 git history 에서 복구.
-    const activeAuctions: Array<{ id: number; ends_at: string; current_bid: number | null; min_bid: number; bid_count: number; created_at: string; _assetName: string; _assetLat: number | null; _assetLng: number | null; _assetDong: string | null; _assetType: 'apt' | 'factory' | 'emart'; _assetId: number }> = [];
+    // 진행중 경매 — 모두 강제 노출 (피드 상단). asset_type 별로 위치/이름 후처리.
+    const { data: activeAuctionsRaw } = await supabase
+      .from('apt_auctions')
+      .select('id, apt_id, asset_type, asset_id, ends_at, min_bid, current_bid, current_bidder_id, bid_count, created_at')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(10)
+      .then((r) => r, () => ({ data: null }));
+    type RawAuc = { id: number; apt_id: number | null; asset_type: 'apt' | 'factory' | 'emart' | null; asset_id: number | null; ends_at: string; min_bid: number; current_bid: number | null; current_bidder_id: string | null; bid_count: number; created_at: string };
+    const aucList = (activeAuctionsRaw ?? []) as RawAuc[];
+    const aucAptIds: number[] = [], aucFactoryIds: number[] = [], aucEmartIds: number[] = [];
+    for (const a of aucList) {
+      const aType = a.asset_type ?? 'apt';
+      const aId = a.asset_id ?? a.apt_id ?? 0;
+      if (aType === 'apt' && aId) aucAptIds.push(aId);
+      else if (aType === 'factory' && aId) aucFactoryIds.push(aId);
+      else if (aType === 'emart' && aId) aucEmartIds.push(aId);
+    }
+    const aucAssetMap = new Map<string, { name: string; lat: number | null; lng: number | null; dong: string | null }>();
+    if (aucAptIds.length > 0) {
+      const { data } = await supabase.from('apt_master').select('id, apt_nm, dong, lat, lng').in('id', aucAptIds);
+      for (const r of (data ?? []) as Array<{ id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null }>) {
+        aucAssetMap.set(`apt:${r.id}`, { name: r.apt_nm ?? '단지', lat: r.lat, lng: r.lng, dong: r.dong });
+      }
+    }
+    if (aucFactoryIds.length > 0) {
+      const { data } = await supabase.from('factory_locations').select('id, name, lat, lng').in('id', aucFactoryIds);
+      for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+        aucAssetMap.set(`factory:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
+      }
+    }
+    if (aucEmartIds.length > 0) {
+      const { data } = await supabase.from('emart_locations').select('id, name, lat, lng').in('id', aucEmartIds);
+      for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+        aucAssetMap.set(`emart:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
+      }
+    }
+    const activeAuctions = aucList.map((r) => {
+      const aType = r.asset_type ?? 'apt';
+      const aId = r.asset_id ?? r.apt_id ?? 0;
+      const info = aucAssetMap.get(`${aType}:${aId}`) ?? { name: '자산', lat: null, lng: null, dong: null };
+      return { ...r, _assetName: info.name, _assetLat: info.lat, _assetLng: info.lng, _assetDong: info.dong, _assetType: aType, _assetId: aId };
+    });
 
     // Phase B — 8개 base fetch 단일 Promise.all 병렬화 (2026-05-06 사고 후 — 이전 sequential).
     const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
@@ -138,8 +179,65 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const emartCommRows = (((emartCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; author_id: string; content: string; created_at: string; emart: unknown }>);
     const factoryCommRows = (((factoryCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; factory_id: number; author_id: string; content: string; created_at: string; factory: unknown }>);
 
-    // 시한 경매 비활성 (2026-05-06) — 입찰 피드 제거. 재오픈 시 git history 에서 복구.
-    const bidRows: Array<{ id: number; auction_id: number; bidder_id: string; amount: number; created_at: string }> = [];
+    // 최근 입찰 — 피드 일반 항목으로 노출
+    const { data: recentBids } = await supabase
+      .from('auction_bids')
+      .select('id, auction_id, bidder_id, amount, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then((r) => r, () => ({ data: null }));
+    const bidRows = (recentBids ?? []) as Array<{ id: number; auction_id: number; bidder_id: string; amount: number; created_at: string }>;
+    // 입찰의 자산명 조회 (auction_id → apt_master/factory/emart name)
+    const auctionIds = Array.from(new Set(bidRows.map((b) => b.auction_id)));
+    const auctionAptMap = new Map<number, { apt_nm: string | null; lat: number | null; lng: number | null; dong: string | null; apt_master_id: number }>();
+    if (auctionIds.length > 0) {
+      const { data: aucRows } = await supabase
+        .from('apt_auctions')
+        .select('id, apt_id, asset_type, asset_id')
+        .in('id', auctionIds);
+      type AucMeta = { id: number; apt_id: number | null; asset_type: 'apt' | 'factory' | 'emart' | null; asset_id: number | null };
+      const aucMetas = (aucRows ?? []) as AucMeta[];
+      const aIds: number[] = [], fIds: number[] = [], eIds: number[] = [];
+      for (const r of aucMetas) {
+        const t = r.asset_type ?? 'apt';
+        const aid = r.asset_id ?? r.apt_id ?? 0;
+        if (!aid) continue;
+        if (t === 'apt') aIds.push(aid);
+        else if (t === 'factory') fIds.push(aid);
+        else if (t === 'emart') eIds.push(aid);
+      }
+      const assetMap = new Map<string, { name: string | null; dong: string | null; lat: number | null; lng: number | null }>();
+      if (aIds.length > 0) {
+        const { data } = await supabase.from('apt_master').select('id, apt_nm, dong, lat, lng').in('id', aIds);
+        for (const r of (data ?? []) as Array<{ id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null }>) {
+          assetMap.set(`apt:${r.id}`, { name: r.apt_nm, dong: r.dong, lat: r.lat, lng: r.lng });
+        }
+      }
+      if (fIds.length > 0) {
+        const { data } = await supabase.from('factory_locations').select('id, name, lat, lng').in('id', fIds);
+        for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+          assetMap.set(`factory:${r.id}`, { name: r.name, dong: null, lat: r.lat, lng: r.lng });
+        }
+      }
+      if (eIds.length > 0) {
+        const { data } = await supabase.from('emart_locations').select('id, name, lat, lng').in('id', eIds);
+        for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+          assetMap.set(`emart:${r.id}`, { name: r.name, dong: null, lat: r.lat, lng: r.lng });
+        }
+      }
+      for (const r of aucMetas) {
+        const t = r.asset_type ?? 'apt';
+        const aid = r.asset_id ?? r.apt_id ?? 0;
+        const info = assetMap.get(`${t}:${aid}`) ?? { name: null, dong: null, lat: null, lng: null };
+        auctionAptMap.set(r.id, {
+          apt_nm: info.name,
+          dong: info.dong,
+          lat: info.lat,
+          lng: info.lng,
+          apt_master_id: t === 'apt' ? aid : 0,
+        });
+      }
+    }
 
     // Phase C — 의존 metadata 8개 쿼리 단일 Promise.all 병렬화 (2026-05-06).
     // 이전: commentPostMap → profileMap (2개) → awardMap → commentCounts (4개 parallel) — 4단계 직렬
@@ -474,8 +572,33 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       };
     });
 
-    // 시한 경매 비활성 (2026-05-06) — 입찰 FeedItem 도 빈 배열.
-    const bidItems: FeedItem[] = [];
+    // 입찰 → FeedItem (auction_bid)
+    const bidItems: FeedItem[] = bidRows.map((b) => {
+      const apt = auctionAptMap.get(b.auction_id);
+      const prof = profileMap.get(b.bidder_id);
+      return {
+        kind: 'auction_bid' as const,
+        id: b.id,
+        auction_id: b.auction_id,
+        apt_master_id: apt?.apt_master_id ?? 0,
+        post_id: null,
+        title: `입찰 : ${prof?.display_name ?? '익명'} (${Number(b.amount).toLocaleString()} mlbg)`,
+        content: apt?.apt_nm ? `${apt.apt_nm}` : null,
+        created_at: b.created_at,
+        apt_nm: apt?.apt_nm ?? null,
+        dong: apt?.dong ?? null,
+        lat: apt?.lat ?? null,
+        lng: apt?.lng ?? null,
+        author_id: b.bidder_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        listing_price: Number(b.amount),
+      };
+    });
 
     // 시스템 공지 — 자동 작성된 일반 커뮤니티 글처럼 노출.
     // created_at 을 고정 시점 (분양 개시 시각) 으로 박아서 시간순 정렬에 합류 → 신규 피드가 위로 쌓이며 자연스럽게 묻힘.
