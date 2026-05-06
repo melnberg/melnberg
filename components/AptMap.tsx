@@ -1629,13 +1629,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
           data-keep-on-mobile-map — 모바일 미니멀 지도 모드에서 숨김 처리되지 않도록 예외.
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
-      <div data-keep-on-mobile-map="" className="absolute top-14 right-2 z-40 bg-white border border-[#e5e7eb] shadow-[0_4px_16px_rgba(0,0,0,0.12)] rounded-lg overflow-hidden w-[100px] sm:w-[110px] flex flex-col">
-        <div className="text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-wider px-3 py-1.5 bg-bg/40 border-b border-[#f0f0f0]">핀 표시</div>
-        <div className="flex flex-col p-1 gap-0.5">
+      <div data-keep-on-mobile-map="" className="absolute top-14 right-2 z-40 bg-white border border-[#e5e7eb] shadow-[0_4px_12px_rgba(0,0,0,0.10)] rounded-md overflow-hidden w-[64px] sm:w-[72px] flex flex-col">
+        <div className="text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-wider px-1.5 py-1 bg-bg/40 border-b border-[#f0f0f0] text-center">핀</div>
+        <div className="flex flex-col px-0.5 py-0.5 gap-0">
           {([
-            { k: 'apt' as const, label: '아파트', dot: '#f97316' },
+            { k: 'apt' as const, label: '집', dot: '#f97316' },
             { k: 'facility' as const, label: '시설', dot: '#6b7280' },
-            { k: 'emart' as const, label: '이마트', dot: '#fbbf24' },
+            { k: 'emart' as const, label: '마트', dot: '#fbbf24' },
             { k: 'restaurant' as const, label: '맛집', dot: '#f59e0b' },
             { k: 'kids' as const, label: '육아', dot: '#f472b6' },
           ]).map((it) => {
@@ -1646,12 +1646,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                 type="button"
                 onClick={() => togglePinFilter(it.k)}
                 aria-pressed={on}
-                className={`flex items-center gap-2 px-2 py-1 text-[11px] sm:text-[12px] rounded cursor-pointer text-left transition-colors ${
+                className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] sm:text-[11px] rounded cursor-pointer text-left transition-colors ${
                   on ? 'text-text font-semibold hover:bg-[#f5f9ff]' : 'text-muted hover:bg-[#f5f5f5]'
                 }`}
               >
                 <span
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-opacity"
+                  className="w-2 h-2 rounded-full flex-shrink-0 transition-opacity"
                   style={{ backgroundColor: it.dot, opacity: on ? 1 : 0.25 }}
                 />
                 <span className={on ? '' : 'line-through'}>{it.label}</span>
