@@ -1634,7 +1634,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {/* 우상단 핀 필터 — 케밥 버튼이 위, 펼치면 chip 이 아래로.
           모바일 sticky topbar (h-52, z-30) 회피 위해 top-14, PC 는 top-2.
           케밥 디자인 = FloatingMapPin map-mode 와 동일 (글래스 화이트). */}
-      <div data-keep-on-mobile-map="" className="fixed top-14 lg:top-2 right-5 z-40 flex flex-col items-center gap-1.5">
+      <div data-keep-on-mobile-map="" className="fixed top-14 right-5 lg:top-[100px] lg:right-2 z-40 flex flex-col items-center gap-1.5">
         {/* 케밥 — 항상 표시, 가장 위 */}
         <button
           type="button"
