@@ -1965,7 +1965,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 else if (f.kind === 'strike') txt = typeof f.strike_loss_mlbg === 'number' ? `−${f.strike_loss_mlbg.toLocaleString()} mlbg` : '−mlbg';
                                 else if (f.kind === 'bridge_toll') txt = typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
                                 else if (f.kind === 'notice') txt = '공지';
-                                return txt ? <span className="text-text tabular-nums">{txt}</span> : null;
+                                return txt ? <span className="tabular-nums">{txt}</span> : null;
                               })()
                             )}
                           </div>

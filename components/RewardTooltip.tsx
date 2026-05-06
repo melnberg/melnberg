@@ -6,7 +6,7 @@ type Props = {
 
 export default function RewardTooltip({ earned }: Props) {
   return (
-    <span className="tabular-nums text-text" style={{ font: 'inherit' }}>
+    <span className="tabular-nums" style={{ font: 'inherit', color: 'inherit' }}>
       +{earned} mlbg
     </span>
   );
