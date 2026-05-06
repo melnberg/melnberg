@@ -200,3 +200,14 @@
   object-fit: contain !important;
   border-radius: 12px !important;
 }
+
+/* 오로라 — 그라디언트 위치 천천히 이동. 펄스/음영 없음. FloatingMapPin 등에서 사용 */
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-aurora {
+  background-size: 250% 250%;
+  animation: aurora 6s ease-in-out infinite;
+}
