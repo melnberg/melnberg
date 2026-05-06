@@ -1635,11 +1635,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           FloatingMapPin (bottom-5 right-5) 위에 세로 일렬 정렬. 화면 가림 최소화. */}
       <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col items-center gap-1.5">
         {filterOpen && ([
-          { k: 'apt' as const, label: '집', from: '#fdba74', to: '#ea580c' },
-          { k: 'facility' as const, label: '시설', from: '#9ca3af', to: '#4b5563' },
-          { k: 'emart' as const, label: '마트', from: '#fde68a', to: '#d97706' },
-          { k: 'restaurant' as const, label: '맛집', from: '#fbbf24', to: '#b45309' },
-          { k: 'kids' as const, label: '육아', from: '#fbcfe8', to: '#db2777' },
+          { k: 'apt' as const, label: '집', color: '#ea580c' },
+          { k: 'facility' as const, label: '시설', color: '#4b5563' },
+          { k: 'emart' as const, label: '마트', color: '#d97706' },
+          { k: 'restaurant' as const, label: '맛집', color: '#b45309' },
+          { k: 'kids' as const, label: '육아', color: '#db2777' },
         ]).map((it) => {
           const on = pinFilters[it.k];
           return (
@@ -1648,26 +1648,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               type="button"
               onClick={() => togglePinFilter(it.k)}
               aria-pressed={on}
-              className={`w-9 h-9 text-[11px] font-bold rounded-sm cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 ${on ? '' : 'line-through'}`}
+              className={`w-11 h-11 text-[11px] font-bold rounded-full cursor-pointer transition-transform flex items-center justify-center hover:scale-110 active:scale-95 shadow-md ${on ? '' : 'line-through'}`}
               style={
                 on
-                  ? {
-                      background: `linear-gradient(135deg, ${it.from} 0%, ${it.to} 100%)`,
-                      color: '#fff',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: 'rgba(0,0,0,0.15)',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.25)',
-                    }
-                  : {
-                      backgroundColor: '#ffffff',
-                      color: '#9ca3af',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: 'rgba(0,0,0,0.15)',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                    }
+                  ? { backgroundColor: it.color, color: '#fff' }
+                  : { backgroundColor: '#ffffff', color: '#9ca3af', borderWidth: '1px', borderStyle: 'solid', borderColor: 'rgba(0,0,0,0.15)' }
               }
             >
               {it.label}
