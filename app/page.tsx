@@ -835,11 +835,24 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
 // 30초 캐싱. mutation (글/댓글/매물 등) 시 클라이언트가 /api/revalidate-home 호출 → revalidateTag('home-feed') 로 즉시 무효화.
 const fetchFeed = unstable_cache(fetchFeedRaw, ['home-feed-v1'], { revalidate: 30, tags: ['home-feed'] });
 
+// Supabase 부하 시 fetchFeed 가 30초+ 걸려 페이지 전체가 안 떠지는 사고 방어 (2026-05-06).
+// 8초 안에 못 받으면 빈 피드로 일단 렌더 — 클라가 30초 후 재방문 시 캐시 갱신됨.
+async function fetchFeedSafe(): Promise<FeedItem[]> {
+  const timeout = new Promise<FeedItem[]>((resolve) =>
+    setTimeout(() => resolve([]), 8000),
+  );
+  try {
+    return await Promise.race([fetchFeed(), timeout]);
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ view?: string; apt?: string; emart?: string; factory?: string }> }) {
   const sp = await searchParams;
   // 모바일 초기 뷰. URL 쿼리로 결정. 토글은 클라이언트에서 pushState + popstate (서버 RTT 0).
   const initialView = (sp.view === 'map' || !!sp.apt || !!sp.emart || !!sp.factory) ? 'map' : 'feed';
-  const feed = await fetchFeed();
+  const feed = await fetchFeedSafe();
 
   return (
     <Layout current="home">

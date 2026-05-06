@@ -25,8 +25,10 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // 토큰 갱신
-  await supabase.auth.getUser();
+  // 토큰 갱신 — Supabase 부하 시 미들웨어 25초 timeout 으로 사이트 전체가 504 가 되는 사고 방어
+  // (2026-05-06). 5초 안에 못 받으면 그냥 통과 (서버 컴포넌트가 자체 fallback).
+  const timeout = new Promise((resolve) => setTimeout(resolve, 5000));
+  await Promise.race([supabase.auth.getUser().catch(() => null), timeout]);
 
   return response;
 }
