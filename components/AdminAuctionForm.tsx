@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
+import { revalidateHome } from '@/lib/revalidate-home';
 
 type AssetType = 'apt' | 'factory' | 'emart';
 
@@ -143,6 +144,7 @@ export default function AdminAuctionForm() {
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_auction_id: number | null; out_message: string | null } | undefined;
     if (!row?.out_success) { alert(row?.out_message ?? '경매 생성 실패'); return; }
     if (row.out_auction_id) notifyTelegram('auction_start', row.out_auction_id);
+    revalidateHome(); // 홈 피드 즉시 무효화 — 경매 LIVE 카드 늦게 뜨던 문제 해결
     const label = picked.type === 'apt'
       ? (picked.row as AptSuggestion).apt_nm
       : picked.type === 'factory'
