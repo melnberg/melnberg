@@ -33,19 +33,25 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const [post, comments] = await Promise.all([getPost(numId), listComments(numId)]);
   if (!post) notFound();
 
-  // mlbg 적립 — 본글 + 댓글 한 번에 fetch (id → earned 매핑)
+  // mlbg 적립 — 본글 + 댓글 + 게시글 농사 보너스 한 번에 fetch (병렬)
   const sbPub = await createClient();
   const commentIds = comments.map((c) => c.id);
-  const { data: awardRows } = await sbPub
-    .from('mlbg_award_log')
-    .select('kind, ref_id, earned')
-    .in('ref_id', [numId, ...commentIds])
-    .then((r) => r, () => ({ data: null }));
+  const [awardResp, farmResp] = await Promise.all([
+    sbPub.from('mlbg_award_log').select('kind, ref_id, earned').in('ref_id', [numId, ...commentIds])
+      .then((r) => r, () => ({ data: null })),
+    sbPub.from('mlbg_farm_log').select('earned').eq('post_id', numId)
+      .then((r) => r, () => ({ data: null })),
+  ]);
+  const awardRows = (awardResp as { data: unknown[] | null }).data;
+  const farmRows = (farmResp as { data: unknown[] | null }).data;
   const earnedMap = new Map<string, number>();
   for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
     earnedMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
   }
-  const postEarned = earnedMap.get(`community_post:${numId}`) ?? earnedMap.get(`hotdeal_post:${numId}`) ?? 0;
+  // 게시글 농사 합산 — 다른 사람이 댓글 1개당 작성자 +0.5(community) / +2(hotdeal). 1인 1글 1회.
+  const farmEarned = ((farmRows ?? []) as Array<{ earned: number | string }>).reduce<number>((sum, r) => sum + Number(r.earned ?? 0), 0);
+  const postCreationEarned = earnedMap.get(`community_post:${numId}`) ?? earnedMap.get(`hotdeal_post:${numId}`) ?? 0;
+  const postEarned = postCreationEarned + farmEarned;
   // 댓글 id → earned 매핑 (CommentSection 으로 전달)
   const commentEarnedMap: Record<number, number> = {};
   for (const cid of commentIds) {

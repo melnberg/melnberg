@@ -33,19 +33,24 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
   const [post, comments] = await Promise.all([getPost(numId, 'hotdeal'), listComments(numId)]);
   if (!post) notFound();
 
-  // mlbg 적립 — 본글 + 댓글 한 번에 fetch
+  // mlbg 적립 — 본글 + 댓글 + 게시글 농사 보너스 한 번에 fetch (병렬)
   const sbPub = await createClient();
   const commentIds = comments.map((c) => c.id);
-  const { data: awardRows } = await sbPub
-    .from('mlbg_award_log')
-    .select('kind, ref_id, earned')
-    .in('ref_id', [numId, ...commentIds])
-    .then((r) => r, () => ({ data: null }));
+  const [awardResp, farmResp] = await Promise.all([
+    sbPub.from('mlbg_award_log').select('kind, ref_id, earned').in('ref_id', [numId, ...commentIds])
+      .then((r) => r, () => ({ data: null })),
+    sbPub.from('mlbg_farm_log').select('earned').eq('post_id', numId)
+      .then((r) => r, () => ({ data: null })),
+  ]);
+  const awardRows = (awardResp as { data: unknown[] | null }).data;
+  const farmRows = (farmResp as { data: unknown[] | null }).data;
   const earnedMap = new Map<string, number>();
   for (const r of (awardRows ?? []) as Array<{ kind: string; ref_id: number; earned: number }>) {
     earnedMap.set(`${r.kind}:${r.ref_id}`, Number(r.earned));
   }
-  const postEarned = earnedMap.get(`hotdeal_post:${numId}`) ?? earnedMap.get(`community_post:${numId}`) ?? 0;
+  const farmEarned = ((farmRows ?? []) as Array<{ earned: number | string }>).reduce<number>((sum, r) => sum + Number(r.earned ?? 0), 0);
+  const postCreationEarned = earnedMap.get(`hotdeal_post:${numId}`) ?? earnedMap.get(`community_post:${numId}`) ?? 0;
+  const postEarned = postCreationEarned + farmEarned;
   const commentEarnedMap: Record<number, number> = {};
   for (const cid of commentIds) {
     const v = earnedMap.get(`hotdeal_comment:${cid}`) ?? earnedMap.get(`community_comment:${cid}`);
