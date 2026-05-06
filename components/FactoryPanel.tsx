@@ -10,7 +10,7 @@ import RewardTooltip from './RewardTooltip';
 
 export type FactoryItem = {
   id: number;
-  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station' | 'party_dem' | 'party_ppl' | 'party_jhs' | 'party_ref' | 'party_jin' | 'party_basic' | 'party_sd';
+  brand: 'hynix' | 'samsung' | 'costco' | 'union' | 'cargo' | 'terminal' | 'station' | 'party_dem' | 'party_ppl' | 'party_jhs' | 'party_ref' | 'party_jin' | 'party_basic' | 'party_sd' | 'park';
   name: string;
   address: string | null;
   lat: number;
@@ -44,6 +44,7 @@ const BRAND_META: Record<FactoryItem['brand'], { label: string; bg: string; icon
   party_jin:   { label: '진보당',       bg: '#D32030', iconBg: '#fee2e2', pin: '/pins/factory-party-jin.svg' },
   party_basic: { label: '기본소득당',   bg: '#009E73', iconBg: '#dcfce7', pin: '/pins/factory-party-basic.svg' },
   party_sd:    { label: '사회민주당',   bg: '#C32A45', iconBg: '#fee2e2', pin: '/pins/factory-party-sd.svg' },
+  park:        { label: '공원·유원지',   bg: '#16A34A', iconBg: '#dcfce7', pin: '/pins/factory-park.svg' },
 };
 
 function fmtKstShort(iso: string): string {

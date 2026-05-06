@@ -413,6 +413,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       party_jin:   new window.kakao.maps.MarkerImage('/pins/factory-party-jin.svg',   new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       party_basic: new window.kakao.maps.MarkerImage('/pins/factory-party-basic.svg', new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
       party_sd:    new window.kakao.maps.MarkerImage('/pins/factory-party-sd.svg',    new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
+      park:        new window.kakao.maps.MarkerImage('/pins/factory-park.svg',        new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) }),
     };
     for (const f of factoryList) {
       const pos = new window.kakao.maps.LatLng(f.lat, f.lng);
