@@ -1631,9 +1631,24 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           카카오 SDK 상단 컨트롤 + 모바일 sticky topbar (z-30) 위로 띄우려고 z-40 + top-14.
           data-keep-on-mobile-map — 모바일 미니멀 지도 모드에서 숨김 처리되지 않도록 예외.
           모바일에선 더 작게 (text-[10px], 좁은 패딩) — 화면 좁아도 안 잘리게 */}
-      {/* 우하단 핀 필터 — 기본은 케밥 버튼만, 누르면 chip 5개가 위로 펼쳐짐.
-          FloatingMapPin (bottom-5 right-5) 위에 세로 일렬 정렬. 화면 가림 최소화. */}
-      <div data-keep-on-mobile-map="" className="fixed bottom-[72px] right-5 z-40 flex flex-col items-center gap-1.5">
+      {/* 우상단 핀 필터 — 케밥 버튼이 위, 펼치면 chip 이 아래로.
+          모바일 sticky topbar (h-52, z-30) 회피 위해 top-14, PC 는 top-2.
+          케밥 디자인 = FloatingMapPin map-mode 와 동일 (글래스 화이트). */}
+      <div data-keep-on-mobile-map="" className="fixed top-14 lg:top-2 right-5 z-40 flex flex-col items-center gap-1.5">
+        {/* 케밥 — 항상 표시, 가장 위 */}
+        <button
+          type="button"
+          onClick={() => setFilterOpen((v) => !v)}
+          aria-label="핀 필터 토글"
+          aria-expanded={filterOpen}
+          className="w-11 h-11 rounded-full cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 transition-transform bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <circle cx="12" cy="5" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="12" cy="19" r="2" />
+          </svg>
+        </button>
         {filterOpen && ([
           { k: 'apt' as const, label: '집' },
           { k: 'facility' as const, label: '시설' },
@@ -1670,20 +1685,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             </button>
           );
         })}
-        {/* 케밥(점 3개) 토글 — 단색 네이비 동그라미 (FloatingMapPin 과 같은 44×44) */}
-        <button
-          type="button"
-          onClick={() => setFilterOpen((v) => !v)}
-          aria-label="핀 필터 토글"
-          aria-expanded={filterOpen}
-          className="w-11 h-11 rounded-full cursor-pointer flex items-center justify-center hover:scale-110 active:scale-95 transition-transform bg-navy text-white hover:bg-navy-dark shadow-md"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <circle cx="12" cy="5" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="12" cy="19" r="2" />
-          </svg>
-        </button>
       </div>
 
       {/* 좌상단 — 아파트 검색 + 정보 배지 스택 (화면 좌상단 끝에 딱 붙임) */}
