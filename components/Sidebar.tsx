@@ -52,7 +52,8 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
     <>
       <aside
         style={{ overscrollBehavior: 'contain' }}
-        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[140px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
+        // 모바일 100vh 함정 회피 — h-[100dvh] 는 URL바·제스처바 노출 시 줄어들어 하단 [로그인][회원가입] 가 시스템UI 뒤로 숨지 않음.
+        className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[140px] h-[100dvh] lg:h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
         <div className="px-4 flex items-center h-[66px]">
           <a href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
