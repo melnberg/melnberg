@@ -36,9 +36,10 @@ export default async function AdminAuctionsPage() {
   if (!user) redirect('/login?next=/admin/auctions');
   if (!(await isCurrentUserAdmin())) redirect('/');
 
-  // 만료 경매 처리는 /api/cron/complete-auctions (5분 cron) 으로 이관 (death spiral 방지, 2026-05-06).
+  // 2026-05-06: 시한 경매 일시 비활성. 새 경매 등록 폼 비활성, 기존 데이터는 조회용으로만 표시.
   const { data } = await supabase.rpc('list_recent_auctions', { p_limit: 50 }).then((r) => r, () => ({ data: null }));
   const rows = (data ?? []) as AuctionRow[];
+  const isDisabled = true;
 
   return (
     <Layout>
@@ -53,10 +54,20 @@ export default async function AdminAuctionsPage() {
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">시한 경매 관리</h1>
           <p className="text-sm text-muted mb-6">단지 ID 입력하면 즉시 경매 시작. 종료 5분 전 입찰 시 자동 연장.</p>
 
-          <div className="border border-border bg-bg/30 px-6 py-5 mb-10">
-            <h2 className="text-[14px] font-bold text-navy mb-3">새 경매 등록</h2>
-            <AdminAuctionForm />
-          </div>
+          {isDisabled ? (
+            <div className="border-2 border-[#dc2626] bg-[#fef2f2] px-6 py-5 mb-10">
+              <h2 className="text-[14px] font-bold text-[#dc2626] mb-2">⚠ 시한 경매 일시 비활성화 (2026-05-06)</h2>
+              <p className="text-[12px] text-[#7f1d1d] leading-relaxed">
+                안정화 작업으로 새 경매 등록을 막아둠. 기존 경매 데이터는 아래 표에서 조회만 가능.<br />
+                재오픈하려면 app/admin/auctions/page.tsx 의 isDisabled 를 false 로 + Sidebar 메뉴 주석 해제.
+              </p>
+            </div>
+          ) : (
+            <div className="border border-border bg-bg/30 px-6 py-5 mb-10">
+              <h2 className="text-[14px] font-bold text-navy mb-3">새 경매 등록</h2>
+              <AdminAuctionForm />
+            </div>
+          )}
 
           <h2 className="text-[16px] font-bold text-navy mb-3">전체 경매 ({rows.length}건)</h2>
           {rows.length === 0 ? (
