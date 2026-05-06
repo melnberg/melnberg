@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made' | 'election_winner' | 'election_loser';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
@@ -166,6 +166,8 @@ export default function NotificationsBell() {
                 n.type === 'offer_made' ? '매수요청' :
                 n.type === 'snatch_made' ? '내놔요청' :
                 n.type === 'offer_accepted' ? '매도수락' :
+                n.type === 'election_winner' ? '🎉 선거 당선' :
+                n.type === 'election_loser' ? '선거 낙선' :
                 '건의 답글';
               return (
                 <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
