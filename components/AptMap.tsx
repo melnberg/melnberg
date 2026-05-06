@@ -1421,7 +1421,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
             ))}
           </ul>
         )}
-        {liveAuctions.length > 0 && (
+        {/* LIVE 경매 배너 — 사용자 요청으로 가림 (2026-05-06). 다시 보고 싶으면 false 만 true 로. */}
+        {false && liveAuctions.length > 0 && (
           <Link
             href={liveAuctions.length === 1 ? `/auctions/${liveAuctions[0].id}` : '/auctions'}
             className="bg-[#dc2626] text-white px-3 py-2 shadow-[0_2px_8px_rgba(220,38,38,0.4)] text-[12px] font-bold flex items-center gap-1.5 border border-[#b91c1c] hover:bg-[#b91c1c] no-underline animate-pulse-glow"
