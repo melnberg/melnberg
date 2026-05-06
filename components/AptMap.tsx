@@ -1065,15 +1065,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         function tierFor(hh: number): 0 | 1 | 2 | 3 {
           return hh >= 2000 ? 0 : hh >= 1000 ? 1 : hh >= 300 ? 2 : 3;
         }
-        function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean, hh: number): boolean {
+        function isVisibleForTier(tier: number, lvl: number, occupied: boolean, listed: boolean): boolean {
           if (occupied || listed) return true;
           const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
-          if (tier === 0) {
-            // 주황 (2000~2999): PC 에서 1KM 이상 줌아웃 시 숨김 — 빨강(3000+) 만 노출
-            // Kakao 최신 SDK: lvl 5=500m, lvl 6=1KM, lvl 7=2KM. 따라서 lvl >= 6 부터 hide.
-            if (!isMobile && lvl >= 6 && hh < 3000) return false;
-            return true;
-          }
+          if (tier === 0) return true;
           if (tier === 1) return lvl <= (isMobile ? 7 : 5);
           if (tier === 2) return lvl <= (isMobile ? 5 : 4);
           if (tier === 3) return lvl <= 4;
@@ -1085,7 +1080,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           const labelLevelOk = lvl <= 4;
           for (const e of markersRef.current) {
             const tier = tierFor(e.hh);
-            const v = isVisibleForTier(tier, lvl, e.occupied, e.listed, e.hh);
+            const v = isVisibleForTier(tier, lvl, e.occupied, e.listed);
             e.marker.setMap(v ? map : null);
 
             if (!e.pyeongPrice || !labelLevelOk || !v) {
