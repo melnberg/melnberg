@@ -1800,7 +1800,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         <button
           type="button"
           onClick={() => setFeedOpen((v) => !v)}
-          className="bg-white border border-border px-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#eef4fb] hover:border-navy flex items-center gap-1.5"
+          className="bg-white border border-border px-3 py-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-[12px] font-bold text-navy hover:bg-[#eef4fb] hover:border-navy flex items-center gap-1.5"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
