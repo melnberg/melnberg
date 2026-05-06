@@ -54,14 +54,14 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
         style={{ overscrollBehavior: 'contain' }}
         className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] lg:w-[140px] h-screen flex-shrink-0 bg-white border-r border-border flex flex-col overflow-y-auto transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${open ? 'shadow-[4px_0_16px_rgba(0,0,0,0.08)]' : ''}`}
       >
-        <div className="px-4 py-4 flex items-center border-b border-border">
+        <div className="px-4 py-2 flex items-center border-b border-border h-[44px]">
           <a href="/" className="flex items-center gap-2 no-underline" onClick={() => setOpen(false)}>
-            <img src="/logo.svg" alt="멜른버그" className="w-8 h-8 flex-shrink-0" />
+            <img src="/logo.svg" alt="멜른버그" className="w-7 h-7 flex-shrink-0" />
             <span className="text-[14px] font-bold text-navy tracking-tight whitespace-nowrap">멜른버그</span>
           </a>
         </div>
 
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-4 pt-2 pb-2">
           {user ? (
             <div className="border border-border hover:border-navy transition-colors">
               {/* Row 1: 아바타 · 이름 + 배지 · 알림 종 */}
