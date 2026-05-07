@@ -66,5 +66,5 @@ export async function listStockPosts(stockCode: string, limit = 50) {
     author: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null } | null;
     comments?: Array<{ count: number }>;
   };
-  return ((data ?? []) as Row[]).map((p) => ({ ...p, comment_count: p.comments?.[0]?.count ?? 0 }));
+  return ((data ?? []) as unknown as Row[]).map((p) => ({ ...p, comment_count: p.comments?.[0]?.count ?? 0 }));
 }

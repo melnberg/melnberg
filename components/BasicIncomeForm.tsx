@@ -3,30 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// 입력 state 는 문자열 — controlled <input type="number"> 의 leading-zero 잔존 버그 회피.
-// (React 가 값 동일하면 DOM 미업데이트 → "070" 같은 사용자 입력이 화면에 남는 문제)
-type TierStr = { pct: string; amount: string };
 type Tier = { pct: number; amount: number };
 type PreviewRow = { tier_idx: number; pct_from: number; pct_to: number; amount: number; recipients: number; subtotal: number };
 
-const DEFAULT_TIERS: TierStr[] = [
-  { pct: '50', amount: '30' },
-  { pct: '80', amount: '15' },
-  { pct: '100', amount: '5' },
+const DEFAULT_TIERS: Tier[] = [
+  { pct: 50, amount: 30 },
+  { pct: 80, amount: 15 },
+  { pct: 100, amount: 5 },
 ];
-
-// 숫자 입력 정규화 — 앞쪽 0 제거 ("070" → "70"), 빈문자열 허용, 소수점 유지.
-function normalizeNumStr(s: string): string {
-  // 숫자·소수점 외 제거
-  const cleaned = s.replace(/[^\d.]/g, '');
-  if (cleaned === '') return '';
-  // 소수점 1개만 허용 (둘 이상이면 첫 것만)
-  const parts = cleaned.split('.');
-  const head = parts[0].replace(/^0+(?=\d)/, '') || '0';
-  return parts.length > 1 ? `${head}.${parts.slice(1).join('')}` : head;
-}
-function toNum(s: string): number { const n = Number(s); return Number.isFinite(n) ? n : 0; }
-function toTiers(arr: TierStr[]): Tier[] { return arr.map((t) => ({ pct: toNum(t.pct), amount: toNum(t.amount) })); }
 
 export default function BasicIncomeForm() {
   const router = useRouter();
