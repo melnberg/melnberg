@@ -1143,31 +1143,39 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     return () => window.removeEventListener('keydown', onKey);
   }, [previewItem]);
   // 글 상세 URL — MobileFeedList.hrefFor 와 동일 로직. 없으면 null.
-  function feedItemHref(item: FeedItem): string | null {
-    if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) return `/auctions/${item.auction_id}`;
+  function feedItemHref(item: FeedItem): string {
+    // 모든 kind 에 valid URL 보장 — 데이터 누락 시 게시판 목록으로 fallback.
+    if ((item.kind === 'auction' || item.kind === 'auction_bid' || item.kind === 'auction_won')) {
+      return item.auction_id ? `/auctions/${item.auction_id}` : '/auctions';
+    }
     if (item.kind === 'post' || item.kind === 'post_comment') {
-      if (!item.post_id) return null;
       const base = item.post_category === 'hotdeal' ? '/hotdeal'
                  : item.post_category === 'stocks' ? '/stocks'
                  : item.post_category === 'realty' ? '/realty'
                  : '/community';
-      return `${base}/${item.post_id}`;
+      return item.post_id ? `${base}/${item.post_id}` : base;
     }
-    if (item.kind === 'notice' && item.notice_href) return item.notice_href;
+    if (item.kind === 'notice') return item.notice_href ?? '/';
     if (
       item.kind === 'discussion' || item.kind === 'comment' ||
       item.kind === 'listing' || item.kind === 'offer' || item.kind === 'snatch' ||
       item.kind === 'sell_complete'
-    ) return item.apt_master_id ? `/apt/${item.apt_master_id}` : null;
-    if ((item.kind === 'restaurant_register' || item.kind === 'restaurant_comment') && item.restaurant_id) {
-      return `/restaurants/${item.restaurant_id}`;
+    ) return item.apt_master_id ? `/apt/${item.apt_master_id}` : '/';
+    if (item.kind === 'restaurant_register' || item.kind === 'restaurant_comment') {
+      return item.restaurant_id ? `/restaurants/${item.restaurant_id}` : '/restaurants';
     }
-    if ((item.kind === 'kids_register' || item.kind === 'kids_comment') && item.kids_id) {
-      return `/kids/${item.kids_id}`;
+    if (item.kind === 'kids_register' || item.kind === 'kids_comment') {
+      return item.kids_id ? `/kids/${item.kids_id}` : '/kids';
     }
-    if (item.kind === 'emart_occupy' || item.kind === 'emart_comment') return `/e/${item.apt_master_id}`;
-    if (item.kind === 'factory_occupy' || item.kind === 'factory_comment') return `/f/${item.apt_master_id}`;
-    return null;
+    if (item.kind === 'emart_occupy' || item.kind === 'emart_comment') {
+      return item.apt_master_id ? `/e/${item.apt_master_id}` : '/';
+    }
+    if (item.kind === 'factory_occupy' || item.kind === 'factory_comment') {
+      return item.apt_master_id ? `/f/${item.apt_master_id}` : '/';
+    }
+    // strike / bridge_toll 등 별도 상세 페이지 없는 종류 — 작성자 프로필 또는 홈
+    if (item.author_id) return `/u/${item.author_id}`;
+    return '/';
   }
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}
@@ -2207,40 +2215,31 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {/* 데스크톱(lg+) 글 상세 drawer — 카드 클릭 시 피드 패널 우측에 iframe 으로 풀페이지 표시.
           폭 ~400px → iframe 안의 Tailwind lg(1024px) breakpoint 미충족 → Sidebar 햄버거 + 메인 article 만 보이는 모바일 레이아웃 자동.
           모바일(lg-)은 hidden — MobileFeedList 가 풀페이지 라우팅 처리. ESC / X 로 닫음. */}
-      {previewItem && (() => {
-        const previewHref = feedItemHref(previewItem);
-        return (
-          <aside
-            className="hidden lg:flex absolute top-0 left-[280px] w-[400px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
-            role="dialog"
-            aria-label="글 상세"
-          >
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-white flex-shrink-0">
-              <span className="text-[12px] text-muted truncate">↗ 글 상세</span>
-              <button
-                type="button"
-                onClick={() => setPreviewItem(null)}
-                className="text-[14px] text-muted hover:text-navy bg-transparent border-none cursor-pointer px-2 py-0.5"
-                aria-label="닫기"
-                title="닫기 (ESC)"
-              >
-                ✕
-              </button>
-            </div>
-            {previewHref ? (
-              <iframe
-                src={previewHref}
-                className="flex-1 w-full border-0"
-                title="글 상세"
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-[12px] text-muted px-4 text-center">
-                이 글은 별도 상세 페이지가 없음. 카드에서 바로 확인.
-              </div>
-            )}
-          </aside>
-        );
-      })()}
+      {previewItem && (
+        <aside
+          className="hidden lg:flex absolute top-0 left-[280px] w-[400px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
+          role="dialog"
+          aria-label="글 상세"
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-white flex-shrink-0">
+            <span className="text-[12px] text-muted truncate">↗ 글 상세</span>
+            <button
+              type="button"
+              onClick={() => setPreviewItem(null)}
+              className="text-[14px] text-muted hover:text-navy bg-transparent border-none cursor-pointer px-2 py-0.5"
+              aria-label="닫기"
+              title="닫기 (ESC)"
+            >
+              ✕
+            </button>
+          </div>
+          <iframe
+            src={feedItemHref(previewItem)}
+            className="flex-1 w-full border-0"
+            title="글 상세"
+          />
+        </aside>
+      )}
 
 
       {/* 가운데 하단 — AI 검색 (B 위치). /ai 페이지 디자인과 통일. */}
