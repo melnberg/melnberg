@@ -200,10 +200,13 @@ export default function MyStoreForm({ currentUserId }: { currentUserId: string }
     if (error) { setErr(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_id: number | null; out_message: string | null } | undefined;
     if (!row?.out_success) { setErr(row?.out_message ?? '등록 실패'); return; }
+    // out_id 가 비정상이면 상세 대신 목록으로 (404 사고 회피).
+    const newId = row.out_id;
+    const targetPath = (newId != null && Number.isFinite(Number(newId))) ? `/stores/${newId}` : '/stores';
     alert('가게 등록 완료. 사업자 인증됨. +30 mlbg 지급됨.');
     revalidateHome();
-    router.push(`/stores/${row.out_id}`);
-    router.refresh();
+    // router.refresh() 빼고 hard navigation — RSC 캐시·race 방지.
+    window.location.assign(targetPath);
   }
 
   return (

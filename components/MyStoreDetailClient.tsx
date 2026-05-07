@@ -103,7 +103,7 @@ export default function MyStoreDetailClient({ store }: { store: StoreItem }) {
   }
 
   return (
-    <article>
+    <article className="min-w-0">
       <header className="pb-4 mb-6 border-b border-border">
         <div className="flex items-baseline gap-2 mb-2 flex-wrap">
           <span className="text-[20px]">🏪</span>
@@ -129,17 +129,17 @@ export default function MyStoreDetailClient({ store }: { store: StoreItem }) {
       </header>
 
       {store.photo_url && (
-        <div className="aspect-square w-full max-w-[600px] mx-auto bg-[#f0f0f0] rounded-xl overflow-hidden border border-border mb-6">
-          <img src={store.photo_url} alt="" className="w-full h-full object-cover" />
+        <div className="aspect-square w-full max-w-[600px] block mx-auto bg-[#f0f0f0] rounded-xl overflow-hidden border border-border mb-6">
+          <img src={store.photo_url} alt="" className="block w-full h-full max-w-full object-cover" />
         </div>
       )}
 
-      <div className="text-[14px] text-text leading-relaxed mb-4 whitespace-pre-wrap">{store.description}</div>
+      <div className="text-[14px] text-text leading-relaxed mb-4 whitespace-pre-wrap break-words">{store.description}</div>
 
       {store.recommended && (
         <div className="border-l-4 border-cyan bg-cyan/5 px-4 py-3 mb-6">
           <div className="text-[11px] font-bold tracking-widest uppercase text-cyan mb-1">대표 메뉴/서비스</div>
-          <div className="text-[14px] text-text leading-relaxed whitespace-pre-wrap">{store.recommended}</div>
+          <div className="text-[14px] text-text leading-relaxed whitespace-pre-wrap break-words">{store.recommended}</div>
         </div>
       )}
 
