@@ -91,29 +91,38 @@ export default async function StoresIndex() {
               )}
             </div>
           ) : (
-            <ul className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {stores.map((s) => (
                 <li key={s.id}>
                   <Link href={`/stores/${s.id}`}
-                    className="block border border-border hover:border-navy bg-white no-underline transition-colors overflow-hidden">
-                    <div className="flex gap-3">
-                      {s.photo_url ? (
-                        <img src={s.photo_url} alt="" className="w-24 h-24 object-cover flex-shrink-0 bg-bg/30" />
-                      ) : (
-                        <div className="w-24 h-24 bg-bg/40 flex-shrink-0 flex items-center justify-center text-[24px]">🏪</div>
+                    className="block bg-white border border-border hover:border-navy hover:bg-bg/30 no-underline overflow-hidden">
+                    {s.photo_url ? (
+                      <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden">
+                        <img src={s.photo_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="aspect-square w-full bg-bg/40 flex items-center justify-center text-[64px]">🏪</div>
+                    )}
+                    <div className="px-4 py-3">
+                      <div className="flex items-baseline justify-between gap-2 mb-1">
+                        <h3 className="text-[15px] font-bold text-navy truncate inline-flex items-center gap-1.5">
+                          🏪 <span className="truncate">{s.dong ? `${s.dong} ${s.name}` : s.name}</span>
+                        </h3>
+                        <span className="text-[10px] text-muted flex-shrink-0">❤ {s.like_count}</span>
+                      </div>
+                      {s.address && <div className="text-[10px] text-muted mb-1 truncate">{s.address}</div>}
+                      <p className="text-[12px] text-text leading-snug line-clamp-2 mb-1">{s.description}</p>
+                      {s.recommended && (
+                        <p className="text-[11px] text-cyan font-bold leading-snug line-clamp-1">메뉴/서비스 — {s.recommended}</p>
                       )}
-                      <div className="flex-1 min-w-0 py-2 pr-3">
-                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="text-[14px] font-bold text-navy truncate">{s.name}</span>
+                      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-[#f0f0f0] text-[10px] text-muted">
+                        <span className="inline-flex items-center gap-1.5 truncate">
+                          by <Nickname info={profileToNicknameInfo(s.author, s.author_id)} />
+                        </span>
+                        <span className="flex items-center gap-1.5 flex-shrink-0">
+                          {s.category && <span>{s.category}</span>}
                           {s.verified && <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5">✓ 인증</span>}
-                          {s.category && <span className="text-[10px] text-muted">{s.category}</span>}
-                        </div>
-                        <div className="text-[11px] text-muted truncate">{s.dong ? `${s.dong} · ` : ''}{s.address ?? ''}</div>
-                        <p className="text-[12px] text-text leading-snug mt-1 line-clamp-2">{s.description}</p>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-muted">
-                          <Nickname info={profileToNicknameInfo(s.author, s.author_id)} />
-                          {s.like_count > 0 && <span>· ❤ {s.like_count}</span>}
-                        </div>
+                        </span>
                       </div>
                     </div>
                   </Link>
