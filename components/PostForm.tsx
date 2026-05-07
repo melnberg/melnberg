@@ -7,6 +7,7 @@ import { awardMlbg } from '@/lib/mlbg-award';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { revalidateHome } from '@/lib/revalidate-home';
 import { fileToWebp } from '@/lib/image-to-webp';
+import StockPicker from './StockPicker';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null };
@@ -129,18 +130,10 @@ export default function PostForm({ initial, category = 'community', redirectBase
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {category === 'stocks' && (
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="stockTag" className="text-[11px] font-bold tracking-widest uppercase text-muted">
-            종목 태그 <span className="text-muted normal-case font-normal">(선택)</span>
+          <label className="text-[11px] font-bold tracking-widest uppercase text-muted">
+            종목 <span className="text-muted normal-case font-normal">(선택 — 검색해서 첨부하면 가격·차트가 글에 표시됨)</span>
           </label>
-          <input
-            id="stockTag"
-            type="text"
-            value={stockTag}
-            onChange={(e) => setStockTag(e.target.value)}
-            placeholder="예: 삼성전자, 005930, 반도체 (자유 입력)"
-            maxLength={50}
-            className="border border-border px-3.5 py-2.5 text-[14px] outline-none focus:border-navy rounded-none"
-          />
+          <StockPicker initial={stockTag || undefined} onChange={(c) => setStockTag(c ?? '')} />
         </div>
       )}
       <div className="flex flex-col gap-1.5">

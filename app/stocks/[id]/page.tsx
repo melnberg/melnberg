@@ -8,6 +8,7 @@ import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
 import RewardTooltip from '@/components/RewardTooltip';
 import PostLikeButton from '@/components/PostLikeButton';
+import StockInfoCard from '@/components/StockInfoCard';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
@@ -113,6 +114,12 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
               {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath="/stocks" /></>)}
             </div>
           </header>
+
+          {post.stock_code && /^\d{6}$/.test(post.stock_code) && (
+            <div className="mb-6">
+              <StockInfoCard code={post.stock_code} />
+            </div>
+          )}
 
           <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
             {linkify(post.content)}
