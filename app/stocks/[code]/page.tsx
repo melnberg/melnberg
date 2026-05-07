@@ -44,7 +44,29 @@ export default async function StockBoardPage({ params }: { params: Promise<{ cod
                 <span className="text-[12px] text-muted tabular-nums">{stock.code}</span>
                 <span className="text-[10px] font-bold tracking-widest uppercase bg-cyan/15 text-navy px-1.5 py-0.5">{stock.market}</span>
               </div>
-              <p className="text-[12px] text-muted mt-1">이 종목 토론방. 시세는 추후 추가 예정.</p>
+              {stock.latest_close != null ? (() => {
+                const pct = stock.latest_change_pct;
+                const amt = stock.latest_change_amount;
+                const up = pct != null && pct > 0;
+                const down = pct != null && pct < 0;
+                const color = up ? 'text-[#dc2626]' : down ? 'text-[#2563eb]' : 'text-muted';
+                const arrow = up ? '▲' : down ? '▼' : '–';
+                return (
+                  <div className="flex items-baseline gap-2 mt-1.5 flex-wrap">
+                    <span className="text-[20px] lg:text-[24px] font-bold text-text tabular-nums">
+                      {Number(stock.latest_close).toLocaleString()}<span className="text-[12px] text-muted ml-1">원</span>
+                    </span>
+                    {pct != null && (
+                      <span className={`text-[13px] font-bold tabular-nums ${color}`}>
+                        {arrow} {amt != null ? Math.abs(amt).toLocaleString() : ''} ({Math.abs(pct).toFixed(2)}%)
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted tabular-nums">기준 {stock.latest_trade_date}</span>
+                  </div>
+                );
+              })() : (
+                <p className="text-[12px] text-muted mt-1">시세 데이터 없음 (cron 미실행 또는 휴장)</p>
+              )}
             </div>
             {user ? (
               <Link

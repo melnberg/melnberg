@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import type { Stock } from '@/lib/stocks';
+import type { StockWithPrice } from '@/lib/stocks';
 
-// 종목 목록 + 클라이언트 사이드 검색 (이름·코드).
-export default function StockSearch({ stocks }: { stocks: Stock[] }) {
+// 종목 목록 + 클라이언트 사이드 검색 (이름·코드) + 시세 표시.
+export default function StockSearch({ stocks }: { stocks: StockWithPrice[] }) {
   const [q, setQ] = useState('');
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -14,8 +14,8 @@ export default function StockSearch({ stocks }: { stocks: Stock[] }) {
   }, [q, stocks]);
 
   const grouped = useMemo(() => {
-    const k: Stock[] = [];
-    const q: Stock[] = [];
+    const k: StockWithPrice[] = [];
+    const q: StockWithPrice[] = [];
     for (const s of filtered) (s.market === 'KOSPI' ? k : q).push(s);
     return { KOSPI: k, KOSDAQ: q };
   }, [filtered]);
@@ -41,17 +41,42 @@ export default function StockSearch({ stocks }: { stocks: Stock[] }) {
               <div key={m}>
                 <div className="text-[11px] font-bold tracking-widest uppercase text-muted mb-2">{m}</div>
                 <ul className="border-y border-border">
-                  {grouped[m].map((s) => (
-                    <li key={s.code} className="border-b border-[#f0f0f0] last:border-b-0">
-                      <Link
-                        href={`/stocks/${s.code}`}
-                        className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-cyan/5 no-underline"
-                      >
-                        <span className="text-[14px] font-bold text-navy">{s.name}</span>
-                        <span className="text-[11px] text-muted tabular-nums">{s.code}</span>
-                      </Link>
-                    </li>
-                  ))}
+                  {grouped[m].map((s) => {
+                    const pct = s.latest_change_pct;
+                    const up = pct != null && pct > 0;
+                    const down = pct != null && pct < 0;
+                    const color = up ? 'text-[#dc2626]' : down ? 'text-[#2563eb]' : 'text-muted';
+                    const arrow = up ? '▲' : down ? '▼' : '–';
+                    return (
+                      <li key={s.code} className="border-b border-[#f0f0f0] last:border-b-0">
+                        <Link
+                          href={`/stocks/${s.code}`}
+                          className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-cyan/5 no-underline"
+                        >
+                          <span className="flex items-baseline gap-2 min-w-0">
+                            <span className="text-[14px] font-bold text-navy truncate">{s.name}</span>
+                            <span className="text-[10px] text-muted tabular-nums flex-shrink-0">{s.code}</span>
+                          </span>
+                          <span className="flex items-baseline gap-2 flex-shrink-0">
+                            {s.latest_close != null ? (
+                              <>
+                                <span className="text-[13px] font-bold text-text tabular-nums">
+                                  {Number(s.latest_close).toLocaleString()}
+                                </span>
+                                {pct != null && (
+                                  <span className={`text-[11px] font-bold tabular-nums ${color}`}>
+                                    {arrow} {Math.abs(pct).toFixed(2)}%
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-muted">시세 없음</span>
+                            )}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )

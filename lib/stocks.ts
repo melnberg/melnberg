@@ -7,25 +7,46 @@ export type Stock = {
   active: boolean;
 };
 
-export async function listStocks(): Promise<Stock[]> {
+export type StockWithPrice = Stock & {
+  latest_trade_date: string | null;
+  latest_close: number | null;
+  latest_change_amount: number | null;
+  latest_change_pct: number | null;
+  latest_volume: number | null;
+};
+
+// 시세 view 사용 — 종목 + 최신 종가 한 번에
+export async function listStocks(): Promise<StockWithPrice[]> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from('stocks')
-    .select('code, name, market, active')
+    .from('stocks_with_latest_price')
+    .select('code, name, market, active, latest_trade_date, latest_close, latest_change_amount, latest_change_pct, latest_volume')
     .eq('active', true)
     .order('market', { ascending: true })
     .order('name', { ascending: true });
-  return (data ?? []) as Stock[];
+  return (data ?? []) as StockWithPrice[];
 }
 
-export async function getStock(code: string): Promise<Stock | null> {
+export async function getStock(code: string): Promise<StockWithPrice | null> {
   const supabase = await createClient();
   const { data } = await supabase
-    .from('stocks')
-    .select('code, name, market, active')
+    .from('stocks_with_latest_price')
+    .select('code, name, market, active, latest_trade_date, latest_close, latest_change_amount, latest_change_pct, latest_volume')
     .eq('code', code)
     .maybeSingle();
-  return (data as Stock) ?? null;
+  return (data as StockWithPrice) ?? null;
+}
+
+// 종목 최근 N일 시세 (mini chart 용)
+export async function getPriceHistory(code: string, days = 30) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('stock_prices')
+    .select('trade_date, close, change_pct')
+    .eq('code', code)
+    .order('trade_date', { ascending: false })
+    .limit(days);
+  return (data ?? []).reverse() as Array<{ trade_date: string; close: number; change_pct: number | null }>;
 }
 
 // 특정 종목의 글 목록 + 댓글 수

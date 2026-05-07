@@ -22,3 +22,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 scripts/.*.log
+
+# Android Studio / IntelliJ
+android/.idea/
+android/.gradle/
+android/local.properties
+android/build/
+android/app/build/
+android/captures/
+*.iml
+.idea/
+
+# Capacitor
+android/app/src/main/assets/public/
