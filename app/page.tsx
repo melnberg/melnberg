@@ -1000,10 +1000,38 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
-    // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems]
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 300 - auctionItems.length);
+    // 알고리즘 랜덤 — 가치(earned_mlbg) / 사진 본문 / 댓글·좋아요 많음 가중치 + Efraimidis-Spirakis
+    // weighted shuffle. 시간순 X, 매 캐시 사이클(90초)마다 새 순서.
+    // 경매·공지·관리자 공지는 강제 상단 유지.
+    const IMG_RE = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
+    const NOW = Date.now();
+    const feedWeight = (f: FeedItem): number => {
+      let w = 1;
+      if (f.content && IMG_RE.test(f.content)) w += 2.5;        // 사진 있는 글
+      if ((f.earned_mlbg ?? 0) > 0) w += 1.5;                   // AI 평가 가치 있는 글
+      if ((f.comment_count ?? 0) >= 3) w += 1.5;                // 댓글 많은 글
+      if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;        // 좋아요 많은 찐리뷰
+      const ageHours = (NOW - new Date(f.created_at).getTime()) / 3600000;
+      if (ageHours > 168) w *= 0.5;                             // 7일 이상은 절반
+      return Math.max(w, 0.01);
+    };
+
+    const fixed = [...NOTICE_ITEMS, ...announcementItems];
+    const shufflable = [
+      ...discussionItems, ...commentItems,
+      ...postItems, ...postCommentItems,
+      ...listingItems, ...offerItems, ...bidItems,
+      ...emartItems, ...factoryItems, ...facilityCommentItems,
+      ...strikeItems, ...tollItems, ...sellItems,
+      ...restaurantRegisterItems, ...restaurantCommentItems,
+      ...kidsRegisterItems, ...kidsCommentItems,
+    ];
+    const shuffled = shufflable
+      .map((f) => ({ f, key: -Math.log(Math.random()) / feedWeight(f) }))
+      .sort((a, b) => a.key - b.key)
+      .map((x) => x.f);
+
+    const others = [...fixed, ...shuffled].slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];
 }
 
