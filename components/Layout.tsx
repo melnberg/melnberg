@@ -72,7 +72,8 @@ export default async function Layout({ current, children }: { current?: string; 
       <Sidebar current={current} user={sidebarUser} recentPosts={recentPosts} />
       <main className="flex-1 min-w-0 flex flex-col">
         <MobileTopBar />
-        <WealthSurgeBoard />
+        {/* 자산 급등 전광판 — 일시 가림. 다시 켜려면 아래 한 줄 주석 해제. */}
+        {/* <WealthSurgeBoard /> */}
         <GreetingBonusBanner />
         {children}
       </main>
