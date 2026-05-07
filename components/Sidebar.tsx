@@ -297,7 +297,7 @@ function SItem({ href, label, price, active, icon, onClick, sub, dot }: { href: 
       {icon}
       <span className="truncate">{label}</span>
       {/* 새 글 빨간점 — active 일 땐 어차피 진입한 직후라 dot 사라짐. price/active arrow 와 충돌 없음. */}
-      {dot && !active && <span aria-label="새 글" className="ml-auto w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />}
+      {dot && !active && <span aria-label="새 글" className="ml-auto w-1 h-1 rounded-full bg-red-500 flex-shrink-0" />}
       {price && <span className={`ml-auto text-[11px] font-semibold ${active ? 'text-navy' : 'text-muted'}`}>{price}</span>}
       {active && <span className="absolute right-3 text-lg leading-none text-navy">›</span>}
     </Link>

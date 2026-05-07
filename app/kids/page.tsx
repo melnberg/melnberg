@@ -23,7 +23,7 @@ export default async function KidsPage() {
   const pins = (data ?? []) as Pin[];
 
   return (
-    <Layout>
+    <Layout current="kids">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/kids', label: '육아 장소', bold: true }]} meta="Kids" />
       <section className="py-12">
         <div className="max-w-content mx-auto px-10">

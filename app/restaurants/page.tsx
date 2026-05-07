@@ -34,7 +34,7 @@ export default async function RestaurantsPage() {
   const pins = (data ?? []) as Pin[];
 
   return (
-    <Layout>
+    <Layout current="restaurants">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/restaurants', label: '맛집 추천', bold: true }]} meta="Restaurants" />
 
       <section className="py-12">
