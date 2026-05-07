@@ -7,6 +7,7 @@ import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
 import InlineCommentBox, { type InlineKind } from './InlineCommentBox';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
+import { feedItemHref } from '@/lib/feed-item-href';
 import { createClient } from '@/lib/supabase/client';
 import { KidsIcon, RestaurantIcon } from './CategoryIcons';
 
@@ -54,36 +55,6 @@ function relTime(iso: string): string {
   if (sec < 86400) return `${Math.floor(sec / 3600)}시간`;
   if (sec < 604800) return `${Math.floor(sec / 86400)}일`;
   return `${d.getMonth() + 1}.${d.getDate()}`;
-}
-
-// 피드 아이템 → 풀페이지 라우트 (모바일 SNS 모델)
-function hrefFor(f: FeedItem): string | null {
-  if ((f.kind === 'auction' || f.kind === 'auction_bid') && f.auction_id) return `/auctions/${f.auction_id}`;
-  if (f.kind === 'post' || f.kind === 'post_comment') {
-    if (!f.post_id) return null;
-    const base = f.post_category === 'hotdeal' ? '/hotdeal'
-               : f.post_category === 'stocks' ? '/stocks'
-               : f.post_category === 'realty' ? '/realty'
-               : '/community';
-    return `${base}/${f.post_id}`;
-  }
-  if (f.kind === 'notice' && f.notice_href) return f.notice_href;
-  // 단지 토론·매물·호가 — 모두 단지 페이지 /apt/{apt_master_id} 로 통합
-  if (
-    f.kind === 'discussion' || f.kind === 'comment' ||
-    f.kind === 'listing' || f.kind === 'offer' || f.kind === 'snatch' ||
-    f.kind === 'sell_complete'
-  ) return f.apt_master_id ? `/apt/${f.apt_master_id}` : null;
-  if ((f.kind === 'restaurant_register' || f.kind === 'restaurant_comment') && f.restaurant_id) {
-    return `/restaurants/${f.restaurant_id}`;
-  }
-  if ((f.kind === 'kids_register' || f.kind === 'kids_comment') && f.kids_id) {
-    return `/kids/${f.kids_id}`;
-  }
-  // 시설 — 풀페이지
-  if (f.kind === 'emart_occupy' || f.kind === 'emart_comment') return `/e/${f.apt_master_id}`;
-  if (f.kind === 'factory_occupy' || f.kind === 'factory_comment') return `/f/${f.apt_master_id}`;
-  return null;
 }
 
 function rewardKind(f: FeedItem): React.ComponentProps<typeof RewardTooltip>['kind'] {
@@ -242,7 +213,7 @@ export default function MobileFeedList({ items }: Props) {
       {/* 상단 멜른버그 바는 Layout 의 MobileTopBar 가 모든 화면 공통으로 처리 — 여기선 제거 */}
       <ul>
         {items.slice(0, visibleCount).map((f) => {
-          const href = hrefFor(f);
+          const href = feedItemHref(f);
           const badge = badgeFor(f);
           // 단지 관련 kind 의 헤드라벨엔 동 prefix (예: "역삼동 역삼래미안")
           const aptHeadLabel = f.apt_nm ? (f.dong ? `${f.dong} ${f.apt_nm}` : f.apt_nm) : '';

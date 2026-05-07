@@ -14,6 +14,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
+import { feedItemHref } from '@/lib/feed-item-href';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { getLat: () => number; getLng: () => number };
@@ -1176,41 +1177,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       document.removeEventListener('mousedown', onClick);
     };
   }, [previewItem]);
-  // 글 상세 URL — MobileFeedList.hrefFor 와 동일 로직. 없으면 null.
-  function feedItemHref(item: FeedItem): string {
-    // 모든 kind 에 valid URL 보장 — 데이터 누락 시 게시판 목록으로 fallback.
-    if ((item.kind === 'auction' || item.kind === 'auction_bid' || item.kind === 'auction_won')) {
-      return item.auction_id ? `/auctions/${item.auction_id}` : '/auctions';
-    }
-    if (item.kind === 'post' || item.kind === 'post_comment') {
-      const base = item.post_category === 'hotdeal' ? '/hotdeal'
-                 : item.post_category === 'stocks' ? '/stocks'
-                 : item.post_category === 'realty' ? '/realty'
-                 : '/community';
-      return item.post_id ? `${base}/${item.post_id}` : base;
-    }
-    if (item.kind === 'notice') return item.notice_href ?? '/';
-    if (
-      item.kind === 'discussion' || item.kind === 'comment' ||
-      item.kind === 'listing' || item.kind === 'offer' || item.kind === 'snatch' ||
-      item.kind === 'sell_complete'
-    ) return item.apt_master_id ? `/apt/${item.apt_master_id}` : '/';
-    if (item.kind === 'restaurant_register' || item.kind === 'restaurant_comment') {
-      return item.restaurant_id ? `/restaurants/${item.restaurant_id}` : '/restaurants';
-    }
-    if (item.kind === 'kids_register' || item.kind === 'kids_comment') {
-      return item.kids_id ? `/kids/${item.kids_id}` : '/kids';
-    }
-    if (item.kind === 'emart_occupy' || item.kind === 'emart_comment') {
-      return item.apt_master_id ? `/e/${item.apt_master_id}` : '/';
-    }
-    if (item.kind === 'factory_occupy' || item.kind === 'factory_comment') {
-      return item.apt_master_id ? `/f/${item.apt_master_id}` : '/';
-    }
-    // strike / bridge_toll 등 별도 상세 페이지 없는 종류 — 작성자 프로필 또는 홈
-    if (item.author_id) return `/u/${item.author_id}`;
-    return '/';
-  }
+  // 글 상세 URL — lib/feed-item-href.ts 의 feedItemHref 사용 (MobileFeedList 와 공용).
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}
     if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) {
