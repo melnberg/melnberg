@@ -7,6 +7,7 @@ import LaunchTelegramButton from '@/components/LaunchTelegramButton';
 import LaunchPartiesTelegramButton from '@/components/LaunchPartiesTelegramButton';
 import AdminAnnouncementForm from '@/components/AdminAnnouncementForm';
 import AdminSyncStockButton from '@/components/AdminSyncStockButton';
+import AdminSyncAllStocksButton from '@/components/AdminSyncAllStocksButton';
 import { createClient } from '@/lib/supabase/server';
 import { isCurrentUserAdmin } from '@/lib/community';
 import { type ProfileWithTier, type PaymentRecord } from '@/lib/tier';
@@ -83,6 +84,7 @@ export default async function AdminPage() {
               <a href="/admin/feedback" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">건의사항</a>
               <a href="/admin/basic-income" className="px-3 py-1.5 border border-cyan bg-cyan text-white text-[12px] font-bold no-underline hover:bg-cyan/80">💸 기본소득</a>
               <AdminSyncStockButton />
+              <AdminSyncAllStocksButton />
               <LaunchTelegramButton />
               <LaunchPartiesTelegramButton />
             </div>
