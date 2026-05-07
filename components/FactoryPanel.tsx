@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { awardMlbg } from '@/lib/mlbg-award';
+import FacilityIncomeHistory from './FacilityIncomeHistory';
 import { revalidateHome } from '@/lib/revalidate-home';
 import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import RewardTooltip from './RewardTooltip';
@@ -320,7 +321,9 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
             <div className="text-[11px] text-muted leading-relaxed">매일 KST 8시에 자동 적립 + 알림. 별도 청구 불필요.</div>
           </div>
 
-          <div className="grid gap-2 mb-4">
+          {isMine && <FacilityIncomeHistory type="factory" id={factory.id} />}
+
+          <div className="grid gap-2 mb-4 mt-4">
             {isMine ? (
               <>
                 <button type="button" onClick={release} disabled={busy}

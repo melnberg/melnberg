@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { KidsIcon } from './CategoryIcons';
+import FacilityIncomeHistory from './FacilityIncomeHistory';
 
 export type KidsItem = {
   id: number; name: string; description: string; recommended_activity: string;
@@ -205,9 +206,12 @@ export default function KidsPanel({
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted">분양: <b className="text-navy">{kids.occupier_name ?? '익명'}</b></span>
               {isMine ? (
-                <div className="flex gap-1 items-center">
-                  <span className="text-[10px] text-cyan font-bold tracking-wide">매일 자동 적립</span>
-                  <button onClick={release} disabled={busy} className="bg-white border border-border text-text px-2 py-1 text-[11px] font-bold cursor-pointer hover:border-red-500 hover:text-red-600 disabled:opacity-40">해제</button>
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex gap-1 items-center justify-end">
+                    <span className="text-[10px] text-cyan font-bold tracking-wide">매일 자동 적립</span>
+                    <button onClick={release} disabled={busy} className="bg-white border border-border text-text px-2 py-1 text-[11px] font-bold cursor-pointer hover:border-red-500 hover:text-red-600 disabled:opacity-40">해제</button>
+                  </div>
+                  <FacilityIncomeHistory type="kids" id={kids.id} />
                 </div>
               ) : kids.listing_price != null ? (
                 <button onClick={buy} disabled={busy} className="bg-[#dc2626] text-white px-3 py-1 text-[11px] font-bold cursor-pointer hover:bg-[#b91c1c] border-none disabled:opacity-40">

@@ -8,6 +8,7 @@ import { awardMlbg } from '@/lib/mlbg-award';
 import { revalidateHome } from '@/lib/revalidate-home';
 import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import RewardTooltip from './RewardTooltip';
+import FacilityIncomeHistory from './FacilityIncomeHistory';
 
 export type EmartItem = {
   id: number;
@@ -324,8 +325,10 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
             </div>
           </div>
 
+          {isMine && <FacilityIncomeHistory type="emart" />}
+
           {/* 액션 */}
-          <div className="grid gap-2 mb-4">
+          <div className="grid gap-2 mb-4 mt-4">
             {isMine ? (
               <>
                 <button
