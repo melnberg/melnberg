@@ -14,6 +14,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
+import InlineCommentBox, { type InlineKind } from './InlineCommentBox';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { getLat: () => number; getLng: () => number };
@@ -274,6 +275,15 @@ function readPinCache(key: string): { ts: number; pins: AptPin[] } | null {
 }
 function writePinCache(key: string, pins: AptPin[]) {
   try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), pins })); } catch { /* quota */ }
+}
+
+// kind → InlineCommentBox 가 다룰 부모 식별. 댓글 자체 종류는 펼치기 미지원.
+function inlineKindFor(f: FeedItem): { kind: InlineKind; parentId: number } | null {
+  if (f.kind === 'discussion') return { kind: 'discussion', parentId: f.id };
+  if (f.kind === 'post') return f.post_id ? { kind: 'post', parentId: f.post_id } : null;
+  if (f.kind === 'emart_occupy') return { kind: 'emart_occupy', parentId: f.apt_master_id };
+  if (f.kind === 'factory_occupy') return { kind: 'factory_occupy', parentId: f.apt_master_id };
+  return null;
 }
 
 // 본문에 섞인 이미지 URL → <img> 인라인 렌더 (피드 카드 공용).
@@ -1188,10 +1198,31 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 셔플 시드 — 증가시키면 useMemo 재계산. 새로고침 클릭마다 +1.
   const [feedShuffleSeed, setFeedShuffleSeed] = useState(0);
   const [feedRefreshing, setFeedRefreshing] = useState(false);
+  // 인라인 댓글 — 펼친 카드 키 / 댓글수 캐시 / 현재 사용자 정보
+  const [feedExpandedKey, setFeedExpandedKey] = useState<string | null>(null);
+  const [feedCounts, setFeedCounts] = useState<Record<string, number>>({});
+  const [feedMe, setFeedMe] = useState<{ id: string; name: string } | null>(null);
   // displayFeed — 렌더링 전용. jumpToFeedItem / pins.find 등 lookup 은 원본 feed 사용.
   const displayFeed = useMemo(() => shuffleFeedItems(feed), [feed, feedShuffleSeed]);
   // 새로고침 시 패널 자체 스크롤 top 으로 — 패널이 자체 overflow-y-auto.
   const feedScrollRef = useRef<HTMLDivElement>(null);
+  // 현재 사용자 — 인라인 댓글 작성에 필요. 마운트 시 1회 fetch.
+  useEffect(() => {
+    const sb = createClient();
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (cancelled || !user) return;
+        const { data: prof } = await sb.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+        const name = (prof as { display_name?: string } | null)?.display_name
+          ?? (user.user_metadata?.display_name as string | undefined)
+          ?? user.email?.split('@')[0] ?? '회원';
+        if (!cancelled) setFeedMe({ id: user.id, name });
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}
     if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) {
@@ -2072,6 +2103,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                 <ul>
                 {displayFeed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
+                  const itemKey = feedKey;
+                  const inlineCfg = inlineKindFor(f);
+                  const isExpanded = feedExpandedKey === itemKey;
+                  const cnt = feedCounts[itemKey] ?? f.comment_count ?? 0;
                   const fullContent = (f.content ?? '').trim();
                   const isComment = f.kind === 'comment' || f.kind === 'post_comment';
                   const isCommunity = f.kind === 'post' || f.kind === 'post_comment';
@@ -2224,9 +2259,32 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 return txt ? <span className="tabular-nums">{txt}</span> : null;
                               })()
                             )}
+                            {inlineCfg && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFeedExpandedKey(isExpanded ? null : itemKey); }}
+                                className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 text-navy hover:bg-navy-soft cursor-pointer bg-transparent border-none"
+                                aria-label={`댓글 ${cnt}개`}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span className="tabular-nums">{cnt}</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
+                      {/* 인라인 댓글 영역 — 말풍선 클릭 시 펼침. 카드 클릭 영역 밖이라 jumpToFeedItem 트리거 안 됨. */}
+                      {isExpanded && inlineCfg && (
+                        <InlineCommentBox
+                          kind={inlineCfg.kind}
+                          parentId={inlineCfg.parentId}
+                          currentUserId={feedMe?.id ?? null}
+                          currentUserName={feedMe?.name ?? null}
+                          onCountChange={(n) => setFeedCounts((c) => ({ ...c, [itemKey]: n }))}
+                        />
+                      )}
                     </li>
                   );
                 })}
