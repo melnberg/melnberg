@@ -126,10 +126,13 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
         )}
 
         <nav className="flex-1 pb-4 flex flex-col mt-3">
+          {/* 사용자 지정 순서: 홈 / AI / 커뮤니티 / 주식 토론 / 맛집 추천 / 육아 장소 / 멤버십 */}
           <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
           <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
-          {/* 블로그 메뉴 가림 (2026-05-06). 다시 보려면 주석 해제. */}
-          {/* <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} /> */}
+          <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} />
 
           {/* 멤버십 — 상담 2개 + 멤버십 2개 모두 하위 */}
           <SectionToggle
@@ -165,29 +168,12 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
             </>
           )}
 
-          {/* 시한 경매 — 매일 진행 X 라 메뉴 숨김. 진행 시 주석 해제 */}
+          {/* 가림 메뉴 (블로그 / 시한 경매 / 자산 순위 / 핫딜 / 내 가게) — 페이지 자체는 살아있음, 직접 URL 진입 가능 */}
+          {/* <SItem href="/blog" label="블로그" active={current === 'blog'} icon={<BlogIcon />} onClick={() => setOpen(false)} /> */}
           {/* <SItem href="/auctions" label="시한 경매" active={current === 'auctions'} icon={<AuctionIcon />} onClick={() => setOpen(false)} /> */}
-
-          {/* 맛집 추천 */}
-          <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} />
-
-          {/* 육아 장소 */}
-          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} />
-
-          {/* 자산 순위 게시판 */}
-          <SItem href="/ranking" label="자산 순위" active={current === 'ranking'} icon={<RankingIcon />} onClick={() => setOpen(false)} />
-
-          {/* 핫딜 게시판 — 적립 보상 2.5x */}
-          <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} />
-
-          {/* 주식 토론 — 종목·시황 토론. 적립은 community 와 동일 */}
-          <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} />
-
-          {/* 내 가게 — 사용자 운영 실제 사업장 (1인 1개 + 사업자 진위확인) */}
-          <SItem href="/stores" label="내 가게" active={current === 'stores'} icon={<StoreIcon />} onClick={() => setOpen(false)} />
-
-          {/* 커뮤니티 — 좁은 사이드바엔 미리보기 제외 (글 클릭은 페이지에서) */}
-          <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
+          {/* <SItem href="/ranking" label="자산 순위" active={current === 'ranking'} icon={<RankingIcon />} onClick={() => setOpen(false)} /> */}
+          {/* <SItem href="/hotdeal" label="핫딜" active={current === 'hotdeal'} icon={<HotdealIcon />} onClick={() => setOpen(false)} /> */}
+          {/* <SItem href="/stores" label="내 가게" active={current === 'stores'} icon={<StoreIcon />} onClick={() => setOpen(false)} /> */}
         </nav>
 
         {/* 비로그인 — 사이드바 맨 아래 [로그인 (흰)] [회원가입 (네이비)] 스택 */}

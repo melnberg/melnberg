@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import WealthSurgeBoard from '@/components/WealthSurgeBoard';
 import { createPublicClient } from '@/lib/supabase/public';
 
 export const metadata = { title: '자산 순위 — 멜른버그' };
@@ -50,7 +49,6 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   return (
     <Layout>
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/ranking', label: '자산 순위', bold: true }]} meta="Ranking" />
-      <WealthSurgeBoard />
       <section className="py-8 sm:py-12">
         <div className="max-w-content mx-auto px-4 sm:px-10">
           <div className="flex items-baseline justify-between gap-4 mb-2 flex-wrap">
