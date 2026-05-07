@@ -6,6 +6,7 @@ import CommentSection from '@/components/CommentSection';
 import PostActions from '@/components/PostActions';
 import RewardTooltip from '@/components/RewardTooltip';
 import PostLikeButton from '@/components/PostLikeButton';
+import HyojaButton from '@/components/HyojaButton';
 import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
@@ -119,7 +120,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           <header className="pb-6 mb-6 border-b border-border">
             <div className="flex items-start justify-between gap-3 mb-3">
               <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight break-keep flex-1">{post.title}</h1>
-              <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+              <div className="flex items-center gap-2 shrink-0">
+                <HyojaButton />
+                <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+              </div>
             </div>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
               <span className="font-bold text-navy">
