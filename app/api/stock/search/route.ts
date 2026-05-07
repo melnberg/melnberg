@@ -2,7 +2,7 @@
 // GET /api/stock/search?q=삼성
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createPublicClient } from '@/lib/supabase/public';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 15;
@@ -28,21 +28,21 @@ async function searchNaverFront(q: string): Promise<Item[]> {
   } catch { return []; }
 }
 
-// 2) 로컬 DB stocks 테이블 검색 (시드 종목 한정)
+// 2) 로컬 DB stocks 테이블 검색 — anon public client (stores 패턴, 154/164 RLS 가 anon select 허용)
 async function searchLocalDb(q: string): Promise<Item[]> {
   try {
-    const sb = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false } },
-    );
+    const sb = createPublicClient();
     const isCode = /^\d{1,6}$/.test(q);
     const query = sb.from('stocks').select('code, name, market').eq('active', true);
-    const { data } = isCode
+    const { data, error } = isCode
       ? await query.ilike('code', `${q}%`).limit(20)
       : await query.ilike('name', `%${q}%`).limit(20);
+    if (error) console.error('stocks search fallback error:', error);
     return (data ?? []) as Item[];
-  } catch { return []; }
+  } catch (e) {
+    console.error('stocks search fallback exception:', e);
+    return [];
+  }
 }
 
 export async function GET(req: NextRequest) {
