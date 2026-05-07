@@ -1,7 +1,7 @@
 import { createClient } from './supabase/server';
 import { getCurrentUser, getCurrentProfile } from './auth';
 
-export type PostCategory = 'community' | 'blog' | 'hotdeal';
+export type PostCategory = 'community' | 'blog' | 'hotdeal' | 'stocks';
 
 export type CommunityPost = {
   id: number;

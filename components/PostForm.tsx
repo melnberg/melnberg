@@ -10,8 +10,8 @@ import { fileToWebp } from '@/lib/image-to-webp';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
-  category?: 'community' | 'blog' | 'hotdeal';
-  redirectBase?: string; // '/community' | '/blog' | '/hotdeal'
+  category?: 'community' | 'blog' | 'hotdeal' | 'stocks';
+  redirectBase?: string; // '/community' | '/blog' | '/hotdeal' | '/stocks'
 };
 
 export default function PostForm({ initial, category = 'community', redirectBase = '/community' }: Props) {

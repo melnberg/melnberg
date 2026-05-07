@@ -8,7 +8,7 @@ import { KidsIcon, RestaurantIcon } from './CategoryIcons';
 
 type Notification = {
   id: number;
-  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made' | 'election_winner' | 'election_loser' | 'restaurant_comment' | 'restaurant_like' | 'kids_comment' | 'kids_like';
+  type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made' | 'election_winner' | 'election_loser' | 'restaurant_comment' | 'restaurant_like' | 'kids_comment' | 'kids_like' | 'facility_income_auto';
   post_id: number | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
@@ -176,6 +176,7 @@ export default function NotificationsBell() {
                 n.type === 'restaurant_like' ? '🍴 맛집 좋아요' :
                 n.type === 'kids_comment' ? '👶 육아 장소 댓글' :
                 n.type === 'kids_like' ? '👶 육아 장소 좋아요' :
+                n.type === 'facility_income_auto' ? '💰 시설 수익 자동 지급' :
                 '건의 답글';
               return (
                 <li key={n.id} className={`border-b border-[#f0f0f0] last:border-b-0 ${n.read_at ? 'bg-white' : 'bg-[#f5f9ff]'}`}>
@@ -215,6 +216,8 @@ export default function NotificationsBell() {
                         <span><span className="font-bold text-navy inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {n.listing_message ?? '육아 장소'}</span> — <span className="text-muted">{n.comment_excerpt ?? ''}</span></span>
                       ) : n.type === 'kids_like' ? (
                         <span><span className="font-bold text-navy inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {n.listing_message ?? '육아 장소'}</span> — 좋아요 ❤</span>
+                      ) : n.type === 'facility_income_auto' ? (
+                        <span className="text-text">{n.comment_excerpt ?? '시설 수익 자동 지급'}</span>
                       ) : (
                         <>댓글: <span className="text-muted">{n.comment_excerpt ?? '(내용 없음)'}</span></>
                       )}
