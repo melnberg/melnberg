@@ -28,30 +28,46 @@ function loadKakao(): Promise<void> {
 
 type Place = { id: string; place_name: string; road_address_name: string; address_name: string; x: string; y: string; category_name?: string };
 
-export default function MyStoreForm({ currentUserId }: { currentUserId: string }) {
+export type MyStoreInitial = {
+  id: number;
+  name: string;
+  category: string | null;
+  description: string;
+  recommended: string | null;
+  lat: number;
+  lng: number;
+  photo_url: string | null;
+  address: string | null;
+  dong: string | null;
+  contact: string | null;
+  url: string | null;
+};
+
+export default function MyStoreForm({ currentUserId, initial }: { currentUserId: string; initial?: MyStoreInitial }) {
   const supabase = createClient();
   const router = useRouter();
+  const isEdit = !!initial;
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
   const markerRef = useRef<unknown>(null);
 
   // 가게 정보
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [description, setDescription] = useState('');
-  const [recommended, setRecommended] = useState('');
-  const [contact, setContact] = useState('');
-  const [url, setUrl] = useState('');
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
-  const [address, setAddress] = useState('');
-  const [dong, setDong] = useState('');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [category, setCategory] = useState(initial?.category ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [recommended, setRecommended] = useState(initial?.recommended ?? '');
+  const [contact, setContact] = useState(initial?.contact ?? '');
+  const [url, setUrl] = useState(initial?.url ?? '');
+  const [lat, setLat] = useState<number | null>(initial?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(initial?.lng ?? null);
+  const [address, setAddress] = useState(initial?.address ?? '');
+  const [dong, setDong] = useState(initial?.dong ?? '');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initial?.photo_url ?? null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Place[]>([]);
 
-  // NTS 검증 — DB 저장 X, API 호출에만 사용
+  // NTS 검증 — DB 저장 X, API 호출에만 사용 (등록 시만)
   const [bizNo, setBizNo] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [startDt, setStartDt] = useState('');
@@ -63,9 +79,18 @@ export default function MyStoreForm({ currentUserId }: { currentUserId: string }
     let cancelled = false;
     loadKakao().then(() => {
       if (cancelled || !mapDivRef.current) return;
-      const center = new window.kakao.maps.LatLng(37.498, 127.027);
+      const initLat = initial?.lat ?? 37.498;
+      const initLng = initial?.lng ?? 127.027;
+      const center = new window.kakao.maps.LatLng(initLat, initLng);
       const map = new window.kakao.maps.Map(mapDivRef.current, { center, level: 4 });
       mapRef.current = map;
+      if (initial?.lat != null && initial?.lng != null) {
+        // 편집 모드 — 기존 좌표에 마커
+        const pos = new window.kakao.maps.LatLng(initial.lat, initial.lng);
+        const marker = new window.kakao.maps.Marker({ position: pos }) as unknown as { setMap: (m: unknown) => void };
+        marker.setMap(map);
+        markerRef.current = marker;
+      }
       window.kakao.maps.event.addListener(map, 'click', (...args: unknown[]) => {
         const e = args[0] as { latLng: { getLat: () => number; getLng: () => number } };
         const newLat = e.latLng.getLat();
@@ -135,54 +160,85 @@ export default function MyStoreForm({ currentUserId }: { currentUserId: string }
     if (!name.trim()) { setErr('가게명 필수'); return; }
     if (!description.trim()) { setErr('설명 필수'); return; }
     if (lat == null || lng == null) { setErr('지도에서 위치를 선택하세요'); return; }
-    if (!photoFile) { setErr('가게 사진 필수'); return; }
-    if (!bizNo.replace(/[-\s]/g, '').match(/^\d{10}$/)) { setErr('사업자번호는 숫자 10자리'); return; }
-    if (!ownerName.trim()) { setErr('대표자명 필수'); return; }
-    if (!startDt.replace(/[-\s.]/g, '').match(/^\d{8}$/)) { setErr('개업일자는 YYYYMMDD 8자리 (예: 20200315)'); return; }
+    if (!isEdit) {
+      if (!photoFile) { setErr('가게 사진 필수'); return; }
+      if (!bizNo.replace(/[-\s]/g, '').match(/^\d{10}$/)) { setErr('사업자번호는 숫자 10자리'); return; }
+      if (!ownerName.trim()) { setErr('대표자명 필수'); return; }
+      if (!startDt.replace(/[-\s.]/g, '').match(/^\d{8}$/)) { setErr('개업일자는 YYYYMMDD 8자리 (예: 20200315)'); return; }
+    }
 
     setBusy(true);
 
-    // 1) NTS 사업자등록정보 진위확인
+    // 1) NTS 사업자등록정보 진위확인 — 등록 시만
     let verified = false;
-    try {
-      const r = await fetch('/api/verify-business', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ b_no: bizNo, p_nm: ownerName, start_dt: startDt }),
-      });
-      const j = await r.json();
-      if (!j?.ok) {
-        setErr(`사업자 검증 실패 — ${j?.error ?? 'unknown'}`);
+    if (!isEdit) {
+      try {
+        const r = await fetch('/api/verify-business', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ b_no: bizNo, p_nm: ownerName, start_dt: startDt }),
+        });
+        const j = await r.json();
+        if (!j?.ok) {
+          setErr(`사업자 검증 실패 — ${j?.error ?? 'unknown'}`);
+          setBusy(false);
+          return;
+        }
+        verified = true;
+      } catch (e) {
+        setErr(`사업자 검증 오류: ${e instanceof Error ? e.message : '실패'}`);
         setBusy(false);
         return;
       }
-      verified = true;
-    } catch (e) {
-      setErr(`사업자 검증 오류: ${e instanceof Error ? e.message : '실패'}`);
+    }
+
+    // 2) 사진 업로드 — 새 파일 있을 때만. 편집 모드에선 기존 url 유지.
+    let photoUrl: string | null = initial?.photo_url ?? null;
+    if (photoFile) {
+      try {
+        const converted = await fileToWebp(photoFile).catch(() => null);
+        const blob = converted?.blob ?? photoFile;
+        const isWebp = blob !== photoFile;
+        const ext = isWebp ? 'webp' : (photoFile.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+        const contentType = isWebp ? 'image/webp' : photoFile.type;
+        const path = `${currentUserId}/store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
+        if (upErr) throw new Error(upErr.message);
+        const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+        photoUrl = publicUrl;
+      } catch (e) {
+        setErr(`사진 업로드 실패: ${e instanceof Error ? e.message : String(e)}`);
+        setBusy(false);
+        return;
+      }
+    }
+
+    if (isEdit && initial) {
+      // 3a) 수정
+      const { data, error } = await supabase.rpc('update_my_store', {
+        p_id: initial.id,
+        p_name: name.trim(),
+        p_category: category.trim() || null,
+        p_description: description.trim(),
+        p_recommended: recommended.trim() || null,
+        p_lat: lat, p_lng: lng,
+        p_photo_url: photoUrl,
+        p_address: address || null,
+        p_dong: dong || null,
+        p_contact: contact.trim() || null,
+        p_url: url.trim() || null,
+      });
       setBusy(false);
+      if (error) { setErr(error.message); return; }
+      const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+      if (!row?.out_success) { setErr(row?.out_message ?? '수정 실패'); return; }
+      alert('수정 완료');
+      revalidateHome();
+      window.location.assign(`/stores/${initial.id}`);
       return;
     }
 
-    // 2) 사진 업로드
-    let photoUrl: string | null = null;
-    try {
-      const converted = await fileToWebp(photoFile).catch(() => null);
-      const blob = converted?.blob ?? photoFile;
-      const isWebp = blob !== photoFile;
-      const ext = isWebp ? 'webp' : (photoFile.name.split('.').pop()?.toLowerCase() ?? 'jpg');
-      const contentType = isWebp ? 'image/webp' : photoFile.type;
-      const path = `${currentUserId}/store-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
-      if (upErr) throw new Error(upErr.message);
-      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
-      photoUrl = publicUrl;
-    } catch (e) {
-      setErr(`사진 업로드 실패: ${e instanceof Error ? e.message : String(e)}`);
-      setBusy(false);
-      return;
-    }
-
-    // 3) 가게 등록 (verified=true)
+    // 3b) 가게 등록 (verified=true)
     const { data, error } = await supabase.rpc('register_my_store', {
       p_name: name.trim(),
       p_category: category.trim() || null,
@@ -280,14 +336,15 @@ export default function MyStoreForm({ currentUserId }: { currentUserId: string }
 
       {/* 사진 */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">가게 사진 * (5MB 이하)</label>
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">{isEdit ? '가게 사진 (변경 시만 새 파일)' : '가게 사진 * (5MB 이하)'}</label>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
           className="text-[12px]" />
         {photoPreview && <img src={photoPreview} alt="" className="max-w-[300px] max-h-[200px] object-contain border border-border mt-2 rounded-xl" />}
       </div>
 
-      {/* NTS 검증 — DB 저장 X, 진위확인용 */}
+      {/* NTS 검증 — DB 저장 X, 진위확인용. 편집 모드에선 숨김. */}
+      {!isEdit && (
       <div className="border-2 border-cyan/40 bg-cyan/5 px-4 py-4 flex flex-col gap-3">
         <div>
           <div className="text-[13px] font-bold text-navy">🔒 사업자 진위 확인</div>
@@ -314,6 +371,7 @@ export default function MyStoreForm({ currentUserId }: { currentUserId: string }
           </div>
         </div>
       </div>
+      )}
 
       {err && <div className="text-sm px-4 py-3 break-keep leading-relaxed bg-red-50 text-red-700 border border-red-200">{err}</div>}
 
@@ -322,7 +380,7 @@ export default function MyStoreForm({ currentUserId }: { currentUserId: string }
           className="bg-white border border-border text-text px-5 py-3 text-[13px] font-semibold cursor-pointer hover:border-navy hover:text-navy">취소</button>
         <button type="submit" disabled={busy}
           className="bg-navy text-white border-none px-6 py-3 text-[13px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50">
-          {busy ? '등록 중...' : '검증 후 등록 (+30 mlbg)'}
+          {busy ? (isEdit ? '저장 중...' : '등록 중...') : (isEdit ? '저장' : '검증 후 등록 (+30 mlbg)')}
         </button>
       </div>
     </form>

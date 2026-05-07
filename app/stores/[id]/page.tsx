@@ -57,6 +57,13 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
     .select('display_name')
     .eq('id', row.author_id)
     .maybeSingle();
+  // 현재 로그인 유저 추출 — cookie client 1차, 실패 시 null. (anon read 와 별개로 동작.)
+  let currentUserId: string | null = null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    currentUserId = user?.id ?? null;
+  } catch { currentUserId = null; }
+
   const store: StoreItem = {
     ...row,
     author_name: (prof as { display_name?: string | null } | null)?.display_name ?? null,
@@ -71,7 +78,7 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
       ]} meta="My Store" />
       <article className="py-12 w-full min-w-0 overflow-x-hidden">
         <div className="max-w-[760px] mx-auto px-6 w-full min-w-0">
-          <MyStoreDetailClient store={store} />
+          <MyStoreDetailClient store={store} currentUserId={currentUserId} />
         </div>
       </article>
     </Layout>

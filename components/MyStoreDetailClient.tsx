@@ -26,14 +26,19 @@ function relTime(iso: string): string {
   return `${d.getMonth() + 1}.${d.getDate()}`;
 }
 
-export default function MyStoreDetailClient({ store }: { store: StoreItem }) {
+export default function MyStoreDetailClient({ store, currentUserId = null }: { store: StoreItem; currentUserId?: string | null }) {
   const supabase = createClient();
-  const [me, setMe] = useState<{ id: string; name: string } | null>(null);
+  const [me, setMe] = useState<{ id: string; name: string } | null>(
+    currentUserId ? { id: currentUserId, name: '회원' } : null,
+  );
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(store.like_count);
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [commentText, setCommentText] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // 서버에서 받은 currentUserId 로 즉시 isAuthor 판단 (수정·삭제 버튼 깜빡임 방지)
+  const isAuthorServer = !!currentUserId && currentUserId === store.author_id;
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +88,19 @@ export default function MyStoreDetailClient({ store }: { store: StoreItem }) {
     if (row) { setLiked(row.out_liked); setLikeCount(row.out_count); }
   }
 
+  async function handleDelete() {
+    if (busy) return;
+    if (!confirm('정말 삭제할까? 되돌릴 수 없음.')) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('delete_my_store', { p_id: store.id });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '삭제 실패'); return; }
+    alert('삭제 완료');
+    window.location.assign('/stores');
+  }
+
   async function submitComment(e: React.FormEvent) {
     e.preventDefault();
     if (!me) { alert('로그인 필요'); return; }
@@ -122,8 +140,12 @@ export default function MyStoreDetailClient({ store }: { store: StoreItem }) {
         <div className="text-[11px] text-muted mt-1 flex items-center gap-2 flex-wrap">
           <span>운영자 <b className="text-navy">{store.author_name ?? '익명'}</b></span>
           <span className="tabular-nums">+30 mlbg</span>
-          {isAuthor && (
-            <Link href={`/stores/${store.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</Link>
+          {(isAuthor || isAuthorServer) && (
+            <>
+              <Link href={`/stores/${store.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</Link>
+              <button type="button" onClick={handleDelete} disabled={busy}
+                className="text-red-500 hover:text-red-700 underline cursor-pointer disabled:opacity-40 bg-transparent border-0 p-0">🗑 삭제</button>
+            </>
           )}
         </div>
       </header>
