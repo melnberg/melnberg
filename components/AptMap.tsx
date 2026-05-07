@@ -2048,8 +2048,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : isCommunity ? '커뮤니티'
                     : (aptHeadLabel || '(단지 정보 없음)');
                   return (
-                    <li key={feedKey} className="border-b border-[#f0f0f0] last:border-b-0">
+                    <li key={feedKey} className={`border-b border-[#f0f0f0] last:border-b-0 ${isExpanded ? 'border-l-4 border-l-cyan' : ''}`}>
                       <div className={`px-3 py-2.5 ${
+                        isExpanded ? 'bg-cyan/5' :
                         isAuction ? 'bg-[#fef2f2] hover:bg-[#fee2e2] border-l-4 border-[#dc2626]' :
                         'bg-white hover:bg-[#fafbfc]'
                       }`}>
@@ -2204,7 +2205,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           </div>
                         </div>
                       </div>
-                      {/* 인라인 댓글 영역 — 말풍선 클릭 시 펼침. 카드 클릭 영역 밖이라 jumpToFeedItem 트리거 안 됨. */}
+                      {/* 펼침 시 인라인 댓글 — 가능 종류 (discussion/post/emart_occupy/factory_occupy) 만 */}
                       {isExpanded && inlineCfg && (
                         <InlineCommentBox
                           kind={inlineCfg.kind}
@@ -2213,6 +2214,11 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           currentUserName={feedMe?.name ?? null}
                           onCountChange={(n) => setFeedCounts((c) => ({ ...c, [itemKey]: n }))}
                         />
+                      )}
+                      {isExpanded && !inlineCfg && (
+                        <div className="px-3 py-2 bg-cyan/5 border-t border-cyan/20 text-[11px] text-muted">
+                          이 글은 패널 댓글 미지원. 우상단 <span className="text-navy font-bold">↗ 페이지</span> 눌러서 상세 페이지로.
+                        </div>
                       )}
                     </li>
                   );
