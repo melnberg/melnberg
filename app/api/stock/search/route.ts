@@ -9,23 +9,28 @@ export const maxDuration = 15;
 
 type Item = { code: string; name: string; market?: string };
 
-// 1) Naver mobile front-api 검색 (가장 안정적)
+// 1) Naver autoComplete — ac.stock.naver.com/ac. front-api 엔드포인트는 2026-05 기준 404.
 async function searchNaverFront(q: string): Promise<Item[]> {
   try {
-    const url = `https://m.stock.naver.com/front-api/v1/search/autoComplete?searchTerm=${encodeURIComponent(q)}&target=stock`;
+    const url = `https://ac.stock.naver.com/ac?q=${encodeURIComponent(q)}&target=stock`;
     const r = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!r.ok) return [];
-    const j = (await r.json()) as { result?: { items?: Array<{ reutersCode?: string; name?: string; nationCode?: string; nationName?: string; typeName?: string }> } };
-    const list = j.result?.items ?? [];
+    const j = (await r.json()) as { items?: Array<{ code?: string; reutersCode?: string; name?: string; nationName?: string; typeName?: string; category?: string }> };
+    const list = j.items ?? [];
     const items: Item[] = [];
     for (const it of list) {
-      const code = (it.reutersCode ?? '').replace(/[^0-9]/g, '');
+      if (it.category && it.category !== 'stock') continue;
+      const raw = it.code ?? it.reutersCode ?? '';
+      const code = raw.replace(/[^0-9]/g, '');
       if (!/^\d{6}$/.test(code)) continue;
       if (!it.name) continue;
       items.push({ code, name: it.name, market: it.typeName ?? it.nationName ?? '' });
     }
     return items;
-  } catch { return []; }
+  } catch (e) {
+    console.error('naver autoComplete error:', e);
+    return [];
+  }
 }
 
 // 2) 로컬 DB stocks 테이블 검색 — anon public client (stores 패턴, 154/164 RLS 가 anon select 허용)
