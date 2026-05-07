@@ -62,54 +62,63 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           </a>
         </div>
 
-        {/* 로그인 사용자 정보 — 로그인 시에만 상단에 노출 */}
+        {/* 로그인 사용자 정보 — 좁은 사이드바 (lg:140px) 에서도 안 깨지게 세로 스택.
+            순서: 사진+조합원 / 자산(mlbg) / 마이페이지 / 출석룰렛 / 어드민. */}
         {user && (
-          <div className="px-4 py-2">
-            <div className="border border-border hover:border-navy transition-colors">
-              <div className="flex items-center gap-2.5 px-3 pt-2.5 pb-1.5">
-                <Link
-                  href="/me"
-                  onClick={() => setOpen(false)}
-                  className="flex-1 min-w-0 flex items-center gap-2.5 no-underline"
-                >
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-border" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-navy text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                      {(user.name[0] ?? '').toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                    <span className="text-[13px] font-bold text-text truncate">{user.name}</span>
-                    {user.isPaid ? (
-                      <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5 flex-shrink-0">조합원</span>
-                    ) : (
-                      <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5 flex-shrink-0">무료</span>
-                    )}
-                  </div>
-                </Link>
+          <div className="px-3 py-2">
+            <div className="border border-border hover:border-navy transition-colors p-2.5 flex flex-col gap-2 relative">
+              {/* 알림 종 — 카드 우상단 absolute */}
+              <div className="absolute top-1.5 right-1.5">
                 <NotificationsBell />
               </div>
+              {/* 1. 사진 + 조합원/무료 뱃지 + 닉네임 (세로 스택, 가운데 정렬) */}
               <Link
                 href="/me"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-between gap-2 px-3 pb-2 pt-0.5 text-[11px] no-underline border-t border-[#f3f3f3] mx-3"
+                className="flex flex-col items-center gap-1 no-underline"
               >
-                {typeof user.balance === 'number' ? (
-                  <span className="text-cyan font-bold tabular-nums">💰 {user.balance} mlbg</span>
-                ) : <span />}
-                <span className="text-muted hover:text-navy">마이페이지 →</span>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border border-border" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center text-base font-bold">
+                    {(user.name[0] ?? '').toUpperCase()}
+                  </div>
+                )}
+                {user.isPaid ? (
+                  <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan text-white px-1.5 py-0.5">조합원</span>
+                ) : (
+                  <span className="text-[9px] font-bold tracking-wider uppercase bg-[#e5e5e5] text-muted px-1.5 py-0.5">무료</span>
+                )}
+                <span className="text-[12px] font-bold text-text truncate max-w-full">{user.name}</span>
               </Link>
-              <div className="px-3 pb-2 pt-1">
-                <CheckinButton />
-              </div>
+              {/* 2. 자산 — mlbg 잔액 가운데 */}
+              {typeof user.balance === 'number' && (
+                <Link
+                  href="/me"
+                  onClick={() => setOpen(false)}
+                  className="text-center text-[12px] text-cyan font-bold tabular-nums no-underline border-t border-[#f3f3f3] pt-1.5"
+                >
+                  💰 {user.balance} mlbg
+                </Link>
+              )}
+              {/* 3. 마이페이지 링크 */}
+              <Link
+                href="/me"
+                onClick={() => setOpen(false)}
+                className="text-center text-[11px] text-muted hover:text-navy no-underline"
+              >
+                마이페이지 →
+              </Link>
+              {/* 4. 출석 룰렛 */}
+              <CheckinButton />
+              {/* 5. 어드민 페이지 (관리자만) */}
               {user.isAdmin && (
                 <Link
                   href="/admin"
                   onClick={() => setOpen(false)}
-                  className="block bg-navy text-white text-center py-1.5 text-[11px] font-bold tracking-widest uppercase no-underline hover:bg-navy-dark"
+                  className="block bg-navy text-white text-center py-1.5 text-[10px] font-bold tracking-widest uppercase no-underline hover:bg-navy-dark"
                 >
-                  어드민 페이지 →
+                  어드민 →
                 </Link>
               )}
             </div>
