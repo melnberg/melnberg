@@ -709,6 +709,96 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     }
   }, [searchParams, kidsList]);
 
+  // 내 가게 (my_stores) — 가족회원이 등록한 실제 사업장. 별표 강조 + verified 배지.
+  type MyStoreItem = {
+    id: number; name: string; category: string | null; description: string;
+    recommended: string | null;
+    lat: number; lng: number; photo_url: string | null; address: string | null;
+    dong: string | null;
+    contact: string | null; url: string | null;
+    verified: boolean; like_count: number;
+    author_id: string; author_name: string | null;
+    created_at: string;
+  };
+  const [myStoreList, setMyStoreList] = useState<MyStoreItem[]>([]);
+  const myStoreMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  async function refetchMyStores() {
+    try {
+      const sbCli = createClient();
+      const { data } = await sbCli.rpc('list_recent_my_store_pins', { p_limit: 100 });
+      const items = ((data ?? []) as MyStoreItem[]);
+      setMyStoreList(items);
+    } catch { /* silent */ }
+  }
+  useEffect(() => { refetchMyStores(); }, []);
+
+  // 내 가게 마커 — 라이트 시안 (#00B0F0) 핀 + 흰 별 5각성 + verified 배지
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    for (const m of myStoreMarkersRef.current) m.setMap(null);
+    myStoreMarkersRef.current = [];
+    if (myStoreList.length === 0) return;
+    const PIN_W = 26, PIN_H = 36;
+    // 별 5각성 path — 32x45 viewBox 기준, 핀 헤드 중앙(cx=16, cy=17) 정렬, 외경 ~9
+    // 점 좌표: 12시 (16,8), 우상 (18.6,14.6), 우하 (23.5,15.4)→안쪽 (19.7,18.7)→우바닥 (21.2,24.5)
+    // → 안쪽 (16,21.3) → 좌바닥 (10.8,24.5) → 안쪽 (12.3,18.7) → 좌하 (8.5,15.4) → 안쪽 (13.4,14.6) → 닫힘
+    const STAR_PATH = 'M 16 8 L 18.6 14.6 L 23.5 15.4 L 19.7 18.7 L 21.2 24.5 L 16 21.3 L 10.8 24.5 L 12.3 18.7 L 8.5 15.4 L 13.4 14.6 Z';
+    const myStorePin = (verified: boolean) => {
+      // verified 배지: 핀 우상단 진남색 동그라미 + 흰 ✓
+      const badge = verified
+        ? '<g><circle cx="24.5" cy="7.5" r="5" fill="#002060" stroke="white" stroke-width="1.4"/><path d="M 22.3 7.6 L 24.0 9.3 L 26.9 6.0" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>'
+        : '';
+      const star = `<path d="${STAR_PATH}" fill="white" stroke="#002060" stroke-width="0.8" stroke-linejoin="round"/>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45">`
+        + `<defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs>`
+        + `<ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/>`
+        + `<path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#00B0F0" stroke="#002060" stroke-width="2"/>`
+        + `<path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>`
+        + `${star}${badge}</svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    };
+    const imgPlain = new window.kakao.maps.MarkerImage(myStorePin(false), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    const imgVerified = new window.kakao.maps.MarkerImage(myStorePin(true), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    for (const s of myStoreList) {
+      const pos = new window.kakao.maps.LatLng(s.lat, s.lng);
+      const titleParts = [`[가족회원의 집] ${s.name}`];
+      if (s.dong) titleParts.push(`— ${s.dong}`);
+      if (s.category) titleParts.push(`(${s.category})`);
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: titleParts.join(' '),
+        clickable: true,
+        image: s.verified ? imgVerified : imgPlain,
+        map,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        // 모바일/데스크톱 모두 상세 페이지로 통일 (/stores/{id})
+        saveCurrentMapState(mapInstRef.current);
+        router.push(`/stores/${s.id}`);
+      });
+      myStoreMarkersRef.current.push(marker);
+    }
+    return () => {
+      for (const m of myStoreMarkersRef.current) m.setMap(null);
+      myStoreMarkersRef.current = [];
+    };
+  }, [myStoreList, mapReady, router]);
+
+  // URL ?store=ID — 외부 링크에서 해당 가게 위치로 panTo
+  useEffect(() => {
+    const sidStr = searchParams.get('store');
+    if (!sidStr) return;
+    const sid = Number(sidStr);
+    if (!Number.isFinite(sid)) return;
+    const s = myStoreList.find((x) => x.id === sid);
+    if (s && mapInstRef.current) {
+      const m = mapInstRef.current as { panTo: (p: unknown) => void; setLevel?: (n: number) => void };
+      m.panTo(new window.kakao.maps.LatLng(s.lat, s.lng));
+      if (m.setLevel) m.setLevel(3);
+    }
+  }, [searchParams, myStoreList]);
+
   async function refetchEmart() {
     try {
       const r = await fetch('/api/emart-list', { cache: 'no-store' });
