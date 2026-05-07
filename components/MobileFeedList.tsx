@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
@@ -26,6 +26,7 @@ type Props = { items: FeedItem[] };
 
 // 본문에 섞여 있는 이미지 URL (http(s)://...jpg|jpeg|png|gif|webp[?…]) 을 <img> 로 치환.
 // 이미지 클릭은 부모 카드 Link 로 전파 → 이미지 새 탭 안 뜨고 게시글 페이지로 이동.
+// 정사각형 (Instagram 스타일) — aspect-square 컨테이너 + object-cover.
 const IMG_URL_RE = /(https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?)/gi;
 function renderContentWithImages(text: string): React.ReactNode {
   if (!text) return null;
@@ -33,8 +34,12 @@ function renderContentWithImages(text: string): React.ReactNode {
   return parts.map((p, i) => {
     if (i % 2 === 1) {
       return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={i} src={p} alt="" loading="lazy" className="block my-1 max-w-full max-h-[260px] object-contain border border-border rounded-xl" />
+        <span key={i} className="block my-2 max-w-[400px] mx-auto">
+          <span className="block aspect-square w-full bg-bg/30 border border-border rounded-xl overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p} alt="" loading="lazy" className="w-full h-full object-cover" />
+          </span>
+        </span>
       );
     }
     return p ? <span key={i}>{p}</span> : null;
@@ -141,32 +146,70 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 const INITIAL_VISIBLE = 30;
 const REVEAL_STEP = 30;
 
+// 클라이언트 셔플 — 서버의 feedWeight 와 동일 시그널.
+// 서버는 90초 캐시라 같은 사용자가 여러 번 진입해도 같은 순서. 클라에서 매 마운트마다
+// random 키만 새로 — 가중치는 동일하므로 분포는 보존.
+const IMG_RE_W = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
+function feedWeightClient(f: FeedItem, now: number): number {
+  let w = 1;
+  if (f.content && IMG_RE_W.test(f.content)) w += 2.5;
+  if ((f.earned_mlbg ?? 0) > 0) w += 1.5;
+  if ((f.comment_count ?? 0) >= 3) w += 1.5;
+  if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;
+  const ageHours = (now - new Date(f.created_at).getTime()) / 3600000;
+  if (ageHours > 168) w *= 0.5;
+  return Math.max(w, 0.01);
+}
+
+// auction / notice 는 강제 상단 — 셔플 대상 아님. 서버에서 이미 앞쪽에 배치돼 들어옴.
+function isFixedKind(k: FeedItem['kind']): boolean {
+  return k === 'auction' || k === 'auction_bid' || k === 'auction_won' || k === 'notice';
+}
+
+function shuffleItems(items: FeedItem[]): FeedItem[] {
+  const fixed: FeedItem[] = [];
+  const shufflable: FeedItem[] = [];
+  for (const f of items) {
+    if (isFixedKind(f.kind)) fixed.push(f);
+    else shufflable.push(f);
+  }
+  const now = Date.now();
+  const shuffled = shufflable
+    .map((f) => ({ f, key: -Math.log(Math.random()) / feedWeightClient(f, now) }))
+    .sort((a, b) => a.key - b.key)
+    .map((x) => x.f);
+  return [...fixed, ...shuffled];
+}
+
 export default function MobileFeedList({ items }: Props) {
   const [lastClickKey, setLastClickKey] = useState<string | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [me, setMe] = useState<{ id: string; name: string } | null>(null);
+  // 셔플 시드 — 증가시키면 useMemo 가 재계산. 마운트 시 1, 새로고침 클릭마다 +1.
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const displayItems = useMemo(() => shuffleItems(items), [items, shuffleSeed]);
   const [visibleCount, setVisibleCount] = useState(Math.min(INITIAL_VISIBLE, items.length));
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // items 가 새로 들어오면 visibleCount 재초기화 (다른 정렬/필터 적용 시 대비)
+  // items 또는 셔플 시드 변경 시 visibleCount 재초기화
   useEffect(() => {
-    setVisibleCount(Math.min(INITIAL_VISIBLE, items.length));
-  }, [items]);
+    setVisibleCount(Math.min(INITIAL_VISIBLE, displayItems.length));
+  }, [displayItems]);
 
   // 바닥 근처 도달 → 30개씩 추가 노출
   useEffect(() => {
-    if (visibleCount >= items.length) return;
+    if (visibleCount >= displayItems.length) return;
     const el = sentinelRef.current;
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) {
-        setVisibleCount((c) => Math.min(c + REVEAL_STEP, items.length));
+        setVisibleCount((c) => Math.min(c + REVEAL_STEP, displayItems.length));
       }
     }, { rootMargin: '600px 0px' });
     io.observe(el);
     return () => io.disconnect();
-  }, [visibleCount, items.length]);
+  }, [visibleCount, displayItems.length]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -234,8 +277,19 @@ export default function MobileFeedList({ items }: Props) {
   return (
     <div className="bg-white">
       {/* 상단 멜른버그 바는 Layout 의 MobileTopBar 가 모든 화면 공통으로 처리 — 여기선 제거 */}
+      {/* 새로고침 — 클라이언트 셔플만 (서버 재요청 X). 시드 증가 → useMemo 재계산. */}
+      <div className="flex justify-end px-4 py-2 border-b border-border">
+        <button
+          type="button"
+          onClick={() => { setShuffleSeed((n) => n + 1); window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }}
+          className="text-[12px] text-cyan border border-cyan/40 rounded-full px-2.5 py-0.5 cursor-pointer bg-transparent hover:bg-cyan/10 active:bg-cyan/20"
+          aria-label="피드 새로고침"
+        >
+          🔄 새로고침
+        </button>
+      </div>
       <ul>
-        {items.slice(0, visibleCount).map((f) => {
+        {displayItems.slice(0, visibleCount).map((f) => {
           const href = hrefFor(f);
           const badge = badgeFor(f);
           // 단지 관련 kind 의 헤드라벨엔 동 prefix (예: "역삼동 역삼래미안")
@@ -351,9 +405,9 @@ export default function MobileFeedList({ items }: Props) {
           );
         })}
       </ul>
-      {visibleCount < items.length && (
+      {visibleCount < displayItems.length && (
         <div ref={sentinelRef} className="px-4 py-6 text-center text-[12px] text-muted">
-          불러오는 중… ({visibleCount}/{items.length})
+          불러오는 중… ({visibleCount}/{displayItems.length})
         </div>
       )}
     </div>
