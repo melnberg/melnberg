@@ -42,14 +42,14 @@ export default function ThreadProfileCard({
     : null;
 
   return (
-    <div className="w-full max-w-[640px] mx-auto bg-white border border-border rounded-xl overflow-hidden mb-4">
-      {/* 상단 테마 밴드 (theme_color 있을 때만). 없으면 살짝 회색 */}
+    <div className="w-full max-w-[640px] mx-auto bg-[#fff8ec] border-2 border-[#e8d9b8] rounded-3xl overflow-hidden mb-4 shadow-[0_4px_24px_rgba(120,90,50,0.06)]">
+      {/* 상단 테마 밴드 — theme_color 있으면 그 색, 없으면 따뜻한 베이지 */}
       <div
         className="h-[60px] w-full"
-        style={{ background: themeColor ?? '#f1f3f5' }}
+        style={{ background: themeColor ?? '#e8d9b8' }}
         aria-hidden
       />
-      <div className="px-4 pb-4">
+      <div className="px-5 pb-5">
         <div className="flex items-start justify-between gap-3 -mt-10">
           {/* 아바타 — 밴드와 겹침 */}
           <div className="flex-shrink-0">
@@ -58,10 +58,10 @@ export default function ThreadProfileCard({
               <img
                 src={avatarUrl}
                 alt=""
-                className="w-20 h-20 rounded-full object-cover border-4 border-white bg-white"
+                className="w-20 h-20 rounded-full object-cover border-4 border-[#fff8ec] bg-[#fff8ec]"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full border-4 border-white bg-navy-soft flex items-center justify-center text-navy text-[24px] font-bold">
+              <div className="w-20 h-20 rounded-full border-4 border-[#fff8ec] bg-[#f5e8cc] flex items-center justify-center text-[#5c4634] text-[24px] font-bold">
                 {(displayName[0] ?? '?').toUpperCase()}
               </div>
             )}
@@ -71,7 +71,7 @@ export default function ThreadProfileCard({
             <div className="mt-12">
               <Link
                 href="/threads/profile"
-                className="inline-block px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy rounded-full"
+                className="inline-block px-3 py-1.5 border-2 border-[#e8d9b8] bg-[#fff8ec] text-[#5c4634] text-[12px] font-bold no-underline hover:border-[#c89b6f] hover:text-[#5c4634] rounded-full transition-colors"
               >
                 프로필 편집
               </Link>
@@ -80,10 +80,10 @@ export default function ThreadProfileCard({
         </div>
 
         {/* 닉네임·핸들 */}
-        <div className="mt-2">
-          <div className="text-[16px] font-bold text-text leading-tight">{displayName}</div>
+        <div className="mt-3">
+          <div className="text-[17px] font-bold text-[#5c4634] leading-tight" style={{ fontFamily: 'serif' }}>{displayName}</div>
           {handle && (
-            <div className="text-[12px] text-muted mt-0.5">
+            <div className="text-[12px] text-[#a07f5f] mt-0.5">
               {handle.startsWith('@') ? handle : `@${handle}`}
             </div>
           )}
@@ -91,14 +91,14 @@ export default function ThreadProfileCard({
 
         {/* bio */}
         {bio && (
-          <p className="mt-3 text-[13px] text-text whitespace-pre-wrap leading-relaxed">
+          <p className="mt-3 text-[13px] text-[#5c4634] whitespace-pre-wrap leading-loose">
             {bio}
           </p>
         )}
 
         {/* 메타 푸터 */}
-        <div className="mt-3 flex items-center gap-3 text-[11px] text-muted">
-          <span>글 <b className="text-text tabular-nums">{threadCount}</b>개</span>
+        <div className="mt-3 flex items-center gap-3 text-[11px] text-[#8a6f55]">
+          <span>글 <b className="text-[#5c4634] tabular-nums">{threadCount}</b>개</span>
           {joinedLabel && (
             <>
               <span aria-hidden>·</span>

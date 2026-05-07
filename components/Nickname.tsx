@@ -216,8 +216,21 @@ export default function Nickname({
 
   if (!isPaid) {
     // 무료회원은 그냥 텍스트 (프로필 페이지 X)
-    // 무료회원: 사진 / 닉네임 / 주택수 (조합원 배지 없음)
-    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}{housingTag}</span>;
+    // 무료회원: 사진 / 닉네임 / 주택수 (조합원 배지 없음) / 일깃장(집) — userId 있을 때만
+    const freeDiary = userId ? (
+      <Link
+        href={`/u/${userId}#threads`}
+        onClick={(e) => e.stopPropagation()}
+        title={`${name} 의 일깃장`}
+        aria-label={`${name} 의 일깃장`}
+        className="ml-1 inline-flex items-center text-[#a07f5f] hover:text-[#7c5a3a] no-underline align-middle leading-none"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" />
+        </svg>
+      </Link>
+    ) : null;
+    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}{housingTag}{freeDiary}</span>;
   }
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';
@@ -335,7 +348,22 @@ export default function Nickname({
     document.body,
   );
 
-  // 표기 순서: 사진 / 닉네임 / 주택수 / 조합원 / SNS dot
+  // 일깃장 (집) 아이콘 — userId 있을 때만. 클릭 시 /u/{userId}#threads 로 anchor scroll.
+  const diaryNode = userId ? (
+    <Link
+      href={`/u/${userId}#threads`}
+      onClick={(e) => e.stopPropagation()}
+      title={`${name} 의 일깃장`}
+      aria-label={`${name} 의 일깃장`}
+      className="ml-1 inline-flex items-center text-[#a07f5f] hover:text-[#7c5a3a] no-underline align-middle leading-none"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" />
+      </svg>
+    </Link>
+  ) : null;
+
+  // 표기 순서: 사진 / 닉네임 / 주택수 / 조합원 / SNS dot / 일깃장(집)
   return (
     <span className={`inline-flex items-center whitespace-nowrap ${className}`}>
       {avatarNode}
@@ -343,6 +371,7 @@ export default function Nickname({
       {housingTag}
       {badgeNode}
       {dotEl}
+      {diaryNode}
       {legendPopup}
       {tipPopup}
     </span>

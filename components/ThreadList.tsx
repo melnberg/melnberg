@@ -93,9 +93,9 @@ function ThreadCard({
   }
 
   const avatar = author?.avatar_url ? (
-    <img src={author.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0" />
+    <img src={author.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-[#e8d9b8] flex-shrink-0" />
   ) : (
-    <div className="w-10 h-10 rounded-full bg-navy-soft border border-border flex items-center justify-center text-navy text-[14px] font-bold flex-shrink-0">
+    <div className="w-10 h-10 rounded-full bg-[#f5e8cc] border-2 border-[#e8d9b8] flex items-center justify-center text-[#5c4634] text-[14px] font-bold flex-shrink-0">
       {(author?.display_name?.[0] ?? '?').toUpperCase()}
     </div>
   );
@@ -103,25 +103,25 @@ function ThreadCard({
   return (
     <article
       onClick={handleCardClick}
-      className={`flex gap-3 p-4 border-b border-border ${isEditing ? '' : 'hover:bg-bg/30 cursor-pointer'}`}
+      className={`flex gap-3 p-4 border-b border-[#e8d9b8] last:border-b-0 ${isEditing ? '' : 'hover:bg-[#fdf6e3]/60 cursor-pointer'}`}
     >
       <div className="flex-shrink-0">{avatar}</div>
       <div className="flex-1 min-w-0">
         {showAuthor && (
           <div className="flex items-center gap-2 mb-1 text-[13px]">
             <Nickname info={profileToNicknameInfo(author, t.author_id)} />
-            <span className="text-muted text-[11px]">· {formatRelative(t.created_at)}</span>
+            <span className="text-[#a07f5f] text-[11px]">· {formatRelative(t.created_at)}</span>
           </div>
         )}
         {!showAuthor && (
-          <div className="text-[11px] text-muted mb-1">{formatRelative(t.created_at)}</div>
+          <div className="text-[11px] text-[#a07f5f] mb-1">{formatRelative(t.created_at)}</div>
         )}
         {isEditing ? (
           <div onClick={(e) => e.stopPropagation()}>
             <textarea
               value={editContent}
               onChange={(e) => onChangeEdit(e.target.value)}
-              className="w-full min-h-[80px] p-2 border border-border text-[14px] text-text bg-white resize-y focus:outline-none focus:border-navy"
+              className="w-full min-h-[80px] p-2 border-2 border-[#e8d9b8] rounded-xl text-[14px] text-[#5c4634] bg-[#fff8ec] resize-y focus:outline-none focus:border-[#c89b6f] leading-loose"
               autoFocus
             />
             <div className="flex items-center gap-2 mt-2">
@@ -129,7 +129,7 @@ function ThreadCard({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onSaveEdit(t.id); }}
                 disabled={saving || editContent.trim() === ''}
-                className="bg-navy text-white px-3 py-1 text-[12px] font-bold disabled:opacity-50 hover:bg-navy-dark"
+                className="bg-[#5c4634] text-[#fff8ec] px-4 py-1.5 text-[12px] font-bold disabled:opacity-50 hover:bg-[#3d2f22] rounded-full"
               >
                 {saving ? '저장중…' : '저장'}
               </button>
@@ -137,32 +137,32 @@ function ThreadCard({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCancelEdit(); }}
                 disabled={saving}
-                className="px-3 py-1 text-[12px] text-muted hover:text-navy disabled:opacity-50"
+                className="px-3 py-1 text-[12px] text-[#a07f5f] hover:text-[#5c4634] disabled:opacity-50"
               >
                 취소
               </button>
             </div>
           </div>
         ) : (
-          <div className="text-[14px] text-text whitespace-pre-wrap break-words leading-relaxed">
+          <div className="text-[14px] text-[#5c4634] whitespace-pre-wrap break-words leading-loose">
             {linkify(t.content)}
           </div>
         )}
-        <div className="flex items-center gap-5 mt-3 text-[12px] text-muted">
+        <div className="flex items-center gap-5 mt-3 text-[12px] text-[#a07f5f]">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onToggleLike(t.id); }}
             disabled={!currentUserId || isEditing}
-            className={`flex items-center gap-1 ${currentUserId && !isEditing ? 'hover:text-navy' : 'cursor-not-allowed opacity-50'}`}
+            className={`flex items-center gap-1 ${currentUserId && !isEditing ? 'hover:text-[#5c4634]' : 'cursor-not-allowed opacity-50'}`}
             title={currentUserId ? '좋아요' : '로그인 필요'}
           >
-            <span className={t.liked ? 'text-cyan' : ''} aria-hidden>{t.liked ? '♥' : '♡'}</span>
+            <span className={t.liked ? 'text-[#c89b6f]' : ''} aria-hidden>{t.liked ? '♥' : '♡'}</span>
             <span className="tabular-nums">{t.like_count}</span>
           </button>
           <Link
             href={`/t/${t.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 hover:text-navy no-underline text-muted"
+            className="flex items-center gap-1 hover:text-[#5c4634] no-underline text-[#a07f5f]"
           >
             <span aria-hidden>💬</span>
             <span className="tabular-nums">{t.reply_count}</span>
@@ -172,7 +172,7 @@ function ThreadCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onStartEdit(t.id, t.content); }}
-                className="hover:text-navy"
+                className="hover:text-[#5c4634]"
                 title="수정"
                 aria-label="수정"
               >
@@ -181,7 +181,7 @@ function ThreadCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
-                className="hover:text-navy"
+                className="hover:text-[#5c4634]"
                 title="삭제"
                 aria-label="삭제"
               >
@@ -269,11 +269,11 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
   }
 
   if (items.length === 0) {
-    return <p className="text-center py-12 text-muted text-[13px]">{emptyText}</p>;
+    return <p className="text-center py-12 text-[#8a6f55] text-[13px] leading-loose">{emptyText}</p>;
   }
 
   return (
-    <div className="flex flex-col border-t border-border bg-white">
+    <div className="flex flex-col bg-transparent">
       {items.map((t) => (
         <ThreadCard
           key={t.id}
