@@ -139,22 +139,22 @@ export default function CheckinButton() {
         type="button"
         onClick={handleClick}
         disabled={isDone || busy}
-        className={`w-full px-3 py-1.5 text-[11px] font-bold flex items-center justify-between gap-2 border transition-colors ${
+        className={`w-full px-2 py-1.5 text-[11px] font-bold flex flex-col items-center justify-center gap-0.5 border transition-colors ${
           isDone
             ? 'bg-bg/60 border-border text-muted cursor-default'
             : 'bg-cyan/10 border-cyan/40 text-navy hover:bg-cyan hover:text-white cursor-pointer'
         }`}
         title={isDone ? '오늘 출석 완료' : '클릭해서 +0.5 mlbg + 럭키 룰렛'}
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1 whitespace-nowrap">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             {isDone ? <polyline points="20 6 9 17 4 12" /> : <><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></>}
           </svg>
-          <span>{isDone ? '오늘 출석 완료' : '출석 + 룰렛 🎰'}</span>
+          <span>{isDone ? '출석 완료' : '출석 룰렛 🎰'}</span>
         </span>
         {streak > 0 && (
-          <span className={`text-[10px] tabular-nums ${isDone ? 'text-muted' : 'text-cyan font-bold'}`}>
-            {streak}일 연속
+          <span className={`text-[10px] tabular-nums whitespace-nowrap ${isDone ? 'text-muted' : 'text-cyan font-bold'}`}>
+            🔥 {streak}일 연속
           </span>
         )}
       </button>
