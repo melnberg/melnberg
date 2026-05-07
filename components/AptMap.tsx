@@ -14,7 +14,6 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
-import InlineCommentBox, { type InlineKind } from './InlineCommentBox';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { getLat: () => number; getLng: () => number };
@@ -275,15 +274,6 @@ function readPinCache(key: string): { ts: number; pins: AptPin[] } | null {
 }
 function writePinCache(key: string, pins: AptPin[]) {
   try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), pins })); } catch { /* quota */ }
-}
-
-// kind → InlineCommentBox 가 다룰 부모 식별. 댓글 자체 종류는 펼치기 미지원.
-function inlineKindFor(f: FeedItem): { kind: InlineKind; parentId: number } | null {
-  if (f.kind === 'discussion') return { kind: 'discussion', parentId: f.id };
-  if (f.kind === 'post') return f.post_id ? { kind: 'post', parentId: f.post_id } : null;
-  if (f.kind === 'emart_occupy') return { kind: 'emart_occupy', parentId: f.apt_master_id };
-  if (f.kind === 'factory_occupy') return { kind: 'factory_occupy', parentId: f.apt_master_id };
-  return null;
 }
 
 // 본문에 섞인 이미지 URL → <img> 인라인 렌더 (피드 카드 공용).
@@ -1143,27 +1133,42 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
-  // 인라인 댓글 — 펼친 카드 키 / 댓글수 캐시 / 현재 사용자 정보
-  const [feedExpandedKey, setFeedExpandedKey] = useState<string | null>(null);
-  const [feedCounts, setFeedCounts] = useState<Record<string, number>>({});
-  const [feedMe, setFeedMe] = useState<{ id: string; name: string } | null>(null);
-  // 현재 사용자 — 인라인 댓글 작성에 필요. 마운트 시 1회 fetch.
+  // 데스크톱 피드 카드 클릭 → 우측 글 상세 drawer (iframe). lg+ 만 노출.
+  const [previewItem, setPreviewItem] = useState<FeedItem | null>(null);
+  // ESC 키로 drawer 닫기
   useEffect(() => {
-    const sb = createClient();
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (cancelled || !user) return;
-        const { data: prof } = await sb.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
-        const name = (prof as { display_name?: string } | null)?.display_name
-          ?? (user.user_metadata?.display_name as string | undefined)
-          ?? user.email?.split('@')[0] ?? '회원';
-        if (!cancelled) setFeedMe({ id: user.id, name });
-      } catch { /* ignore */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    if (!previewItem) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewItem(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewItem]);
+  // 글 상세 URL — MobileFeedList.hrefFor 와 동일 로직. 없으면 null.
+  function feedItemHref(item: FeedItem): string | null {
+    if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) return `/auctions/${item.auction_id}`;
+    if (item.kind === 'post' || item.kind === 'post_comment') {
+      if (!item.post_id) return null;
+      const base = item.post_category === 'hotdeal' ? '/hotdeal'
+                 : item.post_category === 'stocks' ? '/stocks'
+                 : item.post_category === 'realty' ? '/realty'
+                 : '/community';
+      return `${base}/${item.post_id}`;
+    }
+    if (item.kind === 'notice' && item.notice_href) return item.notice_href;
+    if (
+      item.kind === 'discussion' || item.kind === 'comment' ||
+      item.kind === 'listing' || item.kind === 'offer' || item.kind === 'snatch' ||
+      item.kind === 'sell_complete'
+    ) return item.apt_master_id ? `/apt/${item.apt_master_id}` : null;
+    if ((item.kind === 'restaurant_register' || item.kind === 'restaurant_comment') && item.restaurant_id) {
+      return `/restaurants/${item.restaurant_id}`;
+    }
+    if ((item.kind === 'kids_register' || item.kind === 'kids_comment') && item.kids_id) {
+      return `/kids/${item.kids_id}`;
+    }
+    if (item.kind === 'emart_occupy' || item.kind === 'emart_comment') return `/e/${item.apt_master_id}`;
+    if (item.kind === 'factory_occupy' || item.kind === 'factory_comment') return `/f/${item.apt_master_id}`;
+    return null;
+  }
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}
     if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) {
@@ -2022,10 +2027,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                 <ul>
                 {feed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
-                  const itemKey = feedKey;
-                  const inlineCfg = inlineKindFor(f);
-                  const isExpanded = feedExpandedKey === itemKey;
-                  const cnt = feedCounts[itemKey] ?? f.comment_count ?? 0;
+                  const isPreviewing = previewItem != null && `${previewItem.kind}-${previewItem.id}` === feedKey;
                   const fullContent = (f.content ?? '').trim();
                   const isComment = f.kind === 'comment' || f.kind === 'post_comment';
                   const isCommunity = f.kind === 'post' || f.kind === 'post_comment';
@@ -2048,16 +2050,16 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : isCommunity ? '커뮤니티'
                     : (aptHeadLabel || '(단지 정보 없음)');
                   return (
-                    <li key={feedKey} className={`border-b border-[#f0f0f0] last:border-b-0 ${isExpanded ? 'border-l-4 border-l-cyan' : ''}`}>
+                    <li key={feedKey} className={`border-b border-[#f0f0f0] last:border-b-0 ${isPreviewing ? 'border-l-4 border-l-cyan' : ''}`}>
                       <div className={`px-3 py-2.5 ${
-                        isExpanded ? 'bg-cyan/5' :
+                        isPreviewing ? 'bg-cyan/5' :
                         isAuction ? 'bg-[#fef2f2] hover:bg-[#fee2e2] border-l-4 border-[#dc2626]' :
                         'bg-white hover:bg-[#fafbfc]'
                       }`}>
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <button
                             type="button"
-                            onClick={() => setFeedExpandedKey(isExpanded ? null : itemKey)}
+                            onClick={() => setPreviewItem(f)}
                             className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1 bg-transparent border-none p-0 cursor-pointer"
                           >
                             {headLabel}
@@ -2080,8 +2082,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                         <div
                           role="button"
                           tabIndex={0}
-                          onClick={() => setFeedExpandedKey(isExpanded ? null : itemKey)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') setFeedExpandedKey(isExpanded ? null : itemKey); }}
+                          onClick={() => setPreviewItem(f)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') setPreviewItem(f); }}
                           className="cursor-pointer hover:opacity-80"
                         >
                           {(isEmartOccupy || isFactoryOccupy) ? (
@@ -2189,37 +2191,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 return txt ? <span className="tabular-nums">{txt}</span> : null;
                               })()
                             )}
-                            {inlineCfg && (
-                              <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFeedExpandedKey(isExpanded ? null : itemKey); }}
-                                className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 text-navy hover:bg-navy-soft cursor-pointer bg-transparent border-none"
-                                aria-label={`댓글 ${cnt}개`}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                                </svg>
-                                <span className="tabular-nums">{cnt}</span>
-                              </button>
-                            )}
                           </div>
                         </div>
                       </div>
-                      {/* 펼침 시 인라인 댓글 — 가능 종류 (discussion/post/emart_occupy/factory_occupy) 만 */}
-                      {isExpanded && inlineCfg && (
-                        <InlineCommentBox
-                          kind={inlineCfg.kind}
-                          parentId={inlineCfg.parentId}
-                          currentUserId={feedMe?.id ?? null}
-                          currentUserName={feedMe?.name ?? null}
-                          onCountChange={(n) => setFeedCounts((c) => ({ ...c, [itemKey]: n }))}
-                        />
-                      )}
-                      {isExpanded && !inlineCfg && (
-                        <div className="px-3 py-2 bg-cyan/5 border-t border-cyan/20 text-[11px] text-muted">
-                          이 글은 패널 댓글 미지원. 우상단 <span className="text-navy font-bold">↗ 페이지</span> 눌러서 상세 페이지로.
-                        </div>
-                      )}
                     </li>
                   );
                 })}
@@ -2229,6 +2203,44 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           </div>
         )}
       </div>
+
+      {/* 데스크톱(lg+) 글 상세 drawer — 카드 클릭 시 피드 패널 우측에 iframe 으로 풀페이지 표시.
+          폭 ~400px → iframe 안의 Tailwind lg(1024px) breakpoint 미충족 → Sidebar 햄버거 + 메인 article 만 보이는 모바일 레이아웃 자동.
+          모바일(lg-)은 hidden — MobileFeedList 가 풀페이지 라우팅 처리. ESC / X 로 닫음. */}
+      {previewItem && (() => {
+        const previewHref = feedItemHref(previewItem);
+        return (
+          <aside
+            className="hidden lg:flex absolute top-0 left-[280px] w-[400px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
+            role="dialog"
+            aria-label="글 상세"
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-white flex-shrink-0">
+              <span className="text-[12px] text-muted truncate">↗ 글 상세</span>
+              <button
+                type="button"
+                onClick={() => setPreviewItem(null)}
+                className="text-[14px] text-muted hover:text-navy bg-transparent border-none cursor-pointer px-2 py-0.5"
+                aria-label="닫기"
+                title="닫기 (ESC)"
+              >
+                ✕
+              </button>
+            </div>
+            {previewHref ? (
+              <iframe
+                src={previewHref}
+                className="flex-1 w-full border-0"
+                title="글 상세"
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-[12px] text-muted px-4 text-center">
+                이 글은 별도 상세 페이지가 없음. 카드에서 바로 확인.
+              </div>
+            )}
+          </aside>
+        );
+      })()}
 
 
       {/* 가운데 하단 — AI 검색 (B 위치). /ai 페이지 디자인과 통일. */}
