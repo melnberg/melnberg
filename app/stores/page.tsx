@@ -9,6 +9,7 @@ import { profileToNicknameInfo } from '@/lib/nickname-info';
 export const metadata = { title: '내 가게 — 멜른버그', description: '회원이 운영하는 실제 사업장 모음' };
 export const dynamic = 'force-dynamic';
 
+type AuthorInfo = { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null };
 type StoreRow = {
   id: number; author_id: string; name: string; category: string | null; description: string;
   recommended: string | null; address: string | null; dong: string | null;
@@ -16,19 +17,37 @@ type StoreRow = {
   contact: string | null; url: string | null;
   verified: boolean; like_count: number;
   created_at: string;
-  author: { display_name: string | null; link_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; avatar_url: string | null } | null;
+  author: AuthorInfo | null;
 };
 
 export default async function StoresIndex() {
   const supabase = await createClient();
   const user = await getCurrentUser();
 
-  const { data } = await supabase
+  // 1) 가게 목록 (조인 X — Supabase FK 추론 실패하던 사례 회피, 분리 fetch)
+  const { data: rows, error } = await supabase
     .from('my_stores')
-    .select('id, author_id, name, category, description, recommended, address, dong, lat, lng, photo_url, contact, url, verified, like_count, created_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
+    .select('id, author_id, name, category, description, recommended, address, dong, lat, lng, photo_url, contact, url, verified, like_count, created_at')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
-  const stores = ((data ?? []) as unknown) as StoreRow[];
+  if (error) console.error('my_stores select error:', error);
+
+  const baseStores = (rows ?? []) as Omit<StoreRow, 'author'>[];
+
+  // 2) 작성자 프로필 별도 fetch
+  const authorIds = Array.from(new Set(baseStores.map((s) => s.author_id)));
+  const authorMap = new Map<string, AuthorInfo>();
+  if (authorIds.length > 0) {
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
+      .in('id', authorIds);
+    for (const p of ((profs ?? []) as Array<AuthorInfo & { id: string }>)) {
+      authorMap.set(p.id, p);
+    }
+  }
+
+  const stores: StoreRow[] = baseStores.map((s) => ({ ...s, author: authorMap.get(s.author_id) ?? null }));
 
   // 본인 가게 1개 — 등록 버튼 분기
   const myStore = user ? stores.find((s) => s.author_id === user.id) ?? null : null;

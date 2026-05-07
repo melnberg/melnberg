@@ -23,20 +23,22 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
   const supabase = await createClient();
   const { data } = await supabase
     .from('my_stores')
-    .select('id, author_id, name, category, description, recommended, lat, lng, photo_url, address, dong, contact, url, verified, like_count, author:profiles!author_id(display_name)')
+    .select('id, author_id, name, category, description, recommended, lat, lng, photo_url, address, dong, contact, url, verified, like_count')
     .eq('id', numId)
     .is('deleted_at', null)
     .maybeSingle();
   if (!data) notFound();
 
-  const row = data as unknown as StoreItem & { author: { display_name: string | null } | null };
+  const row = data as StoreItem;
+  // 작성자 프로필 별도 fetch (FK 추론 회피)
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', row.author_id)
+    .maybeSingle();
   const store: StoreItem = {
-    id: row.id, author_id: row.author_id, name: row.name, category: row.category,
-    description: row.description, recommended: row.recommended,
-    lat: row.lat, lng: row.lng, photo_url: row.photo_url,
-    address: row.address, dong: row.dong, contact: row.contact, url: row.url,
-    verified: row.verified, like_count: row.like_count,
-    author_name: row.author?.display_name ?? null,
+    ...row,
+    author_name: (prof as { display_name?: string | null } | null)?.display_name ?? null,
   };
 
   return (
