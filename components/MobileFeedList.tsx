@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
@@ -147,101 +146,32 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 const INITIAL_VISIBLE = 30;
 const REVEAL_STEP = 30;
 
-// 클라이언트 셔플 — 서버의 feedWeight 와 동일 시그널 (사람 글 우선, 시스템 활동 약하게).
-const IMG_RE_W = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
-const PEOPLE_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
-  'discussion', 'comment',
-  'post', 'post_comment',
-  'restaurant_register', 'restaurant_comment',
-  'kids_register', 'kids_comment',
-  'emart_comment', 'factory_comment',
-]);
-const SYSTEM_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
-  'listing', 'offer', 'snatch',
-  'sell_complete', 'bridge_toll', 'strike',
-  'emart_occupy', 'factory_occupy',
-  'auction_bid', 'auction_won',
-]);
-function feedWeightClient(f: FeedItem, now: number): number {
-  let w = 1;
-  if (PEOPLE_KINDS_W.has(f.kind)) w *= 2.5;
-  if (SYSTEM_KINDS_W.has(f.kind)) w *= 0.25;
-  if (f.content && IMG_RE_W.test(f.content)) w += 2.5;
-  if ((f.earned_mlbg ?? 0) > 0) w += 1.5;
-  if ((f.comment_count ?? 0) >= 3) w += 1.5;
-  if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;
-  const ageHours = (now - new Date(f.created_at).getTime()) / 3600000;
-  if (ageHours < 1) w += 2.0;
-  else if (ageHours < 6) w += 1.0;
-  if (ageHours > 168) w *= 0.5;
-  return Math.max(w, 0.01);
-}
-
-// auction (진행 중 경매 본글) 만 강제 상단. auction_bid / auction_won 알림은
-// SYSTEM 가중치(×0.25) 로 뒤로 밀려야 — fixed 로 두면 가중치 무시되고 위에 쌓임.
-function isFixedKind(k: FeedItem['kind']): boolean {
-  return k === 'auction';
-}
-
-function shuffleItems(items: FeedItem[]): FeedItem[] {
-  const fixed: FeedItem[] = [];
-  const shufflable: FeedItem[] = [];
-  for (const f of items) {
-    if (isFixedKind(f.kind)) fixed.push(f);
-    else shufflable.push(f);
-  }
-  const now = Date.now();
-  const shuffled = shufflable
-    .map((f) => ({ f, key: -Math.log(Math.random()) / feedWeightClient(f, now) }))
-    .sort((a, b) => a.key - b.key)
-    .map((x) => x.f);
-  return [...fixed, ...shuffled];
-}
-
 export default function MobileFeedList({ items }: Props) {
   const [lastClickKey, setLastClickKey] = useState<string | null>(null);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [me, setMe] = useState<{ id: string; name: string } | null>(null);
-  // 셔플 시드 — 증가시키면 useMemo 가 재계산. 마운트 시 1, 새로고침 클릭마다 +1.
-  const [shuffleSeed, setShuffleSeed] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-  const router = useRouter();
-  // 새로고침 — 서버 캐시 무효화 + RSC 재요청 + 클라 셔플 재계산
-  async function handleRefresh() {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await fetch('/api/revalidate-home', { method: 'POST' }).catch(() => null);
-      router.refresh();
-      setShuffleSeed((n) => n + 1);
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-    } finally {
-      setTimeout(() => setRefreshing(false), 800);
-    }
-  }
-  const displayItems = useMemo(() => shuffleItems(items), [items, shuffleSeed]);
   const [visibleCount, setVisibleCount] = useState(Math.min(INITIAL_VISIBLE, items.length));
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // items 또는 셔플 시드 변경 시 visibleCount 재초기화
+  // items 변경 시 visibleCount 재초기화
   useEffect(() => {
-    setVisibleCount(Math.min(INITIAL_VISIBLE, displayItems.length));
-  }, [displayItems]);
+    setVisibleCount(Math.min(INITIAL_VISIBLE, items.length));
+  }, [items]);
 
   // 바닥 근처 도달 → 30개씩 추가 노출
   useEffect(() => {
-    if (visibleCount >= displayItems.length) return;
+    if (visibleCount >= items.length) return;
     const el = sentinelRef.current;
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
       if (entries.some((e) => e.isIntersecting)) {
-        setVisibleCount((c) => Math.min(c + REVEAL_STEP, displayItems.length));
+        setVisibleCount((c) => Math.min(c + REVEAL_STEP, items.length));
       }
     }, { rootMargin: '600px 0px' });
     io.observe(el);
     return () => io.disconnect();
-  }, [visibleCount, displayItems.length]);
+  }, [visibleCount, items.length]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -309,20 +239,8 @@ export default function MobileFeedList({ items }: Props) {
   return (
     <div className="bg-white">
       {/* 상단 멜른버그 바는 Layout 의 MobileTopBar 가 모든 화면 공통으로 처리 — 여기선 제거 */}
-      {/* 새로고침 — 서버 캐시 무효화 + RSC 재요청 + 클라 셔플 재계산 */}
-      <div className="flex justify-end px-4 py-2 border-b border-border">
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="text-[12px] text-cyan border border-cyan/40 rounded-full px-3 py-1 cursor-pointer bg-white hover:bg-cyan/10 active:bg-cyan/20 disabled:opacity-50"
-          aria-label="피드 새로고침"
-        >
-          🔄 {refreshing ? '새로고침 중…' : '새로고침'}
-        </button>
-      </div>
       <ul>
-        {displayItems.slice(0, visibleCount).map((f) => {
+        {items.slice(0, visibleCount).map((f) => {
           const href = hrefFor(f);
           const badge = badgeFor(f);
           // 단지 관련 kind 의 헤드라벨엔 동 prefix (예: "역삼동 역삼래미안")
@@ -438,9 +356,9 @@ export default function MobileFeedList({ items }: Props) {
           );
         })}
       </ul>
-      {visibleCount < displayItems.length && (
+      {visibleCount < items.length && (
         <div ref={sentinelRef} className="px-4 py-6 text-center text-[12px] text-muted">
-          불러오는 중… ({visibleCount}/{displayItems.length})
+          불러오는 중… ({visibleCount}/{items.length})
         </div>
       )}
     </div>

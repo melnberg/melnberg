@@ -5,7 +5,11 @@ const API_BASE = 'https://api.telegram.org';
 
 export type TelegramSendResult = { ok: true; message_id: number } | { ok: false; error: string };
 
+// 사용자 요청으로 텔레그램 알림 푸시 전면 차단. 다시 켜려면 false 로 변경.
+const TELEGRAM_DISABLED = true as boolean;
+
 export async function sendTelegramMessage(text: string, opts?: { parseMode?: 'HTML' | 'MarkdownV2'; disablePreview?: boolean }): Promise<TelegramSendResult> {
+  if (TELEGRAM_DISABLED) return { ok: false, error: 'disabled' };
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {

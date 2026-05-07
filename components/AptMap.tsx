@@ -309,60 +309,6 @@ function renderFeedContentWithImages(text: string): React.ReactNode {
   });
 }
 
-// 클라이언트 셔플 — MobileFeedList 와 동일 로직.
-// 서버의 feedWeight 와 같은 시그널: 사진(+2.5) / earned_mlbg>0 (+1.5) / comment_count>=3 (+1.5) /
-// discussion_like_count>=3 (+1.0) / 7일 이상 (×0.5).
-// 새로고침 (shuffleSeed) 마다 random 키 새로 생성 → 분포는 보존하면서 순서만 바뀜.
-const FEED_IMG_RE_W = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
-const FEED_PEOPLE_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
-  'discussion', 'comment',
-  'post', 'post_comment',
-  'restaurant_register', 'restaurant_comment',
-  'kids_register', 'kids_comment',
-  'emart_comment', 'factory_comment',
-]);
-const FEED_SYSTEM_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
-  'listing', 'offer', 'snatch',
-  'sell_complete', 'bridge_toll', 'strike',
-  'emart_occupy', 'factory_occupy',
-  'auction_bid', 'auction_won',
-]);
-function feedWeightClient(f: FeedItem, now: number): number {
-  let w = 1;
-  if (FEED_PEOPLE_KINDS_W.has(f.kind)) w *= 2.5;
-  if (FEED_SYSTEM_KINDS_W.has(f.kind)) w *= 0.25;
-  if (f.content && FEED_IMG_RE_W.test(f.content)) w += 2.5;
-  if ((f.earned_mlbg ?? 0) > 0) w += 1.5;
-  if ((f.comment_count ?? 0) >= 3) w += 1.5;
-  if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;
-  const ageHours = (now - new Date(f.created_at).getTime()) / 3600000;
-  if (ageHours < 1) w += 2.0;
-  else if (ageHours < 6) w += 1.0;
-  if (ageHours > 168) w *= 0.5;
-  return Math.max(w, 0.01);
-}
-
-// auction (진행 중 경매 본글) 만 강제 상단. auction_bid / auction_won 알림은
-// SYSTEM 가중치(×0.25) 로 뒤로 밀려야 — fixed 로 두면 가중치 무시되고 위에 쌓임.
-function isFixedFeedKind(k: FeedItem['kind']): boolean {
-  return k === 'auction';
-}
-
-function shuffleFeedItems(items: FeedItem[]): FeedItem[] {
-  const fixed: FeedItem[] = [];
-  const shufflable: FeedItem[] = [];
-  for (const f of items) {
-    if (isFixedFeedKind(f.kind)) fixed.push(f);
-    else shufflable.push(f);
-  }
-  const now = Date.now();
-  const shuffled = shufflable
-    .map((f) => ({ f, key: -Math.log(Math.random()) / feedWeightClient(f, now) }))
-    .sort((a, b) => a.key - b.key)
-    .map((x) => x.f);
-  return [...fixed, ...shuffled];
-}
-
 export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1197,17 +1143,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
-  // 셔플 시드 — 증가시키면 useMemo 재계산. 새로고침 클릭마다 +1.
-  const [feedShuffleSeed, setFeedShuffleSeed] = useState(0);
-  const [feedRefreshing, setFeedRefreshing] = useState(false);
   // 인라인 댓글 — 펼친 카드 키 / 댓글수 캐시 / 현재 사용자 정보
   const [feedExpandedKey, setFeedExpandedKey] = useState<string | null>(null);
   const [feedCounts, setFeedCounts] = useState<Record<string, number>>({});
   const [feedMe, setFeedMe] = useState<{ id: string; name: string } | null>(null);
-  // displayFeed — 렌더링 전용. jumpToFeedItem / pins.find 등 lookup 은 원본 feed 사용.
-  const displayFeed = useMemo(() => shuffleFeedItems(feed), [feed, feedShuffleSeed]);
-  // 새로고침 시 패널 자체 스크롤 top 으로 — 패널이 자체 overflow-y-auto.
-  const feedScrollRef = useRef<HTMLDivElement>(null);
   // 현재 사용자 — 인라인 댓글 작성에 필요. 마운트 시 1회 fetch.
   useEffect(() => {
     const sb = createClient();
@@ -2074,36 +2013,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           <span className="ml-auto text-[11px] text-muted">{feedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {feedOpen && (
-          <div ref={feedScrollRef} className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
+          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
             {feed.length === 0 ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">아직 작성된 글 없음</div>
             ) : (
               <>
-                {/* 새로고침 — 서버 캐시 무효화 + RSC 재요청 + 클라 셔플 재계산 */}
-                <div className="flex justify-end px-3 py-2 border-b border-border bg-white sticky top-0 z-10">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (feedRefreshing) return;
-                      setFeedRefreshing(true);
-                      try {
-                        await fetch('/api/revalidate-home', { method: 'POST' }).catch(() => null);
-                        router.refresh();
-                        setFeedShuffleSeed((n) => n + 1);
-                        if (feedScrollRef.current) feedScrollRef.current.scrollTop = 0;
-                      } finally {
-                        setTimeout(() => setFeedRefreshing(false), 800);
-                      }
-                    }}
-                    disabled={feedRefreshing}
-                    className="text-[12px] text-cyan border border-cyan/40 rounded-full px-3 py-1 cursor-pointer bg-white hover:bg-cyan/10 active:bg-cyan/20 disabled:opacity-50"
-                    aria-label="피드 새로고침"
-                  >
-                    🔄 {feedRefreshing ? '새로고침 중…' : '새로고침'}
-                  </button>
-                </div>
                 <ul>
-                {displayFeed.map((f) => {
+                {feed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
                   const itemKey = feedKey;
                   const inlineCfg = inlineKindFor(f);
