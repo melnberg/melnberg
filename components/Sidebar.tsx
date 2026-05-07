@@ -183,6 +183,9 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 주식 토론 — 종목·시황 토론. 적립은 community 와 동일 */}
           <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} />
 
+          {/* 내 가게 — 사용자 운영 실제 사업장 (1인 1개 + 사업자 진위확인) */}
+          <SItem href="/stores" label="내 가게" active={current === 'stores'} icon={<StoreIcon />} onClick={() => setOpen(false)} />
+
           {/* 커뮤니티 — 좁은 사이드바엔 미리보기 제외 (글 클릭은 페이지에서) */}
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
         </nav>
@@ -311,6 +314,8 @@ const CommunityIcon = () => <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4
 const HotdealIcon = () => <svg {...iconProps}><path d="M12 2c0 4-3 5-3 9a3 3 0 1 0 6 0c0-2-1-3-1-3 0 0 4 1 4 6a6 6 0 1 1-12 0c0-5 6-7 6-12z" /></svg>;
 // 차트 (캔들봉 + 추세선) — 주식 토론
 const StocksIcon = () => <svg {...iconProps}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /><path d="M16 9h3v3" /></svg>;
+// 가게 (지붕 달린 상점) — 내 가게
+const StoreIcon = () => <svg {...iconProps}><path d="M3 9l1-5h16l1 5" /><path d="M3 9v11h18V9" /><path d="M9 20v-6h6v6" /></svg>;
 const AuctionIcon = () => <svg {...iconProps}><path d="M11 21h-1l1-7" /><path d="M14 3h1l-1 7" /><path d="M5 14l9-9" /><path d="M3 16l5 5" /><path d="M16 8l5 5" /></svg>;
 const ApartmentIcon = () => <svg {...iconProps}><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3" /></svg>;
 const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
