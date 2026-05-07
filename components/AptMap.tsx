@@ -828,9 +828,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         setLiveAuctions((json.auctions ?? []).slice(0, 3));
       } catch { /* silent */ }
     }
-    fetchLive();
+    // 첫 페인트 막지 않게 250ms 후 첫 발화 (60초 폴링은 그대로).
+    const firstFire = setTimeout(fetchLive, 250);
     const id = setInterval(fetchLive, 60000);
-    return () => { cancelled = true; clearInterval(id); };
+    return () => { cancelled = true; clearTimeout(firstFire); clearInterval(id); };
   }, []);
   const [occupierProfiles, setOccupierProfiles] = useState<Map<string, { name: string; link: string | null; isPaid: boolean; isSolo: boolean; avatarUrl: string | null; aptCount: number | null }>>(new Map());
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -935,58 +936,76 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [marqueeDuration, setMarqueeDuration] = useState(12);
   useEffect(() => {
     let cancelled = false;
+    // 1단계: 핵심 2개만 먼저 발화 — 도착 즉시 마퀴 표시 가능 (score / wealth).
     (async () => {
       try {
-        const responses = await Promise.all([
-          fetch('/api/score-ranking'),
-          fetch('/api/wealth-ranking'),
-          fetch('/api/trade-highlights'),
-          fetch('/api/most-traded-apts'),
-          fetch('/api/today-activity'),
-          fetch('/api/top-quality-awards'),
-          fetch('/api/today-sells'),
-          fetch('/api/active-offers'),
-          fetch('/api/recent-hotdeals'),
+        const [r1, r2] = await Promise.all([
+          fetch('/api/score-ranking').catch(() => null),
+          fetch('/api/wealth-ranking').catch(() => null),
         ]);
-        const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = responses;
-        if (r1.ok) {
+        if (r1 && r1.ok) {
           const j = (await r1.json()) as { ranking: RankRow[] };
           if (!cancelled) setRanking(j.ranking ?? []);
         }
-        if (r2.ok) {
+        if (r2 && r2.ok) {
           const j = (await r2.json()) as { ranking: WealthRow[] };
           if (!cancelled) setWealthRanking(j.ranking ?? []);
         }
-        if (r3.ok) {
-          const j = (await r3.json()) as { trades: TradeHighlight[] };
-          if (!cancelled) setTradeHighlights((j.trades ?? []).map((t) => ({ ...t, deal_amount: Number(t.deal_amount) })));
-        }
-        if (r4.ok) {
-          const j = (await r4.json()) as { apts: TradedApt[] };
-          if (!cancelled) setHotApts((j.apts ?? []).map((a) => ({ ...a, trade_count: Number(a.trade_count), median_amount: Number(a.median_amount) })));
-        }
-        if (r5.ok) {
-          const j = (await r5.json()) as { stats: ActivityStats | null };
-          if (!cancelled) setActivityStats(j.stats);
-        }
-        if (r6.ok) {
-          const j = (await r6.json()) as { items: QualityAward[] };
-          if (!cancelled) setQualityAwards((j.items ?? []).map((q) => ({ ...q, earned: Number(q.earned), multiplier: Number(q.multiplier) })));
-        }
-        if (r7.ok) {
-          const j = (await r7.json()) as { sells: SellEvent[] };
-          if (!cancelled) setTodaySells((j.sells ?? []).map((s) => ({ ...s, price: Number(s.price) })));
-        }
-        if (r8.ok) {
-          const j = (await r8.json()) as { offers: ActiveOffer[] };
-          if (!cancelled) setActiveOffers((j.offers ?? []).map((o) => ({ ...o, price: Number(o.price) })));
-        }
-        if (r9.ok) {
-          const j = (await r9.json()) as { items: HotdealItem[] };
-          if (!cancelled) setRecentHotdeals(j.items ?? []);
-        }
       } catch { /* ignore */ }
     })();
+    // 2단계: 나머지 7개는 idle/defer — 첫 페인트 끝난 후 발화.
+    const idle = (cb: () => void) => {
+      if (typeof window !== 'undefined' && (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    idle(() => {
+      if (cancelled) return;
+      (async () => {
+        try {
+          const responses = await Promise.all([
+            fetch('/api/trade-highlights').catch(() => null),
+            fetch('/api/most-traded-apts').catch(() => null),
+            fetch('/api/today-activity').catch(() => null),
+            fetch('/api/top-quality-awards').catch(() => null),
+            fetch('/api/today-sells').catch(() => null),
+            fetch('/api/active-offers').catch(() => null),
+            fetch('/api/recent-hotdeals').catch(() => null),
+          ]);
+          const [r3, r4, r5, r6, r7, r8, r9] = responses;
+          if (r3 && r3.ok) {
+            const j = (await r3.json()) as { trades: TradeHighlight[] };
+            if (!cancelled) setTradeHighlights((j.trades ?? []).map((t) => ({ ...t, deal_amount: Number(t.deal_amount) })));
+          }
+          if (r4 && r4.ok) {
+            const j = (await r4.json()) as { apts: TradedApt[] };
+            if (!cancelled) setHotApts((j.apts ?? []).map((a) => ({ ...a, trade_count: Number(a.trade_count), median_amount: Number(a.median_amount) })));
+          }
+          if (r5 && r5.ok) {
+            const j = (await r5.json()) as { stats: ActivityStats | null };
+            if (!cancelled) setActivityStats(j.stats);
+          }
+          if (r6 && r6.ok) {
+            const j = (await r6.json()) as { items: QualityAward[] };
+            if (!cancelled) setQualityAwards((j.items ?? []).map((q) => ({ ...q, earned: Number(q.earned), multiplier: Number(q.multiplier) })));
+          }
+          if (r7 && r7.ok) {
+            const j = (await r7.json()) as { sells: SellEvent[] };
+            if (!cancelled) setTodaySells((j.sells ?? []).map((s) => ({ ...s, price: Number(s.price) })));
+          }
+          if (r8 && r8.ok) {
+            const j = (await r8.json()) as { offers: ActiveOffer[] };
+            if (!cancelled) setActiveOffers((j.offers ?? []).map((o) => ({ ...o, price: Number(o.price) })));
+          }
+          if (r9 && r9.ok) {
+            const j = (await r9.json()) as { items: HotdealItem[] };
+            if (!cancelled) setRecentHotdeals(j.items ?? []);
+          }
+        } catch { /* ignore */ }
+      })();
+    });
     return () => { cancelled = true; };
   }, []);
   // 8초마다 모드 자동 토글 — 데이터 없는 모드는 자동 건너뜀
