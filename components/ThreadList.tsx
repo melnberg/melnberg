@@ -57,19 +57,38 @@ function ThreadCard({
   currentUserId,
   showAuthor,
   onToggleLike,
+  editingId,
+  editContent,
+  onStartEdit,
+  onCancelEdit,
+  onChangeEdit,
+  onSaveEdit,
+  onDelete,
+  saving,
 }: {
   t: Thread;
   currentUserId: string | null;
   showAuthor: boolean;
   onToggleLike: (id: number) => void;
+  editingId: number | null;
+  editContent: string;
+  onStartEdit: (id: number, content: string) => void;
+  onCancelEdit: () => void;
+  onChangeEdit: (val: string) => void;
+  onSaveEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+  saving: boolean;
 }) {
   const router = useRouter();
   const author = t.author;
+  const isOwner = currentUserId !== null && currentUserId === t.author_id;
+  const isEditing = editingId === t.id;
 
-  // 카드 클릭 시 단독 페이지 — 단, 링크/이미지/버튼 영역은 제외
+  // 카드 클릭 시 단독 페이지 — 단, 링크/이미지/버튼/textarea/수정 모드일 땐 제외
   function handleCardClick(e: React.MouseEvent) {
+    if (isEditing) return;
     const target = e.target as HTMLElement;
-    if (target.closest('a, button, img')) return;
+    if (target.closest('a, button, img, textarea')) return;
     router.push(`/t/${t.id}`);
   }
 
@@ -84,7 +103,7 @@ function ThreadCard({
   return (
     <article
       onClick={handleCardClick}
-      className="flex gap-3 p-4 border-b border-border hover:bg-bg/30 cursor-pointer"
+      className={`flex gap-3 p-4 border-b border-border ${isEditing ? '' : 'hover:bg-bg/30 cursor-pointer'}`}
     >
       <div className="flex-shrink-0">{avatar}</div>
       <div className="flex-1 min-w-0">
@@ -97,15 +116,44 @@ function ThreadCard({
         {!showAuthor && (
           <div className="text-[11px] text-muted mb-1">{formatRelative(t.created_at)}</div>
         )}
-        <div className="text-[14px] text-text whitespace-pre-wrap break-words leading-relaxed">
-          {linkify(t.content)}
-        </div>
+        {isEditing ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <textarea
+              value={editContent}
+              onChange={(e) => onChangeEdit(e.target.value)}
+              className="w-full min-h-[80px] p-2 border border-border text-[14px] text-text bg-white resize-y focus:outline-none focus:border-navy"
+              autoFocus
+            />
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onSaveEdit(t.id); }}
+                disabled={saving || editContent.trim() === ''}
+                className="bg-navy text-white px-3 py-1 text-[12px] font-bold disabled:opacity-50 hover:bg-navy-dark"
+              >
+                {saving ? '저장중…' : '저장'}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onCancelEdit(); }}
+                disabled={saving}
+                className="px-3 py-1 text-[12px] text-muted hover:text-navy disabled:opacity-50"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[14px] text-text whitespace-pre-wrap break-words leading-relaxed">
+            {linkify(t.content)}
+          </div>
+        )}
         <div className="flex items-center gap-5 mt-3 text-[12px] text-muted">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onToggleLike(t.id); }}
-            disabled={!currentUserId}
-            className={`flex items-center gap-1 ${currentUserId ? 'hover:text-navy' : 'cursor-not-allowed opacity-50'}`}
+            disabled={!currentUserId || isEditing}
+            className={`flex items-center gap-1 ${currentUserId && !isEditing ? 'hover:text-navy' : 'cursor-not-allowed opacity-50'}`}
             title={currentUserId ? '좋아요' : '로그인 필요'}
           >
             <span className={t.liked ? 'text-cyan' : ''} aria-hidden>{t.liked ? '♥' : '♡'}</span>
@@ -119,6 +167,28 @@ function ThreadCard({
             <span aria-hidden>💬</span>
             <span className="tabular-nums">{t.reply_count}</span>
           </Link>
+          {isOwner && !isEditing && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onStartEdit(t.id, t.content); }}
+                className="hover:text-navy"
+                title="수정"
+                aria-label="수정"
+              >
+                <span aria-hidden>✏</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
+                className="hover:text-navy"
+                title="삭제"
+                aria-label="삭제"
+              >
+                <span aria-hidden>🗑</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </article>
@@ -128,7 +198,53 @@ function ThreadCard({
 export default function ThreadList({ threads, currentUserId, showAuthor = true, emptyText = '아직 글이 없어요.' }: Props) {
   const [items, setItems] = useState<Thread[]>(threads);
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const supabase = createClient();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  function startEdit(id: number, content: string) {
+    setEditingId(id);
+    setEditContent(content);
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditContent('');
+  }
+
+  async function saveEdit(id: number) {
+    const content = editContent.trim();
+    if (content === '' || saving) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('threads')
+      .update({ content })
+      .eq('id', id);
+    setSaving(false);
+    if (error) {
+      alert('수정 실패: ' + error.message);
+      return;
+    }
+    setItems((cur) => cur.map((t) => (t.id === id ? { ...t, content } : t)));
+    setEditingId(null);
+    setEditContent('');
+    router.refresh();
+  }
+
+  async function deleteThread(id: number) {
+    if (!confirm('삭제할까?')) return;
+    const { error } = await supabase
+      .from('threads')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) {
+      alert('삭제 실패: ' + error.message);
+      return;
+    }
+    setItems((cur) => cur.filter((t) => t.id !== id));
+    router.refresh();
+  }
 
   async function toggleLike(threadId: number) {
     if (!currentUserId) return;
@@ -169,6 +285,14 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
           currentUserId={currentUserId}
           showAuthor={showAuthor}
           onToggleLike={toggleLike}
+          editingId={editingId}
+          editContent={editContent}
+          onStartEdit={startEdit}
+          onCancelEdit={cancelEdit}
+          onChangeEdit={setEditContent}
+          onSaveEdit={saveEdit}
+          onDelete={deleteThread}
+          saving={saving}
         />
       ))}
     </div>

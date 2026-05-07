@@ -8,19 +8,11 @@ import { profileToNicknameInfo } from '@/lib/nickname-info';
 import { linkify } from '@/lib/linkify';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { attachAuthorsToThreads } from '@/lib/threads-fetch';
 
 export const dynamic = 'force-dynamic';
 
-type AuthorJoin = {
-  display_name: string | null;
-  avatar_url: string | null;
-  tier: string | null;
-  tier_expires_at: string | null;
-  is_solo: boolean | null;
-  link_url: string | null;
-};
-
-type RawThread = {
+type ThreadCoreRow = {
   id: number;
   author_id: string;
   parent_id: number | null;
@@ -28,13 +20,7 @@ type RawThread = {
   like_count: number;
   reply_count: number;
   created_at: string;
-  author: AuthorJoin | AuthorJoin[] | null;
 };
-
-function normalizeAuthor(a: AuthorJoin | AuthorJoin[] | null): Thread['author'] {
-  if (!a) return null;
-  return Array.isArray(a) ? (a[0] ?? null) : a;
-}
 
 export default async function ThreadDetailPage({
   params,
@@ -48,26 +34,32 @@ export default async function ThreadDetailPage({
   const supabase = await createClient();
   const me = await getCurrentUser();
 
-  // 메인 스레드
+  // 메인 스레드 — PostgREST FK 모호 회피 (author 별도 fetch)
   const { data: mainRaw } = await supabase
     .from('threads')
-    .select('id, author_id, parent_id, content, like_count, reply_count, created_at, author:profiles!author_id(display_name, avatar_url, tier, tier_expires_at, is_solo, link_url)')
+    .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
     .eq('id', threadId)
     .is('deleted_at', null)
     .maybeSingle();
   if (!mainRaw) notFound();
 
-  const main = mainRaw as unknown as RawThread;
+  const main = mainRaw as ThreadCoreRow;
 
   // 답글 — parent_id = threadId, 평면 (children 의 children 는 단순화)
   const { data: repliesRaw } = await supabase
     .from('threads')
-    .select('id, author_id, parent_id, content, like_count, reply_count, created_at, author:profiles!author_id(display_name, avatar_url, tier, tier_expires_at, is_solo, link_url)')
+    .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
     .eq('parent_id', threadId)
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
     .limit(200);
-  const replies = (repliesRaw ?? []) as unknown as RawThread[];
+  const replies = (repliesRaw ?? []) as ThreadCoreRow[];
+
+  // author 일괄 병합 (메인 + 답글)
+  const allCore: ThreadCoreRow[] = [main, ...replies];
+  const enriched = await attachAuthorsToThreads(supabase, allCore);
+  const mainEnriched = enriched[0]!;
+  const repliesEnriched = enriched.slice(1);
 
   // 좋아요 상태 — 메인 + 답글 모두
   const allIds = [main.id, ...replies.map((r) => r.id)];
@@ -82,18 +74,18 @@ export default async function ThreadDetailPage({
   }
 
   const mainThread: Thread = {
-    id: main.id,
-    author_id: main.author_id,
-    parent_id: main.parent_id,
-    content: main.content,
-    like_count: main.like_count,
-    reply_count: main.reply_count,
-    created_at: main.created_at,
-    author: normalizeAuthor(main.author),
-    liked: likedSet.has(main.id),
+    id: mainEnriched.id,
+    author_id: mainEnriched.author_id,
+    parent_id: mainEnriched.parent_id,
+    content: mainEnriched.content,
+    like_count: mainEnriched.like_count,
+    reply_count: mainEnriched.reply_count,
+    created_at: mainEnriched.created_at,
+    author: mainEnriched.author,
+    liked: likedSet.has(mainEnriched.id),
   };
 
-  const repliesNorm: Thread[] = replies.map((r) => ({
+  const repliesNorm: Thread[] = repliesEnriched.map((r) => ({
     id: r.id,
     author_id: r.author_id,
     parent_id: r.parent_id,
@@ -101,7 +93,7 @@ export default async function ThreadDetailPage({
     like_count: r.like_count,
     reply_count: r.reply_count,
     created_at: r.created_at,
-    author: normalizeAuthor(r.author),
+    author: r.author,
     liked: likedSet.has(r.id),
   }));
 

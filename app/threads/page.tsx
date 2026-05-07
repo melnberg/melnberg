@@ -5,6 +5,7 @@ import ThreadList, { type Thread } from '@/components/ThreadList';
 import ThreadComposer from '@/components/ThreadComposer';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
+import { attachAuthorsToThreads } from '@/lib/threads-fetch';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: '내 스레드 — 멜른버그' };
@@ -27,16 +28,27 @@ export default async function ThreadsPage() {
   const supabase = await createClient();
 
   // 본인 스레드 (parent_id is null — 답글 제외)
+  // PostgREST FK 모호 회피 — author 별도 fetch + 병합
   const { data: rows } = await supabase
     .from('threads')
-    .select('id, author_id, parent_id, content, like_count, reply_count, created_at, author:profiles!author_id(display_name, avatar_url, tier, tier_expires_at, is_solo, link_url)')
+    .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
     .eq('author_id', user.id)
     .is('parent_id', null)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(50);
 
-  const threads = (rows ?? []) as unknown as Thread[];
+  const threadCore = (rows ?? []) as Array<{
+    id: number;
+    author_id: string;
+    parent_id: number | null;
+    content: string;
+    like_count: number;
+    reply_count: number;
+    created_at: string;
+  }>;
+  const enriched = await attachAuthorsToThreads(supabase, threadCore);
+  const threads = enriched as unknown as Thread[];
 
   // 좋아요 상태
   let likedSet = new Set<number>();

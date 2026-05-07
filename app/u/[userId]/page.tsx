@@ -10,6 +10,7 @@ import { profileToNicknameInfo } from '@/lib/nickname-info';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 import { isActivePaid } from '@/lib/tier-utils';
+import { attachAuthorsToThreads } from '@/lib/threads-fetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,8 +188,8 @@ export default async function UserProfilePage({
   }
 
   // 스레드 — 항상 fetch (탭 무관, 페이지 하단 섹션). 본인이면 작성 폼 노출.
-  type RawAuthor = { display_name: string | null; avatar_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; link_url: string | null };
-  type RawThread = {
+  // PostgREST FK 모호 회피 — author 별도 fetch + 병합
+  type ThreadCoreRow = {
     id: number;
     author_id: string;
     parent_id: number | null;
@@ -196,19 +197,19 @@ export default async function UserProfilePage({
     like_count: number;
     reply_count: number;
     created_at: string;
-    author: RawAuthor | RawAuthor[] | null;
   };
   const { data: threadsRaw } = await supabase
     .from('threads')
-    .select('id, author_id, parent_id, content, like_count, reply_count, created_at, author:profiles!author_id(display_name, avatar_url, tier, tier_expires_at, is_solo, link_url)')
+    .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
     .eq('author_id', userId)
     .is('parent_id', null)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(50);
-  const threadRows = (threadsRaw ?? []) as unknown as RawThread[];
+  const threadRows = (threadsRaw ?? []) as ThreadCoreRow[];
   let userThreads: Thread[] = [];
   if (threadRows.length > 0) {
+    const enriched = await attachAuthorsToThreads(supabase, threadRows);
     let likedSet = new Set<number>();
     if (me?.id) {
       const { data: likes } = await supabase
@@ -218,7 +219,7 @@ export default async function UserProfilePage({
         .in('thread_id', threadRows.map((t) => t.id));
       likedSet = new Set((likes ?? []).map((l) => (l as { thread_id: number }).thread_id));
     }
-    userThreads = threadRows.map((t) => ({
+    userThreads = enriched.map((t) => ({
       id: t.id,
       author_id: t.author_id,
       parent_id: t.parent_id,
@@ -226,7 +227,7 @@ export default async function UserProfilePage({
       like_count: t.like_count,
       reply_count: t.reply_count,
       created_at: t.created_at,
-      author: Array.isArray(t.author) ? (t.author[0] ?? null) : t.author,
+      author: t.author,
       liked: likedSet.has(t.id),
     }));
   }
