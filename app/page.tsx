@@ -1026,6 +1026,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       if ((f.comment_count ?? 0) >= 3) w += 1.5;                // 댓글 많음
       if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;        // 좋아요 많은 찐리뷰
       const ageHours = (NOW - new Date(f.created_at).getTime()) / 3600000;
+      if (ageHours < 1) w += 2.0;                               // 1시간 이내 데뷔 보너스
+      else if (ageHours < 6) w += 1.0;                          // 6시간 이내 신선도
       if (ageHours > 168) w *= 0.5;                             // 7일 이상 절반
       return Math.max(w, 0.01);
     };

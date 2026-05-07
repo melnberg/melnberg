@@ -336,6 +336,8 @@ function feedWeightClient(f: FeedItem, now: number): number {
   if ((f.comment_count ?? 0) >= 3) w += 1.5;
   if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;
   const ageHours = (now - new Date(f.created_at).getTime()) / 3600000;
+  if (ageHours < 1) w += 2.0;
+  else if (ageHours < 6) w += 1.0;
   if (ageHours > 168) w *= 0.5;
   return Math.max(w, 0.01);
 }
