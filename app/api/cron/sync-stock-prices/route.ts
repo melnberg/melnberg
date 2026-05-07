@@ -23,7 +23,7 @@ async function fetchLatestFromNaver(code: string): Promise<{ trade_date: string;
     const text = await r.text();
     // 응답: [['날짜','시가',...], ['20250506', 71000, ...], ...]
     // 안전하게 줄단위 정규식으로 마지막 데이터 찾음
-    const matches = text.matchAll(/\['?(\d{8})'?,\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*(\d+)/g);
+    const matches = text.matchAll(/\[\s*["'](\d{8})["']\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*(\d+)/g);
     let last: { date: string; close: number; volume: number } | null = null;
     for (const m of matches) {
       last = { date: m[1], close: Number(m[5]), volume: Number(m[6]) };

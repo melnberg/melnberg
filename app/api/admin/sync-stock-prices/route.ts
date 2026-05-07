@@ -19,7 +19,7 @@ async function fetchLatestFromNaver(code: string): Promise<{ trade_date: string;
     const r = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!r.ok) return null;
     const text = await r.text();
-    const matches = text.matchAll(/\['?(\d{8})'?,\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*(\d+)/g);
+    const matches = text.matchAll(/\[\s*["'](\d{8})["']\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*(\d+)/g);
     let last: { date: string; close: number; volume: number } | null = null;
     for (const m of matches) {
       last = { date: m[1], close: Number(m[5]), volume: Number(m[6]) };
