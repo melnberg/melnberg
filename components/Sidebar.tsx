@@ -116,7 +116,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           </div>
         )}
 
-        <nav className="flex-1 pb-4 flex flex-col">
+        <nav className="flex-1 pb-4 flex flex-col mt-3">
           <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
           <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
           {/* 블로그 메뉴 가림 (2026-05-06). 다시 보려면 주석 해제. */}
