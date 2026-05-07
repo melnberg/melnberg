@@ -11,7 +11,7 @@
 --   - 기존 claim_* RPC 는 보존 (수동 청구도 필요 시 가능).
 -- ──────────────────────────────────────────────
 
--- 알림 타입 확장
+-- 알림 타입 확장 — 기존 타입 (041, 046, 048, 051, 054, 131, 135, 143, 144, 149) 모두 포함 + facility_income_auto 추가
 alter table public.notifications drop constraint if exists notifications_type_check;
 alter table public.notifications
   add constraint notifications_type_check
@@ -20,6 +20,8 @@ alter table public.notifications
     'admin_notice','bio_comment',
     'offer_made','offer_accepted','snatch_made',
     'election_winner','election_loser',
+    'restaurant_comment','restaurant_like',
+    'kids_comment','kids_like',
     'facility_income_auto'
   ));
 
