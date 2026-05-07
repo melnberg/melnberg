@@ -1135,12 +1135,25 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [feedOpen, setFeedOpen] = useState(true);
   // 데스크톱 피드 카드 클릭 → 우측 글 상세 drawer (iframe). lg+ 만 노출.
   const [previewItem, setPreviewItem] = useState<FeedItem | null>(null);
-  // ESC 키로 drawer 닫기
+  // ESC 키 + 외부(피드/drawer 밖) 클릭으로 drawer 닫기
   useEffect(() => {
     if (!previewItem) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewItem(null); };
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      if (!t) return;
+      // 피드 패널·drawer 안 클릭은 무시. 그 외(지도 등) 클릭 시 닫기.
+      if (t.closest('[data-feed-panel]') || t.closest('[data-preview-drawer]')) return;
+      setPreviewItem(null);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // 다음 tick 에 등록 — 카드 클릭 자체가 즉시 닫혀버리는 race 방지
+    const timer = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', onClick);
+    };
   }, [previewItem]);
   // 글 상세 URL — MobileFeedList.hrefFor 와 동일 로직. 없으면 null.
   function feedItemHref(item: FeedItem): string {
@@ -2027,7 +2040,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           <span className="ml-auto text-[11px] text-muted">{feedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {feedOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
+          <div data-feed-panel className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
             {feed.length === 0 ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">아직 작성된 글 없음</div>
             ) : (
@@ -2217,7 +2230,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           모바일(lg-)은 hidden — MobileFeedList 가 풀페이지 라우팅 처리. ESC / X 로 닫음. */}
       {previewItem && (
         <aside
-          className="hidden lg:flex absolute top-0 left-[280px] w-[400px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
+          data-preview-drawer
+          className="hidden lg:flex absolute top-0 left-[280px] w-[280px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
           role="dialog"
           aria-label="글 상세"
         >
