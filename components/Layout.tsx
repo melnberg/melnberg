@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache';
+import { headers } from 'next/headers';
 import { createPublicClient } from '@/lib/supabase/public';
 import { getCurrentUser, getCurrentProfile, getCurrentMlbgBalance } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type BoardLatest } from './Sidebar';
@@ -53,6 +54,15 @@ function withTimeout<T>(p: Promise<T>, fallback: T, ms = 5000): Promise<T> {
 }
 
 export default async function Layout({ current, children }: { current?: string; children: React.ReactNode }) {
+  // embed 모드 — 데스크톱 글 패널 drawer iframe (?embed=1) 에서 진입한 경우.
+  // middleware 가 ?embed=1 → x-embed 헤더 set. Layout 은 Sidebar/MobileTopBar/플로팅 위젯 다 skip
+  // → DB 쿼리 4건 + React 트리 절약 → drawer iframe SSR 1~3초 → 수백 ms.
+  const hdrs = await headers();
+  const isEmbed = hdrs.get('x-embed') === '1';
+  if (isEmbed) {
+    return <>{children}</>;
+  }
+
   // 모두 독립적인 쿼리 — 병렬 실행. cached 헬퍼라 페이지에서 또 호출해도 dedupe됨.
   const emptyBoardLatest: BoardLatest = { community: null, realty: null, stocks: null, restaurants: null, kids: null };
   const [user, profile, balance, boardLatest] = await Promise.all([

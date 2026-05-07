@@ -2248,13 +2248,21 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                 </div>
               </div>
             )}
-            <iframe
-              src={feedItemHref(previewItem)}
-              className="absolute inset-0 w-full h-full border-0"
-              title="글 상세"
-              loading="eager"
-              onLoad={() => setPreviewLoading(false)}
-            />
+            {(() => {
+              // embed=1 query → middleware 가 x-embed 헤더 set → Layout 이 Sidebar/MobileTopBar/플로팅 다 skip.
+              // drawer iframe SSR 1~3초 → 수백 ms 처방.
+              const baseHref = feedItemHref(previewItem);
+              const embedHref = baseHref + (baseHref.includes('?') ? '&' : '?') + 'embed=1';
+              return (
+                <iframe
+                  src={embedHref}
+                  className="absolute inset-0 w-full h-full border-0"
+                  title="글 상세"
+                  loading="eager"
+                  onLoad={() => setPreviewLoading(false)}
+                />
+              );
+            })()}
           </div>
         </aside>
       )}

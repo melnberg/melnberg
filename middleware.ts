@@ -30,6 +30,12 @@ export async function middleware(request: NextRequest) {
   const timeout = new Promise((resolve) => setTimeout(resolve, 5000));
   await Promise.race([supabase.auth.getUser().catch(() => null), timeout]);
 
+  // ?embed=1 → x-embed 헤더 set. Layout 이 headers() 로 읽어 minimal 모드로 분기.
+  // (데스크톱 글 패널 drawer iframe 의 SSR 비용 절감용 — Sidebar/MobileTopBar/플로팅 위젯 skip)
+  if (request.nextUrl.searchParams.get('embed') === '1') {
+    response.headers.set('x-embed', '1');
+  }
+
   return response;
 }
 
