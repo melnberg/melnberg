@@ -28,6 +28,10 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const [uploading, setUploading] = useState(false);
   // 첨부 이미지 — URL 텍스트는 본문에 안 박고 별도 thumbnail 로 미리보기. 제출 시 본문 끝에 자동 append.
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
+  // 투표 — 글 작성 시 선택적으로 추가. 수정(initial)에선 비활성.
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -120,6 +124,27 @@ export default function PostForm({ initial, category = 'community', redirectBase
       const awardKind = category === 'hotdeal' ? 'hotdeal_post' : 'community_post';
       await awardMlbg(awardKind, data.id, finalContent);
       notifyTelegram(awardKind, data.id);
+
+      // 투표 옵션 추가 — 실패해도 글 자체는 살아있음 (alert 만)
+      if (pollEnabled) {
+        const cleaned = pollOptions.map((s) => s.trim()).filter((s) => s.length > 0);
+        if (cleaned.length >= 2 && cleaned.length <= 6) {
+          const { data: pollResp, error: pollErr } = await supabase.rpc('create_post_poll', {
+            p_post_id: data.id,
+            p_question: pollQuestion.trim() || null,
+            p_options: cleaned,
+          });
+          const pollRow = Array.isArray(pollResp) ? pollResp[0] : pollResp;
+          if (pollErr) {
+            alert(`투표 등록 실패 (글은 정상 게시됨): ${pollErr.message}`);
+          } else if (pollRow && pollRow.out_success === false) {
+            alert(`투표 등록 실패 (글은 정상 게시됨): ${pollRow.out_message ?? '알 수 없는 오류'}`);
+          }
+        } else {
+          alert('투표는 옵션이 2~6개 필요합니다 — 글만 게시되었어요.');
+        }
+      }
+
       revalidateHome();
       router.push(`${redirectBase}/${data.id}`);
       router.refresh();
@@ -219,6 +244,80 @@ export default function PostForm({ initial, category = 'community', redirectBase
             <span className="text-muted ml-2">— 멤버십 결제한 회원만 본문 열람 가능</span>
           </span>
         </label>
+      )}
+
+      {/* 투표 — 새 글 작성 시에만 (수정에선 비활성) */}
+      {!initial && (
+        <div className="border border-border p-4 bg-bg/30">
+          <label className="flex items-center gap-2.5 text-[13px] text-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={pollEnabled}
+              onChange={(e) => setPollEnabled(e.target.checked)}
+              className="w-4 h-4 accent-navy cursor-pointer"
+            />
+            <span className="font-bold text-navy">🎰 mlbg 베팅 추가</span>
+            <span className="text-muted text-[12px]">— 옵션 2~6개. 사용자들이 mlbg 걸고 베팅. 정답 결정 시 배당률대로 정산.</span>
+          </label>
+          {pollEnabled && (
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold tracking-widest uppercase text-muted">
+                  질문 <span className="normal-case font-normal">(선택 — 비우면 글 제목)</span>
+                </label>
+                <input
+                  type="text"
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  placeholder="질문을 입력하세요"
+                  maxLength={200}
+                  className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold tracking-widest uppercase text-muted">옵션</label>
+                <div className="flex flex-col gap-2">
+                  {pollOptions.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold text-muted w-5 shrink-0">{i + 1}.</span>
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => {
+                          const next = pollOptions.slice();
+                          next[i] = e.target.value;
+                          setPollOptions(next);
+                        }}
+                        placeholder={`옵션 ${i + 1}`}
+                        maxLength={100}
+                        className="flex-1 border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))}
+                          aria-label="옵션 삭제"
+                          className="text-[14px] w-7 h-7 flex items-center justify-center bg-white border border-border text-muted hover:text-red-600 hover:border-red-300 cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {pollOptions.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setPollOptions([...pollOptions, ''])}
+                    className="self-start mt-1 text-[12px] font-bold text-navy bg-transparent border border-border hover:border-navy px-3 py-1.5 cursor-pointer"
+                  >
+                    + 옵션 추가
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {err && (

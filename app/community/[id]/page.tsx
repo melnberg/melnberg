@@ -9,10 +9,12 @@ import PostLikeButton from '@/components/PostLikeButton';
 import HyojaButton from '@/components/HyojaButton';
 import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
+import PollWidget from '@/components/PollWidget';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
+import { fetchPostPoll } from '@/lib/post-poll';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,6 +104,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
       '회원';
   }
 
+  // 투표 fetch
+  const pollData = await fetchPostPoll(numId, user?.id ?? null);
+
   return (
     <Layout current="community">
       <PostViewCounter postId={post.id} />
@@ -156,6 +161,19 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
             {linkify(post.content)}
           </div>
+
+          {/* 투표 (있을 때만) */}
+          {pollData.poll && (
+            <PollWidget
+              postId={post.id}
+              poll={pollData.poll}
+              options={pollData.options}
+              votes={pollData.votes}
+              myVote={pollData.myVote}
+              currentUserId={user?.id ?? null}
+              isAuthor={isAuthor}
+            />
+          )}
 
           {/* 댓글 */}
           <CommentSection

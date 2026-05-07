@@ -7,9 +7,11 @@ import PostActions from '@/components/PostActions';
 import PostViewCounter from '@/components/PostViewCounter';
 import RewardTooltip from '@/components/RewardTooltip';
 import PostLikeButton from '@/components/PostLikeButton';
+import PollWidget from '@/components/PollWidget';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
+import { fetchPostPoll } from '@/lib/post-poll';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +77,8 @@ export default async function WorryPostDetail({ params }: { params: Promise<{ id
   // worry 게시판은 댓글 작성자도 익명으로 표시. CommentSection 에 currentUserName="익명" 전달.
   const currentUserName: string | null = user ? '익명' : null;
 
+  const pollData = await fetchPostPoll(numId, user?.id ?? null);
+
   return (
     <Layout current="worry">
       <PostViewCounter postId={post.id} />
@@ -107,6 +111,19 @@ export default async function WorryPostDetail({ params }: { params: Promise<{ id
           <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
             {linkify(post.content)}
           </div>
+
+          {pollData.poll && (
+            <PollWidget
+              postId={post.id}
+              poll={pollData.poll}
+              options={pollData.options}
+              votes={pollData.votes}
+              myVote={pollData.myVote}
+              currentUserId={user?.id ?? null}
+              isAuthor={isAuthor}
+              anonymous
+            />
+          )}
 
           <CommentSection
             postId={post.id}

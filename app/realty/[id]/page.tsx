@@ -8,10 +8,12 @@ import PostViewCounter from '@/components/PostViewCounter';
 import Nickname from '@/components/Nickname';
 import RewardTooltip from '@/components/RewardTooltip';
 import PostLikeButton from '@/components/PostLikeButton';
+import PollWidget from '@/components/PollWidget';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
+import { fetchPostPoll } from '@/lib/post-poll';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +82,8 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
     currentUserName = profile?.display_name ?? user.email?.split('@')[0] ?? '회원';
   }
 
+  const pollData = await fetchPostPoll(numId, user?.id ?? null);
+
   return (
     <Layout current="realty">
       <PostViewCounter postId={post.id} />
@@ -114,6 +118,18 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
           <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
             {linkify(post.content)}
           </div>
+
+          {pollData.poll && (
+            <PollWidget
+              postId={post.id}
+              poll={pollData.poll}
+              options={pollData.options}
+              votes={pollData.votes}
+              myVote={pollData.myVote}
+              currentUserId={user?.id ?? null}
+              isAuthor={isAuthor}
+            />
+          )}
 
           <CommentSection
             postId={post.id}
