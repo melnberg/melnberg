@@ -56,9 +56,11 @@ function hrefFor(f: FeedItem): string | null {
   if ((f.kind === 'auction' || f.kind === 'auction_bid') && f.auction_id) return `/auctions/${f.auction_id}`;
   if (f.kind === 'post' || f.kind === 'post_comment') {
     if (!f.post_id) return null;
-    const base = f.post_category === 'hotdeal' ? '/hotdeal'
-               : f.post_category === 'stocks' ? '/stocks'
-               : '/community';
+    if (f.post_category === 'stocks') {
+      // 종목별 토론방 — code 가 있으면 /stocks/{code}/{postId}, 없으면 종목 목록
+      return f.stock_code ? `/stocks/${f.stock_code}/${f.post_id}` : '/stocks';
+    }
+    const base = f.post_category === 'hotdeal' ? '/hotdeal' : '/community';
     return `${base}/${f.post_id}`;
   }
   if (f.kind === 'notice' && f.notice_href) return f.notice_href;

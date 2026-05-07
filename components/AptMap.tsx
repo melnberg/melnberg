@@ -131,6 +131,8 @@ export type FeedItem = {
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
   post_category?: 'community' | 'hotdeal' | 'stocks';
+  /** stocks 카테고리 글 — 종목 코드 (라우팅 /stocks/{code}/{postId}) */
+  stock_code?: string | null;
   /** strike 전용 — 손실 % 와 mlbg 액수 */
   strike_loss_pct?: number;
   strike_loss_mlbg?: number;
@@ -1085,9 +1087,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       if (k) setSelectedKids(k);
       return;
     }
-    // 커뮤니티 글/댓글 → /community/{post_id} 로 이동
+    // 커뮤니티/핫딜/주식 글·댓글 → 카테고리별 라우트
     if ((item.kind === 'post' || item.kind === 'post_comment') && item.post_id) {
-      router.push(`/community/${item.post_id}`);
+      if (item.post_category === 'stocks') {
+        router.push(item.stock_code ? `/stocks/${item.stock_code}/${item.post_id}` : '/stocks');
+      } else if (item.post_category === 'hotdeal') {
+        router.push(`/hotdeal/${item.post_id}`);
+      } else {
+        router.push(`/community/${item.post_id}`);
+      }
       return;
     }
     // 아파트 토론/댓글/매물 → 지도 + 단지 패널

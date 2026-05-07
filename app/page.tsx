@@ -26,7 +26,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .limit(50),
       supabase
         .from('posts')
-        .select('id, author_id, title, content, category, created_at')
+        .select('id, author_id, title, content, category, stock_code, created_at')
         .in('category', ['community', 'hotdeal', 'stocks'])
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -331,7 +331,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       factoryCommCntRows,
     ] = await Promise.all([
       commentPostIds.length > 0
-        ? supabase.from('posts').select('id, title, category').in('id', commentPostIds)
+        ? supabase.from('posts').select('id, title, category, stock_code').in('id', commentPostIds)
             .then((r) => r, () => ({ data: null }))
         : Promise.resolve({ data: null }),
       allAuthorIds.length > 0
@@ -373,9 +373,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     ]);
 
     // commentPostMap 빌드
-    const commentPostMap = new Map<number, { title: string | null; category: string | null }>();
-    for (const p of (((commentPostsResp as { data: unknown[] | null })?.data) ?? []) as Array<{ id: number; title: string | null; category: string | null }>) {
-      commentPostMap.set(p.id, { title: p.title, category: p.category });
+    const commentPostMap = new Map<number, { title: string | null; category: string | null; stock_code: string | null }>();
+    for (const p of (((commentPostsResp as { data: unknown[] | null })?.data) ?? []) as Array<{ id: number; title: string | null; category: string | null; stock_code: string | null }>) {
+      commentPostMap.set(p.id, { title: p.title, category: p.category, stock_code: p.stock_code });
     }
 
     // profileMap 빌드
@@ -473,7 +473,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const postItems: FeedItem[] = (posts ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const prof = profileMap.get(row.author_id as string);
-      const cat = (row.category as 'community' | 'hotdeal' | undefined) ?? 'community';
+      const cat = (row.category as 'community' | 'hotdeal' | 'stocks' | undefined) ?? 'community';
       return {
         kind: 'post' as const,
         id: row.id as number,
@@ -498,6 +498,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         })(),
         comment_count: postCommCnt.get(row.id as number) ?? 0,
         post_category: cat,
+        stock_code: (row.stock_code as string | null) ?? null,
       };
     });
 
@@ -529,6 +530,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
           author_apt_count: prof?.apt_count ?? null,
           earned_mlbg: cat === 'hotdeal' ? earnedFor('hotdeal_comment', row.id as number) : earnedFor('community_comment', row.id as number),
           post_category: cat,
+          stock_code: (post as { stock_code?: string | null } | null)?.stock_code ?? null,
         };
       });
 

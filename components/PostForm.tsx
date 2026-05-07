@@ -11,10 +11,11 @@ import { fileToWebp } from '@/lib/image-to-webp';
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
   category?: 'community' | 'blog' | 'hotdeal' | 'stocks';
-  redirectBase?: string; // '/community' | '/blog' | '/hotdeal' | '/stocks'
+  redirectBase?: string; // '/community' | '/blog' | '/hotdeal' | '/stocks/{code}'
+  stockCode?: string;    // category='stocks' 일 때만. 종목 코드. 글 INSERT 시 같이 저장.
 };
 
-export default function PostForm({ initial, category = 'community', redirectBase = '/community' }: Props) {
+export default function PostForm({ initial, category = 'community', redirectBase = '/community', stockCode }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -107,6 +108,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
           content: content.trim(),
           category,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
+          stock_code: category === 'stocks' && stockCode ? stockCode : null,
         })
         .select('id')
         .single();
