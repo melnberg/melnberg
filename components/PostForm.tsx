@@ -24,10 +24,11 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // 첨부 이미지 — URL 텍스트는 본문에 안 박고 별도 thumbnail 로 미리보기. 제출 시 본문 끝에 자동 append.
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 이미지 업로드 → 본문에 URL 삽입. linkify 가 자동으로 <img> 렌더.
   async function handleImageUpload(file: File) {
     if (uploading) return;
     if (file.size > 5 * 1024 * 1024) { setErr('5MB 이하 이미지만 가능합니다.'); return; }
@@ -35,7 +36,6 @@ export default function PostForm({ initial, category = 'community', redirectBase
     setUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setErr('로그인이 필요합니다.'); setUploading(false); return; }
-    // 용량관리 — webp 로 변환 후 업로드. gif 는 원본 유지.
     const converted = await fileToWebp(file).catch(() => null);
     const blob = converted?.blob ?? file;
     const isWebp = blob !== file;
@@ -46,28 +46,25 @@ export default function PostForm({ initial, category = 'community', redirectBase
     setUploading(false);
     if (upErr) { setErr(`업로드 실패: ${upErr.message}`); return; }
     const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
-    // 본문에 별도 줄로 URL 삽입 — linkify 가 .jpg/.png/.webp/.gif 끝나면 <img> 로 렌더
-    const insert = `\n${publicUrl}\n`;
-    const ta = textareaRef.current;
-    if (ta) {
-      const start = ta.selectionStart ?? content.length;
-      const end = ta.selectionEnd ?? content.length;
-      const next = content.slice(0, start) + insert + content.slice(end);
-      setContent(next);
-      // 커서 위치 이동
-      requestAnimationFrame(() => {
-        const pos = start + insert.length;
-        ta.focus(); ta.setSelectionRange(pos, pos);
-      });
-    } else {
-      setContent((c) => c + insert);
-    }
+    setAttachedImages((cur) => [...cur, publicUrl]);
+  }
+
+  function removeAttached(url: string) {
+    setAttachedImages((cur) => cur.filter((u) => u !== url));
+  }
+
+  // 본문 + 첨부 이미지 URL → 최종 저장될 텍스트
+  function composeFinalContent(): string {
+    const body = content.trim();
+    if (attachedImages.length === 0) return body;
+    return body + '\n\n' + attachedImages.join('\n');
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
-    if (!title.trim() || !content.trim()) {
+    const finalContent = composeFinalContent();
+    if (!title.trim() || !finalContent) {
       setErr('제목과 내용을 모두 입력해주세요.');
       return;
     }
@@ -86,7 +83,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
         .from('posts')
         .update({
           title: title.trim(),
-          content: content.trim(),
+          content: finalContent,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
           updated_at: new Date().toISOString(),
         })
@@ -105,7 +102,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
         .insert({
           author_id: user.id,
           title: title.trim(),
-          content: content.trim(),
+          content: finalContent,
           category,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
           stock_code: category === 'stocks' && stockCode ? stockCode : null,
@@ -117,9 +114,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
         setErr(error?.message ?? '저장 실패');
         return;
       }
-      // mlbg 적립 — await 로 기다려서 상세 페이지에서 +N 즉시 보이게
       const awardKind = category === 'hotdeal' ? 'hotdeal_post' : 'community_post';
-      await awardMlbg(awardKind, data.id, content.trim());
+      await awardMlbg(awardKind, data.id, finalContent);
       notifyTelegram(awardKind, data.id);
       revalidateHome();
       router.push(`${redirectBase}/${data.id}`);
@@ -172,11 +168,29 @@ export default function PostForm({ initial, category = 'community', redirectBase
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="내용을 입력하세요. 사진은 우측 상단 [📷 사진 추가] 버튼으로 업로드."
-          required
+          placeholder="내용을 입력하세요. 사진은 우측 상단 [📷 사진 추가] 버튼으로 업로드 (썸네일로 미리보기)."
           rows={14}
           className="border border-border border-b-2 border-b-navy px-3.5 py-3 text-[15px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
         />
+        {/* 첨부 이미지 썸네일 미리보기 — 게시 시 본문 끝에 자동 추가됨 */}
+        {attachedImages.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {attachedImages.map((url) => (
+              <div key={url} className="relative w-24 h-24 border border-border bg-bg/30 overflow-hidden group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="첨부" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeAttached(url)}
+                  aria-label="첨부 삭제"
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 text-white text-[14px] leading-none flex items-center justify-center cursor-pointer border-none hover:bg-black/90"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {category === 'blog' && (
