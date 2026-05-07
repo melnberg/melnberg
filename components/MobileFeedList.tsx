@@ -175,9 +175,10 @@ function feedWeightClient(f: FeedItem, now: number): number {
   return Math.max(w, 0.01);
 }
 
-// auction / notice 는 강제 상단 — 셔플 대상 아님. 서버에서 이미 앞쪽에 배치돼 들어옴.
+// auction (진행 중 경매 본글) 만 강제 상단. auction_bid / auction_won 알림은
+// SYSTEM 가중치(×0.25) 로 뒤로 밀려야 — fixed 로 두면 가중치 무시되고 위에 쌓임.
 function isFixedKind(k: FeedItem['kind']): boolean {
-  return k === 'auction' || k === 'auction_bid' || k === 'auction_won' || k === 'notice';
+  return k === 'auction';
 }
 
 function shuffleItems(items: FeedItem[]): FeedItem[] {
