@@ -131,7 +131,7 @@ export type FeedItem = {
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
-  post_category?: 'community' | 'hotdeal' | 'stocks';
+  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty';
   /** stocks 카테고리 글 — 종목 코드 (라우팅 /stocks/{code}/{postId}) */
   stock_code?: string | null;
   /** strike 전용 — 손실 % 와 mlbg 액수 */
@@ -1218,6 +1218,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     if ((item.kind === 'post' || item.kind === 'post_comment') && item.post_id) {
       const base = item.post_category === 'hotdeal' ? '/hotdeal'
                  : item.post_category === 'stocks' ? '/stocks'
+                 : item.post_category === 'realty' ? '/realty'
                  : '/community';
       router.push(`${base}/${item.post_id}`);
       return;
@@ -2055,7 +2056,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <button
                             type="button"
-                            onClick={() => jumpToFeedItem(f)}
+                            onClick={() => setFeedExpandedKey(isExpanded ? null : itemKey)}
                             className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1 bg-transparent border-none p-0 cursor-pointer"
                           >
                             {headLabel}
@@ -2063,13 +2064,23 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
                             <Nickname info={feedItemToNicknameInfo(f)} />
                           </span>
+                          {/* 페이지로 이동 — 라우팅 원하는 사용자용. 카드 클릭(펼침)과 분리. */}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); jumpToFeedItem(f); }}
+                            className="text-[10px] text-muted hover:text-navy hover:underline flex-shrink-0 bg-transparent border-none p-0 cursor-pointer"
+                            aria-label="페이지로 이동"
+                            title="페이지로 이동"
+                          >
+                            ↗ 페이지
+                          </button>
                         </div>
-                        {/* 본문 영역 — 클릭 시 jumpToFeedItem 으로 이동 (글로) */}
+                        {/* 본문 영역 — 클릭 시 그 자리에서 펼침/접기 토글 (라우팅 X). 페이지 이동은 우상단 ↗ 페이지 버튼. */}
                         <div
                           role="button"
                           tabIndex={0}
-                          onClick={() => jumpToFeedItem(f)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') jumpToFeedItem(f); }}
+                          onClick={() => setFeedExpandedKey(isExpanded ? null : itemKey)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') setFeedExpandedKey(isExpanded ? null : itemKey); }}
                           className="cursor-pointer hover:opacity-80"
                         >
                           {(isEmartOccupy || isFactoryOccupy) ? (
