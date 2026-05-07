@@ -5,6 +5,7 @@ import MyStoreForm from '@/components/MyStoreForm';
 import { createClient } from '@/lib/supabase/server';
 
 export const metadata = { title: '내 가게 등록 — 멜른버그' };
+export const dynamic = 'force-dynamic';
 
 export default async function NewStorePage() {
   const supabase = await createClient();
