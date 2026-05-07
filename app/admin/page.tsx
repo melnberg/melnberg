@@ -80,6 +80,7 @@ export default async function AdminPage() {
               <a href="/admin/strikes" className="px-3 py-1.5 border border-[#dc2626] bg-[#dc2626] text-white text-[12px] font-bold no-underline hover:bg-[#b91c1c]">💥 파업</a>
               <a href="/admin/apt-master" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">아파트 마스터</a>
               <a href="/admin/feedback" className="px-3 py-1.5 border border-border bg-white text-text text-[12px] font-bold no-underline hover:border-navy hover:text-navy">건의사항</a>
+              <a href="/admin/basic-income" className="px-3 py-1.5 border border-cyan bg-cyan text-white text-[12px] font-bold no-underline hover:bg-cyan/80">💸 기본소득</a>
               <LaunchTelegramButton />
               <LaunchPartiesTelegramButton />
             </div>
