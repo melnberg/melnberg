@@ -316,17 +316,13 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
           </div>
 
           <div className="border-l-4 border-cyan bg-cyan/5 px-4 py-3 mb-4">
-            <div className="text-[12px] font-bold text-navy mb-1">💰 매일 {factory.daily_income} mlbg 자동 수익</div>
-            <div className="text-[11px] text-muted leading-relaxed">24시간마다 +{factory.daily_income} 누적. {ownerLabel}이 직접 청구.</div>
+            <div className="text-[12px] font-bold text-navy mb-1">💰 매일 {factory.daily_income} mlbg 자동 적립</div>
+            <div className="text-[11px] text-muted leading-relaxed">매일 KST 8시에 자동 적립 + 알림. 별도 청구 불필요.</div>
           </div>
 
           <div className="grid gap-2 mb-4">
             {isMine ? (
               <>
-                <button type="button" onClick={claim} disabled={busy || daysOwed < 1}
-                  className="bg-cyan text-navy border-none px-4 py-2.5 text-[13px] font-black tracking-wide hover:bg-cyan/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer">
-                  {daysOwed >= 1 ? `수익 청구 (+${owedAmount.toLocaleString()} mlbg)` : '아직 24시간 안 지남'}
-                </button>
                 <button type="button" onClick={release} disabled={busy}
                   className="bg-white border border-border text-text px-4 py-2 text-[12px] font-bold hover:border-red-500 hover:text-red-600 disabled:opacity-50 cursor-pointer">
                   보유 해제 ({factory.occupy_price.toLocaleString()} mlbg 환불)

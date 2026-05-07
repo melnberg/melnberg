@@ -318,9 +318,9 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
 
           {/* 수익 안내 */}
           <div className="border-l-4 border-cyan bg-cyan/5 px-4 py-3 mb-4">
-            <div className="text-[12px] font-bold text-navy mb-1">💰 매일 1 mlbg 자동 수익</div>
+            <div className="text-[12px] font-bold text-navy mb-1">💰 매일 1 mlbg 자동 적립</div>
             <div className="text-[11px] text-muted leading-relaxed">
-              24시간마다 1 mlbg 누적. 사장이 직접 청구 → 잔액 입금. 1인 1점포 제한.
+              매일 KST 8시에 자동 적립 + 알림. 별도 청구 불필요. 1인 1점포 제한.
             </div>
           </div>
 
@@ -328,14 +328,6 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
           <div className="grid gap-2 mb-4">
             {isMine ? (
               <>
-                <button
-                  type="button"
-                  onClick={claim}
-                  disabled={busy || daysOwed < 1}
-                  className="bg-cyan text-navy border-none px-4 py-2.5 text-[13px] font-black tracking-wide hover:bg-cyan/80 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {daysOwed >= 1 ? `수익 청구 (+${daysOwed} mlbg)` : '아직 24시간 안 지남'}
-                </button>
                 <button
                   type="button"
                   onClick={release}

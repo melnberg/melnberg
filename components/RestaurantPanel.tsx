@@ -215,8 +215,8 @@ export default function RestaurantPanel({
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted">분양: <b className="text-navy">{restaurant.occupier_name ?? '익명'}</b></span>
               {isMine ? (
-                <div className="flex gap-1">
-                  <button onClick={claim} disabled={busy} className="bg-cyan text-navy px-2 py-1 text-[11px] font-bold cursor-pointer hover:bg-cyan/80 border-none disabled:opacity-40">수익청구</button>
+                <div className="flex gap-1 items-center">
+                  <span className="text-[10px] text-cyan font-bold tracking-wide">매일 자동 적립</span>
                   <button onClick={release} disabled={busy} className="bg-white border border-border text-text px-2 py-1 text-[11px] font-bold cursor-pointer hover:border-red-500 hover:text-red-600 disabled:opacity-40">해제</button>
                 </div>
               ) : restaurant.listing_price != null ? (
