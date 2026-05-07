@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import { getCurrentUser } from '@/lib/auth';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicClient } from '@/lib/supabase/public';
 import Nickname from '@/components/Nickname';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 
@@ -21,11 +21,12 @@ type StoreRow = {
 };
 
 export default async function StoresIndex() {
-  const supabase = await createClient();
   const user = await getCurrentUser();
 
-  // 1) 가게 목록 (조인 X — Supabase FK 추론 실패하던 사례 회피, 분리 fetch)
-  const { data: rows, error } = await supabase
+  // 1) 가게 목록 — public client (anon) 로 조회. 쿠키 컨텍스트 없는 환경에서도 RLS 정책 (deleted_at IS NULL) 적용.
+  // 조인 X — Supabase FK 추론 실패하던 사례 회피, 프로필은 별도 fetch.
+  const pub = createPublicClient();
+  const { data: rows, error } = await pub
     .from('my_stores')
     .select('id, author_id, name, category, description, recommended, address, dong, lat, lng, photo_url, contact, url, verified, like_count, created_at')
     .is('deleted_at', null)
@@ -38,7 +39,7 @@ export default async function StoresIndex() {
   const authorIds = Array.from(new Set(baseStores.map((s) => s.author_id)));
   const authorMap = new Map<string, AuthorInfo>();
   if (authorIds.length > 0) {
-    const { data: profs } = await supabase
+    const { data: profs } = await pub
       .from('profiles')
       .select('id, display_name, link_url, tier, tier_expires_at, is_solo, avatar_url')
       .in('id', authorIds);
