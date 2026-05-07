@@ -29,12 +29,37 @@ function loadKakao(): Promise<void> {
 
 type Place = { id: string; place_name: string; road_address_name: string; address_name: string; x: string; y: string; category_name?: string };
 
+type KakaoMarkerInst = {
+  setMap: (m: unknown) => void;
+  setImage: (img: unknown) => void;
+  getPosition: () => unknown;
+};
+
+function previewMarkerSvg(num: number, hovered: boolean): string {
+  const fill = hovered ? '#002060' : '#00B0F0';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="30" viewBox="0 0 24 30"><circle cx="12" cy="12" r="11" fill="${fill}" stroke="#002060" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="white" font-family="sans-serif">${num}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function makePreviewMarkerImage(num: number, hovered: boolean): unknown {
+  const maps = window.kakao.maps as unknown as {
+    Size: new (w: number, h: number) => unknown;
+    Point: new (x: number, y: number) => unknown;
+    MarkerImage: new (src: string, size: unknown, opts?: { offset?: unknown }) => unknown;
+  };
+  const size = hovered ? new maps.Size(30, 38) : new maps.Size(24, 30);
+  const offset = hovered ? new maps.Point(15, 38) : new maps.Point(12, 30);
+  return new maps.MarkerImage(previewMarkerSvg(num, hovered), size, { offset });
+}
+
 export default function RestaurantPinForm({ currentUserId }: { currentUserId: string }) {
   const supabase = createClient();
   const router = useRouter();
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
   const markerRef = useRef<unknown>(null);
+  const searchMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [recommendedMenu, setRecommendedMenu] = useState('');
@@ -97,19 +122,75 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
     (mapRef.current as { panTo: (p: unknown) => void }).panTo(pos);
   }
 
+  function clearSearchMarkers() {
+    for (const m of searchMarkersRef.current) {
+      try { m.setMap(null); } catch { /* ignore */ }
+    }
+    searchMarkersRef.current = [];
+  }
+
   function search() {
     if (!searchQuery.trim()) return;
+    clearSearchMarkers();
+    setHoveredIdx(null);
     const ps = new window.kakao.maps.services.Places();
     ps.keywordSearch(searchQuery.trim(), (data, status) => {
-      if (status === window.kakao.maps.services.Status.OK) {
-        setSearchResults((data as unknown as Place[]).slice(0, 8));
-      } else {
+      if (status !== window.kakao.maps.services.Status.OK) {
         setSearchResults([]);
+        return;
+      }
+      const results = (data as unknown as Place[]).slice(0, 8);
+      setSearchResults(results);
+      const map = mapRef.current;
+      if (!map) return;
+      const mapsAny = window.kakao.maps as unknown as {
+        LatLngBounds: new () => { extend: (p: unknown) => void };
+        LatLng: new (lat: number, lng: number) => unknown;
+        Marker: new (opts: { position: unknown; image?: unknown }) => unknown;
+        event: { addListener: (target: unknown, type: string, handler: (...args: unknown[]) => void) => void };
+      };
+      const bounds = new mapsAny.LatLngBounds();
+      results.forEach((p, idx) => {
+        const lat0 = Number(p.y);
+        const lng0 = Number(p.x);
+        if (!Number.isFinite(lat0) || !Number.isFinite(lng0)) return;
+        const pos = new mapsAny.LatLng(lat0, lng0);
+        const image = makePreviewMarkerImage(idx + 1, false);
+        const marker = new mapsAny.Marker({ position: pos, image }) as unknown as KakaoMarkerInst;
+        marker.setMap(map);
+        mapsAny.event.addListener(marker, 'click', () => pickPlace(p));
+        mapsAny.event.addListener(marker, 'mouseover', () => setHoveredIdx(idx));
+        mapsAny.event.addListener(marker, 'mouseout', () => setHoveredIdx(null));
+        searchMarkersRef.current.push(marker);
+        bounds.extend(pos);
+      });
+      if (results.length > 0) {
+        (map as { setBounds: (b: unknown, p?: number) => void }).setBounds(bounds, 60);
+        const mapAny = map as { getLevel: () => number; setLevel: (l: number) => void };
+        if (mapAny.getLevel() < 3) mapAny.setLevel(3);
       }
     });
   }
 
+  // hover 변경 시 마커 이미지 교체 + panTo
+  useEffect(() => {
+    const markers = searchMarkersRef.current;
+    if (markers.length === 0) return;
+    markers.forEach((m, idx) => {
+      const isHover = hoveredIdx === idx;
+      try { m.setImage(makePreviewMarkerImage(idx + 1, isHover)); } catch { /* ignore */ }
+    });
+    if (hoveredIdx != null && markers[hoveredIdx] && mapRef.current) {
+      try {
+        const pos = markers[hoveredIdx].getPosition();
+        (mapRef.current as { panTo: (p: unknown) => void }).panTo(pos);
+      } catch { /* ignore */ }
+    }
+  }, [hoveredIdx]);
+
   function pickPlace(p: Place) {
+    clearSearchMarkers();
+    setHoveredIdx(null);
     setName(p.place_name);
     setAddress(p.road_address_name || p.address_name);
     setMarker(Number(p.y), Number(p.x));
@@ -216,12 +297,18 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
         </div>
         {searchResults.length > 0 && (
           <ul className="border border-border max-h-[200px] overflow-y-auto">
-            {searchResults.map((p) => (
+            {searchResults.map((p, idx) => (
               <li key={p.id}>
-                <button type="button" onClick={() => pickPlace(p)} className="w-full text-left px-3 py-2 hover:bg-bg/40 border-b border-[#f0f0f0] last:border-b-0 bg-white cursor-pointer">
-                  <div className="text-[13px] font-bold text-navy">{p.place_name}</div>
-                  <div className="text-[11px] text-muted">{p.road_address_name || p.address_name}</div>
-                  {p.category_name && <div className="text-[10px] text-muted/70">{p.category_name}</div>}
+                <button type="button" onClick={() => pickPlace(p)}
+                  onMouseEnter={() => setHoveredIdx(idx)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                  className={`w-full text-left px-3 py-2 border-b border-[#f0f0f0] last:border-b-0 cursor-pointer flex items-start gap-2 ${hoveredIdx === idx ? 'bg-cyan/10' : 'bg-white hover:bg-bg/40'}`}>
+                  <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-black tabular-nums" style={{ background: hoveredIdx === idx ? '#002060' : '#00B0F0' }}>{idx + 1}</span>
+                  <span className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-navy">{p.place_name}</div>
+                    <div className="text-[11px] text-muted">{p.road_address_name || p.address_name}</div>
+                    {p.category_name && <div className="text-[10px] text-muted/70">{p.category_name}</div>}
+                  </span>
                 </button>
               </li>
             ))}
