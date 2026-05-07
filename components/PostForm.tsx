@@ -11,7 +11,7 @@ import StockPicker from './StockPicker';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null };
-  category?: 'community' | 'blog' | 'hotdeal' | 'stocks';
+  category?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty';
   redirectBase?: string;
 };
 

@@ -63,6 +63,7 @@ function hrefFor(f: FeedItem): string | null {
     if (!f.post_id) return null;
     const base = f.post_category === 'hotdeal' ? '/hotdeal'
                : f.post_category === 'stocks' ? '/stocks'
+               : f.post_category === 'realty' ? '/realty'
                : '/community';
     return `${base}/${f.post_id}`;
   }
@@ -257,6 +258,7 @@ export default function MobileFeedList({ items }: Props) {
             : (f.kind === 'post' || f.kind === 'post_comment') ? (
                 f.post_category === 'hotdeal' ? '🔥 핫딜'
                 : f.post_category === 'stocks' ? '📈 주식 토론'
+                : f.post_category === 'realty' ? '🏢 부동산 토론'
                 : '커뮤니티'
               )
             : aptHeadLabel;
