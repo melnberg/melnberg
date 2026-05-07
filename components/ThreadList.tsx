@@ -217,13 +217,11 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
     const content = editContent.trim();
     if (content === '' || saving) return;
     setSaving(true);
-    const { error } = await supabase
-      .from('threads')
-      .update({ content })
-      .eq('id', id);
+    const { data, error } = await supabase.rpc('update_thread', { p_id: id, p_content: content });
     setSaving(false);
-    if (error) {
-      alert('수정 실패: ' + error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || (row && row.out_success === false)) {
+      alert('수정 실패: ' + (error?.message ?? row?.out_message ?? '알 수 없음'));
       return;
     }
     setItems((cur) => cur.map((t) => (t.id === id ? { ...t, content } : t)));
@@ -234,12 +232,10 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
 
   async function deleteThread(id: number) {
     if (!confirm('삭제할까?')) return;
-    const { error } = await supabase
-      .from('threads')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) {
-      alert('삭제 실패: ' + error.message);
+    const { data, error } = await supabase.rpc('delete_thread', { p_id: id });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || (row && row.out_success === false)) {
+      alert('삭제 실패: ' + (error?.message ?? row?.out_message ?? '알 수 없음'));
       return;
     }
     setItems((cur) => cur.filter((t) => t.id !== id));
