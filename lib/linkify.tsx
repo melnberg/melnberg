@@ -47,6 +47,7 @@ export function linkify(text: string | null | undefined): React.ReactNode {
               src={p.href}
               alt=""
               loading="lazy"
+              decoding="async"
               className="mlbg-post-img"
             />
           );

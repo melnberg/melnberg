@@ -202,6 +202,9 @@
   margin: 12px auto !important;
   object-fit: contain !important;
   border-radius: 12px !important;
+  /* 화면 밖 이미지는 렌더 skip — 글에 사진 여러 장일 때 첫 페인트 빨라짐 */
+  content-visibility: auto;
+  contain-intrinsic-size: 480px 400px;
 }
 
 /* 오로라 — 그라디언트 위치 천천히 이동. 펄스/음영 없음. FloatingMapPin 등에서 사용 */
