@@ -56,7 +56,9 @@ function hrefFor(f: FeedItem): string | null {
   if ((f.kind === 'auction' || f.kind === 'auction_bid') && f.auction_id) return `/auctions/${f.auction_id}`;
   if (f.kind === 'post' || f.kind === 'post_comment') {
     if (!f.post_id) return null;
-    const base = f.post_category === 'hotdeal' ? '/hotdeal' : '/community';
+    const base = f.post_category === 'hotdeal' ? '/hotdeal'
+               : f.post_category === 'stocks' ? '/stocks'
+               : '/community';
     return `${base}/${f.post_id}`;
   }
   if (f.kind === 'notice' && f.notice_href) return f.notice_href;
@@ -247,7 +249,11 @@ export default function MobileFeedList({ items }: Props) {
             : f.kind === 'kids_register' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>
             : f.kind === 'kids_comment' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
-            : (f.kind === 'post' || f.kind === 'post_comment') ? (f.post_category === 'hotdeal' ? '🔥 핫딜' : '커뮤니티')
+            : (f.kind === 'post' || f.kind === 'post_comment') ? (
+                f.post_category === 'hotdeal' ? '🔥 핫딜'
+                : f.post_category === 'stocks' ? '📈 주식 토론'
+                : '커뮤니티'
+              )
             : aptHeadLabel;
           const fullContent = (f.content ?? '').trim();
           const isAuctionLive = f.kind === 'auction';

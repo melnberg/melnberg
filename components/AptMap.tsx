@@ -130,7 +130,7 @@ export type FeedItem = {
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
-  post_category?: 'community' | 'hotdeal';
+  post_category?: 'community' | 'hotdeal' | 'stocks';
   /** strike 전용 — 손실 % 와 mlbg 액수 */
   strike_loss_pct?: number;
   strike_loss_mlbg?: number;

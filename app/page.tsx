@@ -27,7 +27,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       supabase
         .from('posts')
         .select('id, author_id, title, content, category, created_at')
-        .in('category', ['community', 'hotdeal'])
+        .in('category', ['community', 'hotdeal', 'stocks'])
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -504,13 +504,13 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const postCommentItems: FeedItem[] = (postComments ?? [])
       .filter((r) => {
         const post = commentPostMap.get((r as Record<string, unknown>).post_id as number);
-        return post?.category === 'community' || post?.category === 'hotdeal';
+        return post?.category === 'community' || post?.category === 'hotdeal' || post?.category === 'stocks';
       })
       .map((r) => {
         const row = r as Record<string, unknown>;
         const post = commentPostMap.get(row.post_id as number) ?? null;
         const prof = profileMap.get(row.author_id as string);
-        const cat = (post?.category as 'community' | 'hotdeal' | undefined) ?? 'community';
+        const cat = (post?.category as 'community' | 'hotdeal' | 'stocks' | undefined) ?? 'community';
         return {
           kind: 'post_comment' as const,
           id: row.id as number,
