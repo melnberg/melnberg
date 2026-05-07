@@ -7,7 +7,33 @@
 -- 변경: 각 cron/관리자 실행 = "오늘 (KST) 1일치 적립" — 시설별 1번만 (per user).
 -- 중복은 DB unique 제약으로 차단 → ON CONFLICT DO NOTHING.
 -- 어제 분량은 어제 cron 이 처리했어야 함 (없으면 그 날 손실, 백필 X).
+--
+-- NOTE: 160 안 돌렸을 때를 대비해 facility_income_log 테이블·정책도 여기서 보장 (idempotent).
 -- ──────────────────────────────────────────────
+
+-- 160 에서 만들었어야 할 테이블 — 단독 실행 보장 (이미 있으면 skip)
+create table if not exists public.facility_income_log (
+  id bigserial primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  facility_type text not null check (facility_type in ('emart','factory','restaurant','kids')),
+  facility_id bigint,
+  paid_for_date date not null,
+  amount numeric not null,
+  paid_at timestamptz not null default now()
+);
+create index if not exists facility_income_log_user_facility_idx
+  on public.facility_income_log(user_id, facility_type, facility_id, paid_for_date desc);
+create index if not exists facility_income_log_user_recent_idx
+  on public.facility_income_log(user_id, paid_for_date desc);
+
+alter table public.facility_income_log enable row level security;
+drop policy if exists "facility_income_log own read" on public.facility_income_log;
+create policy "facility_income_log own read"
+  on public.facility_income_log for select using (user_id = auth.uid());
+drop policy if exists "facility_income_log admin read" on public.facility_income_log;
+create policy "facility_income_log admin read"
+  on public.facility_income_log for select
+  using (exists (select 1 from public.profiles where id = auth.uid() and is_admin = true));
 
 -- (시설별, 사용자별, 날짜별) unique — 같은 facility_id 가 null 이어도 동일 user×date 중복 방지
 create unique index if not exists facility_income_log_facility_unique_idx
