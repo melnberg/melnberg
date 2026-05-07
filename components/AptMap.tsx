@@ -96,7 +96,7 @@ function saveCurrentMapState(inst: KakaoMapInst | null) {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -2088,6 +2088,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : f.kind === 'strike' ? '💥 파업'
                     : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
                     : f.kind === 'sell_complete' ? '🤝 거래성사'
+                    : f.kind === 'thread' ? '@ 스레드'
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
                     : isCommunity ? '커뮤니티'
                     : (aptHeadLabel || '(단지 정보 없음)');
@@ -2187,6 +2188,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 {fullContent && <span className="text-muted block mt-0.5">{fullContent}</span>}
                               </span>
                             </div>
+                          ) : f.kind === 'thread' ? (
+                            <div className="text-[12px] text-text leading-snug whitespace-pre-wrap break-words">
+                              {fullContent ? renderFeedContentWithImages(fullContent) : '(빈 스레드)'}
+                            </div>
                           ) : (
                             <>
                               <div className="text-[12px] text-text leading-snug mb-0.5 break-words">{f.title}</div>
@@ -2230,6 +2235,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 else if (f.kind === 'strike') txt = typeof f.strike_loss_mlbg === 'number' ? `−${f.strike_loss_mlbg.toLocaleString()} mlbg` : '−mlbg';
                                 else if (f.kind === 'bridge_toll') txt = typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
                                 else if (f.kind === 'notice') txt = '공지';
+                                else if (f.kind === 'thread') txt = f.discussion_like_count ? `❤ ${f.discussion_like_count}` : '';
                                 return txt ? <span className="tabular-nums">{txt}</span> : null;
                               })()
                             )}

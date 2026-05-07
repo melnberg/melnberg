@@ -20,6 +20,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       { data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp,
       activeAuctionsResp,
       emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp,
+      threadsResp,
     ] = await Promise.all([
       supabase
         .from('apt_discussions')
@@ -143,6 +144,15 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      // threads — 본인이 작성한 스레드 글 (답글 제외) 을 홈 피드에 시간순 합류
+      supabase
+        .from('threads')
+        .select('id, author_id, content, like_count, reply_count, created_at')
+        .is('parent_id', null)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(50)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
@@ -231,6 +241,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       id: number; pin_id: number; author_id: string; content: string; created_at: string;
       pin: { name: string | null; dong: string | null; recommended_activity: string | null; lat: number | null; lng: number | null } | null;
     }>);
+    const threadRows = (((threadsResp as { data: unknown[] | null })?.data ?? []) as Array<{
+      id: number; author_id: string; content: string; like_count: number | null; reply_count: number | null; created_at: string;
+    }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
@@ -314,6 +327,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...restaurantCommRows.map((c) => c.author_id),
       ...kidsPinRows.map((r) => r.author_id),
       ...kidsCommRows.map((c) => c.author_id),
+      ...threadRows.map((r) => r.author_id),
     ].filter(Boolean)));
     const awardRefIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
@@ -328,6 +342,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const emartIds = emartRows.map((e) => e.emart_id);
     const factoryIds = factoryRows.map((f) => f.factory_id);
 
+    const threadAuthorIds = Array.from(new Set(threadRows.map((r) => r.author_id).filter(Boolean)));
+
     const [
       commentPostsResp,
       profsResp,
@@ -338,6 +354,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       postCommRows,
       emartCommCntRows,
       factoryCommCntRows,
+      threadProfsResp,
     ] = await Promise.all([
       commentPostIds.length > 0
         ? supabase.from('posts').select('id, title, category, stock_code').in('id', commentPostIds)
@@ -379,7 +396,17 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         ? supabase.from('factory_comments').select('factory_id').in('factory_id', factoryIds).is('deleted_at', null)
             .then((r) => (r.data ?? []) as Array<{ factory_id: number }>, () => [] as Array<{ factory_id: number }>)
         : Promise.resolve([] as Array<{ factory_id: number }>),
+      // 스레드 전용 프로필 — 있으면 display_name override (없으면 main profile fallback)
+      threadAuthorIds.length > 0
+        ? supabase.from('thread_profiles').select('user_id, display_name').in('user_id', threadAuthorIds)
+            .then((r) => r, () => ({ data: null }))
+        : Promise.resolve({ data: null }),
     ]);
+
+    const threadProfileMap = new Map<string, string | null>();
+    for (const p of (((threadProfsResp as { data: unknown[] | null })?.data) ?? []) as Array<{ user_id: string; display_name: string | null }>) {
+      threadProfileMap.set(p.user_id, p.display_name);
+    }
 
     // commentPostMap 빌드
     const commentPostMap = new Map<number, { title: string | null; category: string | null; stock_code: string | null }>();
@@ -1009,8 +1036,33 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
+    // 스레드 글 → FeedItem (kind 'thread'). post_id 에 thread.id 박아서 /t/{id} 라우팅.
+    const threadItems: FeedItem[] = threadRows.map((r) => {
+      const prof = profileMap.get(r.author_id);
+      const overrideName = threadProfileMap.get(r.author_id) ?? null;
+      return {
+        kind: 'thread' as const,
+        id: r.id,
+        apt_master_id: 0,
+        post_id: r.id,  // 라우팅 용도. /t/{id}
+        title: '스레드',
+        content: r.content,
+        created_at: r.created_at,
+        apt_nm: null, dong: null, lat: null, lng: null,
+        author_id: r.author_id,
+        author_name: overrideName ?? prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        comment_count: r.reply_count ?? 0,
+        discussion_like_count: r.like_count ?? 0,
+      } as FeedItem;
+    });
+
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems]
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];

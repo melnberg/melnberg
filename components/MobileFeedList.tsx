@@ -85,6 +85,7 @@ function fallbackRewardText(f: FeedItem): string {
   if (f.kind === 'strike') return typeof f.strike_loss_mlbg === 'number' ? `−${f.strike_loss_mlbg.toLocaleString()} mlbg` : '−mlbg';
   if (f.kind === 'bridge_toll') return typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
   if (f.kind === 'notice') return '공지';
+  if (f.kind === 'thread') return f.discussion_like_count ? `❤ ${f.discussion_like_count}` : '';
   return '';
 }
 
@@ -109,6 +110,7 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
     case 'restaurant_comment':  return { label: '맛집댓글', cls: 'bg-[#fef3c7] text-[#78350f]' };
     case 'kids_register': return { label: '육아장소', cls: 'bg-[#fbcfe8] text-[#831843]' };
     case 'kids_comment':  return { label: '육아댓글', cls: 'bg-[#fdf2f8] text-[#831843]' };
+    case 'thread':        return { label: '스레드', cls: 'bg-[#fafafa] text-navy border border-border' };
     default: return null;
   }
 }
@@ -221,6 +223,7 @@ export default function MobileFeedList({ items }: Props) {
             : f.kind === 'strike' ? '💥 파업'
             : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
             : f.kind === 'sell_complete' ? '🤝 거래성사'
+            : f.kind === 'thread' ? '@ 스레드'
             : f.kind === 'restaurant_register' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>
             : f.kind === 'restaurant_comment' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>
             : f.kind === 'kids_register' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>

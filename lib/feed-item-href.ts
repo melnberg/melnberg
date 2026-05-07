@@ -4,6 +4,7 @@
 import type { FeedItem } from '@/components/AptMap';
 
 export function feedItemHref(item: FeedItem): string {
+  if (item.kind === 'thread' && item.post_id) return `/t/${item.post_id}`;
   if (item.kind === 'auction' || item.kind === 'auction_bid' || item.kind === 'auction_won') {
     return item.auction_id ? `/auctions/${item.auction_id}` : '/auctions';
   }
