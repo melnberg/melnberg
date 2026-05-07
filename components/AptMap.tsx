@@ -2083,7 +2083,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <button
                             type="button"
-                            onClick={() => setPreviewItem(f)}
+                            onClick={() => setPreviewItem((cur) => (cur && `${cur.kind}-${cur.id}` === feedKey ? null : f))}
                             className="text-[12px] font-bold text-navy truncate hover:underline text-left min-w-0 flex-1 bg-transparent border-none p-0 cursor-pointer"
                           >
                             {headLabel}
@@ -2106,8 +2106,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                         <div
                           role="button"
                           tabIndex={0}
-                          onClick={() => setPreviewItem(f)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') setPreviewItem(f); }}
+                          onClick={() => setPreviewItem((cur) => (cur && `${cur.kind}-${cur.id}` === feedKey ? null : f))}
+                          onKeyDown={(e) => { if (e.key === 'Enter') setPreviewItem((cur) => (cur && `${cur.kind}-${cur.id}` === feedKey ? null : f)); }}
                           className="cursor-pointer hover:opacity-80"
                         >
                           {(isEmartOccupy || isFactoryOccupy) ? (
