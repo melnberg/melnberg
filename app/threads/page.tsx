@@ -3,9 +3,11 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import ThreadList, { type Thread } from '@/components/ThreadList';
 import ThreadComposer from '@/components/ThreadComposer';
+import ThreadProfileCard from '@/components/ThreadProfileCard';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
 import { attachAuthorsToThreads } from '@/lib/threads-fetch';
+import { fetchThreadProfile } from '@/lib/thread-profile';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: '내 스레드 — 멜른버그' };
@@ -29,14 +31,18 @@ export default async function ThreadsPage() {
 
   // 본인 스레드 (parent_id is null — 답글 제외)
   // PostgREST FK 모호 회피 — author 별도 fetch + 병합
-  const { data: rows } = await supabase
-    .from('threads')
-    .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
-    .eq('author_id', user.id)
-    .is('parent_id', null)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(50);
+  const [{ data: rows }, mainProfile, threadProfile] = await Promise.all([
+    supabase
+      .from('threads')
+      .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
+      .eq('author_id', user.id)
+      .is('parent_id', null)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    getCurrentProfile(),
+    fetchThreadProfile(supabase, user.id),
+  ]);
 
   const threadCore = (rows ?? []) as Array<{
     id: number;
@@ -62,25 +68,41 @@ export default async function ThreadsPage() {
   }
   const threadsWithLiked: Thread[] = threads.map((t) => ({ ...t, liked: likedSet.has(t.id) }));
 
+  // 가장 오래된 스레드 일자 (시작일)
+  const oldestIso = threadsWithLiked.length > 0
+    ? threadsWithLiked[threadsWithLiked.length - 1].created_at
+    : null;
+
   return (
     <Layout current="threads">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { label: '내 스레드', bold: true }]} meta="Threads" />
-      <section className="py-6">
-        <div className="max-w-[640px] mx-auto px-4">
-          <div className="flex items-baseline justify-between gap-4 pb-3 mb-3 border-b-2 border-cyan">
-            <h1 className="text-[22px] font-bold text-navy tracking-tight">내 스레드</h1>
-            <span className="text-[11px] text-muted">{threadsWithLiked.length}개</span>
+      {/* 페이지 wrap — 일기장 톤. 메인 게시판과 구분되는 차분한 배경 */}
+      <div className="bg-[#fafafa] min-h-[calc(100vh-66px)]">
+        <section className="py-6">
+          <div className="max-w-[640px] mx-auto px-4">
+            <ThreadProfileCard
+              threadProfile={threadProfile}
+              fallbackProfile={{
+                display_name: mainProfile?.display_name ?? user.email?.split('@')[0] ?? null,
+                avatar_url: mainProfile?.avatar_url ?? null,
+              }}
+              threadCount={threadsWithLiked.length}
+              isOwner
+              joinedAtIso={oldestIso}
+            />
+            <ThreadComposer />
+            <div className="mt-2 border border-border rounded-xl overflow-hidden bg-white">
+              {threadsWithLiked.length === 0 ? (
+                <p className="text-[13px] text-muted text-center py-12">
+                  아직 작성한 스레드가 없어요. 오늘의 한 줄을 남겨보세요.
+                </p>
+              ) : (
+                <ThreadList threads={threadsWithLiked} currentUserId={user.id} showAuthor={false} />
+              )}
+            </div>
           </div>
-          <ThreadComposer />
-          <div className="mt-2">
-            {threadsWithLiked.length === 0 ? (
-              <p className="text-[13px] text-muted text-center py-12">아직 작성한 스레드가 없어요. 첫 글을 남겨보세요.</p>
-            ) : (
-              <ThreadList threads={threadsWithLiked} currentUserId={user.id} showAuthor={false} />
-            )}
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </Layout>
   );
 }
