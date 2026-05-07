@@ -11,7 +11,16 @@ import { createPublicClient } from '@/lib/supabase/public';
 // 피드 — 글(apt_discussions) + 댓글(apt_discussion_comments) + 커뮤니티 글/댓글 + 매물/호가 합쳐 시간순.
 async function fetchFeedRaw(): Promise<FeedItem[]> {
     const supabase = createPublicClient();
-    const [{ data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp] = await Promise.all([
+    // Phase A — base 6 + activeAuctions + Phase B 12 = 19 fetch 단일 Promise.all 병렬화 (2026-05-07).
+    // 이전: base 6 → activeAuctions → aucAssetMap×3 sequential → Phase B 12 (4 round-trip)
+    // 변경: 19개 동시 + aucAssetMap 3개 동시 (2 round-trip)
+    // Phase B 는 sellSince 외 기존 결과에 의존 X — 안전하게 같이 묶음.
+    const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const [
+      { data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp,
+      activeAuctionsResp,
+      emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp,
+    ] = await Promise.all([
       supabase
         .from('apt_discussions')
         .select('id, apt_master_id, author_id, title, content, like_count, created_at, apt_master(apt_nm, dong, lat, lng)')
@@ -56,57 +65,15 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(30)
         .then((r) => r, () => ({ data: null })),
-    ]);
-    const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
-    const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
-
-    // 진행중 경매 — 모두 강제 노출 (피드 상단). asset_type 별로 위치/이름 후처리.
-    const { data: activeAuctionsRaw } = await supabase
-      .from('apt_auctions')
-      .select('id, apt_id, asset_type, asset_id, ends_at, min_bid, current_bid, current_bidder_id, bid_count, created_at')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(10)
-      .then((r) => r, () => ({ data: null }));
-    type RawAuc = { id: number; apt_id: number | null; asset_type: 'apt' | 'factory' | 'emart' | null; asset_id: number | null; ends_at: string; min_bid: number; current_bid: number | null; current_bidder_id: string | null; bid_count: number; created_at: string };
-    const aucList = (activeAuctionsRaw ?? []) as RawAuc[];
-    const aucAptIds: number[] = [], aucFactoryIds: number[] = [], aucEmartIds: number[] = [];
-    for (const a of aucList) {
-      const aType = a.asset_type ?? 'apt';
-      const aId = a.asset_id ?? a.apt_id ?? 0;
-      if (aType === 'apt' && aId) aucAptIds.push(aId);
-      else if (aType === 'factory' && aId) aucFactoryIds.push(aId);
-      else if (aType === 'emart' && aId) aucEmartIds.push(aId);
-    }
-    const aucAssetMap = new Map<string, { name: string; lat: number | null; lng: number | null; dong: string | null }>();
-    if (aucAptIds.length > 0) {
-      const { data } = await supabase.from('apt_master').select('id, apt_nm, dong, lat, lng').in('id', aucAptIds);
-      for (const r of (data ?? []) as Array<{ id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null }>) {
-        aucAssetMap.set(`apt:${r.id}`, { name: r.apt_nm ?? '단지', lat: r.lat, lng: r.lng, dong: r.dong });
-      }
-    }
-    if (aucFactoryIds.length > 0) {
-      const { data } = await supabase.from('factory_locations').select('id, name, lat, lng').in('id', aucFactoryIds);
-      for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
-        aucAssetMap.set(`factory:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
-      }
-    }
-    if (aucEmartIds.length > 0) {
-      const { data } = await supabase.from('emart_locations').select('id, name, lat, lng').in('id', aucEmartIds);
-      for (const r of (data ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
-        aucAssetMap.set(`emart:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
-      }
-    }
-    const activeAuctions = aucList.map((r) => {
-      const aType = r.asset_type ?? 'apt';
-      const aId = r.asset_id ?? r.apt_id ?? 0;
-      const info = aucAssetMap.get(`${aType}:${aId}`) ?? { name: '자산', lat: null, lng: null, dong: null };
-      return { ...r, _assetName: info.name, _assetLat: info.lat, _assetLng: info.lng, _assetDong: info.dong, _assetType: aType, _assetId: aId };
-    });
-
-    // Phase B — 12개 base fetch 단일 Promise.all 병렬화.
-    const sellSince = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const [emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp] = await Promise.all([
+      // 진행중 경매 — 모두 강제 노출 (피드 상단). asset_type 별로 위치/이름 후처리.
+      supabase
+        .from('apt_auctions')
+        .select('id, apt_id, asset_type, asset_id, ends_at, min_bid, current_bid, current_bidder_id, bid_count, created_at')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(10)
+        .then((r) => r, () => ({ data: null })),
+      // Phase B 시작 ↓
       supabase
         .from('emart_occupations')
         .select('id, emart_id, user_id, occupied_at, emart:emart_locations!emart_id(name, lat, lng)')
@@ -177,6 +144,48 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .limit(20)
         .then((r) => r, () => ({ data: null })),
     ]);
+    const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
+    const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
+
+    // 경매 자산 매핑 — activeAuctions 결과에서 ID 수집 후 3개 fetch 병렬화
+    const activeAuctionsRaw = (activeAuctionsResp as { data: unknown[] | null })?.data ?? null;
+    type RawAuc = { id: number; apt_id: number | null; asset_type: 'apt' | 'factory' | 'emart' | null; asset_id: number | null; ends_at: string; min_bid: number; current_bid: number | null; current_bidder_id: string | null; bid_count: number; created_at: string };
+    const aucList = (activeAuctionsRaw ?? []) as RawAuc[];
+    const aucAptIds: number[] = [], aucFactoryIds: number[] = [], aucEmartIds: number[] = [];
+    for (const a of aucList) {
+      const aType = a.asset_type ?? 'apt';
+      const aId = a.asset_id ?? a.apt_id ?? 0;
+      if (aType === 'apt' && aId) aucAptIds.push(aId);
+      else if (aType === 'factory' && aId) aucFactoryIds.push(aId);
+      else if (aType === 'emart' && aId) aucEmartIds.push(aId);
+    }
+    const aucAssetMap = new Map<string, { name: string; lat: number | null; lng: number | null; dong: string | null }>();
+    const [aucAptRes, aucFactoryRes, aucEmartRes] = await Promise.all([
+      aucAptIds.length > 0
+        ? supabase.from('apt_master').select('id, apt_nm, dong, lat, lng').in('id', aucAptIds)
+        : Promise.resolve({ data: null }),
+      aucFactoryIds.length > 0
+        ? supabase.from('factory_locations').select('id, name, lat, lng').in('id', aucFactoryIds)
+        : Promise.resolve({ data: null }),
+      aucEmartIds.length > 0
+        ? supabase.from('emart_locations').select('id, name, lat, lng').in('id', aucEmartIds)
+        : Promise.resolve({ data: null }),
+    ]);
+    for (const r of (((aucAptRes as { data: unknown[] | null })?.data) ?? []) as Array<{ id: number; apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null }>) {
+      aucAssetMap.set(`apt:${r.id}`, { name: r.apt_nm ?? '단지', lat: r.lat, lng: r.lng, dong: r.dong });
+    }
+    for (const r of (((aucFactoryRes as { data: unknown[] | null })?.data) ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+      aucAssetMap.set(`factory:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
+    }
+    for (const r of (((aucEmartRes as { data: unknown[] | null })?.data) ?? []) as Array<{ id: number; name: string; lat: number | null; lng: number | null }>) {
+      aucAssetMap.set(`emart:${r.id}`, { name: r.name, lat: r.lat, lng: r.lng, dong: null });
+    }
+    const activeAuctions = aucList.map((r) => {
+      const aType = r.asset_type ?? 'apt';
+      const aId = r.asset_id ?? r.apt_id ?? 0;
+      const info = aucAssetMap.get(`${aType}:${aId}`) ?? { name: '자산', lat: null, lng: null, dong: null };
+      return { ...r, _assetName: info.name, _assetLat: info.lat, _assetLng: info.lng, _assetDong: info.dong, _assetType: aType, _assetId: aId };
+    });
     const emartRows = (((emartOccsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{ id: number; emart_id: number; user_id: string; occupied_at: string; emart: unknown }>);
     const annRows = ((annResp as { data: unknown[] | null })?.data ?? []) as Array<{ id: number; title: string; body: string | null; link_url: string | null; created_at: string }>;
     const strikeRows = (((strikeResp as { data: unknown[] | null })?.data ?? []) as Array<{

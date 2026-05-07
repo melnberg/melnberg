@@ -496,7 +496,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       setSelectedRestaurant((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
     } catch { /* silent */ }
   }
-  useEffect(() => { refetchRestaurants(); }, []);
+  // idle defer — 첫 페인트 후 발화 (단지 핀 외 추가 핀이라 우선순위 낮음, 2026-05-07)
+  useEffect(() => {
+    const idle = (cb: () => void) => {
+      if (typeof window !== 'undefined' && (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    idle(() => { refetchRestaurants(); });
+  }, []);
 
   // 사용자 등록 육아 장소 핀
   type KidsItem = {
@@ -521,7 +531,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       setSelectedKids((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
     } catch { /* silent */ }
   }
-  useEffect(() => { refetchKids(); }, []);
+  // idle defer — 첫 페인트 후 발화 (단지 핀 외 추가 핀이라 우선순위 낮음, 2026-05-07)
+  useEffect(() => {
+    const idle = (cb: () => void) => {
+      if (typeof window !== 'undefined' && (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    idle(() => { refetchKids(); });
+  }, []);
   async function refetchFactory() {
     try {
       const r = await fetch('/api/factory-list', { cache: 'no-store' });
@@ -533,7 +553,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       setSelectedFactory((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
     } catch { /* silent */ }
   }
-  useEffect(() => { refetchFactory(); }, []);
+  // idle defer — 첫 페인트 후 발화 (단지 핀 외 추가 핀이라 우선순위 낮음, 2026-05-07)
+  useEffect(() => {
+    const idle = (cb: () => void) => {
+      if (typeof window !== 'undefined' && (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    idle(() => { refetchFactory(); });
+  }, []);
 
   useEffect(() => {
     if (!mapReady || !mapInstRef.current) return;
@@ -1588,14 +1618,26 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       } catch { /* silent */ }
     }
 
-    (async () => {
-      await refetchEmart();
-      // discovery 비동기 — 끝나면 다시 fetch
+    // idle defer — 단지 핀 외 추가 핀이라 첫 페인트 후 발화 (2026-05-07)
+    const idle = (cb: () => void) => {
+      if (typeof window !== 'undefined' && (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    idle(() => {
+      if (cancelled) return;
       void (async () => {
-        await discover();
-        if (!cancelled) await refetchEmart();
+        await refetchEmart();
+        if (cancelled) return;
+        // discovery 비동기 — 끝나면 다시 fetch
+        void (async () => {
+          await discover();
+          if (!cancelled) await refetchEmart();
+        })();
       })();
-    })();
+    });
 
     // 마커 렌더는 emartList useEffect 에서 별도 처리
     return () => { cancelled = true; };
