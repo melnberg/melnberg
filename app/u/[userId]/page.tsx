@@ -4,6 +4,8 @@ import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import Nickname from '@/components/Nickname';
 import BioComments from '@/components/BioComments';
+import ThreadList, { type Thread } from '@/components/ThreadList';
+import ThreadComposer from '@/components/ThreadComposer';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
@@ -182,6 +184,51 @@ export default async function UserProfilePage({
       .order('occurred_at', { ascending: false })
       .limit(100);
     eventRows = (data ?? []) as unknown as EvictEvent[];
+  }
+
+  // 스레드 — 항상 fetch (탭 무관, 페이지 하단 섹션). 본인이면 작성 폼 노출.
+  type RawAuthor = { display_name: string | null; avatar_url: string | null; tier: string | null; tier_expires_at: string | null; is_solo: boolean | null; link_url: string | null };
+  type RawThread = {
+    id: number;
+    author_id: string;
+    parent_id: number | null;
+    content: string;
+    like_count: number;
+    reply_count: number;
+    created_at: string;
+    author: RawAuthor | RawAuthor[] | null;
+  };
+  const { data: threadsRaw } = await supabase
+    .from('threads')
+    .select('id, author_id, parent_id, content, like_count, reply_count, created_at, author:profiles!author_id(display_name, avatar_url, tier, tier_expires_at, is_solo, link_url)')
+    .eq('author_id', userId)
+    .is('parent_id', null)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  const threadRows = (threadsRaw ?? []) as unknown as RawThread[];
+  let userThreads: Thread[] = [];
+  if (threadRows.length > 0) {
+    let likedSet = new Set<number>();
+    if (me?.id) {
+      const { data: likes } = await supabase
+        .from('thread_likes')
+        .select('thread_id')
+        .eq('user_id', me.id)
+        .in('thread_id', threadRows.map((t) => t.id));
+      likedSet = new Set((likes ?? []).map((l) => (l as { thread_id: number }).thread_id));
+    }
+    userThreads = threadRows.map((t) => ({
+      id: t.id,
+      author_id: t.author_id,
+      parent_id: t.parent_id,
+      content: t.content,
+      like_count: t.like_count,
+      reply_count: t.reply_count,
+      created_at: t.created_at,
+      author: Array.isArray(t.author) ? (t.author[0] ?? null) : t.author,
+      liked: likedSet.has(t.id),
+    }));
   }
 
   // 탭 합치기 (글/댓글)
@@ -461,6 +508,18 @@ export default async function UserProfilePage({
               <BioComments profileUserId={profile.id} />
             </div>
           )}
+
+          {/* 스레드 — 탭 무관 항상 노출. 본인이면 작성 폼. */}
+          <div className="mt-10">
+            <h2 className="text-[14px] font-bold tracking-widest uppercase text-navy mb-3">스레드</h2>
+            {isOwner && <ThreadComposer />}
+            <ThreadList
+              threads={userThreads}
+              currentUserId={me?.id ?? null}
+              showAuthor={false}
+              emptyText={isOwner ? '아직 글이 없어요. 첫 글을 남겨보세요.' : '아직 글이 없어요.'}
+            />
+          </div>
         </div>
       </section>
     </Layout>
