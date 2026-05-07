@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { syncAllStocks } from '@/app/api/cron/sync-all-stocks/route';
+import { syncAllStocks } from '@/lib/sync-all-stocks';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
