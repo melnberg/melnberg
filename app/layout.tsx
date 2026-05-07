@@ -25,6 +25,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <head>
+        {/* DNS / TCP / TLS 미리 워밍업 — 카카오 지도 SDK + 폰트 첫 fetch latency 단축 */}
+        <link rel="preconnect" href="https://dapi.kakao.com" crossOrigin="" />
+        <link rel="preconnect" href="https://t1.daumcdn.net" crossOrigin="" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://dapi.kakao.com" />
+        <link rel="dns-prefetch" href="https://t1.daumcdn.net" />
         <link
           rel="stylesheet"
           crossOrigin=""
