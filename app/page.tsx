@@ -1000,23 +1000,37 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
-    // 알고리즘 랜덤 — 가치(earned_mlbg) / 사진 본문 / 댓글·좋아요 많음 가중치 + Efraimidis-Spirakis
-    // weighted shuffle. 시간순 X, 매 캐시 사이클(90초)마다 새 순서.
-    // 경매·공지·관리자 공지는 강제 상단 유지.
+    // 알고리즘 랜덤 — 사람들 글 우선. 시스템 활동(매물·경매·점거·통행료 등)은 약하게.
+    // 공지·관리자 공지는 노출 안 함. 경매만 강제 상단 유지.
     const IMG_RE = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
     const NOW = Date.now();
+    const PEOPLE_KINDS = new Set([
+      'discussion', 'comment',
+      'post', 'post_comment',
+      'restaurant_register', 'restaurant_comment',
+      'kids_register', 'kids_comment',
+      'emart_comment', 'factory_comment',
+    ]);
+    const SYSTEM_KINDS = new Set([
+      'listing', 'offer', 'snatch',
+      'sell_complete', 'bridge_toll', 'strike',
+      'emart_occupy', 'factory_occupy',
+      'auction_bid', 'auction_won',
+    ]);
     const feedWeight = (f: FeedItem): number => {
       let w = 1;
-      if (f.content && IMG_RE.test(f.content)) w += 2.5;        // 사진 있는 글
-      if ((f.earned_mlbg ?? 0) > 0) w += 1.5;                   // AI 평가 가치 있는 글
-      if ((f.comment_count ?? 0) >= 3) w += 1.5;                // 댓글 많은 글
+      if (PEOPLE_KINDS.has(f.kind)) w *= 2.5;                   // 사람 글 우선
+      if (SYSTEM_KINDS.has(f.kind)) w *= 0.25;                  // 시스템 활동은 약하게
+      if (f.content && IMG_RE.test(f.content)) w += 2.5;        // 사진 본문
+      if ((f.earned_mlbg ?? 0) > 0) w += 1.5;                   // AI 평가 가치
+      if ((f.comment_count ?? 0) >= 3) w += 1.5;                // 댓글 많음
       if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;        // 좋아요 많은 찐리뷰
       const ageHours = (NOW - new Date(f.created_at).getTime()) / 3600000;
-      if (ageHours > 168) w *= 0.5;                             // 7일 이상은 절반
+      if (ageHours > 168) w *= 0.5;                             // 7일 이상 절반
       return Math.max(w, 0.01);
     };
 
-    const fixed = [...NOTICE_ITEMS, ...announcementItems];
+    // NOTICE_ITEMS / announcementItems 는 노출 X (사용자 요청: 공지 제거)
     const shufflable = [
       ...discussionItems, ...commentItems,
       ...postItems, ...postCommentItems,
@@ -1031,7 +1045,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       .sort((a, b) => a.key - b.key)
       .map((x) => x.f);
 
-    const others = [...fixed, ...shuffled].slice(0, 300 - auctionItems.length);
+    const others = shuffled.slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];
 }
 

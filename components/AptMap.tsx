@@ -278,6 +278,8 @@ function writePinCache(key: string, pins: AptPin[]) {
 
 // 본문에 섞인 이미지 URL → <img> 인라인 렌더 (피드 카드 공용).
 // 이미지 클릭은 부모 카드 jumpToFeedItem 으로 전파 → 게시글 페이지로 이동.
+// 정사각형 (Instagram 스타일) — aspect-square 컨테이너 + object-cover.
+// 부모가 <span> 텍스트 컨텍스트라 <div> 못 들어감 — <span> + display:block 으로 하이드레이션 에러 회피.
 const FEED_IMG_URL_RE = /(https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?)/gi;
 function renderFeedContentWithImages(text: string): React.ReactNode {
   if (!text) return null;
@@ -285,12 +287,67 @@ function renderFeedContentWithImages(text: string): React.ReactNode {
   return parts.map((p, i) => {
     if (i % 2 === 1) {
       return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={i} src={p} alt="" loading="lazy" className="block my-1 max-w-full max-h-[200px] object-contain border border-border" />
+        <span key={i} className="block my-2 max-w-[400px] mx-auto">
+          <span className="block aspect-square w-full bg-bg/30 border border-border rounded-xl overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p} alt="" loading="lazy" className="w-full h-full object-cover" />
+          </span>
+        </span>
       );
     }
     return p ? <span key={i}>{p}</span> : null;
   });
+}
+
+// 클라이언트 셔플 — MobileFeedList 와 동일 로직.
+// 서버의 feedWeight 와 같은 시그널: 사진(+2.5) / earned_mlbg>0 (+1.5) / comment_count>=3 (+1.5) /
+// discussion_like_count>=3 (+1.0) / 7일 이상 (×0.5).
+// 새로고침 (shuffleSeed) 마다 random 키 새로 생성 → 분포는 보존하면서 순서만 바뀜.
+const FEED_IMG_RE_W = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
+const FEED_PEOPLE_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
+  'discussion', 'comment',
+  'post', 'post_comment',
+  'restaurant_register', 'restaurant_comment',
+  'kids_register', 'kids_comment',
+  'emart_comment', 'factory_comment',
+]);
+const FEED_SYSTEM_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
+  'listing', 'offer', 'snatch',
+  'sell_complete', 'bridge_toll', 'strike',
+  'emart_occupy', 'factory_occupy',
+  'auction_bid', 'auction_won',
+]);
+function feedWeightClient(f: FeedItem, now: number): number {
+  let w = 1;
+  if (FEED_PEOPLE_KINDS_W.has(f.kind)) w *= 2.5;
+  if (FEED_SYSTEM_KINDS_W.has(f.kind)) w *= 0.25;
+  if (f.content && FEED_IMG_RE_W.test(f.content)) w += 2.5;
+  if ((f.earned_mlbg ?? 0) > 0) w += 1.5;
+  if ((f.comment_count ?? 0) >= 3) w += 1.5;
+  if ((f.discussion_like_count ?? 0) >= 3) w += 1.0;
+  const ageHours = (now - new Date(f.created_at).getTime()) / 3600000;
+  if (ageHours > 168) w *= 0.5;
+  return Math.max(w, 0.01);
+}
+
+// auction / notice 는 강제 상단 — 셔플 대상 아님. 서버에서 이미 앞쪽에 배치돼 들어옴.
+function isFixedFeedKind(k: FeedItem['kind']): boolean {
+  return k === 'auction' || k === 'auction_bid' || k === 'auction_won' || k === 'notice';
+}
+
+function shuffleFeedItems(items: FeedItem[]): FeedItem[] {
+  const fixed: FeedItem[] = [];
+  const shufflable: FeedItem[] = [];
+  for (const f of items) {
+    if (isFixedFeedKind(f.kind)) fixed.push(f);
+    else shufflable.push(f);
+  }
+  const now = Date.now();
+  const shuffled = shufflable
+    .map((f) => ({ f, key: -Math.log(Math.random()) / feedWeightClient(f, now) }))
+    .sort((a, b) => a.key - b.key)
+    .map((x) => x.f);
+  return [...fixed, ...shuffled];
 }
 
 export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptPin[]; feed?: FeedItem[] }) {
@@ -1127,6 +1184,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
 
   // 피드 (단지별 글 최신순). 기본 펼침.
   const [feedOpen, setFeedOpen] = useState(true);
+  // 셔플 시드 — 증가시키면 useMemo 재계산. 새로고침 클릭마다 +1.
+  const [feedShuffleSeed, setFeedShuffleSeed] = useState(0);
+  const [feedRefreshing, setFeedRefreshing] = useState(false);
+  // displayFeed — 렌더링 전용. jumpToFeedItem / pins.find 등 lookup 은 원본 feed 사용.
+  const displayFeed = useMemo(() => shuffleFeedItems(feed), [feed, feedShuffleSeed]);
+  // 새로고침 시 패널 자체 스크롤 top 으로 — 패널이 자체 overflow-y-auto.
+  const feedScrollRef = useRef<HTMLDivElement>(null);
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}
     if ((item.kind === 'auction' || item.kind === 'auction_bid') && item.auction_id) {
@@ -1976,12 +2040,36 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           <span className="ml-auto text-[11px] text-muted">{feedOpen ? '접기 ^' : '펼치기 v'}</span>
         </button>
         {feedOpen && (
-          <div className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
+          <div ref={feedScrollRef} className="bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.12)] max-h-[calc(100vh-115px)] overflow-y-auto">
             {feed.length === 0 ? (
               <div className="px-4 py-6 text-[12px] text-muted text-center">아직 작성된 글 없음</div>
             ) : (
-              <ul>
-                {feed.map((f) => {
+              <>
+                {/* 새로고침 — 서버 캐시 무효화 + RSC 재요청 + 클라 셔플 재계산 */}
+                <div className="flex justify-end px-3 py-2 border-b border-border bg-white sticky top-0 z-10">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (feedRefreshing) return;
+                      setFeedRefreshing(true);
+                      try {
+                        await fetch('/api/revalidate-home', { method: 'POST' }).catch(() => null);
+                        router.refresh();
+                        setFeedShuffleSeed((n) => n + 1);
+                        if (feedScrollRef.current) feedScrollRef.current.scrollTop = 0;
+                      } finally {
+                        setTimeout(() => setFeedRefreshing(false), 800);
+                      }
+                    }}
+                    disabled={feedRefreshing}
+                    className="text-[12px] text-cyan border border-cyan/40 rounded-full px-3 py-1 cursor-pointer bg-white hover:bg-cyan/10 active:bg-cyan/20 disabled:opacity-50"
+                    aria-label="피드 새로고침"
+                  >
+                    🔄 {feedRefreshing ? '새로고침 중…' : '새로고침'}
+                  </button>
+                </div>
+                <ul>
+                {displayFeed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
                   const fullContent = (f.content ?? '').trim();
                   const isComment = f.kind === 'comment' || f.kind === 'post_comment';
@@ -2141,7 +2229,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </>
             )}
           </div>
         )}

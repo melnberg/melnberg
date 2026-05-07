@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
@@ -146,12 +147,25 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
 const INITIAL_VISIBLE = 30;
 const REVEAL_STEP = 30;
 
-// 클라이언트 셔플 — 서버의 feedWeight 와 동일 시그널.
-// 서버는 90초 캐시라 같은 사용자가 여러 번 진입해도 같은 순서. 클라에서 매 마운트마다
-// random 키만 새로 — 가중치는 동일하므로 분포는 보존.
+// 클라이언트 셔플 — 서버의 feedWeight 와 동일 시그널 (사람 글 우선, 시스템 활동 약하게).
 const IMG_RE_W = /https?:\/\/[^\s]+?\.(?:jpe?g|png|gif|webp)(?:\?[^\s]*)?/i;
+const PEOPLE_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
+  'discussion', 'comment',
+  'post', 'post_comment',
+  'restaurant_register', 'restaurant_comment',
+  'kids_register', 'kids_comment',
+  'emart_comment', 'factory_comment',
+]);
+const SYSTEM_KINDS_W: ReadonlySet<FeedItem['kind']> = new Set([
+  'listing', 'offer', 'snatch',
+  'sell_complete', 'bridge_toll', 'strike',
+  'emart_occupy', 'factory_occupy',
+  'auction_bid', 'auction_won',
+]);
 function feedWeightClient(f: FeedItem, now: number): number {
   let w = 1;
+  if (PEOPLE_KINDS_W.has(f.kind)) w *= 2.5;
+  if (SYSTEM_KINDS_W.has(f.kind)) w *= 0.25;
   if (f.content && IMG_RE_W.test(f.content)) w += 2.5;
   if ((f.earned_mlbg ?? 0) > 0) w += 1.5;
   if ((f.comment_count ?? 0) >= 3) w += 1.5;
@@ -188,6 +202,21 @@ export default function MobileFeedList({ items }: Props) {
   const [me, setMe] = useState<{ id: string; name: string } | null>(null);
   // 셔플 시드 — 증가시키면 useMemo 가 재계산. 마운트 시 1, 새로고침 클릭마다 +1.
   const [shuffleSeed, setShuffleSeed] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
+  // 새로고침 — 서버 캐시 무효화 + RSC 재요청 + 클라 셔플 재계산
+  async function handleRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await fetch('/api/revalidate-home', { method: 'POST' }).catch(() => null);
+      router.refresh();
+      setShuffleSeed((n) => n + 1);
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    } finally {
+      setTimeout(() => setRefreshing(false), 800);
+    }
+  }
   const displayItems = useMemo(() => shuffleItems(items), [items, shuffleSeed]);
   const [visibleCount, setVisibleCount] = useState(Math.min(INITIAL_VISIBLE, items.length));
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -277,15 +306,16 @@ export default function MobileFeedList({ items }: Props) {
   return (
     <div className="bg-white">
       {/* 상단 멜른버그 바는 Layout 의 MobileTopBar 가 모든 화면 공통으로 처리 — 여기선 제거 */}
-      {/* 새로고침 — 클라이언트 셔플만 (서버 재요청 X). 시드 증가 → useMemo 재계산. */}
+      {/* 새로고침 — 서버 캐시 무효화 + RSC 재요청 + 클라 셔플 재계산 */}
       <div className="flex justify-end px-4 py-2 border-b border-border">
         <button
           type="button"
-          onClick={() => { setShuffleSeed((n) => n + 1); window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior }); }}
-          className="text-[12px] text-cyan border border-cyan/40 rounded-full px-2.5 py-0.5 cursor-pointer bg-transparent hover:bg-cyan/10 active:bg-cyan/20"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="text-[12px] text-cyan border border-cyan/40 rounded-full px-3 py-1 cursor-pointer bg-white hover:bg-cyan/10 active:bg-cyan/20 disabled:opacity-50"
           aria-label="피드 새로고침"
         >
-          🔄 새로고침
+          🔄 {refreshing ? '새로고침 중…' : '새로고침'}
         </button>
       </div>
       <ul>
