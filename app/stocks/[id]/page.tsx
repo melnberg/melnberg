@@ -9,35 +9,29 @@ import Nickname from '@/components/Nickname';
 import RewardTooltip from '@/components/RewardTooltip';
 import PostLikeButton from '@/components/PostLikeButton';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
-import { getStock } from '@/lib/stocks';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({ params }: { params: Promise<{ code: string; postId: string }> }) {
-  const { code, postId } = await params;
-  const post = await getPost(Number(postId), 'stocks');
-  const stock = await getStock(code);
-  if (!post || !stock) return {};
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const post = await getPost(Number(id), 'stocks');
+  if (!post) return {};
   return {
-    title: `${post.title} — ${stock.name} — 주식 토론`,
+    title: `${post.title} — 주식 토론 — 멜른버그`,
     description: post.content.slice(0, 140),
   };
 }
 
-export default async function StockPostDetail({ params }: { params: Promise<{ code: string; postId: string }> }) {
-  const { code, postId } = await params;
-  const numId = Number(postId);
+export default async function StockPostDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const numId = Number(id);
   if (!Number.isFinite(numId)) notFound();
 
-  const [post, comments, stock] = await Promise.all([
-    getPost(numId, 'stocks'),
-    listComments(numId),
-    getStock(code),
-  ]);
-  if (!post || !stock) notFound();
+  const [post, comments] = await Promise.all([getPost(numId, 'stocks'), listComments(numId)]);
+  if (!post) notFound();
 
   const sbPub = await createClient();
   const commentIds = comments.map((c) => c.id);
@@ -62,14 +56,13 @@ export default async function StockPostDetail({ params }: { params: Promise<{ co
         <MainTop crumbs={[
           { href: '/', label: '멜른버그' },
           { href: '/stocks', label: '주식 토론' },
-          { href: `/stocks/${code}`, label: stock.name },
           { label: '삭제된 글', bold: true },
         ]} meta="Deleted" />
         <article className="py-24">
           <div className="max-w-[520px] mx-auto px-6 text-center">
             <h1 className="text-[22px] font-bold text-navy mb-3">게시글이 삭제되었습니다</h1>
-            <Link href={`/stocks/${code}`} className="inline-block bg-cyan text-navy px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-cyan/80">
-              ← {stock.name} 토론방
+            <Link href="/stocks" className="inline-block bg-cyan text-navy px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-cyan/80">
+              ← 주식 토론 목록
             </Link>
           </div>
         </article>
@@ -93,18 +86,18 @@ export default async function StockPostDetail({ params }: { params: Promise<{ co
       <MainTop crumbs={[
         { href: '/', label: '멜른버그' },
         { href: '/stocks', label: '주식 토론' },
-        { href: `/stocks/${code}`, label: stock.name },
         { label: post.title, bold: true },
-      ]} meta={`${stock.market} ${stock.code}`} />
+      ]} meta="Stocks" />
 
       <article className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
           <header className="pb-6 mb-6 border-b border-cyan/30">
             <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="inline-flex items-baseline gap-2 bg-cyan/10 text-navy px-2 py-0.5">
-                <span className="text-[10px] font-bold tracking-widest uppercase">📈 {stock.market}</span>
-                <span className="text-[12px] font-bold">{stock.name}</span>
-                <span className="text-[10px] text-muted tabular-nums">{stock.code}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-block bg-cyan/10 text-navy text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">📈 STOCKS</span>
+                {post.stock_code && (
+                  <span className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-2 py-0.5">{post.stock_code}</span>
+                )}
               </div>
               <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
             </div>
@@ -117,7 +110,7 @@ export default async function StockPostDetail({ params }: { params: Promise<{ co
               <span>{formatRelativeKo(post.created_at)}</span>
               {post.updated_at !== post.created_at && (<><span>·</span><span>수정됨</span></>)}
               {postEarned > 0 && (<><span>·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
-              {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath={`/stocks/${code}`} /></>)}
+              {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath="/stocks" /></>)}
             </div>
           </header>
 
@@ -134,8 +127,8 @@ export default async function StockPostDetail({ params }: { params: Promise<{ co
           />
 
           <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
-            <Link href={`/stocks/${code}`} className="text-[13px] font-bold text-navy no-underline hover:underline">
-              ← {stock.name} 목록
+            <Link href="/stocks" className="text-[13px] font-bold text-navy no-underline hover:underline">
+              ← 목록으로
             </Link>
           </div>
         </div>

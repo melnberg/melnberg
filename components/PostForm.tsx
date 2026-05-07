@@ -9,18 +9,19 @@ import { revalidateHome } from '@/lib/revalidate-home';
 import { fileToWebp } from '@/lib/image-to-webp';
 
 type Props = {
-  initial?: { id: number; title: string; content: string; is_paid_only?: boolean };
+  initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null };
   category?: 'community' | 'blog' | 'hotdeal' | 'stocks';
-  redirectBase?: string; // '/community' | '/blog' | '/hotdeal' | '/stocks/{code}'
-  stockCode?: string;    // category='stocks' 일 때만. 종목 코드. 글 INSERT 시 같이 저장.
+  redirectBase?: string;
 };
 
-export default function PostForm({ initial, category = 'community', redirectBase = '/community', stockCode }: Props) {
+export default function PostForm({ initial, category = 'community', redirectBase = '/community' }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [content, setContent] = useState(initial?.content ?? '');
   const [isPaidOnly, setIsPaidOnly] = useState(initial?.is_paid_only ?? (category === 'blog'));
+  // stocks 카테고리 — 종목 태그 (자유 입력, 선택)
+  const [stockTag, setStockTag] = useState(initial?.stock_code ?? '');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -85,6 +86,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
           title: title.trim(),
           content: finalContent,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
+          stock_code: category === 'stocks' ? (stockTag.trim() || null) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', initial.id);
@@ -105,7 +107,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
           content: finalContent,
           category,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
-          stock_code: category === 'stocks' && stockCode ? stockCode : null,
+          stock_code: category === 'stocks' ? (stockTag.trim() || null) : null,
         })
         .select('id')
         .single();
@@ -125,6 +127,22 @@ export default function PostForm({ initial, category = 'community', redirectBase
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {category === 'stocks' && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="stockTag" className="text-[11px] font-bold tracking-widest uppercase text-muted">
+            종목 태그 <span className="text-muted normal-case font-normal">(선택)</span>
+          </label>
+          <input
+            id="stockTag"
+            type="text"
+            value={stockTag}
+            onChange={(e) => setStockTag(e.target.value)}
+            placeholder="예: 삼성전자, 005930, 반도체 (자유 입력)"
+            maxLength={50}
+            className="border border-border px-3.5 py-2.5 text-[14px] outline-none focus:border-navy rounded-none"
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="title" className="text-[11px] font-bold tracking-widest uppercase text-muted">제목</label>
         <input

@@ -9,6 +9,7 @@ export type CommunityPost = {
   title: string;
   content: string;
   category: PostCategory;
+  stock_code?: string | null;     // stocks 카테고리 글의 자유 태그 (선택)
   is_paid_only: boolean;
   created_at: string;
   updated_at: string;
@@ -36,7 +37,7 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
   // select 에 deleted_at 추가해서 fallback 시에도 클라 필터 가능하도록.
   let { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
+    .select('id, author_id, title, content, category, stock_code, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
     .eq('category', category)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -96,7 +97,7 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
   // 컬럼이 없으면 (SQL 064 미적용) 그냥 무시되고 deleted_at = undefined.
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
+    .select('id, author_id, title, content, category, stock_code, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
