@@ -194,7 +194,8 @@
    인라인 style 이 어떤 이유로 안 먹는 사고 방지용 안전망. */
 .mlbg-post-img {
   display: block !important;
-  max-width: 480px !important;
+  /* 컨테이너 폭이 480px 보다 작으면 컨테이너 우선 — iframe drawer (~400px) 에서 overflow 방지 */
+  max-width: min(480px, 100%) !important;
   max-height: 400px !important;
   width: auto !important;
   height: auto !important;
