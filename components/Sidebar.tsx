@@ -26,6 +26,8 @@ export default function Sidebar({ current, user, recentPosts = [], boardLatest }
   // 새 글 빨간점 — localStorage 기반 디바이스별 last_read 관리.
   // 서버 boardLatest 와 lastRead 비교해서 dot 여부 결정.
   const [lastRead, setLastRead] = useState<Record<string, string | null>>({});
+  // 마운트 + localStorage 읽기 끝나기 전엔 dot 안 띄움 — 페이지 이동 시 깜빡임 방지
+  const [mounted, setMounted] = useState(false);
 
   // mount 시 5개 키 한번에 읽기.
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function Sidebar({ current, user, recentPosts = [], boardLatest }
       }
       setLastRead(next);
     } catch { /* localStorage 차단 환경 — dot 정상 표시 */ }
+    setMounted(true);
   }, []);
 
   // current 가 board 키와 일치하면 즉시 last_read 갱신 → dot 사라짐.
@@ -48,6 +51,7 @@ export default function Sidebar({ current, user, recentPosts = [], boardLatest }
   }, [current]);
 
   const dot = (board: BoardKey): boolean => {
+    if (!mounted) return false;  // SSR / 마운트 직후 깜빡임 방지
     const latest = boardLatest?.[board];
     if (!latest) return false;
     const r = lastRead[board];

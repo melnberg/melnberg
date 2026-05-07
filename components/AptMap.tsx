@@ -2231,7 +2231,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {previewItem && (
         <aside
           data-preview-drawer
-          className="hidden lg:flex absolute top-0 left-[280px] w-[280px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
+          className="hidden lg:flex absolute top-0 left-[280px] w-[340px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
           role="dialog"
           aria-label="글 상세"
         >

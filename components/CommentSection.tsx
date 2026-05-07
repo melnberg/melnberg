@@ -235,26 +235,28 @@ function CommentRow({
   const isMine = currentUserId === comment.author_id;
   return (
     <div className={compact ? '' : 'py-2.5'}>
-      <div className="flex items-start justify-between gap-3 mb-1">
-        <div className="flex items-center gap-2 text-[12px]">
-          <span className="font-bold text-navy">
+      <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
+        <div className="flex items-center gap-1.5 text-[12px] flex-wrap min-w-0">
+          <span className="font-bold text-navy whitespace-nowrap">
             <Nickname info={profileToNicknameInfo(comment.author, comment.author_id)} />
           </span>
           <span className="text-muted">·</span>
-          <span className="text-muted">{formatRelativeKo(comment.created_at)}</span>
+          <span className="text-muted whitespace-nowrap">{formatRelativeKo(comment.created_at)}</span>
           {typeof earned === 'number' && earned > 0 && (
             <>
               <span className="text-muted">·</span>
-              <RewardTooltip earned={earned} kind="community_comment" />
+              <span className="whitespace-nowrap">
+                <RewardTooltip earned={earned} kind="community_comment" />
+              </span>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {showReplyButton && onReply && (
             <button
               type="button"
               onClick={onReply}
-              className="text-[11px] text-muted hover:text-navy cursor-pointer bg-transparent border-none p-0"
+              className="text-[11px] text-muted hover:text-navy cursor-pointer bg-transparent border-none p-0 whitespace-nowrap"
             >
               답글
             </button>
@@ -263,7 +265,7 @@ function CommentRow({
             <button
               type="button"
               onClick={onDelete}
-              className="text-[11px] text-muted hover:text-red-600 cursor-pointer bg-transparent border-none p-0"
+              className="text-[11px] text-muted hover:text-red-600 cursor-pointer bg-transparent border-none p-0 whitespace-nowrap"
             >
               삭제
             </button>
