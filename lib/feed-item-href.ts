@@ -11,6 +11,7 @@ export function feedItemHref(item: FeedItem): string {
     const base = item.post_category === 'hotdeal' ? '/hotdeal'
                : item.post_category === 'stocks' ? '/stocks'
                : item.post_category === 'realty' ? '/realty'
+               : item.post_category === 'worry' ? '/worry'
                : '/community';
     return item.post_id ? `${base}/${item.post_id}` : base;
   }

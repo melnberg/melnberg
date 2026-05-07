@@ -230,6 +230,7 @@ export default function MobileFeedList({ items }: Props) {
                 f.post_category === 'hotdeal' ? '🔥 핫딜'
                 : f.post_category === 'stocks' ? '📈 주식 토론'
                 : f.post_category === 'realty' ? '🏢 부동산 토론'
+                : f.post_category === 'worry' ? '💬 익명 고민상담'
                 : '커뮤니티'
               )
             : aptHeadLabel;
@@ -257,7 +258,7 @@ export default function MobileFeedList({ items }: Props) {
                     )}
                     {f.author_id && (
                       <span className="text-[11px] flex-shrink-0">
-                        <Nickname info={feedItemToNicknameInfo(f)} />
+                        {f.post_category === 'worry' ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
                       </span>
                     )}
                   </div>

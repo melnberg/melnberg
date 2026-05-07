@@ -18,7 +18,7 @@ type Props = {
   currentUserId: string | null;
   currentUserName?: string | null;
   /** 댓글 적립 kind 결정 — 'hotdeal' 이면 hotdeal_comment (1 mlbg base), 그 외는 community_comment (0.3) */
-  postCategory?: 'community' | 'blog' | 'hotdeal';
+  postCategory?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
   /** 댓글 id → 적립 mlbg 매핑 (서버에서 전달) */
   earnedMap?: Record<number, number>;
 };
@@ -55,6 +55,7 @@ function formatRelativeKo(iso: string): string {
 
 export default function CommentSection({ postId, comments, currentUserId, currentUserName, postCategory = 'community', earnedMap = {} }: Props) {
   const commentAwardKind = postCategory === 'hotdeal' ? 'hotdeal_comment' : 'community_comment';
+  const isAnonymous = postCategory === 'worry';
   const router = useRouter();
   const supabase = createClient();
   const [list, setList] = useState(comments);
@@ -142,6 +143,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
                 onDelete={() => handleDelete(c.id)}
                 showReplyButton={Boolean(currentUserId)}
                 earned={earnedMap[c.id]}
+                anonymous={isAnonymous}
               />
 
               {/* 답글 목록 */}
@@ -156,6 +158,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
                         showReplyButton={false}
                         compact
                         earned={earnedMap[r.id]}
+                        anonymous={isAnonymous}
                       />
                     </li>
                   ))}
@@ -223,6 +226,7 @@ function CommentRow({
   showReplyButton,
   compact,
   earned,
+  anonymous,
 }: {
   comment: CommunityComment;
   currentUserId: string | null;
@@ -231,6 +235,7 @@ function CommentRow({
   showReplyButton: boolean;
   compact?: boolean;
   earned?: number;
+  anonymous?: boolean;
 }) {
   const isMine = currentUserId === comment.author_id;
   return (
@@ -238,7 +243,7 @@ function CommentRow({
       <div className="flex items-start justify-between gap-2 mb-1 flex-wrap">
         <div className="flex items-center gap-1.5 text-[12px] flex-wrap min-w-0">
           <span className="font-bold text-navy whitespace-nowrap">
-            <Nickname info={profileToNicknameInfo(comment.author, comment.author_id)} />
+            {anonymous ? <span className="text-muted">익명</span> : <Nickname info={profileToNicknameInfo(comment.author, comment.author_id)} />}
           </span>
           <span className="text-muted">·</span>
           <span className="text-muted whitespace-nowrap">{formatRelativeKo(comment.created_at)}</span>

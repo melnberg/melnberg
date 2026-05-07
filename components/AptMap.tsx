@@ -131,7 +131,7 @@ export type FeedItem = {
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
-  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty';
+  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
   /** stocks 카테고리 글 — 종목 코드 (라우팅 /stocks/{code}/{postId}) */
   stock_code?: string | null;
   /** strike 전용 — 손실 % 와 mlbg 액수 */
@@ -1263,6 +1263,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       const base = item.post_category === 'hotdeal' ? '/hotdeal'
                  : item.post_category === 'stocks' ? '/stocks'
                  : item.post_category === 'realty' ? '/realty'
+                 : item.post_category === 'worry' ? '/worry'
                  : '/community';
       router.push(`${base}/${item.post_id}`);
       return;
@@ -2106,7 +2107,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            <Nickname info={feedItemToNicknameInfo(f)} />
+                            {f.post_category === 'worry' ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
                           </span>
                           {/* 페이지로 이동 — 라우팅 원하는 사용자용. 카드 클릭(펼침)과 분리. */}
                           <button
