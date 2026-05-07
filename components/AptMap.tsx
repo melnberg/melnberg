@@ -1135,6 +1135,9 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [feedOpen, setFeedOpen] = useState(true);
   // 데스크톱 피드 카드 클릭 → 우측 글 상세 drawer (iframe). lg+ 만 노출.
   const [previewItem, setPreviewItem] = useState<FeedItem | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  // previewItem 변경 시 로딩 상태 리셋 — iframe onLoad 에서 false 로
+  useEffect(() => { if (previewItem) setPreviewLoading(true); }, [previewItem]);
   // ESC 키 + 외부(피드/drawer 밖) 클릭으로 drawer 닫기
   useEffect(() => {
     if (!previewItem) return;
@@ -2231,7 +2234,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {previewItem && (
         <aside
           data-preview-drawer
-          className="hidden lg:flex absolute top-0 left-[280px] w-[340px] h-[calc(100vh-115px)] bg-white border border-border shadow-[0_4px_20px_rgba(0,0,0,0.18)] z-30 flex-col"
+          className="hidden lg:flex absolute top-0 left-[280px] w-[340px] h-[calc(100vh-115px)] bg-white border border-border z-30 flex-col"
           role="dialog"
           aria-label="글 상세"
         >
@@ -2247,11 +2250,23 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
               ✕
             </button>
           </div>
-          <iframe
-            src={feedItemHref(previewItem)}
-            className="flex-1 w-full border-0"
-            title="글 상세"
-          />
+          <div className="flex-1 relative bg-white">
+            {previewLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white z-10 pointer-events-none">
+                <div className="flex flex-col items-center gap-2 text-[12px] text-muted">
+                  <div className="w-6 h-6 border-2 border-cyan border-t-transparent rounded-full animate-spin" />
+                  <span>불러오는 중…</span>
+                </div>
+              </div>
+            )}
+            <iframe
+              src={feedItemHref(previewItem)}
+              className="absolute inset-0 w-full h-full border-0"
+              title="글 상세"
+              loading="eager"
+              onLoad={() => setPreviewLoading(false)}
+            />
+          </div>
         </aside>
       )}
 
