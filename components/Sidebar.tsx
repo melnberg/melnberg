@@ -9,14 +9,51 @@ import { KidsIcon as SharedKidsIcon, RestaurantIcon as SharedRestaurantIcon } fr
 
 export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; isAdmin?: boolean; avatarUrl?: string | null };
 export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
+export type BoardKey = 'community' | 'realty' | 'stocks' | 'restaurants' | 'kids';
+export type BoardLatest = { community: string | null; realty: string | null; stocks: string | null; restaurants: string | null; kids: string | null };
 
-type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[] };
+type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[]; boardLatest?: BoardLatest };
+
+const BOARD_KEYS: BoardKey[] = ['community', 'realty', 'stocks', 'restaurants', 'kids'];
+const LS_KEY = (b: BoardKey) => `last_read.${b}`;
 
 const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
 const memberships = products.filter((p) => p.id === 'new-membership' || p.id === 'renewal');
 
-export default function Sidebar({ current, user, recentPosts = [] }: Props) {
+export default function Sidebar({ current, user, recentPosts = [], boardLatest }: Props) {
   const [open, setOpen] = useState(false);
+
+  // 새 글 빨간점 — localStorage 기반 디바이스별 last_read 관리.
+  // 서버 boardLatest 와 lastRead 비교해서 dot 여부 결정.
+  const [lastRead, setLastRead] = useState<Record<string, string | null>>({});
+
+  // mount 시 5개 키 한번에 읽기.
+  useEffect(() => {
+    try {
+      const next: Record<string, string | null> = {};
+      for (const b of BOARD_KEYS) {
+        next[b] = localStorage.getItem(LS_KEY(b));
+      }
+      setLastRead(next);
+    } catch { /* localStorage 차단 환경 — dot 정상 표시 */ }
+  }, []);
+
+  // current 가 board 키와 일치하면 즉시 last_read 갱신 → dot 사라짐.
+  useEffect(() => {
+    if (!current) return;
+    if (!(BOARD_KEYS as string[]).includes(current)) return;
+    const now = new Date().toISOString();
+    try { localStorage.setItem(LS_KEY(current as BoardKey), now); } catch { /* ignore */ }
+    setLastRead((s) => ({ ...s, [current]: now }));
+  }, [current]);
+
+  const dot = (board: BoardKey): boolean => {
+    const latest = boardLatest?.[board];
+    if (!latest) return false;
+    const r = lastRead[board];
+    if (!r) return true;
+    return new Date(latest).getTime() > new Date(r).getTime();
+  };
 
   // 현재 페이지가 해당 섹션의 아이템이면 자동 펼침. 이외엔 닫힘 상태로 시작.
   const isConsultActive = consults.some((p) => current === p.filename);
@@ -129,11 +166,11 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
           {/* 사용자 지정 순서: 홈 / AI / 커뮤니티 / 부동산 토론 / 주식 토론 / 맛집 추천 / 육아 장소 / 멤버십 */}
           <SItem href="/" label="홈" active={current === 'home'} icon={<HomeIcon />} onClick={() => setOpen(false)} />
           <SItem href="/ai" label="멜른버그 AI" active={current === 'ai'} icon={<AiIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/realty" label="부동산 토론" active={current === 'realty'} icon={<RealtyIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} />
-          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} />
+          <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} dot={dot('community')} />
+          <SItem href="/realty" label="부동산 토론" active={current === 'realty'} icon={<RealtyIcon />} onClick={() => setOpen(false)} dot={dot('realty')} />
+          <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} dot={dot('stocks')} />
+          <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} dot={dot('restaurants')} />
+          <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} dot={dot('kids')} />
 
           {/* 멤버십 — 상담 2개 + 멤버십 2개 모두 하위 */}
           <SectionToggle
@@ -247,7 +284,7 @@ export default function Sidebar({ current, user, recentPosts = [] }: Props) {
   );
 }
 
-function SItem({ href, label, price, active, icon, onClick, sub }: { href: string; label: string; price?: string; active?: boolean; icon: React.ReactNode; onClick?: () => void; sub?: boolean }) {
+function SItem({ href, label, price, active, icon, onClick, sub, dot }: { href: string; label: string; price?: string; active?: boolean; icon: React.ReactNode; onClick?: () => void; sub?: boolean; dot?: boolean }) {
   const padX = sub ? 'pl-9 pr-4' : 'px-4';
   const subBg = sub ? 'bg-[#fafafa]' : '';
   const activeBg = active ? 'bg-navy-soft text-navy font-bold border-navy' : `text-text font-medium border-transparent hover:bg-navy-soft ${subBg}`;
@@ -259,6 +296,8 @@ function SItem({ href, label, price, active, icon, onClick, sub }: { href: strin
     >
       {icon}
       <span className="truncate">{label}</span>
+      {/* 새 글 빨간점 — active 일 땐 어차피 진입한 직후라 dot 사라짐. price/active arrow 와 충돌 없음. */}
+      {dot && !active && <span aria-label="새 글" className="ml-auto w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />}
       {price && <span className={`ml-auto text-[11px] font-semibold ${active ? 'text-navy' : 'text-muted'}`}>{price}</span>}
       {active && <span className="absolute right-3 text-lg leading-none text-navy">›</span>}
     </Link>
