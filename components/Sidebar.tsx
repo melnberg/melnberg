@@ -8,11 +8,12 @@ import CheckinButton from './CheckinButton';
 import { KidsIcon as SharedKidsIcon, RestaurantIcon as SharedRestaurantIcon } from './CategoryIcons';
 
 export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; isAdmin?: boolean; avatarUrl?: string | null };
-export type SidebarRecentPost = { id: number; title: string; created_at: string; author_name: string | null };
+// SidebarRecentPost 타입 — 사이드바 최근글 리스트 노출하던 시절 유산. 외부 import 없음 → 제거됨 (2026-05-07).
 export type BoardKey = 'community' | 'realty' | 'stocks' | 'restaurants' | 'kids';
 export type BoardLatest = { community: string | null; realty: string | null; stocks: string | null; restaurants: string | null; kids: string | null };
 
-type Props = { current?: string; user?: SidebarUser | null; recentPosts?: SidebarRecentPost[]; boardLatest?: BoardLatest };
+// recentPosts prop 은 더 이상 받지 않음 — 사이드바에 최근글 리스트 노출 안 함.
+type Props = { current?: string; user?: SidebarUser | null; boardLatest?: BoardLatest };
 
 const BOARD_KEYS: BoardKey[] = ['community', 'realty', 'stocks', 'restaurants', 'kids'];
 const LS_KEY = (b: BoardKey) => `last_read.${b}`;
@@ -20,7 +21,7 @@ const LS_KEY = (b: BoardKey) => `last_read.${b}`;
 const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
 const memberships = products.filter((p) => p.id === 'new-membership' || p.id === 'renewal');
 
-export default function Sidebar({ current, user, recentPosts = [], boardLatest }: Props) {
+export default function Sidebar({ current, user, boardLatest }: Props) {
   const [open, setOpen] = useState(false);
 
   // 새 글 빨간점 — localStorage 기반 디바이스별 last_read 관리.
@@ -339,25 +340,18 @@ const iconCls = 'w-[18px] h-[18px] flex-shrink-0';
 const iconProps = { fill: 'none' as const, stroke: 'currentColor' as const, strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, viewBox: '0 0 24 24', className: iconCls };
 
 const HomeIcon = () => <svg {...iconProps}><path d="M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z" /></svg>;
-const BlogIcon = () => <svg {...iconProps}><path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z" /><path d="M4 4v12a4 4 0 0 0 4 4" /></svg>;
 const CommunityIcon = () => <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
-const HotdealIcon = () => <svg {...iconProps}><path d="M12 2c0 4-3 5-3 9a3 3 0 1 0 6 0c0-2-1-3-1-3 0 0 4 1 4 6a6 6 0 1 1-12 0c0-5 6-7 6-12z" /></svg>;
 // 차트 (캔들봉 + 추세선) — 주식 토론
 const StocksIcon = () => <svg {...iconProps}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /><path d="M16 9h3v3" /></svg>;
 const RealtyIcon = () => <svg {...iconProps}><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /></svg>;
-// 가게 (지붕 달린 상점) — 내 가게
-const StoreIcon = () => <svg {...iconProps}><path d="M3 9l1-5h16l1 5" /><path d="M3 9v11h18V9" /><path d="M9 20v-6h6v6" /></svg>;
-const AuctionIcon = () => <svg {...iconProps}><path d="M11 21h-1l1-7" /><path d="M14 3h1l-1 7" /><path d="M5 14l9-9" /><path d="M3 16l5 5" /><path d="M16 8l5 5" /></svg>;
-const ApartmentIcon = () => <svg {...iconProps}><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3" /></svg>;
 const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>;
 const StarIcon = () => <svg {...iconProps}><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>;
 const RenewIcon = () => <svg {...iconProps}><path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" /></svg>;
-const ConsultIcon = () => <svg {...iconProps}><path d="M3 18v-7a9 9 0 0 1 18 0v7" /><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3v4z" /><path d="M3 19a2 2 0 0 0 2 2h1v-6H3v4z" /></svg>;
 const RestaurantIcon = () => <SharedRestaurantIcon className={iconCls} />;
 const KidsIcon = () => <SharedKidsIcon className={iconCls} />;
 const MembershipIcon = () => <svg {...iconProps}><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /><line x1="6" y1="15" x2="10" y2="15" /></svg>;
-// 트로피 — 자산 순위
-const RankingIcon = () => <svg {...iconProps}><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M7 4H4v3a3 3 0 0 0 3 3" /><path d="M17 4h3v3a3 3 0 0 1-3 3" /></svg>;
+// 가림 메뉴 (블로그/시한 경매/자산 순위/핫딜/내 가게) 의 BlogIcon/HotdealIcon/StoreIcon/AuctionIcon/RankingIcon/
+// ApartmentIcon/ConsultIcon 은 dead code 였음 — 부활 시 git 히스토리에서 복구.
 
 const AiIcon = () => <svg {...iconProps} viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"/></svg>

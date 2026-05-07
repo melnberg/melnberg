@@ -431,8 +431,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstRef = useRef<KakaoMapInst | null>(null);
   const markersRef = useRef<MarkerEntry[]>([]);
-  // 별도 overlaysRef 더 이상 필요 없음 — MarkerEntry.overlay 로 통합. 호환 위해 유지.
-  const overlaysRef = useRef<KakaoOverlayInst[]>([]);
+  // overlaysRef 제거됨 — MarkerEntry.overlay 로 통합 후 read 없는 dead state 였음 (2026-05-07).
   // updateVisibility 를 외부에서 직접 호출하기 위한 ref (필터 토글 시 줌 기반 가시성 재적용용)
   const updateAptVisibilityRef = useRef<(() => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -1298,15 +1297,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     [pins],
   );
 
-  // KST 기준 오늘 00:00 (UTC ISO)
-  function todayKstStartUtcIso(): string {
-    const now = new Date();
-    const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    const y = kstNow.getUTCFullYear(), m = kstNow.getUTCMonth(), d = kstNow.getUTCDate();
-    const kstMidnightUtc = Date.UTC(y, m, d) - 9 * 60 * 60 * 1000;
-    return new Date(kstMidnightUtc).toISOString();
-  }
-
   // 카운트 미리 fetch — '오늘의 매매' 폐지. 현재 등록된 매물 갯수.
   useEffect(() => {
     const supabase = createClient();
@@ -1716,7 +1706,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       if (e.overlay) e.overlay.setMap(null);
     }
     markersRef.current = [];
-    overlaysRef.current = [];
 
     function formatPyeong(p: number): string {
       if (p >= 10000) return `${(p / 10000).toFixed(1)}억/평`;
