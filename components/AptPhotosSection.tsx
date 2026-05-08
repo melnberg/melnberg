@@ -85,7 +85,8 @@ export default function AptPhotosSection({ aptId }: { aptId: number }) {
     const isWebp = blob !== file;
     const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
     const contentType = isWebp ? 'image/webp' : file.type;
-    const path = `apt/${aptId}/${me}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    // post-images Storage RLS — 첫 폴더가 auth.uid() 여야 통과 (SQL 105)
+    const path = `${me}/apt/${aptId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
     if (upErr) { setErr(`업로드 실패: ${upErr.message}`); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
