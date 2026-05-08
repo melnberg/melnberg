@@ -1,15 +1,12 @@
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import ThreadComposer from '@/components/ThreadComposer';
 import ThreadProfileCard from '@/components/ThreadProfileCard';
-import ThreadProfileActions from '@/components/ThreadProfileActions';
-import ThreadTabs from '@/components/ThreadTabs';
+import ThreadFeed from '@/components/ThreadFeed';
 import { type Thread } from '@/components/ThreadList';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
 import { attachAuthorsToThreads } from '@/lib/threads-fetch';
-import { fetchThreadProfile } from '@/lib/thread-profile';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: '스레드 — 멜른버그' };
@@ -44,7 +41,7 @@ export default async function ThreadsPage() {
   const supabase = await createClient();
 
   // 본인 스레드 (parent_id is null) + 본인 답글 (parent_id is not null) 동시 fetch
-  const [{ data: threadRows }, { data: replyRows }, mainProfile, threadProfile] = await Promise.all([
+  const [{ data: threadRows }, { data: replyRows }, mainProfile] = await Promise.all([
     supabase
       .from('threads')
       .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -62,7 +59,6 @@ export default async function ThreadsPage() {
       .order('created_at', { ascending: false })
       .limit(50),
     getCurrentProfile(),
-    fetchThreadProfile(supabase, user.id),
   ]);
 
   const threadCore = (threadRows ?? []) as ThreadCoreRow[];
@@ -91,15 +87,24 @@ export default async function ThreadsPage() {
   // 가장 오래된 스레드 일자 (시작일)
   const oldestIso = threads.length > 0 ? threads[threads.length - 1].created_at : null;
 
+  // 작성자 정보 — 메인 프로필에서 (사진·닉네임은 메인 profiles 가 단일 출처)
+  const authorForOptimistic: Thread['author'] = {
+    display_name: mainProfile?.display_name ?? user.email?.split('@')[0] ?? null,
+    avatar_url: mainProfile?.avatar_url ?? null,
+    tier: mainProfile?.tier ?? null,
+    tier_expires_at: mainProfile?.tier_expires_at ?? null,
+    is_solo: mainProfile?.is_solo ?? null,
+    link_url: mainProfile?.link_url ?? null,
+  };
+
   return (
     <Layout current="threads">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { label: '스레드', bold: true }]} meta="Threads" />
       <div className="bg-white min-h-[calc(100vh-66px)]">
         <div className="max-w-[640px] mx-auto bg-white">
-          {/* 프로필 헤더 — Threads 식 (좌측 정보 / 우측 아바타) */}
+          {/* 프로필 헤더 — Threads 식 (좌측 정보 / 우측 아바타). 사진·닉네임은 메인 profiles. */}
           <ThreadProfileCard
-            threadProfile={threadProfile}
-            fallbackProfile={{
+            profile={{
               display_name: mainProfile?.display_name ?? user.email?.split('@')[0] ?? null,
               avatar_url: mainProfile?.avatar_url ?? null,
             }}
@@ -108,17 +113,13 @@ export default async function ThreadsPage() {
             joinedAtIso={oldestIso}
           />
 
-          {/* 본인 — 편집 / 공유 버튼 */}
-          <ThreadProfileActions />
-
-          {/* 작성 폼 — 흑백 */}
-          <ThreadComposer />
-
-          {/* 4탭 — 스레드 / 답글 / 미디어 / 리포스트 */}
-          <ThreadTabs
-            threads={threads}
-            replies={replies}
+          {/* composer + tabs — 즉시 반영 */}
+          <ThreadFeed
+            initialThreads={threads}
+            initialReplies={replies}
             currentUserId={user.id}
+            canPost
+            currentAuthor={authorForOptimistic}
             showAuthor={false}
           />
         </div>

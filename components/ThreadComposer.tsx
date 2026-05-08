@@ -8,6 +8,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fileToWebp } from '@/lib/image-to-webp';
+import type { Thread } from './ThreadList';
 
 type Props = {
   /** 답글이면 부모 thread id, 아니면 null */
@@ -15,11 +16,16 @@ type Props = {
   /** 작성 후 라우터 refresh — 기본 true */
   refreshOnSubmit?: boolean;
   placeholder?: string;
+  /** 작성 직후 (낙관적 반영용) — 새 thread row 를 부모에게 전달.
+   *  지정되면 부모가 즉시 리스트에 prepend 하므로 router.refresh 지연을 체감하지 않음. */
+  onPosted?: (thread: Thread) => void;
+  /** onPosted 로 전달되는 thread 의 author 정보. 없으면 null author. */
+  currentAuthor?: Thread['author'] | null;
 };
 
 const MAX_LEN = 1000;
 
-export default function ThreadComposer({ parentId = null, refreshOnSubmit = true, placeholder }: Props) {
+export default function ThreadComposer({ parentId = null, refreshOnSubmit = true, placeholder, onPosted, currentAuthor = null }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,11 +87,15 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
       return;
     }
 
-    const { error } = await supabase.from('threads').insert({
-      author_id: user.id,
-      content: finalContent,
-      parent_id: parentId,
-    });
+    const { data, error } = await supabase
+      .from('threads')
+      .insert({
+        author_id: user.id,
+        content: finalContent,
+        parent_id: parentId,
+      })
+      .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
+      .single();
 
     setLoading(false);
     if (error) {
@@ -94,6 +104,31 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
     }
     setContent('');
     setAttachedImages([]);
+
+    // 낙관적 반영 — 부모가 onPosted 를 줬다면 즉시 prepend 가능.
+    if (onPosted && data) {
+      const row = data as {
+        id: number;
+        author_id: string;
+        parent_id: number | null;
+        content: string;
+        like_count: number;
+        reply_count: number;
+        created_at: string;
+      };
+      onPosted({
+        id: row.id,
+        author_id: row.author_id,
+        parent_id: row.parent_id,
+        content: row.content,
+        like_count: row.like_count,
+        reply_count: row.reply_count,
+        created_at: row.created_at,
+        author: currentAuthor,
+        liked: false,
+      });
+    }
+
     if (refreshOnSubmit) router.refresh();
   }
 

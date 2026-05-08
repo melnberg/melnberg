@@ -1,13 +1,13 @@
 import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import ThreadList, { type Thread } from '@/components/ThreadList';
-import ThreadComposer from '@/components/ThreadComposer';
+import { type Thread } from '@/components/ThreadList';
+import ThreadReplyFeed from '@/components/ThreadReplyFeed';
 import Nickname from '@/components/Nickname';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 import { linkify } from '@/lib/linkify';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
 import { attachAuthorsToThreads } from '@/lib/threads-fetch';
 
 export const dynamic = 'force-dynamic';
@@ -98,6 +98,22 @@ export default async function ThreadDetailPage({
 
   const authorName = mainThread.author?.display_name ?? '회원';
 
+  // 답글 작성용 — 본인 메인 프로필을 author 정보로 (낙관적 카드 닉네임/아바타).
+  let meAuthor: Thread['author'] | null = null;
+  if (me?.id) {
+    const meProfile = await getCurrentProfile();
+    if (meProfile) {
+      meAuthor = {
+        display_name: meProfile.display_name ?? null,
+        avatar_url: meProfile.avatar_url ?? null,
+        tier: meProfile.tier ?? null,
+        tier_expires_at: meProfile.tier_expires_at ?? null,
+        is_solo: meProfile.is_solo ?? null,
+        link_url: meProfile.link_url ?? null,
+      };
+    }
+  }
+
   return (
     <Layout>
       <MainTop crumbs={[
@@ -142,22 +158,13 @@ export default async function ThreadDetailPage({
             </div>
           </article>
 
-          {/* 답글 입력 — 로그인 사용자 */}
-          {me?.id && (
-            <ThreadComposer parentId={threadId} placeholder="답글 남기기…" />
-          )}
-
-          {/* 답글 헤더 */}
-          <div className="px-4 py-3 text-[13px] font-bold text-black border-b border-gray-200">
-            답글 <span className="text-gray-500 tabular-nums">{repliesNorm.length}</span>
-          </div>
-
-          {/* 답글 트리 */}
-          <ThreadList
-            threads={repliesNorm}
+          {/* 답글 composer + 리스트 — 작성 시 즉시 반영 */}
+          <ThreadReplyFeed
+            parentId={threadId}
+            initialReplies={repliesNorm}
             currentUserId={me?.id ?? null}
-            showAuthor={true}
-            emptyText="아직 답글이 없어. 첫 답을 남겨봐."
+            canPost={!!me?.id}
+            currentAuthor={meAuthor}
           />
         </div>
       </div>

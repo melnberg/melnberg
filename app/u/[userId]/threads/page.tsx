@@ -1,15 +1,12 @@
 import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
-import ThreadComposer from '@/components/ThreadComposer';
 import ThreadProfileCard from '@/components/ThreadProfileCard';
-import ThreadProfileActions from '@/components/ThreadProfileActions';
-import ThreadTabs from '@/components/ThreadTabs';
+import ThreadFeed from '@/components/ThreadFeed';
 import { type Thread } from '@/components/ThreadList';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
 import { attachAuthorsToThreads } from '@/lib/threads-fetch';
-import { fetchThreadProfile } from '@/lib/thread-profile';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,15 +30,23 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
 
   const { data: ownerProfile } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url')
+    .select('id, display_name, avatar_url, tier, tier_expires_at, is_solo, link_url')
     .eq('id', userId)
     .maybeSingle();
 
   if (!ownerProfile) notFound();
 
-  const owner = ownerProfile as { id: string; display_name: string | null; avatar_url: string | null };
+  const owner = ownerProfile as {
+    id: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    tier: string | null;
+    tier_expires_at: string | null;
+    is_solo: boolean | null;
+    link_url: string | null;
+  };
 
-  const [{ data: threadRows }, { data: replyRows }, threadProfile] = await Promise.all([
+  const [{ data: threadRows }, { data: replyRows }] = await Promise.all([
     supabase
       .from('threads')
       .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -58,7 +63,6 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50),
-    fetchThreadProfile(supabase, userId),
   ]);
 
   const threadCore = (threadRows ?? []) as ThreadCoreRow[];
@@ -83,7 +87,21 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
   const replies: Thread[] = (enrichedReplies as unknown as Thread[]).map((t) => ({ ...t, liked: likedSet.has(t.id) }));
 
   const oldestIso = threads.length > 0 ? threads[threads.length - 1].created_at : null;
-  const ownerName = threadProfile?.display_name ?? owner.display_name ?? '익명';
+  const ownerName = owner.display_name ?? '익명';
+
+  // composer 가 본인 페이지에서만 노출 — 본인 메인 프로필을 author 정보로
+  let viewerAuthor: Thread['author'] | null = null;
+  if (isOwner) {
+    const meProfile = await getCurrentProfile();
+    viewerAuthor = {
+      display_name: meProfile?.display_name ?? owner.display_name,
+      avatar_url: meProfile?.avatar_url ?? owner.avatar_url,
+      tier: meProfile?.tier ?? owner.tier,
+      tier_expires_at: meProfile?.tier_expires_at ?? owner.tier_expires_at,
+      is_solo: meProfile?.is_solo ?? owner.is_solo,
+      link_url: meProfile?.link_url ?? owner.link_url,
+    };
+  }
 
   return (
     <Layout current={isOwner ? 'threads' : undefined}>
@@ -98,8 +116,7 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
       <div className="bg-white min-h-[calc(100vh-66px)]">
         <div className="max-w-[640px] mx-auto bg-white">
           <ThreadProfileCard
-            threadProfile={threadProfile}
-            fallbackProfile={{
+            profile={{
               display_name: owner.display_name,
               avatar_url: owner.avatar_url,
             }}
@@ -108,16 +125,13 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
             joinedAtIso={oldestIso}
           />
 
-          {/* 본인일 때만 편집·공유 버튼 */}
-          {isOwner && <ThreadProfileActions />}
-
-          {/* 본인일 때만 작성 폼 */}
-          {isOwner && <ThreadComposer />}
-
-          <ThreadTabs
-            threads={threads}
-            replies={replies}
+          {/* composer + tabs — 본인 페이지면 작성 가능 */}
+          <ThreadFeed
+            initialThreads={threads}
+            initialReplies={replies}
             currentUserId={viewer?.id ?? null}
+            canPost={isOwner}
+            currentAuthor={viewerAuthor}
             showAuthor={false}
           />
         </div>
