@@ -1,7 +1,7 @@
 'use client';
 
-// 스레드 작성 폼 — 본인 페이지 / 단독 스레드(답글) 에서 사용.
-// textarea + 이미지 첨부 + 글자수 카운터.
+// 스레드 작성 폼 — 흑백 모던 (Meta Threads 톤).
+// 위/아래 라인 보더만, 측면 보더 X. 라운드 X (입력 영역). 게시 버튼만 작은 라운드.
 // parentId 가 있으면 답글, 없으면 새 스레드.
 
 import { useRef, useState } from 'react';
@@ -100,31 +100,30 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
   const remaining = MAX_LEN - content.length;
   const overLimit = remaining < 0;
 
-  // 답글이면 placeholder 일반, 새 글이면 따뜻한 일기장 hint
-  const ph = placeholder ?? (parentId ? '답글 작성…' : '오늘 무슨 일이 있었어?');
+  const ph = placeholder ?? (parentId ? '답글 작성…' : '무슨 생각을 하고 계신가요?');
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-[#fff8ec] border-2 border-[#e8d9b8] rounded-3xl p-5 mb-4 shadow-[0_4px_24px_rgba(120,90,50,0.06)] focus-within:border-[#c89b6f] transition-colors"
+      className="bg-white border-t border-b border-gray-200 px-4 py-3"
     >
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder={ph}
         rows={parentId ? 2 : 3}
-        maxLength={MAX_LEN + 200} // 약간 여유 — 검사로 차단
-        className="w-full resize-none border-0 outline-none text-[14px] text-[#5c4634] placeholder:text-[#b89e7c] bg-transparent leading-loose"
+        maxLength={MAX_LEN + 200}
+        className="w-full resize-none border-0 outline-none text-[15px] text-black placeholder:text-gray-400 bg-transparent leading-relaxed"
       />
       {attachedImages.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
           {attachedImages.map((url) => (
             <div key={url} className="relative">
-              <img src={url} alt="" className="w-20 h-20 object-cover border-2 border-[#e8d9b8] rounded-xl" />
+              <img src={url} alt="" className="w-20 h-20 object-cover border border-gray-200 rounded-lg" />
               <button
                 type="button"
                 onClick={() => removeAttached(url)}
-                className="absolute top-0.5 right-0.5 w-5 h-5 bg-[#5c4634] text-[#fff8ec] text-[11px] font-bold leading-none flex items-center justify-center rounded-full"
+                className="absolute top-0.5 right-0.5 w-5 h-5 bg-black text-white text-[11px] font-bold leading-none flex items-center justify-center rounded-full"
                 title="첨부 제거"
               >
                 ×
@@ -133,14 +132,14 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
           ))}
         </div>
       )}
-      {err && <div className="text-[11px] text-[#b14545] mt-2">{err}</div>}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#e8d9b8]">
-        <div className="flex items-center gap-2">
+      {err && <div className="text-[12px] text-red-500 mt-2">{err}</div>}
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="text-[12px] text-[#a07f5f] hover:text-[#5c4634] disabled:opacity-50"
+            className="text-[13px] text-gray-500 hover:text-black disabled:opacity-50"
             title="이미지 첨부"
           >
             {uploading ? '업로드중…' : '이미지'}
@@ -156,16 +155,16 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
               e.target.value = '';
             }}
           />
-          <span className={`text-[11px] tabular-nums ${overLimit ? 'text-[#b14545] font-bold' : 'text-[#a07f5f]'}`}>
+          <span className={`text-[12px] tabular-nums ${overLimit ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
             {remaining}
           </span>
         </div>
         <button
           type="submit"
           disabled={loading || overLimit || (!content.trim() && attachedImages.length === 0)}
-          className="bg-[#5c4634] text-[#fff8ec] px-5 py-2 text-[12px] font-bold hover:bg-[#3d2f22] disabled:opacity-50 rounded-full transition-colors"
+          className="bg-black text-white px-4 py-1.5 text-[14px] font-bold hover:bg-gray-800 disabled:opacity-50 rounded-full transition-colors"
         >
-          {loading ? '게시중…' : (parentId ? '답글' : '남기기')}
+          {loading ? '게시중…' : (parentId ? '답글' : '게시')}
         </button>
       </div>
     </form>

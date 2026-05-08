@@ -34,7 +34,7 @@ export default async function ThreadDetailPage({
   const supabase = await createClient();
   const me = await getCurrentUser();
 
-  // 메인 스레드 — PostgREST FK 모호 회피 (author 별도 fetch)
+  // 메인 스레드
   const { data: mainRaw } = await supabase
     .from('threads')
     .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -45,7 +45,7 @@ export default async function ThreadDetailPage({
 
   const main = mainRaw as ThreadCoreRow;
 
-  // 답글 — parent_id = threadId, 평면 (children 의 children 는 단순화)
+  // 답글
   const { data: repliesRaw } = await supabase
     .from('threads')
     .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -55,13 +55,12 @@ export default async function ThreadDetailPage({
     .limit(200);
   const replies = (repliesRaw ?? []) as ThreadCoreRow[];
 
-  // author 일괄 병합 (메인 + 답글)
   const allCore: ThreadCoreRow[] = [main, ...replies];
   const enriched = await attachAuthorsToThreads(supabase, allCore);
   const mainEnriched = enriched[0]!;
   const repliesEnriched = enriched.slice(1);
 
-  // 좋아요 상태 — 메인 + 답글 모두
+  // 좋아요 상태
   const allIds = [main.id, ...replies.map((r) => r.id)];
   let likedSet = new Set<number>();
   if (me?.id && allIds.length > 0) {
@@ -105,63 +104,62 @@ export default async function ThreadDetailPage({
         { href: '/', label: '멜른버그' },
         { href: `/u/${mainThread.author_id}`, label: authorName },
         { href: `/t/${threadId}`, label: '글', bold: true },
-      ]} meta="Diary" />
+      ]} meta="Threads" />
 
-      {/* 일기장 톤 — 따뜻한 크림 배경 */}
-      <div className="bg-[#fdf6e3] min-h-[calc(100vh-66px)]">
-        <section className="py-10">
-          <div className="max-w-[620px] mx-auto px-4">
-            {/* 메인 스레드 — 단독 강조 카드 (일기장 종이) */}
-            <article className="bg-[#fff8ec] border-2 border-[#e8d9b8] rounded-3xl p-6 mb-4 shadow-[0_4px_24px_rgba(120,90,50,0.06)]">
-              <div className="flex items-center gap-3 mb-3">
-                {mainThread.author?.avatar_url ? (
-                  <img src={mainThread.author.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-[#e8d9b8] flex-shrink-0" />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-[#f5e8cc] border-2 border-[#e8d9b8] flex items-center justify-center text-[#5c4634] text-[16px] font-bold flex-shrink-0">
-                    {(authorName[0] ?? '?').toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-[14px]">
-                    <Nickname info={profileToNicknameInfo(mainThread.author, mainThread.author_id)} />
-                  </div>
-                  <div className="text-[11px] text-[#a07f5f] mt-0.5">
-                    {new Date(mainThread.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                  </div>
+      <div className="bg-white min-h-[calc(100vh-66px)]">
+        <div className="max-w-[640px] mx-auto bg-white">
+          {/* 메인 스레드 — 단독 강조 (Threads 톤) */}
+          <article className="px-4 py-4 border-b border-gray-200">
+            <div className="flex gap-3">
+              {mainThread.author?.avatar_url ? (
+                <img src={mainThread.author.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover bg-gray-100 flex-shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-black text-[14px] font-bold flex-shrink-0">
+                  {(authorName[0] ?? '?').toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-[14px]">
+                  <Nickname info={profileToNicknameInfo(mainThread.author, mainThread.author_id)} />
+                </div>
+                <div className="text-[12px] text-gray-500 mt-0.5">
+                  {new Date(mainThread.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div className="mt-2 text-[15px] text-black whitespace-pre-wrap break-words leading-relaxed">
+                  {linkify(mainThread.content)}
+                </div>
+                <div className="flex items-center gap-5 mt-3 text-[13px] text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <span className={mainThread.liked ? 'text-red-500' : ''} aria-hidden>{mainThread.liked ? '♥' : '♡'}</span>
+                    <span className="tabular-nums">{mainThread.like_count}</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span aria-hidden>💬</span>
+                    <span className="tabular-nums">{mainThread.reply_count}</span>
+                  </span>
                 </div>
               </div>
-              <div className="text-[15px] text-[#5c4634] whitespace-pre-wrap break-words leading-loose">
-                {linkify(mainThread.content)}
-              </div>
-              <div className="flex items-center gap-5 mt-4 pt-3 border-t border-[#e8d9b8] text-[12px] text-[#a07f5f]">
-                <span className="flex items-center gap-1">
-                  <span className={mainThread.liked ? 'text-[#c89b6f]' : ''} aria-hidden>{mainThread.liked ? '♥' : '♡'}</span>
-                  <span className="tabular-nums">{mainThread.like_count}</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span aria-hidden>💬</span>
-                  <span className="tabular-nums">{mainThread.reply_count}</span>
-                </span>
-              </div>
-            </article>
-
-            {/* 답글 입력 — 로그인 사용자 */}
-            {me?.id && (
-              <ThreadComposer parentId={threadId} placeholder="답글 남기기…" />
-            )}
-
-            {/* 답글 트리 */}
-            <h2 className="text-[11px] font-bold tracking-[0.3em] uppercase text-[#a07f5f] mt-6 mb-2 px-1">답글 ({repliesNorm.length})</h2>
-            <div className="bg-[#fff8ec] border-2 border-[#e8d9b8] rounded-3xl overflow-hidden shadow-[0_4px_24px_rgba(120,90,50,0.05)]">
-              <ThreadList
-                threads={repliesNorm}
-                currentUserId={me?.id ?? null}
-                showAuthor={true}
-                emptyText="아직 답글이 없어. 첫 답을 남겨봐."
-              />
             </div>
+          </article>
+
+          {/* 답글 입력 — 로그인 사용자 */}
+          {me?.id && (
+            <ThreadComposer parentId={threadId} placeholder="답글 남기기…" />
+          )}
+
+          {/* 답글 헤더 */}
+          <div className="px-4 py-3 text-[13px] font-bold text-black border-b border-gray-200">
+            답글 <span className="text-gray-500 tabular-nums">{repliesNorm.length}</span>
           </div>
-        </section>
+
+          {/* 답글 트리 */}
+          <ThreadList
+            threads={repliesNorm}
+            currentUserId={me?.id ?? null}
+            showAuthor={true}
+            emptyText="아직 답글이 없어. 첫 답을 남겨봐."
+          />
+        </div>
       </div>
     </Layout>
   );

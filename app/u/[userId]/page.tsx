@@ -510,11 +510,11 @@ export default async function UserProfilePage({
             </div>
           )}
 
-          {/* 일깃장 — 탭 무관 항상 노출. 본인이면 작성 폼. anchor=#threads (Nickname 의 집 아이콘 진입점). */}
-          <div id="threads" className="mt-10 -mx-4 sm:-mx-0 px-4 sm:px-6 py-6 sm:py-8 bg-[#fdf6e3] border-2 border-[#e8d9b8] rounded-3xl scroll-mt-[80px]">
+          {/* 스레드 — 탭 무관 항상 노출. 본인이면 작성 폼. anchor=#threads (Nickname 의 집 아이콘 진입점). */}
+          <div id="threads" className="mt-10 -mx-4 sm:-mx-0 px-4 sm:px-6 py-6 sm:py-8 bg-white border border-gray-200 rounded-lg scroll-mt-[80px]">
             <div className="max-w-[600px] mx-auto">
-              <h2 className="text-[15px] font-bold tracking-wide text-[#5c4634] mb-1" style={{ fontFamily: 'serif' }}>나의 일깃장</h2>
-              <p className="text-[11px] text-[#8a6f55] mb-4 leading-relaxed">{isOwner ? '여기는 너만의 공간이야' : '이 사람의 일깃장이야'}</p>
+              <h2 className="text-[15px] font-bold tracking-wide text-black mb-1">스레드</h2>
+              <p className="text-[12px] text-gray-500 mb-4 leading-relaxed">{isOwner ? '여기는 너만의 공간이야' : '이 사람의 스레드야'}</p>
               {isOwner && <ThreadComposer />}
               <ThreadList
                 threads={userThreads}

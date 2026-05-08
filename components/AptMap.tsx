@@ -2110,16 +2110,6 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
                             {f.post_category === 'worry' ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
                           </span>
-                          {/* 페이지로 이동 — 라우팅 원하는 사용자용. 카드 클릭(펼침)과 분리. */}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); jumpToFeedItem(f); }}
-                            className="text-[10px] text-muted hover:text-navy hover:underline flex-shrink-0 bg-transparent border-none p-0 cursor-pointer"
-                            aria-label="페이지로 이동"
-                            title="페이지로 이동"
-                          >
-                            ↗ 페이지
-                          </button>
                         </div>
                         {/* 본문 영역 — 클릭 시 그 자리에서 펼침/접기 토글 (라우팅 X). 페이지 이동은 우상단 ↗ 페이지 버튼. */}
                         <div

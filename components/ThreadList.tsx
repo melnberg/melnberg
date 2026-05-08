@@ -1,7 +1,7 @@
 'use client';
 
-// 스레드 리스트 — Meta Threads 스타일.
-// 카드: 아바타 / 닉네임 / 시각 / 본문(linkify) / 좋아요·답글
+// 스레드 리스트 — Meta Threads 앱 스타일 (흑백 모던).
+// 카드: 좌측 36px 아바타 / 우측 닉네임·시각·본문·액션
 // 좋아요는 supabase RPC `toggle_thread_like` (optimistic UI)
 // 답글 N 클릭 → /t/{id} 로 이동
 
@@ -93,9 +93,9 @@ function ThreadCard({
   }
 
   const avatar = author?.avatar_url ? (
-    <img src={author.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-[#e8d9b8] flex-shrink-0" />
+    <img src={author.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover bg-gray-100 flex-shrink-0" />
   ) : (
-    <div className="w-10 h-10 rounded-full bg-[#f5e8cc] border-2 border-[#e8d9b8] flex items-center justify-center text-[#5c4634] text-[14px] font-bold flex-shrink-0">
+    <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-black text-[13px] font-bold flex-shrink-0">
       {(author?.display_name?.[0] ?? '?').toUpperCase()}
     </div>
   );
@@ -103,25 +103,24 @@ function ThreadCard({
   return (
     <article
       onClick={handleCardClick}
-      className={`flex gap-3 p-4 border-b border-[#e8d9b8] last:border-b-0 ${isEditing ? '' : 'hover:bg-[#fdf6e3]/60 cursor-pointer'}`}
+      className={`flex gap-3 px-4 py-3 border-b border-gray-200 last:border-b-0 ${isEditing ? '' : 'hover:bg-gray-50 cursor-pointer'}`}
     >
       <div className="flex-shrink-0">{avatar}</div>
       <div className="flex-1 min-w-0">
-        {showAuthor && (
-          <div className="flex items-center gap-2 mb-1 text-[13px]">
+        {showAuthor ? (
+          <div className="flex items-center gap-2 mb-0.5 text-[14px]">
             <Nickname info={profileToNicknameInfo(author, t.author_id)} />
-            <span className="text-[#a07f5f] text-[11px]">· {formatRelative(t.created_at)}</span>
+            <span className="text-gray-500 text-[13px]">· {formatRelative(t.created_at)}</span>
           </div>
-        )}
-        {!showAuthor && (
-          <div className="text-[11px] text-[#a07f5f] mb-1">{formatRelative(t.created_at)}</div>
+        ) : (
+          <div className="text-[13px] text-gray-500 mb-0.5">{formatRelative(t.created_at)}</div>
         )}
         {isEditing ? (
           <div onClick={(e) => e.stopPropagation()}>
             <textarea
               value={editContent}
               onChange={(e) => onChangeEdit(e.target.value)}
-              className="w-full min-h-[80px] p-2 border-2 border-[#e8d9b8] rounded-xl text-[14px] text-[#5c4634] bg-[#fff8ec] resize-y focus:outline-none focus:border-[#c89b6f] leading-loose"
+              className="w-full min-h-[80px] p-2 border border-gray-300 rounded-lg text-[14px] text-black bg-white resize-y focus:outline-none focus:border-black leading-relaxed"
               autoFocus
             />
             <div className="flex items-center gap-2 mt-2">
@@ -129,7 +128,7 @@ function ThreadCard({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onSaveEdit(t.id); }}
                 disabled={saving || editContent.trim() === ''}
-                className="bg-[#5c4634] text-[#fff8ec] px-4 py-1.5 text-[12px] font-bold disabled:opacity-50 hover:bg-[#3d2f22] rounded-full"
+                className="bg-black text-white px-4 py-1.5 text-[13px] font-bold disabled:opacity-50 hover:bg-gray-800 rounded-full"
               >
                 {saving ? '저장중…' : '저장'}
               </button>
@@ -137,32 +136,32 @@ function ThreadCard({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCancelEdit(); }}
                 disabled={saving}
-                className="px-3 py-1 text-[12px] text-[#a07f5f] hover:text-[#5c4634] disabled:opacity-50"
+                className="px-3 py-1 text-[13px] text-gray-500 hover:text-black disabled:opacity-50"
               >
                 취소
               </button>
             </div>
           </div>
         ) : (
-          <div className="text-[14px] text-[#5c4634] whitespace-pre-wrap break-words leading-loose">
+          <div className="text-[15px] text-black whitespace-pre-wrap break-words leading-relaxed">
             {linkify(t.content)}
           </div>
         )}
-        <div className="flex items-center gap-5 mt-3 text-[12px] text-[#a07f5f]">
+        <div className="flex items-center gap-5 mt-2.5 text-[13px] text-gray-500">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onToggleLike(t.id); }}
             disabled={!currentUserId || isEditing}
-            className={`flex items-center gap-1 ${currentUserId && !isEditing ? 'hover:text-[#5c4634]' : 'cursor-not-allowed opacity-50'}`}
+            className={`flex items-center gap-1 ${currentUserId && !isEditing ? 'hover:text-black' : 'cursor-not-allowed opacity-50'}`}
             title={currentUserId ? '좋아요' : '로그인 필요'}
           >
-            <span className={t.liked ? 'text-[#c89b6f]' : ''} aria-hidden>{t.liked ? '♥' : '♡'}</span>
+            <span className={t.liked ? 'text-red-500' : ''} aria-hidden>{t.liked ? '♥' : '♡'}</span>
             <span className="tabular-nums">{t.like_count}</span>
           </button>
           <Link
             href={`/t/${t.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 hover:text-[#5c4634] no-underline text-[#a07f5f]"
+            className="flex items-center gap-1 hover:text-black no-underline text-gray-500"
           >
             <span aria-hidden>💬</span>
             <span className="tabular-nums">{t.reply_count}</span>
@@ -172,7 +171,7 @@ function ThreadCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onStartEdit(t.id, t.content); }}
-                className="hover:text-[#5c4634]"
+                className="hover:text-black"
                 title="수정"
                 aria-label="수정"
               >
@@ -181,7 +180,7 @@ function ThreadCard({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}
-                className="hover:text-[#5c4634]"
+                className="hover:text-black"
                 title="삭제"
                 aria-label="삭제"
               >
@@ -269,7 +268,7 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
   }
 
   if (items.length === 0) {
-    return <p className="text-center py-12 text-[#8a6f55] text-[13px] leading-loose">{emptyText}</p>;
+    return <p className="text-center py-12 text-gray-500 text-[13px]">{emptyText}</p>;
   }
 
   return (
