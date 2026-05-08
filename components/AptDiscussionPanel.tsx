@@ -14,6 +14,7 @@ import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
+import AptPhotosSection from './AptPhotosSection';
 import RewardTooltip from './RewardTooltip';
 import AptReviewLikeButton from './AptReviewLikeButton';
 import { useConfirm } from '@/lib/use-confirm';
@@ -770,6 +771,9 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
               onTradeExecuted={() => reload()}
             />
           )}
+
+          {/* 단지 사진 — 누구나 등록·조회 가능 */}
+          <AptPhotosSection aptId={apt.id} />
 
           {/* 히스토리 토글 */}
           {/* 실거래가 차트 — 국토부 데이터 */}
