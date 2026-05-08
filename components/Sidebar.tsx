@@ -174,7 +174,7 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
           <SItem href="/threads" label="스레드" active={current === 'threads'} icon={<DiaryIcon />} onClick={() => setOpen(false)} />
           <SItem href="/community" label="커뮤니티" active={current === 'community'} icon={<CommunityIcon />} onClick={() => setOpen(false)} dot={dot('community')} />
           <SItem href="/realty" label="부동산 토론" active={current === 'realty'} icon={<RealtyIcon />} onClick={() => setOpen(false)} dot={dot('realty')} />
-          <SItem href="/worry" label="익명 고민상담" active={current === 'worry'} icon={<WorryIcon />} onClick={() => setOpen(false)} />
+          {/* <SItem href="/worry" label="익명 고민상담" active={current === 'worry'} icon={<WorryIcon />} onClick={() => setOpen(false)} /> */}
           <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} dot={dot('stocks')} />
           <SItem href="/coin" label="코인 토론" active={current === 'coin'} icon={<CoinIcon />} onClick={() => setOpen(false)} dot={dot('coin')} />
           <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} dot={dot('restaurants')} />
