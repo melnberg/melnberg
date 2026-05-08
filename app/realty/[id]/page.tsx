@@ -125,12 +125,14 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
               </div>
             </header>
 
-            <div className="px-6 lg:px-8 py-8 border border-white/10"
+            <div className="px-6 lg:px-8 py-8 border border-white/10 mb-3"
                  style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-white/90">
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap text-white/90">
                 {linkify(post.content)}
               </div>
+            </div>
 
+            <div className="bg-white px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               {pollData.poll && (
                 <PollWidget
                   postId={post.id}

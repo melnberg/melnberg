@@ -141,13 +141,16 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
               </div>
             )}
 
-            {/* 본문/폴/댓글 — 다크 글래스 카드 */}
-            <div className="px-6 lg:px-8 py-8 border border-white/10"
+            {/* 본문 — 다크 글래스 */}
+            <div className="px-6 lg:px-8 py-8 border border-white/10 mb-3"
                  style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-white/90">
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap text-white/90">
                 {linkify(post.content)}
               </div>
+            </div>
 
+            {/* 폴/댓글 — 흰 카드 (가독성 위해 분리) */}
+            <div className="bg-white px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
               {pollData.poll && (
                 <PollWidget
                   postId={post.id}
