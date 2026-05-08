@@ -314,7 +314,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
                 </label>
                 <input
                   type="datetime-local"
-                  step={600}
+                  step={1800}
                   value={pollEndsAt}
                   onChange={(e) => setPollEndsAt(e.target.value)}
                   className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none w-full sm:max-w-[260px]"
