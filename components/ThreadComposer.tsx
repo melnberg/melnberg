@@ -8,6 +8,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fileToWebp } from '@/lib/image-to-webp';
+import { revalidateHome } from '@/lib/revalidate-home';
 import type { Thread } from './ThreadList';
 
 type Props = {
@@ -129,6 +130,8 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
       });
     }
 
+    // 홈 피드 (fetchFeed unstable_cache 90s) 캐시 즉시 무효화 — 다음 홈 진입에 새 글 보임.
+    revalidateHome();
     if (refreshOnSubmit) router.refresh();
   }
 

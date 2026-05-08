@@ -6,7 +6,7 @@
 // 답글 N 클릭 → /t/{id} 로 이동
 
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
@@ -196,6 +196,8 @@ function ThreadCard({
 
 export default function ThreadList({ threads, currentUserId, showAuthor = true, emptyText = '아직 글이 없어요.' }: Props) {
   const [items, setItems] = useState<Thread[]>(threads);
+  // parent 가 새 threads prop 으로 갱신할 때 동기화 — composer 의 onPosted prepend 즉시 반영.
+  useEffect(() => { setItems(threads); }, [threads]);
   const [, startTransition] = useTransition();
   const router = useRouter();
   const supabase = createClient();
