@@ -137,13 +137,14 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
             {/* 차트 카드 */}
             {post.stock_code && (/^\d{6}$/.test(post.stock_code) || /^[A-Z][A-Z0-9.\-]{0,9}$/i.test(post.stock_code)) && (
               <div className="mb-6">
-                <StockInfoCard code={post.stock_code} />
+                <StockInfoCard code={post.stock_code} theme="dark" />
               </div>
             )}
 
-            {/* 본문/폴/댓글 — 화이트 페이퍼 카드 (가독성) */}
-            <div className="bg-white px-6 lg:px-8 py-8 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-text">
+            {/* 본문/폴/댓글 — 다크 글래스 카드 */}
+            <div className="px-6 lg:px-8 py-8 border border-white/10"
+                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-white/90">
                 {linkify(post.content)}
               </div>
 

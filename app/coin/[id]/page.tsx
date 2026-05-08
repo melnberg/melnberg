@@ -134,12 +134,13 @@ export default async function CoinPostDetail({ params }: { params: Promise<{ id:
 
             {post.stock_code && /^KRW-[A-Z0-9]{2,10}$/.test(post.stock_code) && (
               <div className="mb-6">
-                <StockInfoCard code={post.stock_code} kind="coin" />
+                <StockInfoCard code={post.stock_code} kind="coin" theme="dark" />
               </div>
             )}
 
-            <div className="bg-white px-6 lg:px-8 py-8 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-text">
+            <div className="px-6 lg:px-8 py-8 border border-white/10"
+                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-white/90">
                 {linkify(post.content)}
               </div>
 

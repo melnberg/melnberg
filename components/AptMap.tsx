@@ -2167,9 +2167,13 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                               </span>
                             </div>
                           ) : isComment ? (
+                            // 댓글 본문은 비공개 — 어떤 글에 댓글이 달렸는지(원글 제목)만 표시.
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
                               <span className="text-[9px] font-bold tracking-wider uppercase bg-cyan/15 text-cyan px-1.5 py-0.5 flex-shrink-0 mt-0.5">댓글</span>
-                              <span className="whitespace-pre-wrap break-words">{fullContent ? renderFeedContentWithImages(fullContent) : f.title}</span>
+                              <span className="break-words text-muted">
+                                <span className="text-text font-medium">{f.title || '게시글'}</span>
+                                <span className="text-cyan font-bold ml-1">에 댓글</span>
+                              </span>
                             </div>
                           ) : isListing ? (
                             <div className="text-[12px] text-text leading-snug flex items-start gap-1.5">
