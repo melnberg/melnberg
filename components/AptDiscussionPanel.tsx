@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { fileToWebp } from '@/lib/image-to-webp';
 import Nickname, { type NicknameInfo } from './Nickname';
 import type { AptPin } from './AptMap';
 import { getAptListingPrice } from '@/lib/listing-price';
@@ -14,7 +15,6 @@ import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import { linkify } from '@/lib/linkify';
 import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
-import AptPhotosSection from './AptPhotosSection';
 import RewardTooltip from './RewardTooltip';
 import AptReviewLikeButton from './AptReviewLikeButton';
 import { useConfirm } from '@/lib/use-confirm';
@@ -93,6 +93,10 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
+  // 글에 첨부할 이미지 URL 들 — 본문 끝에 자동 append
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 댓글 입력 (글 단위)
   const [commentBody, setCommentBody] = useState<Map<number, string>>(new Map());
@@ -411,10 +415,32 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apt.id]);
 
+  async function handleAttachImage(file: File) {
+    if (uploadingImg) return;
+    if (!userId) { setSubmitErr('로그인이 필요해요.'); return; }
+    if (file.size > 8 * 1024 * 1024) { setSubmitErr('8MB 이하 이미지만 가능해요.'); return; }
+    setSubmitErr(null);
+    setUploadingImg(true);
+    const converted = await fileToWebp(file).catch(() => null);
+    const blob = converted?.blob ?? file;
+    const isWebp = blob !== file;
+    const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+    const contentType = isWebp ? 'image/webp' : file.type;
+    const path = `${userId}/apt/${apt.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
+    if (upErr) { setSubmitErr(`업로드 실패: ${upErr.message}`); setUploadingImg(false); return; }
+    const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+    setAttachedImages((cur) => [...cur, publicUrl]);
+    setUploadingImg(false);
+  }
+
   async function submitWrite(e: React.FormEvent) {
     e.preventDefault();
     if (!userId) { setSubmitErr('로그인이 필요해요.'); return; }
-    const text = body.trim();
+    // 본문 + 첨부 이미지 URL 들을 합침
+    const bodyTrim = body.trim();
+    const imgBlock = attachedImages.length > 0 ? '\n\n' + attachedImages.join('\n') : '';
+    const text = (bodyTrim + imgBlock).trim();
     if (!text) { setSubmitErr('내용을 입력해주세요.'); return; }
     // 다리 통행료 사전 검사 (한강 횡단 시) — 글 수정도 동일 로직 적용
     const tollOk = await checkAndPayBridgeToll(apt.lat, apt.lng);
@@ -457,6 +483,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     setWriting(false);
     setEditingId(null);
     setBody('');
+    setAttachedImages([]);
     revalidateHome();
     await reload();
   }
@@ -772,8 +799,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
             />
           )}
 
-          {/* 단지 사진 — 누구나 등록·조회 가능 */}
-          <AptPhotosSection aptId={apt.id} />
+          {/* 단지 사진 별도 섹션 폐지 — 글쓰기에 사진 첨부로 통합 (2026-05-09) */}
 
           {/* 히스토리 토글 */}
           {/* 실거래가 차트 — 국토부 데이터 */}
@@ -1076,10 +1102,52 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
               required
               autoFocus
             />
+            {/* 첨부 이미지 미리보기 */}
+            {attachedImages.length > 0 && (
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {attachedImages.map((url, i) => (
+                  <div key={i} className="relative aspect-square overflow-hidden bg-bg/30 border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setAttachedImages((cur) => cur.filter((_, idx) => idx !== i))}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] cursor-pointer border-none flex items-center justify-center"
+                      aria-label="제거"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* 사진 첨부 버튼 */}
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleAttachImage(f);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImg}
+                className="text-[11px] font-bold text-navy bg-white border border-navy/40 hover:bg-navy hover:text-white px-2.5 py-1 cursor-pointer disabled:opacity-40"
+              >
+                {uploadingImg ? '업로드 중...' : '＋ 사진 첨부'}
+              </button>
+              <span className="text-[10px] text-muted">최대 8MB · jpg/png/webp/heic</span>
+            </div>
             {submitErr && <p className="mt-2 text-xs text-red-600">{submitErr}</p>}
             <div className="mt-3 flex gap-2">
               <button type="button"
-                onClick={() => { setWriting(false); setEditingId(null); setBody(''); setSubmitErr(null); }}
+                onClick={() => { setWriting(false); setEditingId(null); setBody(''); setAttachedImages([]); setSubmitErr(null); }}
                 className="flex-1 py-2 border border-border text-text text-sm font-medium hover:border-navy"
                 disabled={submitting}>
                 취소
