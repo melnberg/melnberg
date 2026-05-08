@@ -143,10 +143,10 @@ export async function fetchPostPoll(
     ends_at?: string | null;
   };
 
-  // 투표 모드 — 옵션별 참가자 fetch (작은 아바타 표시용)
+  // 옵션별 참가자 fetch — vote/bet 둘 다. 베팅 카드에도 닉네임 표시.
   let voters: PollVoter[] = [];
   const isVoteMode = pollRow.mode === 'vote';
-  if (isVoteMode) {
+  {
     const { data: voteRows } = await supabase
       .from('post_poll_votes')
       .select('user_id, option_id')

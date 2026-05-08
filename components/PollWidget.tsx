@@ -262,8 +262,8 @@ export default function PollWidget({
           const isRadioChecked = canBet && selectedOption === opt.id;
           const voteClickable = canVote;
 
-          // 옵션별 참가자 (vote 모드 only) — 본인 + 최대 4명 아바타
-          const optVoters = isVoteMode ? voters.filter((v) => v.option_id === opt.id) : [];
+          // 옵션별 참가자 — vote/bet 모드 둘 다 닉네임/아바타 표시
+          const optVoters = voters.filter((v) => v.option_id === opt.id);
 
           return (
             <label
@@ -316,8 +316,8 @@ export default function PollWidget({
                     <span className="text-cyan">●</span>
                   )}
                   <span className="truncate">{opt.label}</span>
-                  {/* vote 모드 — 옵션별 작은 아바타 nav */}
-                  {isVoteMode && optVoters.length > 0 && (
+                  {/* 옵션별 참가자 — 작은 아바타 nav (vote/bet 둘 다) */}
+                  {optVoters.length > 0 && (
                     <span className="flex items-center -space-x-1.5 ml-1 shrink-0">
                       {optVoters.slice(0, 5).map((v) => (
                         <span
