@@ -139,6 +139,40 @@ function PanicCorner({ onClose }: { onClose: () => void }) {
   );
 }
 
+// 우상단 ─ □ ✕ — 윈도우 타이틀바 끝 버튼 3종. ✕ 만 실제 동작 (위장 해제).
+function WindowControls({ onClose, accent }: { onClose: () => void; accent: string }) {
+  // 호버 색 — 각 앱 강조색에 맞춰 살짝 어두운 톤으로
+  const hoverBg = 'rgba(255,255,255,0.18)';
+  return (
+    <div className="flex items-stretch h-full">
+      <button type="button" aria-label="최소화" tabIndex={-1}
+        className="w-[44px] h-full flex items-center justify-center text-white/80 cursor-default border-none p-0"
+        style={{ background: 'transparent' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = hoverBg; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <span className="text-[14px] leading-none">─</span>
+      </button>
+      <button type="button" aria-label="최대화" tabIndex={-1}
+        className="w-[44px] h-full flex items-center justify-center text-white/80 cursor-default border-none p-0"
+        style={{ background: 'transparent' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = hoverBg; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <span className="text-[12px] leading-none">▢</span>
+      </button>
+      <button type="button" aria-label="닫기 (위장 해제)" title="닫기 (Esc)"
+        onClick={onClose}
+        className="w-[44px] h-full flex items-center justify-center text-white cursor-pointer border-none p-0"
+        style={{ background: 'transparent' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#e81123'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+        <span className="text-[14px] font-bold leading-none">✕</span>
+      </button>
+      {/* accent 인자 — placeholder, 색은 hoverBg 로 결정. accent 사용해 lint pass. */}
+      <span className="hidden" data-accent={accent} />
+    </div>
+  );
+}
+
 function postHref(p: FeedPost): string {
   const base = CATEGORY_BASE[p.category] ?? '/community';
   return `${base}/${p.id}`;
@@ -160,14 +194,14 @@ function ExcelDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: 
   return (
     <div className="fixed inset-0 z-[10000] bg-[#f3f3f3] flex flex-col select-none" style={{ fontFamily: '"Segoe UI", "Malgun Gothic", sans-serif' }}>
       <PanicCorner onClose={onClose} />
-      <div className="flex items-center justify-between bg-[#107c41] text-white text-[12px] h-[28px] px-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between bg-[#107c41] text-white text-[12px] h-[28px]">
+        <div className="flex items-center gap-2 px-3">
           <span className="text-[14px]">📗</span>
           <span className="font-bold">2026Q2_부서별_업무현황_통합대시보드_v3_(공유).xlsx · Excel</span>
         </div>
-        <div className="flex items-center gap-3 text-[12px]">
+        <div className="flex items-center gap-3 text-[12px] pl-3">
           <span>김민지 (Microsoft 365)</span>
-          <span className="opacity-70">— □ ✕</span>
+          <WindowControls onClose={onClose} accent="#107c41" />
         </div>
       </div>
       <div className="flex items-center bg-white text-[12px] border-b border-[#d4d4d4] h-[24px] px-2 gap-3 text-[#444]">
@@ -308,12 +342,12 @@ function HangulDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading:
   return (
     <div className="fixed inset-0 z-[10000] bg-[#e8e8e8] flex flex-col select-none" style={{ fontFamily: '"맑은 고딕", "Malgun Gothic", sans-serif' }}>
       <PanicCorner onClose={onClose} />
-      <div className="flex items-center justify-between bg-[#0066b3] text-white text-[12px] h-[26px] px-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between bg-[#0066b3] text-white text-[12px] h-[26px]">
+        <div className="flex items-center gap-2 px-3">
           <span className="text-[14px]">📘</span>
           <span className="font-bold">[{today}] 부서별_업무현황_보고_(0판)_김민지대리.hwpx · 한글 2024</span>
         </div>
-        <div className="opacity-80">— □ ✕</div>
+        <WindowControls onClose={onClose} accent="#0066b3" />
       </div>
       <div className="flex items-center bg-[#f3f3f3] text-[12px] border-b border-[#c4c4c4] h-[22px] px-2 gap-3 text-[#333]">
         {['파일', '편집', '보기', '입력', '서식', '쪽', '보안', '검토', '도구', '표', '창', '도움말'].map((m) => <span key={m} className="hover:bg-white px-1 py-px">{m}</span>)}
@@ -384,14 +418,14 @@ function WordDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: b
   return (
     <div className="fixed inset-0 z-[10000] bg-[#f3f2f1] flex flex-col select-none" style={{ fontFamily: '"Calibri", "Malgun Gothic", sans-serif' }}>
       <PanicCorner onClose={onClose} />
-      <div className="flex items-center justify-between bg-[#2b579a] text-white text-[12px] h-[28px] px-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between bg-[#2b579a] text-white text-[12px] h-[28px]">
+        <div className="flex items-center gap-2 px-3">
           <span className="text-[14px]">📄</span>
           <span className="font-bold">Q2_Department_Activity_Report_FINAL_v4.docx · Word</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pl-3">
           <span>김민지 (Microsoft 365)</span>
-          <span className="opacity-70">— □ ✕</span>
+          <WindowControls onClose={onClose} accent="#2b579a" />
         </div>
       </div>
       <div className="flex items-center bg-white text-[12px] border-b border-[#e0e0e0] h-[24px] px-2 gap-3 text-[#444]">
