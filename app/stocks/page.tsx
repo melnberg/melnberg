@@ -5,6 +5,9 @@ import { listPosts, formatBoardTime } from '@/lib/community';
 import { getCurrentUser } from '@/lib/auth';
 import Nickname from '@/components/Nickname';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
+import MarketTickerBar from '@/components/MarketTickerBar';
+import HotStocksSection from '@/components/HotStocksSection';
+import { fetchMarketIndices, fetchHotStocks } from '@/lib/market-snapshot';
 
 export const metadata = {
   title: '주식 토론 — 멜른버그',
@@ -14,7 +17,16 @@ export const metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function StocksPage() {
-  const [posts, user] = await Promise.all([listPosts('stocks'), getCurrentUser()]);
+  const [posts, user, indices] = await Promise.all([
+    listPosts('stocks'),
+    getCurrentUser(),
+    fetchMarketIndices(),
+  ]);
+  // 인기 종목 — 최근 14일 글에서만 카운트
+  const cutoff = Date.now() - 14 * 24 * 3600 * 1000;
+  const recentPosts = posts.filter((p) => new Date(p.created_at).getTime() >= cutoff)
+    .map((p) => ({ stock_code: p.stock_code ?? null, stock_name: p.stock_name ?? null }));
+  const hot = await fetchHotStocks(recentPosts, 6);
 
   return (
     <Layout current="stocks">
@@ -41,6 +53,12 @@ export default async function StocksPage() {
 
       <section className="py-6">
         <div className="max-w-content mx-auto px-4 lg:px-10">
+          {/* 마켓 인덱스 — 코스피·코스닥·SP500·BTC */}
+          <MarketTickerBar indices={indices} />
+
+          {/* 인기 종목 — 최근 14일 토론 많은 순 */}
+          <HotStocksSection stocks={hot} />
+
           <div className="mb-4 px-4 py-3 bg-cyan/5 border border-cyan/30 text-[12px] leading-relaxed text-text">
             <b className="text-navy">주식 토론 부여 규칙</b>
             <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
