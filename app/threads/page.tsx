@@ -22,7 +22,25 @@ type ThreadCoreRow = {
 };
 
 export default async function ThreadsPage() {
-  const user = await getCurrentUser();
+  try {
+    return await renderThreadsPage();
+  } catch (err) {
+    console.error('[/threads] SSR error:', err);
+    return (
+      <Layout current="threads">
+        <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { label: '스레드', bold: true }]} meta="Threads" />
+        <div className="bg-white min-h-[calc(100vh-66px)] flex flex-col items-center justify-center px-6 py-20 text-center">
+          <p className="text-[14px] text-black font-bold mb-2">잠시 후 다시 시도해줘</p>
+          <p className="text-[12px] text-gray-500 mb-6">스레드를 불러오는 중 일시적 문제가 있었어.</p>
+          <Link href="/" className="bg-black text-white px-6 py-2.5 rounded-full text-[13px] font-bold no-underline hover:bg-gray-800">홈으로</Link>
+        </div>
+      </Layout>
+    );
+  }
+}
+
+async function renderThreadsPage() {
+  const user = await getCurrentUser().catch(() => null);
 
   if (!user) {
     return (
