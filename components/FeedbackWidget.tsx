@@ -21,24 +21,6 @@ export default function FeedbackWidget() {
     return () => window.removeEventListener('popstate', onPop);
   }, [open]);
 
-  // 모바일 키보드 올라오면 모달이 가려지지 않게 — visualViewport 로 keyboard offset 측정
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
-  useEffect(() => {
-    if (!open) { setKeyboardOffset(0); return; }
-    const vv = (typeof window !== 'undefined') ? window.visualViewport : null;
-    if (!vv) return;
-    const onResize = () => {
-      const offset = window.innerHeight - vv.height - vv.offsetTop;
-      setKeyboardOffset(Math.max(0, offset));
-    };
-    vv.addEventListener('resize', onResize);
-    vv.addEventListener('scroll', onResize);
-    onResize();
-    return () => {
-      vv.removeEventListener('resize', onResize);
-      vv.removeEventListener('scroll', onResize);
-    };
-  }, [open]);
 
   // X 버튼 / submit 성공 시 닫기 — history dummy 도 같이 pop
   function closeModal() {
@@ -88,10 +70,20 @@ export default function FeedbackWidget() {
 
   return (
     <div
-      style={open ? { bottom: 20 + keyboardOffset } : undefined}
-      className={`floating-widget fixed z-50 flex items-end gap-2 ${open ? 'right-5' : 'top-2 right-2'}`}
+      className="floating-widget fixed top-2 right-2 z-50 flex flex-col items-end gap-2"
     >
-      {open ? (
+      {/* 아이콘 — 항상 노출. open 일 때도 그대로 (모달이 그 아래 펼쳐짐). */}
+      <button
+        type="button"
+        onClick={() => (open ? closeModal() : setOpen(true))}
+        aria-label="오류·불편사항 신고"
+        className="w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy flex items-center justify-center transition-colors flex-shrink-0"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </button>
+      {open && (
         <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.18)] w-[320px] max-w-[calc(100vw-40px)]">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-navy text-white">
             <div className="text-[13px] font-bold">오류·불편사항 신고</div>
@@ -127,19 +119,6 @@ export default function FeedbackWidget() {
             )}
           </div>
         </div>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="오류·불편사항 신고"
-            className="w-9 h-9 rounded-full bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy flex items-center justify-center transition-colors flex-shrink-0"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
-        </>
       )}
     </div>
   );
