@@ -36,14 +36,25 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50),
-      supabase
-        .from('posts')
-        .select('id, author_id, title, content, category, stock_code, stock_name, created_at')
-        .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin'])
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(50)
-        .then((r) => r, () => ({ data: null })),
+      // SQL 189 미적용 환경 안전 — stock_name 빠진 select 로 retry
+      (async () => {
+        const r1 = await supabase
+          .from('posts')
+          .select('id, author_id, title, content, category, stock_code, stock_name, created_at')
+          .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin'])
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (!r1.error) return r1;
+        const r2 = await supabase
+          .from('posts')
+          .select('id, author_id, title, content, category, stock_code, created_at')
+          .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin'])
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        return r2;
+      })().then((r) => r, () => ({ data: null })),
       // 임베드 없이 댓글만 조회 — posts 조인은 별도 쿼리에서 처리 (PostgREST 임베드 실패 시 silent fail 방지)
       supabase
         .from('comments')
@@ -384,8 +395,11 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       threadProfsResp,
     ] = await Promise.all([
       commentPostIds.length > 0
-        ? supabase.from('posts').select('id, title, category, stock_code, stock_name').in('id', commentPostIds)
-            .then((r) => r, () => ({ data: null }))
+        ? (async () => {
+            const r1 = await supabase.from('posts').select('id, title, category, stock_code, stock_name').in('id', commentPostIds);
+            if (!r1.error) return r1;
+            return await supabase.from('posts').select('id, title, category, stock_code').in('id', commentPostIds);
+          })().then((r) => r, () => ({ data: null }))
         : Promise.resolve({ data: null }),
       allAuthorIds.length > 0
         ? supabase.from('profiles')
