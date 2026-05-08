@@ -19,17 +19,25 @@ export const dynamic = 'force-dynamic';
 // 다크 프리미엄 테마 — 톤앤매너 무시 (사용자 명시 허락)
 const STOCKS_BG = 'linear-gradient(180deg, #050913 0%, #0a1226 60%, #0d1933 100%)';
 
-export default async function StocksPage() {
-  const [posts, user, indices] = await Promise.all([
+export default async function StocksPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
+  const { tag } = await searchParams;
+  const [postsAll, user, indices] = await Promise.all([
     listPosts('stocks'),
     getCurrentUser(),
     fetchMarketIndices(),
   ]);
-  // 인기 종목 — 최근 14일 글에서만 카운트
+  // ?tag=CODE 있으면 해당 코드 글만 노출
+  const posts = tag
+    ? postsAll.filter((p) => (p as { stock_code?: string | null }).stock_code === tag)
+    : postsAll;
+  // 인기 종목 — 최근 14일 전체 글 기준 (필터링 전)
   const cutoff = Date.now() - 14 * 24 * 3600 * 1000;
-  const recentPosts = posts.filter((p) => new Date(p.created_at).getTime() >= cutoff)
+  const recentPosts = postsAll.filter((p) => new Date(p.created_at).getTime() >= cutoff)
     .map((p) => ({ stock_code: p.stock_code ?? null, stock_name: p.stock_name ?? null }));
   const hot = await fetchHotStocks(recentPosts, 6);
+  const filterName = tag
+    ? (postsAll.find((p) => (p as { stock_code?: string | null }).stock_code === tag) as { stock_name?: string | null } | undefined)?.stock_name ?? tag
+    : null;
 
   return (
     <Layout current="stocks">
@@ -93,9 +101,16 @@ export default async function StocksPage() {
               </div>
             ) : (
               <div className="border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <div className="px-4 py-2.5 border-b border-white/10 flex items-baseline gap-2">
+                <div className="px-4 py-2.5 border-b border-white/10 flex items-baseline gap-2 flex-wrap">
                   <h2 className="text-[13px] font-bold text-white tracking-tight">💬 토론</h2>
                   <span className="text-[11px] text-white/40">{posts.length}건</span>
+                  {filterName && (
+                    <span className="ml-auto flex items-center gap-2 text-[11px]">
+                      <span className="text-white/50">필터:</span>
+                      <span className="font-bold text-emerald-300" style={{ color: '#22e0a1' }}>📈 {filterName}</span>
+                      <Link href="/stocks" className="text-white/60 hover:text-white no-underline">✕ 해제</Link>
+                    </span>
+                  )}
                 </div>
                 <table className="w-full text-[13px] border-collapse table-fixed">
                   <thead>
@@ -135,8 +150,8 @@ export default async function StocksPage() {
                             </Link>
                             <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
                           </td>
-                          <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible">
-                            <span className="inline-flex max-w-full truncate text-cyan-300">
+                          <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible" style={{ color: '#67e8f9' }}>
+                            <span className="inline-flex max-w-full truncate" style={{ color: '#67e8f9' }}>
                               <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
                             </span>
                           </td>

@@ -53,6 +53,7 @@ export default function HotStocksSection({ stocks, label = '🔥 인기 종목',
             <Link
               key={s.code}
               href={`/stocks?tag=${encodeURIComponent(s.code)}`}
+              scroll={false}
               className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all no-underline block"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))',

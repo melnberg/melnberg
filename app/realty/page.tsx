@@ -116,8 +116,8 @@ export default async function RealtyPage() {
                           </Link>
                           <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
                         </td>
-                        <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible">
-                          <span className="inline-flex max-w-full truncate text-amber-200">
+                        <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible" style={{ color: '#fde68a' }}>
+                          <span className="inline-flex max-w-full truncate" style={{ color: '#fde68a' }}>
                             <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
                           </span>
                         </td>

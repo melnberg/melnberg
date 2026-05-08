@@ -19,16 +19,23 @@ export const dynamic = 'force-dynamic';
 // 다크 + 골드/오렌지 (BTC) + 퍼플 그라디언트
 const COIN_BG = 'linear-gradient(180deg, #0a0612 0%, #18102b 60%, #1f1438 100%)';
 
-export default async function CoinPage() {
-  const [posts, user, indices] = await Promise.all([
+export default async function CoinPage({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
+  const { tag } = await searchParams;
+  const [postsAll, user, indices] = await Promise.all([
     listPosts('coin'),
     getCurrentUser(),
     fetchCoinIndices(),
   ]);
+  const posts = tag
+    ? postsAll.filter((p) => (p as { stock_code?: string | null }).stock_code === tag)
+    : postsAll;
   const cutoff = Date.now() - 14 * 24 * 3600 * 1000;
-  const recentPosts = posts.filter((p) => new Date(p.created_at).getTime() >= cutoff)
+  const recentPosts = postsAll.filter((p) => new Date(p.created_at).getTime() >= cutoff)
     .map((p) => ({ stock_code: p.stock_code ?? null, stock_name: p.stock_name ?? null }));
   const hot = await fetchHotCoins(recentPosts, 6);
+  const filterName = tag
+    ? (postsAll.find((p) => (p as { stock_code?: string | null }).stock_code === tag) as { stock_name?: string | null } | undefined)?.stock_name ?? tag.replace('KRW-', '')
+    : null;
 
   return (
     <Layout current="coin">
@@ -88,9 +95,16 @@ export default async function CoinPage() {
               </div>
             ) : (
               <div className="border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <div className="px-4 py-2.5 border-b border-white/10 flex items-baseline gap-2">
+                <div className="px-4 py-2.5 border-b border-white/10 flex items-baseline gap-2 flex-wrap">
                   <h2 className="text-[13px] font-bold text-white tracking-tight">💬 토론</h2>
                   <span className="text-[11px] text-white/40">{posts.length}건</span>
+                  {filterName && (
+                    <span className="ml-auto flex items-center gap-2 text-[11px]">
+                      <span className="text-white/50">필터:</span>
+                      <span className="font-bold" style={{ color: '#ffb866' }}>₿ {filterName}</span>
+                      <Link href="/coin" className="text-white/60 hover:text-white no-underline">✕ 해제</Link>
+                    </span>
+                  )}
                 </div>
                 <table className="w-full text-[13px] border-collapse table-fixed">
                   <thead>
@@ -130,8 +144,8 @@ export default async function CoinPage() {
                             </Link>
                             <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
                           </td>
-                          <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible">
-                            <span className="inline-flex max-w-full truncate text-amber-200">
+                          <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible" style={{ color: '#fde68a' }}>
+                            <span className="inline-flex max-w-full truncate" style={{ color: '#fde68a' }}>
                               <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
                             </span>
                           </td>

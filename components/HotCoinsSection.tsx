@@ -55,6 +55,7 @@ export default function HotCoinsSection({ coins }: { coins: HotCoin[] }) {
             <Link
               key={s.code}
               href={`/coin?tag=${encodeURIComponent(s.code)}`}
+              scroll={false}
               className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all no-underline block"
               style={{
                 background: 'linear-gradient(135deg, rgba(247,147,26,0.06), rgba(255,255,255,0.012))',
