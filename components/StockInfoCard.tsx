@@ -84,20 +84,24 @@ function fmtChange(n: number, foreign: boolean | undefined): string {
 
 export default function StockInfoCard({ code, compact = false, kind = 'stock', theme = 'light' }: { code: string; compact?: boolean; kind?: 'stock' | 'coin'; theme?: 'light' | 'dark' }) {
   const dark = theme === 'dark';
-  // 다크 톤 컬러 — 기본 클래스 대체
+  // 라이트 테마 — 거의 흰색에 가까운 옅은 회색. 테두리도 거의 안 보이게.
+  // 다크 테마 — 기존 유지.
   const cls = {
     card: dark
       ? 'border border-white/15 px-4 py-3'
-      : 'border border-cyan/40 bg-cyan/5 px-4 py-3',
+      : 'border px-4 py-3',
     cardStyle: dark
       ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }
-      : undefined,
+      : {
+          background: '#fafafa',
+          borderColor: '#ececec',
+        },
     name: dark ? 'text-white' : 'text-navy',
     sub: dark ? 'text-white/50' : 'text-muted',
     body: dark ? 'text-white' : 'text-text',
-    chip: dark ? 'bg-white/10 text-white/90' : 'bg-navy/10 text-navy',
-    chipSubtle: dark ? 'bg-white/5 text-white/80' : 'bg-navy/5 text-navy',
-    border: dark ? 'border-white/10' : 'border-border/40',
+    chip: dark ? 'bg-white/10 text-white/90' : 'bg-[#f0f0f0] text-[#555]',
+    chipSubtle: dark ? 'bg-white/5 text-white/80' : 'bg-[#f5f5f5] text-[#666]',
+    border: dark ? 'border-white/10' : 'border-[#ececec]',
   };
   const [info, setInfo] = useState<StockInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);

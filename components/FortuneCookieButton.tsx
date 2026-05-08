@@ -13,17 +13,51 @@ import { revalidateHome } from '@/lib/revalidate-home';
 
 type Fortune = { id: number; fortune_text: string; drawn_date: string; created_at: string };
 
-function CookieIcon({ size = 16 }: { size?: number }) {
-  // 쿠키 — 둥근 본체 + 갈라진 틈 + 종이 쪼가리. 흰색 stroke 으로 오로라 위에 떠 보임.
+// Kakao JS SDK 동적 로드 (한번만). NEXT_PUBLIC_KAKAO_MAP_KEY 가 같은 JS 키.
+declare global {
+  interface Window {
+    Kakao?: {
+      isInitialized: () => boolean;
+      init: (key: string) => void;
+      Share?: { sendDefault: (params: Record<string, unknown>) => void };
+    };
+  }
+}
+
+async function ensureKakaoLoaded(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const key = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+  if (!key) return false;
+  if (window.Kakao?.Share) {
+    if (!window.Kakao.isInitialized()) window.Kakao.init(key);
+    return true;
+  }
+  await new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector('script[data-kakao-sdk]');
+    if (existing) { existing.addEventListener('load', () => resolve()); return; }
+    const s = document.createElement('script');
+    s.src = 'https://developers.kakao.com/sdk/js/kakao.min.js';
+    s.async = true;
+    s.setAttribute('data-kakao-sdk', '1');
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Kakao SDK 로드 실패'));
+    document.head.appendChild(s);
+  }).catch(() => null);
+  if (!window.Kakao) return false;
+  if (!window.Kakao.isInitialized()) window.Kakao.init(key);
+  return !!window.Kakao.Share;
+}
+
+function CookieIcon({ size = 18 }: { size?: number }) {
+  // 쿠키 — 검정 선화. 반달 본체 + 갈라진 틈 + 튀어나온 종이.
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" fill="#FFE7B0" stroke="#FFFFFF" strokeWidth="1.4" />
-      <circle cx="8.5" cy="9" r="0.9" fill="#C97A2A" />
-      <circle cx="14.5" cy="8.5" r="0.7" fill="#C97A2A" />
-      <circle cx="13.5" cy="14" r="0.8" fill="#C97A2A" />
-      <circle cx="9" cy="14.5" r="0.6" fill="#C97A2A" />
-      <path d="M5 13 C 8 16, 16 16, 19 13" stroke="#C97A2A" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-      <path d="M11 11.5 L 13 11.5 L 13 17 L 11 17 Z" fill="#FFFFFF" stroke="#C97A2A" strokeWidth="0.7" />
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {/* 본체 — 둥근 쿠키 */}
+      <circle cx="12" cy="13" r="8.5" />
+      {/* 갈라진 틈 (지그재그) */}
+      <path d="M5 12 L 8 12.5 L 9.5 11.5 L 11 12.5 L 12.5 11.5 L 14 12.5 L 15.5 11.5 L 17 12.5 L 19 12" />
+      {/* 종이 쪼가리 */}
+      <path d="M11 12 L 11 17 L 13 17 L 13 12" />
     </svg>
   );
 }
@@ -44,6 +78,7 @@ export default function FortuneCookieButton() {
   const [revealed, setRevealed] = useState(false);
   // 오늘치 이미 뽑았는지 — true 면 오로라/광택 애니메이션 끔.
   const [drawnToday, setDrawnToday] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -108,6 +143,40 @@ export default function FortuneCookieButton() {
     if (fortune && !already) router.refresh();
   }
 
+  async function shareKakao(f: Fortune) {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const ok = await ensureKakaoLoaded();
+      if (!ok || !window.Kakao?.Share) {
+        alert('카카오톡 공유를 사용할 수 없어요. 카카오 키 확인 필요');
+        return;
+      }
+      const origin = window.location.origin;
+      const link = `${origin}/fortune/${f.id}`;
+      const imageUrl = `${origin}/api/og/fortune/${f.id}`;
+      const d = new Date(f.drawn_date);
+      const dateLabel = `${d.getMonth() + 1}월 ${d.getDate()}일`;
+      window.Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `🥠 ${dateLabel} 포춘쿠키`,
+          description: f.fortune_text,
+          imageUrl,
+          link: { mobileWebUrl: link, webUrl: link },
+        },
+        buttons: [
+          { title: '운세 보러가기', link: { mobileWebUrl: link, webUrl: link } },
+        ],
+      });
+    } catch (e) {
+      console.error('Kakao share error', e);
+      alert('공유 실패');
+    } finally {
+      setSharing(false);
+    }
+  }
+
   const modal = open && mounted ? createPortal(
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={close}>
       <div
@@ -129,19 +198,36 @@ export default function FortuneCookieButton() {
           ) : fortune ? (
             <>
               <div className="text-[60px] mb-2">🥠</div>
-              <div className={`text-[14px] leading-relaxed text-text whitespace-pre-wrap break-words ${revealed ? 'animate-fade-in' : 'opacity-0'}`}>
+              <div
+                className={`text-[15px] leading-loose text-text whitespace-pre-wrap break-keep ${revealed ? 'animate-fade-in' : 'opacity-0'}`}
+                style={{ textWrap: 'balance' as React.CSSProperties['textWrap'] }}
+              >
                 {fortune.fortune_text}
               </div>
               {already && (
                 <div className="mt-3 text-[11px] text-muted">오늘은 이미 한 번 뽑았어요. 내일 다시!</div>
               )}
-              <button
-                type="button"
-                onClick={close}
-                className="mt-5 w-full px-4 py-2 text-[13px] font-bold tracking-wide cursor-pointer border-none bg-emerald-500 text-white hover:bg-emerald-600"
-              >
-                확인
-              </button>
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => shareKakao(fortune)}
+                  disabled={sharing}
+                  className="flex-1 px-3 py-2 text-[13px] font-bold tracking-wide cursor-pointer border-none bg-[#FEE500] text-[#191919] hover:bg-[#fcd900] disabled:opacity-60 flex items-center justify-center gap-1.5"
+                  title="카카오톡으로 공유"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M12 3C6.48 3 2 6.58 2 11c0 2.83 1.84 5.32 4.62 6.78l-1.05 3.83c-.1.36.27.65.59.46l4.51-2.97c.43.04.87.07 1.33.07 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
+                  </svg>
+                  카톡 공유
+                </button>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="flex-1 px-3 py-2 text-[13px] font-bold tracking-wide cursor-pointer border-none bg-emerald-500 text-white hover:bg-emerald-600"
+                >
+                  확인
+                </button>
+              </div>
             </>
           ) : null}
         </div>
@@ -150,9 +236,9 @@ export default function FortuneCookieButton() {
     document.body,
   ) : null;
 
-  // 뽑은 후엔 정적 회색 톤 — 애니메이션 0
+  // 뽑은 후엔 정적 회색 톤 — 애니메이션 0. 클릭은 가능 (다시 누르면 같은 운세 모달).
   const buttonCls = drawnToday
-    ? 'relative w-full px-2 py-2 text-[12px] font-bold text-muted bg-[#f3f4f6] border border-[#e5e7eb] cursor-default flex items-center justify-center gap-1.5'
+    ? 'relative w-full px-2 py-2 text-[12px] font-bold text-muted bg-[#f3f4f6] border border-[#e5e7eb] cursor-pointer hover:bg-[#e5e7eb] flex items-center justify-center gap-1.5'
     : 'fortune-aurora group relative w-full px-2 py-2 text-[12px] font-bold text-white border-none cursor-pointer overflow-hidden flex items-center justify-center gap-1.5';
 
   return (
@@ -160,13 +246,13 @@ export default function FortuneCookieButton() {
       <button
         type="button"
         onClick={handleClick}
-        disabled={busy || drawnToday}
+        disabled={busy}
         className={buttonCls}
-        title={drawnToday ? '오늘은 이미 뽑음 — 내일 다시' : '오늘의 포춘쿠키 — 1일 1회'}
+        title={drawnToday ? '오늘 운세 (다시 보기)' : '오늘의 포춘쿠키 — 1일 1회'}
       >
         <span className="relative z-10 flex items-center gap-1.5 whitespace-nowrap drop-shadow-sm">
-          <CookieIcon size={14} />
-          <span>{drawnToday ? '오늘 운세 뽑음' : label}</span>
+          <CookieIcon size={18} />
+          <span>{label}</span>
         </span>
         {!drawnToday && <span aria-hidden className="fortune-aurora-shine" />}
       </button>

@@ -61,10 +61,20 @@ const FORTUNES: string[] = [
   '오늘은 답장 안 온 사람한테 두 번 보내지 말 것. 내일 알아서 옴.',
 ];
 
-// OpenAI gpt-5-mini 로 매번 새 운세 1건 생성. 사용자 간·일자 간 중복 0.
+// 텍스트 정규화 — 공백/특수문자 압축 후 비교용 키.
+function normText(s: string): string {
+  return s.replace(/\s+/g, '').replace(/["'·.,!?~]/g, '').trim();
+}
+
+// OpenAI gpt-5-mini 로 운세 1건 생성. forbidden 에 들어있는 문구는 절대 안 만들도록 강제.
 // 실패 (키 없음·네트워크·rate limit) 시 null → 호출자가 fallback 사용.
-async function generateFortuneWithAI(): Promise<string | null> {
+async function generateFortuneWithAI(forbidden: string[]): Promise<string | null> {
   if (!process.env.OPENAI_API_KEY) return null;
+  // 토큰 절약을 위해 최근 30개만 prompt 에 노출 (충분히 우회 신호 됨).
+  const recentForbidden = forbidden.slice(0, 30);
+  const forbiddenBlock = recentForbidden.length > 0
+    ? `\n\n절대로 다음 문구들과 같거나 거의 비슷하게 쓰지 마. 다른 시간/사물/행동/관점으로 완전히 새로 써:\n${recentForbidden.map((t, i) => `${i + 1}. ${t}`).join('\n')}`
+    : '';
   const SYSTEM = `너는 한국어 포춘쿠키 작가야. 한 문장으로 오늘의 운세를 뽑아줘.
 
 요구사항:
@@ -79,7 +89,7 @@ async function generateFortuneWithAI(): Promise<string | null> {
 좋은 예:
 - "오늘 점심에 평소 안 가던 식당이 인생 식당으로 등극함. 메뉴는 직원 추천 따라가야 함."
 - "엘리베이터에서 우연히 만난 사람과의 대화에서 좋은 정보 하나 줍는 날."
-- "오후 4시쯤 맞은 햇살 5분이 오늘 비타민. 안 받으면 저녁부터 처짐."`;
+- "오후 4시쯤 맞은 햇살 5분이 오늘 비타민. 안 받으면 저녁부터 처짐."${forbiddenBlock}`;
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);
@@ -94,7 +104,7 @@ async function generateFortuneWithAI(): Promise<string | null> {
         model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: SYSTEM },
-          { role: 'user', content: '오늘의 운세 한 문장.' },
+          { role: 'user', content: '오늘의 운세 한 문장. 위 forbidden 목록과 절대 겹치지 않게.' },
         ],
         max_completion_tokens: 200,
       }),
@@ -132,16 +142,52 @@ export async function POST() {
     return NextResponse.json({ ok: true, already: true, fortune: existing });
   }
 
-  // AI 생성 우선 — 매 호출마다 새 문장. 사용자 간 중복 0.
-  let fortune = await generateFortuneWithAI();
+  // 중복 차단 데이터 수집 — (a) 오늘 모든 사람 + (b) 이 사용자가 과거에 뽑은 모든 운세.
+  const [{ data: todayRows }, { data: mineRows }] = await Promise.all([
+    supabase
+      .from('fortune_cookies')
+      .select('fortune_text')
+      .eq('drawn_date', today)
+      .is('deleted_at', null),
+    supabase
+      .from('fortune_cookies')
+      .select('fortune_text')
+      .eq('user_id', user.id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ]);
+  const forbidden: string[] = [
+    ...((todayRows ?? []) as Array<{ fortune_text: string }>).map((r) => r.fortune_text),
+    ...((mineRows ?? []) as Array<{ fortune_text: string }>).map((r) => r.fortune_text),
+  ];
+  const forbiddenSet = new Set(forbidden.map(normText));
 
-  // AI 실패 시 fallback — (user_id + 날짜) 해시 기반 결정적 선택.
+  // AI 시도 — 최대 3회. 응답이 forbidden 과 같거나 정규화 동일하면 재시도.
+  let fortune: string | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const candidate = await generateFortuneWithAI(forbidden);
+    if (!candidate) break;  // 키/네트워크 문제 — 더 시도해도 의미 없음
+    if (!forbiddenSet.has(normText(candidate))) { fortune = candidate; break; }
+  }
+
+  // AI 실패·전부 중복 시 fallback — FORTUNES 에서 forbidden 제외하고 해시 선택.
   if (!fortune) {
-    let hash = 0;
-    const seed = `${user.id}-${today}`;
-    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-    const idx = ((hash % FORTUNES.length) + FORTUNES.length) % FORTUNES.length;
-    fortune = FORTUNES[idx];
+    const pool = FORTUNES.filter((t) => !forbiddenSet.has(normText(t)));
+    if (pool.length > 0) {
+      let hash = 0;
+      const seed = `${user.id}-${today}`;
+      for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+      const idx = ((hash % pool.length) + pool.length) % pool.length;
+      fortune = pool[idx];
+    } else {
+      // 풀까지 다 떨어지면 — fallback 50개 중에서 그냥 해시 (이론상 거의 없음)
+      let hash = 0;
+      const seed = `${user.id}-${today}`;
+      for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+      const idx = ((hash % FORTUNES.length) + FORTUNES.length) % FORTUNES.length;
+      fortune = FORTUNES[idx];
+    }
   }
 
   const { data: row, error } = await supabase
