@@ -4,6 +4,7 @@
 import type { FeedItem } from '@/components/AptMap';
 
 export function feedItemHref(item: FeedItem): string {
+  if (item.kind === 'fortune_cookie') return `/fortune/${item.id}`;
   if (item.kind === 'thread' && item.post_id) return `/t/${item.post_id}`;
   if (item.kind === 'poll_settled') {
     if (!item.post_id) return '/community';

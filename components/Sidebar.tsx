@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 import NotificationsBell from './NotificationsBell';
-import CheckinButton from './CheckinButton';
+import FortuneCookieButton from './FortuneCookieButton';
+import MlbgIcon from './MlbgIcon';
 import { KidsIcon as SharedKidsIcon, RestaurantIcon as SharedRestaurantIcon } from './CategoryIcons';
 
 export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; isAdmin?: boolean; avatarUrl?: string | null };
@@ -105,7 +106,8 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
         </div>
 
         {/* 로그인 사용자 정보 — 좁은 사이드바 (lg:140px) 에서도 안 깨지게 세로 스택.
-            순서: 사진+조합원 / 자산(mlbg) / 마이페이지 / 출석룰렛 / 어드민. */}
+            순서: 사진+조합원 (= /me 링크) / 자산(mlbg, MlbgIcon) / 포춘쿠키 / 어드민.
+            (출석룰렛·마이페이지 링크 폐지 — 사진 자체가 /me 링크라 중복 제거됨, 2026-05-09) */}
         {user && (
           <div className="px-3 py-2">
             <div className="border border-border hover:border-navy transition-colors p-2.5 flex flex-col gap-2 relative">
@@ -133,27 +135,21 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
                 )}
                 <span className="text-[12px] font-bold text-text truncate max-w-full">{user.name}</span>
               </Link>
-              {/* 2. 자산 — mlbg 잔액 가운데 */}
+              {/* 2. 자산 — MlbgIcon (멜른버그 화폐) + 잔액 */}
               {typeof user.balance === 'number' && (
                 <Link
                   href="/me"
                   onClick={() => setOpen(false)}
-                  className="text-center text-[12px] tabular-nums no-underline border-t border-[#f3f3f3] pt-1.5"
+                  className="text-center text-[13px] tabular-nums no-underline border-t border-[#f3f3f3] pt-1.5 flex items-center justify-center gap-1"
                 >
-                  💰 <span className="text-black font-normal">{Math.floor(user.balance).toLocaleString()}</span> <span className="text-cyan font-bold">mlbg</span>
+                  <MlbgIcon size={20} />
+                  <span className="text-black font-bold">{Math.floor(user.balance).toLocaleString()}</span>
+                  <span className="text-[#F7931A] font-bold text-[11px] tracking-wide">mlbg</span>
                 </Link>
               )}
-              {/* 3. 마이페이지 링크 */}
-              <Link
-                href="/me"
-                onClick={() => setOpen(false)}
-                className="text-center text-[11px] text-muted hover:text-navy no-underline"
-              >
-                마이페이지 →
-              </Link>
-              {/* 4. 출석 룰렛 */}
-              <CheckinButton />
-              {/* 5. 어드민 페이지 (관리자만) */}
+              {/* 3. 포춘쿠키 — 오늘의 운세 (1일 1회) */}
+              <FortuneCookieButton />
+              {/* 4. 어드민 페이지 (관리자만) */}
               {user.isAdmin && (
                 <Link
                   href="/admin"

@@ -23,6 +23,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       threadsResp,
       resolvedPollsResp,
       listingCommentsResp,
+      fortuneCookiesResp,
     ] = await Promise.all([
       supabase
         .from('apt_discussions')
@@ -183,6 +184,14 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(30)
         .then((r) => r, () => ({ data: null })),
+      // 포춘쿠키 — 1일 1회 뽑은 운세. 본인 이름과 같이 피드 노출.
+      supabase
+        .from('fortune_cookies')
+        .select('id, user_id, fortune_text, drawn_date, created_at')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(50)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
@@ -281,6 +290,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       id: number; apt_id: number; author_id: string; content: string; created_at: string;
       apt_master: { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
     }>);
+    const fortuneCookieRows = (((fortuneCookiesResp as { data: unknown[] | null })?.data ?? []) as Array<{
+      id: number; user_id: string; fortune_text: string; drawn_date: string; created_at: string;
+    }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
@@ -366,6 +378,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...kidsCommRows.map((c) => c.author_id),
       ...threadRows.map((r) => r.author_id),
       ...listingCommRows.map((c) => c.author_id),
+      ...fortuneCookieRows.map((r) => r.user_id),
     ].filter(Boolean)));
     const awardRefIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
@@ -1130,6 +1143,30 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
+    // 포춘쿠키 → FeedItem (kind 'fortune_cookie'). 본인 이름 + 운세 본문 + 클릭 시 /fortune/{id}.
+    const fortuneCookieItems: FeedItem[] = fortuneCookieRows.map((r) => {
+      const prof = profileMap.get(r.user_id);
+      return {
+        kind: 'fortune_cookie' as const,
+        id: r.id,
+        apt_master_id: 0,
+        post_id: null,
+        title: '포춘쿠키',
+        content: r.fortune_text,
+        fortune_text: r.fortune_text,
+        fortune_drawn_date: r.drawn_date,
+        created_at: r.created_at,
+        apt_nm: null, dong: null, lat: null, lng: null,
+        author_id: r.user_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+      } as FeedItem;
+    });
+
     // 정산된 폴 → FeedItem (kind 'poll_settled'). resolved_at 기준 시간순.
     let pollSettledItems: FeedItem[] = [];
     if (resolvedPollRows.length > 0) {
@@ -1201,7 +1238,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     }
 
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...listingCommentItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems, ...pollSettledItems]
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...listingCommentItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems, ...pollSettledItems, ...fortuneCookieItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];

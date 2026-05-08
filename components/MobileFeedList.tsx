@@ -119,6 +119,7 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
     case 'kids_comment':  return { label: '육아댓글', cls: 'bg-[#fdf2f8] text-[#831843]' };
     case 'thread':        return { label: '스레드', cls: 'bg-[#fafafa] text-navy border border-border' };
     case 'poll_settled':  return { label: f.poll_mode === 'vote' ? '투표결과' : '정산', cls: 'bg-gradient-to-r from-yellow-400 to-pink-500 text-white' };
+    case 'fortune_cookie': return { label: '운세', cls: 'bg-gradient-to-r from-emerald-400 via-teal-400 to-lime-400 text-white' };
     default: return null;
   }
 }
@@ -232,6 +233,10 @@ export default function MobileFeedList({ items }: Props) {
             : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
             : f.kind === 'sell_complete' ? '🤝 거래성사'
             : f.kind === 'thread' ? '@ 스레드'
+            : f.kind === 'fortune_cookie' ? (() => {
+                const d = f.fortune_drawn_date ? new Date(f.fortune_drawn_date) : new Date(f.created_at);
+                return `🥠 ${d.getMonth() + 1}월 ${d.getDate()}일 포춘쿠키`;
+              })()
             : f.kind === 'poll_settled' ? (f.poll_mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산')
             : f.kind === 'restaurant_register' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>
             : f.kind === 'restaurant_comment' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>

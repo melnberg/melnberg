@@ -96,7 +96,10 @@ function saveCurrentMapState(inst: KakaoMapInst | null) {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'listing_comment' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread' | 'poll_settled';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'listing_comment' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread' | 'poll_settled' | 'fortune_cookie';
+  /** fortune_cookie 전용 — 뽑은 운세 본문 (content 와 동일 채움). drawn_date 별도 보관. */
+  fortune_text?: string | null;
+  fortune_drawn_date?: string | null;
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -2102,6 +2105,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
                     : f.kind === 'sell_complete' ? '🤝 거래성사'
                     : f.kind === 'thread' ? '@ 스레드'
+                    : f.kind === 'fortune_cookie' ? (() => {
+                        const d = f.fortune_drawn_date ? new Date(f.fortune_drawn_date) : new Date(f.created_at);
+                        return `🥠 ${d.getMonth() + 1}월 ${d.getDate()}일 포춘쿠키`;
+                      })()
                     : f.kind === 'poll_settled' ? (f.poll_mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산')
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
                     : isCommunity ? (f.post_category === 'realty' ? '부동산 토론' : f.post_category === 'stocks' ? '주식 토론' : f.post_category === 'coin' ? '코인 토론' : f.post_category === 'hotdeal' ? '핫딜' : f.post_category === 'worry' ? '익명 고민' : '커뮤니티')
