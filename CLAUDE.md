@@ -75,6 +75,23 @@ python .claude/skills/payment-page-builder/scripts/render_html.py
 
 ---
 
+## 피드 말풍선 절대규칙 (PC·모바일 동일)
+
+**단일 진실원**: [`lib/feed-inline-kind.ts`](lib/feed-inline-kind.ts) 의 `inlineKindFor(item)` 함수 한 개.
+
+1. **댓글 가능 카드 = `inlineKindFor()` 가 not null 인 종류**. 새 카드 종류 추가 시 → **이 파일 한 줄만** 추가하면 됨. 다른 파일 손대지 말 것.
+2. **PC·모바일 둘 다 💬 + 카운트 표시 + 클릭 시 인라인 펼침** (InlineCommentBox). 동일 룰. 한 쪽만 추가/누락 절대 금지.
+3. **카드 본문 클릭 = 별개**: 모바일은 풀페이지 라우팅, PC는 우측 drawer iframe. 폼팩터 차이만 있고 룰은 동일 ("본문=상세, 💬=인라인").
+4. **새 카드 종류 추가 체크리스트**:
+   - `lib/feed-inline-kind.ts` 에 분기 추가 → 자동으로 PC·모바일 둘 다 적용됨
+   - `app/page.tsx` 에 `comment_count` 채우는 쿼리 추가 (서버 사이드)
+   - `components/InlineCommentBox.tsx` `TABLE` 에 `{ table, parentCol, awardKind }` 등록
+5. **댓글 작성 후**: `revalidateHome()` 호출 → 다음 피드 새로고침 시 카운트 정확.
+
+위반 시 사용자가 같은 작업을 또 시키게 됨. 새 카드 만들 때마다 필독.
+
+---
+
 ## 출력 파일 위치
 
 모든 산출물은 `/output/`에 저장:

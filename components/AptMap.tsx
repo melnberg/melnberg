@@ -13,8 +13,10 @@ import RewardTooltip from './RewardTooltip';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
+import InlineCommentBox from './InlineCommentBox';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
 import { feedItemHref } from '@/lib/feed-item-href';
+import { inlineKindFor } from '@/lib/feed-inline-kind';
 
 // kakao maps SDK는 window.kakao로 전역 노출됨. 타입 정의 없이 최소 형태로 선언.
 type KakaoLatLng = { getLat: () => number; getLng: () => number };
@@ -1200,6 +1202,24 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   // 데스크톱 피드 카드 클릭 → 우측 글 상세 drawer (iframe). lg+ 만 노출.
   const [previewItem, setPreviewItem] = useState<FeedItem | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  // 💬 인라인 댓글 펼침 키 — PC 피드도 모바일과 동일 룰 적용 (lib/feed-inline-kind 단일 진실원).
+  const [feedExpandedKey, setFeedExpandedKey] = useState<string | null>(null);
+  const [feedCounts, setFeedCounts] = useState<Record<string, number>>({});
+  const [feedMe, setFeedMe] = useState<{ id: string; name: string } | null>(null);
+  useEffect(() => {
+    const sb = createClient();
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await sb.auth.getUser();
+      if (cancelled || !user) return;
+      const { data: prof } = await sb.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+      const name = (prof as { display_name?: string } | null)?.display_name
+        ?? (user.user_metadata?.display_name as string | undefined)
+        ?? user.email?.split('@')[0] ?? '회원';
+      if (!cancelled) setFeedMe({ id: user.id, name });
+    })();
+    return () => { cancelled = true; };
+  }, []);
   // previewItem 변경 시 로딩 상태 리셋 — iframe onLoad 에서 false 로
   useEffect(() => { if (previewItem) setPreviewLoading(true); }, [previewItem]);
   // ESC 키 + 외부(피드/drawer 밖) 클릭으로 drawer 닫기
@@ -2086,6 +2106,10 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                 {feed.map((f) => {
                   const feedKey = `${f.kind}-${f.id}`;
                   const isPreviewing = previewItem != null && `${previewItem.kind}-${previewItem.id}` === feedKey;
+                  // 인라인 댓글 단일 진실원 — PC·모바일 동일 룰
+                  const inlineCfg = inlineKindFor(f);
+                  const inlineCnt = feedCounts[feedKey] ?? f.comment_count ?? 0;
+                  const isInlineExpanded = feedExpandedKey === feedKey;
                   const fullContent = (f.content ?? '').trim();
                   const isComment = f.kind === 'comment' || f.kind === 'post_comment' || f.kind === 'listing_comment';
                   const isCommunity = f.kind === 'post' || f.kind === 'post_comment';
@@ -2260,9 +2284,33 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 return txt ? <span className="tabular-nums">{txt}</span> : null;
                               })()
                             )}
+                            {/* 💬 인라인 댓글 토글 — PC·모바일 동일 룰 (lib/feed-inline-kind 단일 진실원). */}
+                            {inlineCfg && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFeedExpandedKey((k) => (k === feedKey ? null : feedKey)); }}
+                                className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 text-navy hover:bg-navy-soft cursor-pointer bg-transparent border-none"
+                                aria-label={`댓글 ${inlineCnt}개`}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span className="tabular-nums text-[10px]">{inlineCnt}</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
+                      {/* 인라인 댓글 펼침 영역 — 카드 본문 클릭(drawer)과 분리 */}
+                      {isInlineExpanded && inlineCfg && (
+                        <InlineCommentBox
+                          kind={inlineCfg.kind}
+                          parentId={inlineCfg.parentId}
+                          currentUserId={feedMe?.id ?? null}
+                          currentUserName={feedMe?.name ?? null}
+                          onCountChange={(n) => setFeedCounts((c) => ({ ...c, [feedKey]: n }))}
+                        />
+                      )}
                     </li>
                   );
                 })}

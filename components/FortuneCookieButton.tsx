@@ -163,6 +163,8 @@ export default function FortuneCookieButton() {
           title: `🥠 ${dateLabel} 포춘쿠키`,
           description: f.fortune_text,
           imageUrl,
+          imageWidth: 800,
+          imageHeight: 800,
           link: { mobileWebUrl: link, webUrl: link },
         },
         buttons: [

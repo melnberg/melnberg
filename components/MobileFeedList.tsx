@@ -5,24 +5,17 @@ import { useEffect, useRef, useState } from 'react';
 import { type FeedItem } from './AptMap';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
-import InlineCommentBox, { type InlineKind } from './InlineCommentBox';
+import InlineCommentBox from './InlineCommentBox';
 import { feedItemToNicknameInfo } from '@/lib/nickname-info';
 import { feedItemHref } from '@/lib/feed-item-href';
+import { inlineKindFor } from '@/lib/feed-inline-kind';
 import { createClient } from '@/lib/supabase/client';
 import { KidsIcon, RestaurantIcon } from './CategoryIcons';
 
 const SCROLL_KEY = 'mlbg.feed.scroll';
 const LAST_CLICK_KEY = 'mlbg.feed.lastClick';
 
-// kind → InlineCommentBox 가 다룰 부모 식별. 댓글 자체 종류는 펼치기 미지원.
-function inlineKindFor(f: FeedItem): { kind: InlineKind; parentId: number } | null {
-  if (f.kind === 'discussion') return { kind: 'discussion', parentId: f.id };
-  if (f.kind === 'post') return f.post_id ? { kind: 'post', parentId: f.post_id } : null;
-  if (f.kind === 'emart_occupy') return { kind: 'emart_occupy', parentId: f.apt_master_id };
-  if (f.kind === 'factory_occupy') return { kind: 'factory_occupy', parentId: f.apt_master_id };
-  if (f.kind === 'fortune_cookie') return { kind: 'fortune_cookie', parentId: f.id };
-  return null;
-}
+// inlineKindFor 는 lib/feed-inline-kind.ts 의 단일 진실원. PC 피드와 공유.
 
 type Props = { items: FeedItem[] };
 
