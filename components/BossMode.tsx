@@ -11,9 +11,9 @@
 // 해제: Esc 키 / 좌상단 1px invisible 빨간 닫기 버튼.
 // 모드는 localStorage 'melnberg-boss-mode' 에 저장.
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 type Mode = 'excel' | 'hwp' | 'word' | null;
 
@@ -48,6 +48,7 @@ export default function BossMode() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [feed, setFeed] = useState<FeedPost[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -84,15 +85,17 @@ export default function BossMode() {
       .finally(() => setLoadingFeed(false));
   }, [mode, feed.length, loadingFeed]);
 
-  // Esc 로 위장 모드 해제
+  // Esc — 모달 열려있으면 모달만 닫고, 없으면 위장 모드 해제
   useEffect(() => {
     if (!mode) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setMode(null);
+      if (e.key !== 'Escape') return;
+      if (selectedPost) setSelectedPost(null);
+      else setMode(null);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [mode]);
+  }, [mode, selectedPost]);
 
   if (!mounted) return null;
   // 모바일은 보스모드 자체를 숨김. 트리거 / 오버레이 둘 다.
@@ -122,9 +125,12 @@ export default function BossMode() {
         </div>
       )}
 
-      {mode === 'excel' && <ExcelDisguise feed={feed} loading={loadingFeed} onClose={() => setMode(null)} />}
-      {mode === 'hwp' && <HangulDisguise feed={feed} loading={loadingFeed} onClose={() => setMode(null)} />}
-      {mode === 'word' && <WordDisguise feed={feed} loading={loadingFeed} onClose={() => setMode(null)} />}
+      {mode === 'excel' && <ExcelDisguise feed={feed} loading={loadingFeed} onClose={() => setMode(null)} onSelect={setSelectedPost} />}
+      {mode === 'hwp' && <HangulDisguise feed={feed} loading={loadingFeed} onClose={() => setMode(null)} onSelect={setSelectedPost} />}
+      {mode === 'word' && <WordDisguise feed={feed} loading={loadingFeed} onClose={() => setMode(null)} onSelect={setSelectedPost} />}
+      {mode && selectedPost && (
+        <BossPostModal mode={mode} post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
     </>
   );
 }
@@ -173,13 +179,11 @@ function WindowControls({ onClose, accent }: { onClose: () => void; accent: stri
   );
 }
 
-function postHref(p: FeedPost): string {
-  const base = CATEGORY_BASE[p.category] ?? '/community';
-  return `${base}/${p.id}`;
-}
+// 글 카테고리 → 진짜 페이지 base path (BossPostModal 의 "원글 보기" 링크 등에서 사용 가능 — 현재는 사용 X)
+void CATEGORY_BASE;
 
 // ─── EXCEL ──────────────────────────────────────────────
-function ExcelDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: boolean; onClose: () => void }) {
+function ExcelDisguise({ feed, loading, onClose, onSelect }: { feed: FeedPost[]; loading: boolean; onClose: () => void; onSelect: (p: FeedPost) => void }) {
   const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
   const headers = ['No.', '부서', '담당자', '항목', '내용 요약', '댓글', '추천', '조회', '등록일', '진행상태', '비고'];
 
@@ -278,15 +282,13 @@ function ExcelDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: 
             {feed.map((p, idx) => {
               const st = status(p);
               return (
-                <tr key={p.id} className="hover:bg-[#fffbe6] cursor-pointer">
+                <tr key={p.id} className="hover:bg-[#fffbe6] cursor-pointer" onClick={() => onSelect(p)}>
                   <th className="sticky left-0 z-10 bg-[#e6e6e6] border border-[#c2c2c2] w-[36px] h-[22px] text-[#666] font-normal">{idx + 2}</th>
                   <td className="border border-[#d4d4d4] px-2 h-[22px] tabular-nums text-right">{idx + 1}</td>
                   <td className="border border-[#d4d4d4] px-2 h-[22px]">{p.team}</td>
                   <td className="border border-[#d4d4d4] px-2 h-[22px]">{p.author}</td>
-                  <td className="border border-[#d4d4d4] px-2 h-[22px] text-[#0070c0]">
-                    <Link href={postHref(p)} className="text-[#0070c0] no-underline hover:underline" onClick={(e) => e.stopPropagation()}>
-                      {p.title}
-                    </Link>
+                  <td className="border border-[#d4d4d4] px-2 h-[22px] text-[#0070c0] hover:underline">
+                    {p.title}
                   </td>
                   <td className="border border-[#d4d4d4] px-2 h-[22px] text-[#444] truncate max-w-[380px]" title={p.excerpt}>
                     {p.excerpt}
@@ -336,7 +338,7 @@ function RibbonGroup({ label, children }: { label: string; children: React.React
 }
 
 // ─── 한글 (HWP) ─────────────────────────────────────────
-function HangulDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: boolean; onClose: () => void }) {
+function HangulDisguise({ feed, loading, onClose, onSelect }: { feed: FeedPost[]; loading: boolean; onClose: () => void; onSelect: (p: FeedPost) => void }) {
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, '. ') + '.';
 
   return (
@@ -382,9 +384,9 @@ function HangulDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading:
             <div key={p.id} className="mb-4">
               <p className="mb-1">
                 <b>2.{i + 1}.</b>{' '}
-                <Link href={postHref(p)} className="text-[#222] no-underline hover:underline">
+                <button type="button" onClick={() => onSelect(p)} className="text-[#222] hover:underline bg-transparent border-none p-0 m-0 cursor-pointer text-left" style={{ font: 'inherit' }}>
                   <b>[{p.team}]</b> {p.title}
-                </Link>
+                </button>
               </p>
               {p.excerpt && (
                 <p className="pl-4 text-[#333]">{p.excerpt}</p>
@@ -414,7 +416,7 @@ function HangulDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading:
 }
 
 // ─── WORD ───────────────────────────────────────────────
-function WordDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: boolean; onClose: () => void }) {
+function WordDisguise({ feed, loading, onClose, onSelect }: { feed: FeedPost[]; loading: boolean; onClose: () => void; onSelect: (p: FeedPost) => void }) {
   return (
     <div className="fixed inset-0 z-[10000] bg-[#f3f2f1] flex flex-col select-none" style={{ fontFamily: '"Calibri", "Malgun Gothic", sans-serif' }}>
       <PanicCorner onClose={onClose} />
@@ -479,9 +481,9 @@ function WordDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: b
           <ol className="list-decimal pl-6">
             {feed.map((p) => (
               <li key={p.id} className="mb-3">
-                <Link href={postHref(p)} className="text-[#222] no-underline hover:underline">
+                <button type="button" onClick={() => onSelect(p)} className="text-[#222] hover:underline bg-transparent border-none p-0 m-0 cursor-pointer text-left" style={{ font: 'inherit' }}>
                   <b>[{p.team}]</b> {p.title}
-                </Link>
+                </button>
                 {p.excerpt && <div className="text-[#333] mt-1">{p.excerpt}</div>}
                 <div className="text-[11px] text-[#666] mt-1">
                   Owner: {p.author} · Comments: {p.comments} · Likes: {p.like} · {p.created_at.slice(0, 10)}
@@ -501,6 +503,185 @@ function WordDisguise({ feed, loading, onClose }: { feed: FeedPost[]; loading: b
       <div className="flex items-center justify-between bg-[#2b579a] text-white text-[11px] h-[22px] px-3">
         <div className="flex items-center gap-3"><span>1/4 페이지</span><span>·</span><span>단어 638개</span><span>·</span><span>한국어</span></div>
         <div className="flex items-center gap-3"><span>변경 내용 추적: 사용 안 함</span><span>·</span><span>100%</span></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── 글 상세 + 댓글 모달 (위장 안에서 댓글 가능) ─────
+type PostFull = { id: number; title: string; content: string; author: string };
+type CommentRow = { id: number; content: string; created_at: string; author: string };
+
+const MODE_THEME: Record<NonNullable<Mode>, { accent: string; bg: string; appName: string; tabName: string }> = {
+  excel: { accent: '#107c41', bg: '#f3f3f3', appName: 'Excel', tabName: '셀 메모' },
+  hwp: { accent: '#0066b3', bg: '#e8e8e8', appName: '한글', tabName: '메모' },
+  word: { accent: '#2b579a', bg: '#f3f2f1', appName: 'Word', tabName: '검토 창' },
+};
+
+function BossPostModal({ mode, post, onClose }: { mode: NonNullable<Mode>; post: FeedPost; onClose: () => void }) {
+  const supabase = createClient();
+  const theme = MODE_THEME[mode];
+  const [full, setFull] = useState<PostFull | null>(null);
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [me, setMe] = useState<{ id: string; name: string } | null>(null);
+  const [draft, setDraft] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // post 변경 시 fetch
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFull(null);
+    setComments([]);
+    setErr(null);
+    (async () => {
+      const [{ data: postRow }, { data: commsRows }, { data: { user } }] = await Promise.all([
+        supabase.from('posts').select('id, title, content, author_id').eq('id', post.id).maybeSingle(),
+        supabase.from('comments').select('id, content, created_at, author_id').eq('post_id', post.id).is('deleted_at', null).order('created_at', { ascending: true }),
+        supabase.auth.getUser(),
+      ]);
+      if (cancelled) return;
+      if (!postRow) { setErr('글을 찾을 수 없어요.'); setLoading(false); return; }
+      // author 닉네임
+      const allAuthorIds = new Set<string>();
+      const pr = postRow as { id: number; title: string; content: string; author_id: string };
+      allAuthorIds.add(pr.author_id);
+      for (const c of (commsRows ?? []) as Array<{ author_id: string }>) allAuthorIds.add(c.author_id);
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', Array.from(allAuthorIds));
+      if (cancelled) return;
+      const nameMap = new Map<string, string>();
+      for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null }>) nameMap.set(p.id, p.display_name ?? '익명');
+      setFull({
+        id: pr.id,
+        title: pr.title,
+        content: pr.content,
+        author: nameMap.get(pr.author_id) ?? '익명',
+      });
+      setComments(((commsRows ?? []) as Array<{ id: number; content: string; created_at: string; author_id: string }>).map((c) => ({
+        id: c.id,
+        content: c.content,
+        created_at: c.created_at,
+        author: nameMap.get(c.author_id) ?? '익명',
+      })));
+      if (user) {
+        setMe({ id: user.id, name: nameMap.get(user.id) ?? user.email?.split('@')[0] ?? '회원' });
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [post.id, supabase]);
+
+  // (Esc 처리는 부모 BossMode 가 함 — 모달 열려있으면 모달부터 닫음)
+
+  async function submitComment() {
+    if (posting) return;
+    if (!me) { setErr('로그인이 필요해요.'); return; }
+    const content = draft.trim();
+    if (!content) return;
+    setPosting(true);
+    setErr(null);
+    const { data: row, error } = await supabase
+      .from('comments')
+      .insert({ post_id: post.id, author_id: me.id, content, parent_id: null })
+      .select('id, content, created_at, author_id')
+      .single();
+    setPosting(false);
+    if (error || !row) { setErr('등록 실패: ' + (error?.message ?? '알 수 없음')); return; }
+    setComments((cur) => [...cur, {
+      id: row.id,
+      content: row.content,
+      created_at: row.created_at,
+      author: me.name,
+    }]);
+    setDraft('');
+    if (taRef.current) taRef.current.focus();
+  }
+
+  return (
+    <div className="fixed inset-0 z-[10002] flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.5)' }}
+         onClick={onClose}>
+      <div
+        className="bg-white shadow-[0_8px_40px_rgba(0,0,0,0.4)] flex flex-col"
+        style={{ width: 'min(720px, 92vw)', maxHeight: '86vh', fontFamily: '"맑은 고딕", "Malgun Gothic", sans-serif' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 윈도우 타이틀바 — 모드 액센트 */}
+        <div className="flex items-center justify-between text-white text-[12px] h-[26px] px-3" style={{ background: theme.accent }}>
+          <div className="flex items-center gap-2">
+            <span className="text-[13px]">📎</span>
+            <span className="font-bold">{theme.tabName} — {full?.title ? full.title : `항목 #${post.id}`}</span>
+          </div>
+          <button type="button" onClick={onClose} className="text-white hover:bg-[#e81123] px-2 py-0.5 cursor-pointer bg-transparent border-none">
+            ✕
+          </button>
+        </div>
+
+        {/* 본문 */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 text-[13px] text-[#222]" style={{ background: theme.bg }}>
+          {loading && <div className="text-center text-[#888] py-8">불러오는 중...</div>}
+          {!loading && err && <div className="text-red-600 text-[12px] mb-2">{err}</div>}
+          {!loading && full && (
+            <>
+              <div className="bg-white border border-[#ddd] px-4 py-3 mb-3">
+                <div className="text-[11px] text-[#666] mb-1">
+                  <b>작성자</b> {full.author} · <b>팀</b> {post.team} · <b>등록</b> {post.created_at.slice(0, 10)}
+                </div>
+                <div className="text-[15px] font-bold mb-2" style={{ color: theme.accent }}>{full.title}</div>
+                <div className="whitespace-pre-wrap leading-relaxed text-[13px]" style={{ wordBreak: 'break-word' }}>{full.content}</div>
+              </div>
+
+              <div className="text-[11px] font-bold tracking-widest uppercase text-[#666] mb-1.5">코멘트 {comments.length}건</div>
+              <div className="flex flex-col gap-1.5 mb-3">
+                {comments.length === 0 && <div className="text-[12px] text-[#888] py-4 text-center">아직 코멘트가 없어요.</div>}
+                {comments.map((c) => (
+                  <div key={c.id} className="bg-white border border-[#e0e0e0] px-3 py-2">
+                    <div className="text-[11px] text-[#666] mb-0.5">
+                      <b>{c.author}</b> · {new Date(c.created_at).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })}
+                    </div>
+                    <div className="text-[13px] whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>{c.content}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 코멘트 입력 — 항상 노출 */}
+        <div className="border-t border-[#d4d4d4] bg-white px-4 py-3">
+          {!me ? (
+            <div className="text-[12px] text-[#888]">로그인 후 코멘트 남길 수 있어요.</div>
+          ) : (
+            <>
+              <textarea
+                ref={taRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="코멘트 입력 (Ctrl+Enter 등록)"
+                rows={2}
+                className="w-full border border-[#d4d4d4] px-3 py-2 text-[13px] outline-none focus:border-[#888] resize-y"
+                onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submitComment(); } }}
+              />
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-[11px] text-[#888]">{me.name} 으로 등록</div>
+                <button
+                  type="button"
+                  onClick={submitComment}
+                  disabled={posting || !draft.trim()}
+                  className="px-4 py-1.5 text-[12px] font-bold text-white border-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: theme.accent }}
+                >
+                  {posting ? '등록 중...' : '코멘트 등록'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

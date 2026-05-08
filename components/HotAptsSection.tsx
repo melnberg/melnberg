@@ -14,7 +14,7 @@ export default function HotAptsSection({ apts }: { apts: HotApt[] }) {
         {apts.map((a, i) => (
           <Link
             key={a.id}
-            href={`/?focus=${a.id}`}
+            href={`/apt/${a.id}`}
             className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all no-underline block"
             style={{
               background: 'linear-gradient(135deg, rgba(255,209,102,0.06), rgba(255,255,255,0.012))',

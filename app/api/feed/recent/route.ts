@@ -25,7 +25,7 @@ export async function GET() {
       .is('deleted_at', null)
       .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin'])
       .order('created_at', { ascending: false })
-      .limit(60);
+      .limit(100);
     const list = (posts ?? []) as Array<{
       id: number;
       author_id: string;
