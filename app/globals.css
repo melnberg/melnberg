@@ -100,6 +100,10 @@
 .dark-section input::placeholder, .dark-section textarea::placeholder { color: rgba(255, 255, 255, 0.4) !important; }
 .dark-section .text-cyan { color: #67e8f9 !important; }
 .dark-section .hover\:bg-navy-soft:hover { background: rgba(255, 255, 255, 0.06) !important; }
+/* 액션 버튼 (등록 등) — 다크에서 navy 가 안 보여서 시안 액센트로 */
+.dark-section .bg-navy { background: #22e0a1 !important; color: #002060 !important; }
+.dark-section .bg-navy.text-white { color: #002060 !important; }
+.dark-section .hover\:bg-navy-dark:hover { background: #00d4ff !important; }
 
 /* 약관·정책 페이지의 ol/li 기본 스타일 */
 .terms-section ol {
