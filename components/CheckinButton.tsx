@@ -17,10 +17,10 @@ type SpinResult = {
 };
 
 const GRADE_STYLE: Record<Grade, { bg: string; ring: string; emoji: string; label: string; flash: boolean }> = {
-  miss: { bg: 'bg-[#f3f4f6]', ring: 'border-[#d1d5db]', emoji: '🎯', label: '꽝!', flash: false },
-  small: { bg: 'bg-cyan/15', ring: 'border-cyan', emoji: '✨', label: '소액 당첨', flash: false },
-  big: { bg: 'bg-[#fef3c7]', ring: 'border-[#f59e0b]', emoji: '💎', label: '대박!', flash: true },
-  jackpot: { bg: 'bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#dc2626]', ring: 'border-[#dc2626]', emoji: '🎰', label: '잭팟!!!', flash: true },
+  miss:    { bg: 'bg-[#f3f4f6]', ring: 'border-[#d1d5db]', emoji: '🐣', label: '소소!',     flash: false },
+  small:   { bg: 'bg-cyan/15',  ring: 'border-cyan',       emoji: '🍀', label: '소액 당첨', flash: false },
+  big:     { bg: 'bg-[#fef3c7]', ring: 'border-[#f59e0b]', emoji: '🎁', label: '대박!',     flash: true  },
+  jackpot: { bg: 'bg-gradient-to-br from-[#fbbf24] via-[#f59e0b] to-[#dc2626]', ring: 'border-[#dc2626]', emoji: '🎉', label: '잭팟!!!', flash: true },
 };
 
 export default function CheckinButton() {
@@ -98,8 +98,8 @@ export default function CheckinButton() {
           <div className="text-[12px] font-bold tracking-widest uppercase text-muted mb-2">럭키 룰렛</div>
           {!revealed ? (
             <>
-              <div className="text-[60px] mb-2 inline-block animate-spin-fast">🎰</div>
-              <div className="text-[14px] font-bold text-text">결과 확인 중...</div>
+              <div className="text-[60px] mb-2 inline-block animate-bounce">🎁</div>
+              <div className="text-[14px] font-bold text-text">선물 열어보는 중...</div>
             </>
           ) : (
             <>
@@ -150,7 +150,7 @@ export default function CheckinButton() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             {isDone ? <polyline points="20 6 9 17 4 12" /> : <><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" /></>}
           </svg>
-          <span>{isDone ? '출석 완료' : '출석 룰렛 🎰'}</span>
+          <span>{isDone ? '출석 완료' : '오늘 출석 🎁'}</span>
         </span>
         {streak > 0 && (
           <span className={`text-[10px] tabular-nums whitespace-nowrap ${isDone ? 'text-muted' : 'text-cyan font-bold'}`}>

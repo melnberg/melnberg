@@ -87,6 +87,9 @@ export default function FortuneCookieButton() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Kakao SDK 미리 로드 — 클릭 시 동기로 sendDefault 가능해야 모바일에서 팝업 차단 안 됨.
+  useEffect(() => { ensureKakaoLoaded(); }, []);
+
   // 마운트 시 오늘치 + 관리자 여부 확인. 오늘치 있으면 애니메이션 정지 상태로 시작.
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +148,8 @@ export default function FortuneCookieButton() {
     setOpen(true);
     setRevealed(false);
     setDrawing(true);
+    const clickedAt = Date.now();
+    const MIN_DRAW_MS = 3000;  // 최소 3초 — 카지노 도파민
     try {
       const res = await fetch('/api/fortune/draw', { method: 'POST' });
       const j = await res.json();
@@ -156,8 +161,10 @@ export default function FortuneCookieButton() {
       setFortune(j.fortune as Fortune);
       setAlready(!!j.already);
       setDrawnToday(true);  // 뽑힘 → 즉시 애니메이션 정지
-      // 짧은 두근 애니메이션 후 reveal (전체 체감 시간 줄임)
-      setTimeout(() => { setDrawing(false); setRevealed(true); }, 400);
+      // 최소 3초 보장 — AI 가 빨리 와도 쿠키 깨는 연출 유지
+      const elapsed = Date.now() - clickedAt;
+      const remaining = Math.max(0, MIN_DRAW_MS - elapsed);
+      setTimeout(() => { setDrawing(false); setRevealed(true); }, remaining);
       // 새로 뽑았을 때만 피드 새로고침
       if (!j.already) revalidateHome();
     } catch {
@@ -176,20 +183,21 @@ export default function FortuneCookieButton() {
     if (fortune && !already) router.refresh();
   }
 
-  async function shareKakao(f: Fortune) {
+  // 모바일에서 await 가 끼면 클릭 컨텍스트 끊겨 팝업 차단됨.
+  // SDK 가 이미 로드돼 있다면 동기로 sendDefault. 아니면 로드만 트리거하고 사용자에게 다시 누르라고 안내.
+  function shareKakao(f: Fortune) {
     if (sharing) return;
     setSharing(true);
     try {
-      const ok = await ensureKakaoLoaded();
-      if (!ok || !window.Kakao?.Share) {
-        const k = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
-        const masked = k ? `${k.slice(0, 6)}...(len ${k.length})` : '(env 미설정)';
-        alert(`카카오 SDK 로드 실패. 사용된 키: ${masked}`);
+      const k = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+      if (!k) { alert('카카오 키 미설정 (NEXT_PUBLIC_KAKAO_JS_KEY)'); return; }
+      // SDK 준비 안 됐으면 — 로드 트리거 + 사용자에 안내 (모바일 팝업 차단 회피)
+      if (!window.Kakao?.Share) {
+        ensureKakaoLoaded();
+        alert('카카오 SDK 로드 중. 다시 한 번 눌러주세요.');
         return;
       }
-      // 사용된 키 1회 디버그용 console 출력 (4011 디버깅).
-      const debugKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
-      console.log('[KakaoShare] using key:', debugKey ? `${debugKey.slice(0, 6)}...` : '(none)', 'from:', process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? 'JS_KEY' : 'MAP_KEY');
+      if (!window.Kakao.isInitialized()) window.Kakao.init(k);
       const origin = window.location.origin;
       const link = `${origin}/fortune/${f.id}`;
       const imageUrl = `${origin}/api/og/fortune/${f.id}`;
@@ -211,7 +219,7 @@ export default function FortuneCookieButton() {
       });
     } catch (e) {
       console.error('Kakao share error', e);
-      alert('공유 실패');
+      alert('공유 실패: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setSharing(false);
     }

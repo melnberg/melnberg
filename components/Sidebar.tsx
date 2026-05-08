@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { products } from '@/lib/products';
 import NotificationsBell from './NotificationsBell';
 import FortuneCookieButton from './FortuneCookieButton';
+import CheckinButton from './CheckinButton';
 import MlbgIcon from './MlbgIcon';
 import { KidsIcon as SharedKidsIcon, RestaurantIcon as SharedRestaurantIcon } from './CategoryIcons';
 
@@ -149,7 +150,9 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
               )}
               {/* 3. 포춘쿠키 — 오늘의 운세 (1일 1회) */}
               <FortuneCookieButton />
-              {/* 4. 어드민 페이지 (관리자만) */}
+              {/* 4. 출석 + 럭키 룰렛 (1일 1회) */}
+              <CheckinButton />
+              {/* 5. 어드민 페이지 (관리자만) */}
               {user.isAdmin && (
                 <Link
                   href="/admin"
