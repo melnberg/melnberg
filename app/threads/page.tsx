@@ -40,7 +40,7 @@ export default async function ThreadsPage() {
 }
 
 async function renderThreadsPage() {
-  const user = await getCurrentUser().catch(() => null);
+  const user = await getCurrentUser().catch((e) => { console.error('[/threads] getCurrentUser:', e); return null; });
 
   if (!user) {
     return (
