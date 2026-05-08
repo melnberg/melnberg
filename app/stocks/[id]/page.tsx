@@ -149,9 +149,9 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
               </div>
             </div>
 
-            {/* 폴/댓글 — 흰 카드 (가독성 위해 분리). 인라인 스타일도 같이 — Tailwind 어떤 이유로 안 먹어도 보장. */}
-            <div className="px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
-                 style={{ background: '#ffffff', color: '#111111' }}>
+            {/* 폴/댓글 — 다크 그대로, dark-section 클래스로 내부 텍스트 색상 일괄 오버라이드 */}
+            <div className="dark-section px-6 lg:px-8 py-6 border border-white/10"
+                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
               {pollData.poll && (
                 <PollWidget
                   postId={post.id}

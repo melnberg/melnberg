@@ -74,6 +74,33 @@
   a { color: inherit; }
 }
 
+/* 다크 톤 게시판 (주식·코인·부동산) 글 상세 — CommentSection·PollWidget 텍스트를
+   다크 배경에서 보이게 강제. 컴포넌트 내부 text-navy/text-text/text-muted 등
+   라이트 전제 클래스를 일괄 오버라이드. */
+.dark-section { color: #e5e7eb; }
+.dark-section h1, .dark-section h2, .dark-section h3, .dark-section h4 { color: #ffffff !important; }
+.dark-section .text-navy { color: #ffffff !important; }
+.dark-section .text-navy-dark { color: #67e8f9 !important; }
+.dark-section .text-text { color: #f3f4f6 !important; }
+.dark-section .text-muted { color: rgba(255, 255, 255, 0.6) !important; }
+.dark-section .border-navy { border-color: rgba(255, 255, 255, 0.35) !important; }
+.dark-section .border-b-navy { border-bottom-color: rgba(255, 255, 255, 0.35) !important; }
+.dark-section .border-border { border-color: rgba(255, 255, 255, 0.12) !important; }
+.dark-section .border-cyan { border-color: rgba(34, 224, 161, 0.5) !important; }
+.dark-section .bg-bg { background: transparent !important; }
+.dark-section .bg-bg\/30, .dark-section .bg-bg\/50 { background: rgba(255, 255, 255, 0.03) !important; }
+.dark-section .bg-cyan\/5 { background: rgba(34, 224, 161, 0.08) !important; }
+.dark-section .bg-cyan\/15 { background: rgba(34, 224, 161, 0.18) !important; }
+.dark-section .bg-white { background: rgba(255, 255, 255, 0.04) !important; }
+.dark-section input[type="text"], .dark-section input[type="number"], .dark-section textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+.dark-section input::placeholder, .dark-section textarea::placeholder { color: rgba(255, 255, 255, 0.4) !important; }
+.dark-section .text-cyan { color: #67e8f9 !important; }
+.dark-section .hover\:bg-navy-soft:hover { background: rgba(255, 255, 255, 0.06) !important; }
+
 /* 약관·정책 페이지의 ol/li 기본 스타일 */
 .terms-section ol {
   list-style: decimal;
