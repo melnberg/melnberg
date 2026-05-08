@@ -75,11 +75,18 @@ for (const file of files) {
     },
     body: JSON.stringify({ query: sql }),
   });
+  const text = await res.text();
   if (res.ok) {
     console.log('OK');
+    // SELECT 결과가 있으면 같이 출력 (DDL/UPDATE 만 있을 땐 빈 배열).
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('    →', JSON.stringify(parsed, null, 2).split('\n').join('\n    '));
+      }
+    } catch { /* 비-JSON 응답 — 무시 */ }
     success++;
   } else {
-    const text = await res.text();
     console.log(`FAIL [${res.status}]`);
     console.error('    ', text.slice(0, 500));
     failed++;
