@@ -2,6 +2,7 @@
 
 // ThreadComposer + ThreadTabs 묶음.
 // composer 가 작성 → 자식 state 에 즉시 prepend → router.refresh 지연 없이 화면 반영.
+// (build cache bust marker)
 
 import { useState } from 'react';
 import ThreadComposer from './ThreadComposer';
