@@ -295,10 +295,13 @@ function renderFeedContentWithImages(text: string): React.ReactNode {
   return parts.map((p, i) => {
     if (i % 2 === 1) {
       return (
-        <span key={i} className="block my-2 max-w-[400px] mx-auto">
-          <span className="block aspect-square w-full bg-bg/30 border border-border rounded-xl overflow-hidden">
+        <span key={i} className="block my-2 max-w-[280px] mx-auto">
+          <span
+            className="block w-full bg-bg/30 border border-border rounded-xl overflow-hidden"
+            style={{ aspectRatio: '1 / 1' }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p} alt="" loading="lazy" className="w-full h-full object-cover" />
+            <img src={p} alt="" loading="lazy" className="w-full h-full object-cover block" />
           </span>
         </span>
       );
