@@ -54,7 +54,7 @@ export default async function RestaurantsPage() {
               아직 등록된 맛집이 없어요. 첫 등록해보세요.
             </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 max-w-[480px] sm:max-w-none mx-auto">
               {pins.map((p) => (
                 <li key={p.id}>
                   <Link href={`/restaurants/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 no-underline overflow-hidden">

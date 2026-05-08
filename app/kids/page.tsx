@@ -35,11 +35,11 @@ export default async function KidsPage() {
           {pins.length === 0 ? (
             <div className="text-[13px] text-muted text-center py-16 border border-border">아직 등록된 장소가 없어요.</div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 max-w-[480px] sm:max-w-none mx-auto">
               {pins.map((p) => (
                 <li key={p.id}>
                   <Link href={`/kids/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 no-underline overflow-hidden">
-                    {p.photo_url && <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden"><img src={p.photo_url} alt="" className="w-full h-full object-cover" /></div>}
+                    {p.photo_url && <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden flex items-center justify-center"><img src={p.photo_url} alt="" className="w-full h-full object-cover" /></div>}
                     <div className="px-4 py-3">
                       <div className="flex items-baseline justify-between gap-2 mb-1">
                         <h3 className="text-[15px] font-bold text-navy truncate inline-flex items-center gap-1.5"><KidsIcon className="w-[14px] h-[14px]" /> <span className="truncate">{p.dong ? `${p.dong} ${p.name}` : p.name}</span></h3>

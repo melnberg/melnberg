@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import ThreadProfileCard from '@/components/ThreadProfileCard';
-import ThreadFeed from '@/components/ThreadFeed';
+import ThreadFeedSection from '@/components/ThreadFeedSection';
 import { type Thread } from '@/components/ThreadList';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
@@ -142,7 +142,7 @@ async function renderThreadsPage() {
           />
 
           {/* composer + tabs — 즉시 반영 */}
-          <ThreadFeed
+          <ThreadFeedSection
             initialThreads={threads}
             initialReplies={replies}
             currentUserId={user.id}

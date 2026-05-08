@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import ThreadProfileCard from '@/components/ThreadProfileCard';
-import ThreadFeed from '@/components/ThreadFeed';
+import ThreadFeedSection from '@/components/ThreadFeedSection';
 import { type Thread } from '@/components/ThreadList';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser, getCurrentProfile } from '@/lib/auth';
@@ -137,7 +137,7 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
           />
 
           {/* composer + tabs — 본인 페이지면 작성 가능 */}
-          <ThreadFeed
+          <ThreadFeedSection
             initialThreads={threads}
             initialReplies={replies}
             currentUserId={viewer?.id ?? null}

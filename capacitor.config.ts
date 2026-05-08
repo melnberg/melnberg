@@ -27,7 +27,8 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
-    backgroundColor: '#002060',
+    // WebView 배경 — OAuth 외부 페이지 로딩 시 흰색이 자연스러움 (이전 navy 는 카카오 로그인 화면에서 부담)
+    backgroundColor: '#ffffff',
   },
 };
 
