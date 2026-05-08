@@ -60,7 +60,7 @@ export default function MarketTickerBar({ indices }: { indices: MarketIndex[] })
               )}
             </div>
             <div className="flex items-end justify-between gap-2">
-              <span className="text-[18px] lg:text-[20px] font-bold tabular-nums text-text leading-none">
+              <span className="text-[18px] lg:text-[20px] font-bold tabular-nums text-text leading-none whitespace-nowrap">
                 {idx.price != null ? fmtPrice(idx.price, idx.currency) : '—'}
               </span>
               <div className="w-[110px] h-[34px] flex-shrink-0 -mb-1">

@@ -70,7 +70,7 @@ export default function HotStocksSection({ stocks }: { stocks: HotStock[] }) {
               </div>
               <div className="flex items-end justify-between gap-2">
                 <div className="flex flex-col">
-                  <span className="text-[16px] font-bold tabular-nums text-text leading-tight">
+                  <span className="text-[16px] font-bold tabular-nums text-text leading-tight whitespace-nowrap">
                     {s.price != null ? fmtPrice(s.price, s.currency) : '—'}
                   </span>
                   {s.changePct != null && (

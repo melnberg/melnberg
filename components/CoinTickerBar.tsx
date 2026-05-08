@@ -72,7 +72,7 @@ export default function CoinTickerBar({ indices }: { indices: CoinIndex[] }) {
               )}
             </div>
             <div className="flex items-end justify-between gap-2">
-              <span className="text-[18px] lg:text-[20px] font-bold tabular-nums text-text leading-none">
+              <span className="text-[18px] lg:text-[20px] font-bold tabular-nums text-text leading-none whitespace-nowrap">
                 {c.price != null ? `₩${fmtKrw(c.price)}` : '—'}
               </span>
               <div className="w-[110px] h-[34px] flex-shrink-0 -mb-1">
