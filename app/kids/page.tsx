@@ -25,8 +25,8 @@ export default async function KidsPage() {
   return (
     <Layout current="kids">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/kids', label: '육아 장소', bold: true }]} meta="Kids" />
-      <section className="py-12">
-        <div className="max-w-content mx-auto px-10">
+      <section className="py-6 sm:py-12">
+        <div className="max-w-content mx-auto px-4 sm:px-10">
           <div className="flex items-center justify-between gap-4 mb-2">
             <h1 className="text-[28px] font-bold text-navy tracking-tight inline-flex items-center gap-2"><KidsIcon className="w-[26px] h-[26px]" /> 육아 장소 추천</h1>
             <Link href="/kids/new" className="bg-navy text-white px-4 py-2 text-[12px] font-bold no-underline hover:bg-navy-dark whitespace-nowrap">+ 장소 등록</Link>
@@ -35,11 +35,18 @@ export default async function KidsPage() {
           {pins.length === 0 ? (
             <div className="text-[13px] text-muted text-center py-16 border border-border">아직 등록된 장소가 없어요.</div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 max-w-[480px] sm:max-w-none mx-auto">
+            <ul className="grid gap-3 grid-cols-1 sm:grid-cols-2 max-w-[400px] sm:max-w-[820px] mx-auto">
               {pins.map((p) => (
                 <li key={p.id}>
                   <Link href={`/kids/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 no-underline overflow-hidden">
-                    {p.photo_url && <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden flex items-center justify-center"><img src={p.photo_url} alt="" className="w-full h-full object-cover" /></div>}
+                    {p.photo_url && (
+                      <div
+                        className="w-full bg-[#f0f0f0] overflow-hidden"
+                        style={{ aspectRatio: '1 / 1' }}
+                      >
+                        <img src={p.photo_url} alt="" className="w-full h-full object-cover block" />
+                      </div>
+                    )}
                     <div className="px-4 py-3">
                       <div className="flex items-baseline justify-between gap-2 mb-1">
                         <h3 className="text-[15px] font-bold text-navy truncate inline-flex items-center gap-1.5"><KidsIcon className="w-[14px] h-[14px]" /> <span className="truncate">{p.dong ? `${p.dong} ${p.name}` : p.name}</span></h3>

@@ -37,8 +37,8 @@ export default async function RestaurantsPage() {
     <Layout current="restaurants">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/restaurants', label: '맛집 추천', bold: true }]} meta="Restaurants" />
 
-      <section className="py-12">
-        <div className="max-w-content mx-auto px-10">
+      <section className="py-6 sm:py-12">
+        <div className="max-w-content mx-auto px-4 sm:px-10">
           <div className="flex items-center justify-between gap-4 mb-2">
             <h1 className="text-[28px] font-bold text-navy tracking-tight inline-flex items-center gap-2"><RestaurantIcon className="w-[26px] h-[26px]" /> 맛집 추천</h1>
             <Link href="/restaurants/new" className="bg-navy text-white px-4 py-2 text-[12px] font-bold no-underline hover:bg-navy-dark whitespace-nowrap">
@@ -54,13 +54,16 @@ export default async function RestaurantsPage() {
               아직 등록된 맛집이 없어요. 첫 등록해보세요.
             </div>
           ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 max-w-[480px] sm:max-w-none mx-auto">
+            <ul className="grid gap-3 grid-cols-1 sm:grid-cols-2 max-w-[400px] sm:max-w-[820px] mx-auto">
               {pins.map((p) => (
                 <li key={p.id}>
                   <Link href={`/restaurants/${p.id}`} className="block bg-white border border-border hover:border-navy hover:bg-bg/30 no-underline overflow-hidden">
                     {p.photo_url && (
-                      <div className="aspect-square w-full bg-[#f0f0f0] overflow-hidden">
-                        <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+                      <div
+                        className="w-full bg-[#f0f0f0] overflow-hidden"
+                        style={{ aspectRatio: '1 / 1' }}
+                      >
+                        <img src={p.photo_url} alt="" className="w-full h-full object-cover block" />
                       </div>
                     )}
                     <div className="px-4 py-3">

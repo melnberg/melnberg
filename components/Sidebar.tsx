@@ -138,9 +138,9 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
                 <Link
                   href="/me"
                   onClick={() => setOpen(false)}
-                  className="text-center text-[12px] text-cyan font-bold tabular-nums no-underline border-t border-[#f3f3f3] pt-1.5"
+                  className="text-center text-[12px] tabular-nums no-underline border-t border-[#f3f3f3] pt-1.5"
                 >
-                  💰 {user.balance} mlbg
+                  💰 <span className="text-black font-normal">{Math.floor(user.balance).toLocaleString()}</span> <span className="text-cyan font-bold">mlbg</span>
                 </Link>
               )}
               {/* 3. 마이페이지 링크 */}
