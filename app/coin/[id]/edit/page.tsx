@@ -34,7 +34,7 @@ export default async function EditCoinPostPage({ params }: { params: Promise<{ i
           <h1 className="text-[28px] font-bold text-navy tracking-tight mb-2">₿ 코인 토론 글 수정</h1>
           <p className="text-sm text-muted mb-8">내용을 수정하고 저장하세요.</p>
           <PostForm
-            initial={{ id: post.id, title: post.title, content: post.content }}
+            initial={{ id: post.id, title: post.title, content: post.content, stock_code: post.stock_code, stock_name: post.stock_name }}
             category="coin"
             redirectBase="/coin"
           />

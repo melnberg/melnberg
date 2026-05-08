@@ -8,6 +8,7 @@ import { notifyTelegram } from '@/lib/telegram-notify';
 import { revalidateHome } from '@/lib/revalidate-home';
 import { fileToWebp } from '@/lib/image-to-webp';
 import StockPicker from './StockPicker';
+import CoinPicker from './CoinPicker';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null; stock_name?: string | null };
@@ -95,8 +96,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
           title: title.trim(),
           content: finalContent,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
-          stock_code: category === 'stocks' ? (stockTag.trim() || null) : null,
-          stock_name: category === 'stocks' ? (stockName.trim() || null) : null,
+          stock_code: (category === 'stocks' || category === 'coin') ? (stockTag.trim() || null) : null,
+          stock_name: (category === 'stocks' || category === 'coin') ? (stockName.trim() || null) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', initial.id);
@@ -117,8 +118,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
           content: finalContent,
           category,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
-          stock_code: category === 'stocks' ? (stockTag.trim() || null) : null,
-          stock_name: category === 'stocks' ? (stockName.trim() || null) : null,
+          stock_code: (category === 'stocks' || category === 'coin') ? (stockTag.trim() || null) : null,
+          stock_name: (category === 'stocks' || category === 'coin') ? (stockName.trim() || null) : null,
         })
         .select('id')
         .single();
@@ -168,6 +169,18 @@ export default function PostForm({ initial, category = 'community', redirectBase
             종목 <span className="text-muted normal-case font-normal">(선택 — 검색해서 첨부하면 가격·차트가 글에 표시됨)</span>
           </label>
           <StockPicker
+            initial={stockTag || undefined}
+            initialName={stockName || undefined}
+            onChange={(c, n) => { setStockTag(c ?? ''); setStockName(n ?? ''); }}
+          />
+        </div>
+      )}
+      {category === 'coin' && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[11px] font-bold tracking-widest uppercase text-muted">
+            코인 <span className="text-muted normal-case font-normal">(선택 — 검색해서 첨부하면 가격·차트가 글에 표시됨)</span>
+          </label>
+          <CoinPicker
             initial={stockTag || undefined}
             initialName={stockName || undefined}
             onChange={(c, n) => { setStockTag(c ?? ''); setStockName(n ?? ''); }}

@@ -82,7 +82,7 @@ function fmtChange(n: number, foreign: boolean | undefined): string {
   return n.toLocaleString();
 }
 
-export default function StockInfoCard({ code, compact = false }: { code: string; compact?: boolean }) {
+export default function StockInfoCard({ code, compact = false, kind = 'stock' }: { code: string; compact?: boolean; kind?: 'stock' | 'coin' }) {
   const [info, setInfo] = useState<StockInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -92,7 +92,8 @@ export default function StockInfoCard({ code, compact = false }: { code: string;
     setErr(null);
     (async () => {
       try {
-        const r = await fetch(`/api/stock/info?code=${code}`, { cache: 'no-store' });
+        const endpoint = kind === 'coin' ? '/api/coin/info' : '/api/stock/info';
+        const r = await fetch(`${endpoint}?code=${encodeURIComponent(code)}`, { cache: 'no-store' });
         const j = await r.json();
         if (cancelled) return;
         if (!r.ok || !j?.ok) { setErr(j?.error ?? '시세 가져오기 실패'); return; }
@@ -102,7 +103,7 @@ export default function StockInfoCard({ code, compact = false }: { code: string;
       }
     })();
     return () => { cancelled = true; };
-  }, [code]);
+  }, [code, kind]);
 
   if (err) return <div className="border border-red-200 bg-red-50 text-red-700 text-[12px] px-3 py-2">시세 정보 가져오기 실패: {err}</div>;
   if (!info) return <div className="border border-border bg-bg/30 px-3 py-3 text-[12px] text-muted">시세 불러오는 중...</div>;
@@ -126,7 +127,7 @@ export default function StockInfoCard({ code, compact = false }: { code: string;
       {/* 헤더 — 이름 + 코드 + 거래소/업종 + 가격 */}
       <div className="flex items-baseline justify-between gap-2 mb-2 flex-wrap">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-[15px] font-bold text-navy">📈 {info.name}</span>
+          <span className="text-[15px] font-bold text-navy">{kind === 'coin' ? '₿' : '📈'} {info.name}</span>
           <span className="text-[11px] text-muted tabular-nums">{info.code}</span>
           {info.exchange && <span className="text-[10px] px-1.5 py-px bg-navy/10 text-navy font-semibold rounded">{info.exchange}</span>}
           {info.industry && <span className="text-[10px] text-muted">· {info.industry}</span>}

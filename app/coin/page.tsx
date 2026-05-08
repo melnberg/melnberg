@@ -74,7 +74,11 @@ export default async function CoinPage() {
                 </tr>
               </thead>
               <tbody>
-                {posts.map((p) => (
+                {posts.map((p) => {
+                  const pp = p as { stock_code?: string | null; stock_name?: string | null };
+                  // 태그 — 코인명(stock_name) 우선, 없으면 코드(KRW-BTC) fallback
+                  const tag = pp.stock_name || (pp.stock_code ? pp.stock_code.replace('KRW-', '') : null);
+                  return (
                   <tr key={p.id} className="border-b border-border hover:bg-cyan/5 transition-colors">
                     <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.id}</td>
                     <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
@@ -82,6 +86,7 @@ export default async function CoinPage() {
                         href={`/coin/${p.id}`}
                         className="text-text no-underline hover:text-navy hover:underline truncate block w-full"
                       >
+                        {tag && <span className="text-[10px] font-bold bg-cyan/15 text-navy px-1.5 py-0.5 mr-1.5 align-middle">₿ {tag}</span>}
                         {p.title}
                         {p.comment_count && p.comment_count > 0 ? (
                           <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
@@ -98,7 +103,8 @@ export default async function CoinPage() {
                     <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.like_count ?? 0}</td>
                     <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.view_count ?? 0}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}

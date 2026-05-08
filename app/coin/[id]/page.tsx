@@ -9,6 +9,7 @@ import Nickname from '@/components/Nickname';
 import RewardTooltip from '@/components/RewardTooltip';
 import PostLikeButton from '@/components/PostLikeButton';
 import PollWidget from '@/components/PollWidget';
+import StockInfoCard from '@/components/StockInfoCard';
 import { getPost, listComments, formatRelativeKo } from '@/lib/community';
 import { createClient } from '@/lib/supabase/server';
 import { linkify } from '@/lib/linkify';
@@ -99,6 +100,11 @@ export default async function CoinPostDetail({ params }: { params: Promise<{ id:
             <div className="flex items-start justify-between gap-3 mb-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-block bg-cyan/10 text-navy text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">₿ COIN</span>
+                {(post.stock_name || post.stock_code) && (
+                  <span className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-2 py-0.5">
+                    {post.stock_name || (post.stock_code ? post.stock_code.replace('KRW-', '') : '')}
+                  </span>
+                )}
               </div>
               <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
             </div>
@@ -114,6 +120,12 @@ export default async function CoinPostDetail({ params }: { params: Promise<{ id:
               {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath="/coin" /></>)}
             </div>
           </header>
+
+          {post.stock_code && /^KRW-[A-Z0-9]{2,10}$/.test(post.stock_code) && (
+            <div className="mb-6">
+              <StockInfoCard code={post.stock_code} kind="coin" />
+            </div>
+          )}
 
           <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
             {linkify(post.content)}
