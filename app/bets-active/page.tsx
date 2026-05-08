@@ -23,6 +23,7 @@ type PostRow = {
   author_id: string;
   title: string | null;
   category: string | null;
+  deleted_at: string | null;
 };
 
 type ProfRow = {
@@ -75,15 +76,15 @@ export default async function ActiveBetsPage() {
     .gte('created_at', sixHoursAgo)
     .order('created_at', { ascending: false })
     .limit(50);
-  const polls = (pollsData ?? []) as PollRow[];
-  const postIds = polls.map((p) => p.post_id);
+  const pollsRaw = (pollsData ?? []) as PollRow[];
+  const postIds = pollsRaw.map((p) => p.post_id);
 
   let posts: PostRow[] = [];
   let opts: OptRow[] = [];
   let profs: ProfRow[] = [];
   if (postIds.length > 0) {
     const [postsResp, optsResp] = await Promise.all([
-      supabase.from('posts').select('id, author_id, title, category').in('id', postIds)
+      supabase.from('posts').select('id, author_id, title, category, deleted_at').in('id', postIds)
         .then((r) => r, () => ({ data: null })),
       supabase.from('post_poll_options').select('post_id, idx, label').in('post_id', postIds).order('idx', { ascending: true })
         .then((r) => r, () => ({ data: null })),
@@ -99,7 +100,12 @@ export default async function ActiveBetsPage() {
     }
   }
   const postMap = new Map<number, PostRow>();
-  for (const p of posts) postMap.set(p.id, p);
+  for (const p of posts) {
+    if (p.deleted_at) continue;
+    postMap.set(p.id, p);
+  }
+  // 삭제된 글에 연결된 폴은 노출 제외 — empty state 정확도 위해 사전 필터
+  const polls = pollsRaw.filter((p) => postMap.has(p.post_id));
   const profMap = new Map<string, string | null>();
   for (const p of profs) profMap.set(p.id, p.display_name);
   const optsByPost = new Map<number, string[]>();
@@ -134,7 +140,7 @@ export default async function ActiveBetsPage() {
             <ul className="flex flex-col gap-2">
               {polls.map((poll) => {
                 const post = postMap.get(poll.post_id);
-                if (!post) return null;
+                if (!post || post.deleted_at) return null;
                 const base = categoryToBase(post.category);
                 const author = profMap.get(post.author_id) ?? '익명';
                 const total = Number(poll.total_pool ?? 0);

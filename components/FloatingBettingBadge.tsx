@@ -17,16 +17,26 @@ export default function FloatingBettingBadge() {
         const sixHoursAgo = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
         const { data, error } = await supabase
           .from('post_polls')
-          .select('post_id', { count: 'exact', head: false })
+          .select('post_id')
           .eq('status', 'open')
           .gte('created_at', sixHoursAgo)
-          .limit(20);
+          .limit(50);
         if (!alive) return;
         if (error || !data) {
           setCount(0);
           return;
         }
-        setCount(data.length);
+        const ids = data.map((d: { post_id: number }) => d.post_id);
+        if (ids.length === 0) { setCount(0); return; }
+        // 삭제된 글의 폴은 제외
+        const { data: posts } = await supabase
+          .from('posts')
+          .select('id, deleted_at')
+          .in('id', ids);
+        if (!alive) return;
+        const aliveCount = ((posts ?? []) as Array<{ id: number; deleted_at: string | null }>)
+          .filter((p) => !p.deleted_at).length;
+        setCount(aliveCount);
       } catch {
         if (alive) setCount(0);
       }
