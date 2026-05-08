@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import PWAInstall from '@/components/PWAInstall';
+import { ConfirmProvider } from '@/lib/use-confirm';
 
 export const metadata: Metadata = {
   title: '멜른버그',
@@ -41,7 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       </head>
       <body>
-        {children}
+        <ConfirmProvider>
+          {children}
+        </ConfirmProvider>
         <PWAInstall />
       </body>
     </html>

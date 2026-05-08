@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { useConfirm } from '@/lib/use-confirm';
 
 export default function PostActions({ postId, basePath = '/community' }: { postId: number; basePath?: string }) {
   const router = useRouter();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
     if (deleting) return;
-    if (!confirm('이 글을 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+    if (!(await confirm({ title: '이 글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     setDeleting(true);
     // soft-delete: deleted_at 만 set. 피드/리스트에서 자동 숨김 + 상세는 삭제 안내
     const { error } = await supabase.from('posts').update({ deleted_at: new Date().toISOString() }).eq('id', postId);

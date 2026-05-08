@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
+import { useConfirm } from '@/lib/use-confirm';
 
 export type StoreItem = {
   id: number; author_id: string; name: string; category: string | null;
@@ -28,6 +29,7 @@ function relTime(iso: string): string {
 
 export default function MyStoreDetailClient({ store, currentUserId = null }: { store: StoreItem; currentUserId?: string | null }) {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [me, setMe] = useState<{ id: string; name: string } | null>(
     currentUserId ? { id: currentUserId, name: '회원' } : null,
   );
@@ -90,7 +92,7 @@ export default function MyStoreDetailClient({ store, currentUserId = null }: { s
 
   async function handleDelete() {
     if (busy) return;
-    if (!confirm('정말 삭제할까? 되돌릴 수 없음.')) return;
+    if (!(await confirm({ title: '정말 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('delete_my_store', { p_id: store.id });
     setBusy(false);

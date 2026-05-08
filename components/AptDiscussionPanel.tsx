@@ -16,6 +16,7 @@ import ListingInteractions from './ListingInteractions';
 import TradeChart from './TradeChart';
 import RewardTooltip from './RewardTooltip';
 import AptReviewLikeButton from './AptReviewLikeButton';
+import { useConfirm } from '@/lib/use-confirm';
 
 type Discussion = {
   id: number;
@@ -124,6 +125,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const supabase = createClient();
+  const confirm = useConfirm();
 
   async function toggleHistory() {
     if (historyOpen) { setHistoryOpen(false); return; }
@@ -322,7 +324,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   async function claimApt() {
     if (!userId) { alert('분양받으려면 로그인이 필요해요.'); return; }
     const price = getAptListingPrice(apt.lawd_cd);
-    if (!confirm(`이 단지를 ${price} mlbg 에 분양받습니다. 진행할까요?`)) return;
+    if (!(await confirm({ title: `${price} mlbg 에 분양받기`, body: '진행할까?', okLabel: '분양' }))) return;
     setClaiming(true);
     const { data, error } = await supabase.rpc('claim_apt', { p_apt_id: apt.id });
     setClaiming(false);
@@ -359,7 +361,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
 
   async function unlist() {
     if (!userId) return;
-    if (!confirm('매물 등록을 해제할까요?')) return;
+    if (!(await confirm({ title: '매물 등록을 해제할까?', okLabel: '해제' }))) return;
     setTrading(true);
     const { data, error } = await supabase.rpc('unlist_apt', { p_apt_id: apt.id });
     setTrading(false);
@@ -372,7 +374,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
 
   async function buyApt() {
     if (!userId || listingPrice == null) return;
-    if (!confirm(`이 단지를 ${listingPrice.toLocaleString()} mlbg 에 매수합니다. 진행할까요?`)) return;
+    if (!(await confirm({ title: `${listingPrice.toLocaleString()} mlbg 에 매수`, body: '진행할까?', okLabel: '매수' }))) return;
     setTrading(true);
     const { data, error } = await supabase.rpc('buy_apt', { p_apt_id: apt.id });
     setTrading(false);
@@ -465,7 +467,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   }
 
   async function deleteDiscussion(id: number) {
-    if (!confirm('이 글을 삭제하시겠어요?')) return;
+    if (!(await confirm({ title: '이 글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { error } = await supabase.rpc('delete_apt_discussion', { p_id: id });
     if (error) { alert(error.message); return; }
     revalidateHome();
@@ -541,7 +543,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   }
 
   async function deleteComment(commentId: number) {
-    if (!confirm('이 댓글을 삭제하시겠어요?')) return;
+    if (!(await confirm({ title: '이 댓글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { error } = await supabase.rpc('delete_apt_discussion_comment', { p_id: commentId });
     if (error) { alert(error.message); return; }
     revalidateHome();

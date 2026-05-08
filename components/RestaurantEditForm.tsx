@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fileToWebp } from '@/lib/image-to-webp';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { useConfirm } from '@/lib/use-confirm';
 
 type Pin = {
   id: number;
@@ -17,6 +18,7 @@ type Pin = {
 export default function RestaurantEditForm({ pin, currentUserId }: { pin: Pin; currentUserId: string }) {
   const supabase = createClient();
   const router = useRouter();
+  const confirm = useConfirm();
   const [name, setName] = useState(pin.name);
   const [description, setDescription] = useState(pin.description);
   const [recommendedMenu, setRecommendedMenu] = useState(pin.recommended_menu);
@@ -94,7 +96,7 @@ export default function RestaurantEditForm({ pin, currentUserId }: { pin: Pin; c
   }
 
   async function handleDelete() {
-    if (!confirm('정말 삭제할까요? 점거자가 있다면 점거도 같이 사라집니다.')) return;
+    if (!(await confirm({ title: '정말 삭제할까?', body: '점거자가 있다면 점거도 같이 사라짐.', okLabel: '삭제', danger: true }))) return;
     if (busy) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('delete_restaurant_pin', { p_pin_id: pin.id });

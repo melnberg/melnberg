@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { fileToWebp } from '@/lib/image-to-webp';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { useConfirm } from '@/lib/use-confirm';
 
 type Pin = { id: number; name: string; description: string; recommended_activity: string; photo_url: string | null };
 
 export default function KidsEditForm({ pin, currentUserId }: { pin: Pin; currentUserId: string }) {
   const supabase = createClient();
   const router = useRouter();
+  const confirm = useConfirm();
   const [name, setName] = useState(pin.name);
   const [description, setDescription] = useState(pin.description);
   const [recommendedActivity, setRecommendedActivity] = useState(pin.recommended_activity);
@@ -75,7 +77,7 @@ export default function KidsEditForm({ pin, currentUserId }: { pin: Pin; current
   }
 
   async function handleDelete() {
-    if (!confirm('정말 삭제할까요?')) return;
+    if (!(await confirm({ title: '정말 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     if (busy) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('delete_kids_pin', { p_pin_id: pin.id });

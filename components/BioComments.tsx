@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
+import { useConfirm } from '@/lib/use-confirm';
 
 type Comment = {
   id: number;
@@ -27,6 +28,7 @@ function relTime(iso: string): string {
 export default function BioComments({ profileUserId }: { profileUserId: string }) {
   const router = useRouter();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
@@ -104,7 +106,7 @@ export default function BioComments({ profileUserId }: { profileUserId: string }
   }
 
   async function remove(id: number) {
-    if (!confirm('댓글을 삭제할까요?')) return;
+    if (!(await confirm({ title: '댓글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { error } = await supabase.from('profile_bio_comments').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     setComments((prev) => (prev ?? []).filter((c) => c.id !== id));

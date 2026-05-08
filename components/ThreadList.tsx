@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import Nickname from './Nickname';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 import { linkify } from '@/lib/linkify';
+import { useConfirm } from '@/lib/use-confirm';
 
 export type Thread = {
   id: number;
@@ -201,6 +202,7 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
   const [, startTransition] = useTransition();
   const router = useRouter();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -232,7 +234,7 @@ export default function ThreadList({ threads, currentUserId, showAuthor = true, 
   }
 
   async function deleteThread(id: number) {
-    if (!confirm('삭제할까?')) return;
+    if (!(await confirm({ title: '삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { data, error } = await supabase.rpc('delete_thread', { p_id: id });
     const row = Array.isArray(data) ? data[0] : data;
     if (error || (row && row.out_success === false)) {

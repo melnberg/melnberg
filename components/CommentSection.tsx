@@ -11,6 +11,7 @@ import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
 import Nickname from './Nickname';
 import RewardTooltip from './RewardTooltip';
+import { useConfirm } from '@/lib/use-confirm';
 
 type Props = {
   postId: number;
@@ -58,6 +59,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
   const isAnonymous = postCategory === 'worry';
   const router = useRouter();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [list, setList] = useState(comments);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -112,7 +114,7 @@ export default function CommentSection({ postId, comments, currentUserId, curren
   }
 
   async function handleDelete(commentId: number) {
-    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+    if (!(await confirm({ title: '댓글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     // soft-delete
     const { error } = await supabase.from('comments').update({ deleted_at: new Date().toISOString() }).eq('id', commentId);
     if (error) {

@@ -9,6 +9,7 @@ import { revalidateHome } from '@/lib/revalidate-home';
 import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import RewardTooltip from './RewardTooltip';
 import FacilityIncomeHistory from './FacilityIncomeHistory';
+import { useConfirm } from '@/lib/use-confirm';
 
 export type EmartItem = {
   id: number;
@@ -41,6 +42,7 @@ function fmtKstShort(iso: string): string {
 export default function EmartPanel({ emart, onClose, onChanged, inline = false }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [currentUid, setCurrentUid] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -119,7 +121,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
   async function occupy() {
     if (busy) return;
     if (emart.occupier_id) { alert(`이미 ${emart.occupier_name ?? '다른 사람'} 님이 보유 중`); return; }
-    if (!confirm(`${emart.name}\n5 mlbg 로 분양받습니다. (1인 1점포 — 다른 이마트 보유 시 거절됨)`)) return;
+    if (!(await confirm({ title: `${emart.name}`, body: '5 mlbg 로 분양받기. (1인 1점포 — 다른 이마트 보유 시 거절됨)', okLabel: '분양' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('occupy_emart', { p_emart_id: emart.id });
     setBusy(false);
@@ -149,7 +151,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
 
   async function release() {
     if (busy) return;
-    if (!confirm('이마트 보유를 해제하고 5 mlbg 환불받습니다. 진행할까요?')) return;
+    if (!(await confirm({ title: '이마트 보유 해제', body: '5 mlbg 환불받음.', okLabel: '해제' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('release_emart');
     setBusy(false);
@@ -184,7 +186,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
 
   async function unlist() {
     if (busy) return;
-    if (!confirm('매도 등록을 해제할까요?')) return;
+    if (!(await confirm({ title: '매도 등록을 해제할까?', okLabel: '해제' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('unlist_emart', { p_emart_id: emart.id });
     setBusy(false);
@@ -199,7 +201,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
   async function buyListing() {
     if (busy) return;
     if (emart.listing_price == null) return;
-    if (!confirm(`${emart.name}\n${Number(emart.listing_price).toLocaleString()} mlbg 에 매수합니다. 진행할까요?`)) return;
+    if (!(await confirm({ title: `${emart.name}`, body: `${Number(emart.listing_price).toLocaleString()} mlbg 에 매수.`, okLabel: '매수' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('buy_emart', { p_emart_id: emart.id });
     setBusy(false);
@@ -235,7 +237,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
   }
 
   async function deleteComment(id: number) {
-    if (!confirm('댓글을 삭제할까요?')) return;
+    if (!(await confirm({ title: '댓글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { error } = await supabase.from('emart_comments').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     setComments((prev) => prev.filter((c) => c.id !== id));

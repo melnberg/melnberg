@@ -29,7 +29,8 @@ export function feedItemHref(item: FeedItem): string {
   if (item.kind === 'notice') return item.notice_href ?? '/';
   if (
     item.kind === 'discussion' || item.kind === 'comment' ||
-    item.kind === 'listing' || item.kind === 'offer' || item.kind === 'snatch' ||
+    item.kind === 'listing' || item.kind === 'listing_comment' ||
+    item.kind === 'offer' || item.kind === 'snatch' ||
     item.kind === 'sell_complete'
   ) return item.apt_master_id ? `/apt/${item.apt_master_id}` : '/';
   if (item.kind === 'restaurant_register' || item.kind === 'restaurant_comment') {

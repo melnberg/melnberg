@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notifyTelegram } from '@/lib/telegram-notify';
 import { revalidateHome } from '@/lib/revalidate-home';
+import { useConfirm } from '@/lib/use-confirm';
 
 type Comment = {
   id: number;
@@ -56,6 +57,7 @@ export default function ListingInteractions({
   onTradeExecuted?: () => void;
 }) {
   const supabase = createClient();
+  const confirm = useConfirm();
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [offers, setOffers] = useState<Offer[] | null>(null);
 
@@ -138,7 +140,7 @@ export default function ListingInteractions({
   }
 
   async function deleteComment(id: number) {
-    if (!confirm('댓글을 삭제할까요?')) return;
+    if (!(await confirm({ title: '댓글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { data, error } = await supabase.rpc('delete_listing_comment', { p_id: id });
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
@@ -155,7 +157,7 @@ export default function ListingInteractions({
       if (!Number.isFinite(price) || price <= 0) { alert('호가는 0보다 큰 숫자로 입력하세요.'); return; }
     }
     if (kind === 'snatch') {
-      if (!confirm('이 단지를 무상으로 받겠다고 매도자에게 요청합니다. (내놔)')) return;
+      if (!(await confirm({ title: '내놔 요청', body: '이 단지를 무상으로 받겠다고 매도자에게 요청.', okLabel: '요청' }))) return;
     }
     setOfferBusy(true);
     const { data, error } = await supabase.rpc('make_offer', {
@@ -184,7 +186,7 @@ export default function ListingInteractions({
     const msg = kind === 'snatch'
       ? '이 단지를 무상으로 넘깁니다. 정말 진행할까요?'
       : `${price.toLocaleString()} mlbg 에 매도합니다. 진행할까요?`;
-    if (!confirm(msg)) return;
+    if (!(await confirm({ title: kind === 'snatch' ? '무상 양도 진행?' : '매도 진행?', body: msg, okLabel: kind === 'snatch' ? '양도' : '매도' }))) return;
     const { data, error } = await supabase.rpc('accept_offer', { p_offer_id: id });
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
@@ -197,7 +199,7 @@ export default function ListingInteractions({
   }
 
   async function rejectOffer(id: number) {
-    if (!confirm('이 호가를 거절할까요?')) return;
+    if (!(await confirm({ title: '이 호가를 거절할까?', okLabel: '거절', danger: true }))) return;
     const { data, error } = await supabase.rpc('reject_offer', { p_offer_id: id });
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
@@ -207,7 +209,7 @@ export default function ListingInteractions({
   }
 
   async function cancelOffer(id: number) {
-    if (!confirm('내가 보낸 호가를 취소할까요?')) return;
+    if (!(await confirm({ title: '내가 보낸 호가를 취소할까?', okLabel: '취소', cancelLabel: '아니오' }))) return;
     const { data, error } = await supabase.rpc('cancel_offer', { p_offer_id: id });
     if (error) { alert(error.message); return; }
     const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;

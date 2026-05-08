@@ -22,6 +22,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp,
       threadsResp,
       resolvedPollsResp,
+      listingCommentsResp,
     ] = await Promise.all([
       supabase
         .from('apt_discussions')
@@ -163,6 +164,14 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('resolved_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      // 매물 댓글 — apt_listing_comments. apt_master 임베드로 단지명/위치 같이 가져옴.
+      supabase
+        .from('apt_listing_comments')
+        .select('id, apt_id, author_id, content, created_at, apt_master:apt_master!apt_id(apt_nm, dong, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(30)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
@@ -257,6 +266,10 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const resolvedPollRows = (((resolvedPollsResp as { data: unknown[] | null })?.data ?? []) as Array<{
       post_id: number; status: string; correct_option_id: number | null; total_pool: number | string | null; resolved_at: string; mode?: string | null;
     }>);
+    const listingCommRows = (((listingCommentsResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
+      id: number; apt_id: number; author_id: string; content: string; created_at: string;
+      apt_master: { apt_nm: string | null; dong: string | null; lat: number | null; lng: number | null } | null;
+    }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
     const { data: recentBids } = await supabase
@@ -341,6 +354,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...kidsPinRows.map((r) => r.author_id),
       ...kidsCommRows.map((c) => c.author_id),
       ...threadRows.map((r) => r.author_id),
+      ...listingCommRows.map((c) => c.author_id),
     ].filter(Boolean)));
     const awardRefIds = Array.from(new Set([
       ...((discs ?? []).map((d) => (d as Record<string, unknown>).id as number)),
@@ -608,6 +622,32 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
         listing_price: Number(row.price),
+      };
+    });
+
+    const listingCommentItems: FeedItem[] = listingCommRows.map((row) => {
+      const am = row.apt_master;
+      const prof = profileMap.get(row.author_id);
+      const aptLabel = am?.apt_nm ? (am.dong ? `${am.dong} ${am.apt_nm}` : am.apt_nm) : '단지';
+      return {
+        kind: 'listing_comment' as const,
+        id: row.id,
+        apt_master_id: row.apt_id,
+        post_id: null,
+        title: `🏷️ ${aptLabel} 매물 댓글`,
+        content: row.content,
+        created_at: row.created_at,
+        apt_nm: am?.apt_nm ?? null,
+        dong: am?.dong ?? null,
+        lat: am?.lat ?? null,
+        lng: am?.lng ?? null,
+        author_id: row.author_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
       };
     });
 
@@ -1145,7 +1185,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     }
 
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems, ...pollSettledItems]
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...listingCommentItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems, ...pollSettledItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];

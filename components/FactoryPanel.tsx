@@ -9,6 +9,7 @@ import FacilityIncomeHistory from './FacilityIncomeHistory';
 import { revalidateHome } from '@/lib/revalidate-home';
 import { checkAndPayBridgeToll } from '@/lib/bridge-toll';
 import RewardTooltip from './RewardTooltip';
+import { useConfirm } from '@/lib/use-confirm';
 
 export type FactoryItem = {
   id: number;
@@ -58,6 +59,7 @@ function fmtKstShort(iso: string): string {
 export default function FactoryPanel({ factory, onClose, onChanged, inline = false }: Props) {
   const router = useRouter();
   const supabase = createClient();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [currentUid, setCurrentUid] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -137,7 +139,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   async function occupy() {
     if (busy) return;
     if (factory.occupier_id) { alert(`이미 ${factory.occupier_name ?? '다른 사람'} 님이 보유 중`); return; }
-    if (!confirm(`${factory.name}\n${factory.occupy_price.toLocaleString()} mlbg 로 분양받습니다.`)) return;
+    if (!(await confirm({ title: `${factory.name}`, body: `${factory.occupy_price.toLocaleString()} mlbg 로 분양받기.`, okLabel: '분양' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('occupy_factory', { p_factory_id: factory.id });
     setBusy(false);
@@ -165,7 +167,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
 
   async function release() {
     if (busy) return;
-    if (!confirm(`보유 해제 시 ${factory.occupy_price.toLocaleString()} mlbg 환불받습니다. 진행할까요?`)) return;
+    if (!(await confirm({ title: '보유 해제', body: `${factory.occupy_price.toLocaleString()} mlbg 환불받음.`, okLabel: '해제' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('release_factory', { p_factory_id: factory.id });
     setBusy(false);
@@ -193,7 +195,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   }
 
   async function unlist() {
-    if (!confirm('매도 해제할까요?')) return;
+    if (!(await confirm({ title: '매도 해제할까?', okLabel: '해제' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('unlist_factory', { p_factory_id: factory.id });
     setBusy(false);
@@ -206,7 +208,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
 
   async function buyListing() {
     if (factory.listing_price == null) return;
-    if (!confirm(`${factory.name}\n${factory.listing_price.toLocaleString()} mlbg 에 매수합니다.`)) return;
+    if (!(await confirm({ title: `${factory.name}`, body: `${factory.listing_price.toLocaleString()} mlbg 에 매수.`, okLabel: '매수' }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc('buy_factory', { p_factory_id: factory.id });
     setBusy(false);
@@ -241,7 +243,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   }
 
   async function deleteComment(id: number) {
-    if (!confirm('댓글을 삭제할까요?')) return;
+    if (!(await confirm({ title: '댓글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     const { error } = await supabase.from('factory_comments').delete().eq('id', id);
     if (error) { alert(error.message); return; }
     setComments((prev) => prev.filter((c) => c.id !== id));

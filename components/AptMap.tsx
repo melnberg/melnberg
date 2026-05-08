@@ -96,7 +96,7 @@ function saveCurrentMapState(inst: KakaoMapInst | null) {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread' | 'poll_settled';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'listing_comment' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread' | 'poll_settled';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -2078,7 +2078,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                   const feedKey = `${f.kind}-${f.id}`;
                   const isPreviewing = previewItem != null && `${previewItem.kind}-${previewItem.id}` === feedKey;
                   const fullContent = (f.content ?? '').trim();
-                  const isComment = f.kind === 'comment' || f.kind === 'post_comment';
+                  const isComment = f.kind === 'comment' || f.kind === 'post_comment' || f.kind === 'listing_comment';
                   const isCommunity = f.kind === 'post' || f.kind === 'post_comment';
                   const isListing = f.kind === 'listing';
                   const isOffer = f.kind === 'offer';
@@ -2098,7 +2098,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : f.kind === 'thread' ? '@ 스레드'
                     : f.kind === 'poll_settled' ? (f.poll_mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산')
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
-                    : isCommunity ? '커뮤니티'
+                    : isCommunity ? (f.post_category === 'realty' ? '부동산 토론' : f.post_category === 'stocks' ? '주식 토론' : f.post_category === 'hotdeal' ? '핫딜' : f.post_category === 'worry' ? '익명 고민' : '커뮤니티')
                     : (aptHeadLabel || '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className={`border-b border-[#f0f0f0] last:border-b-0 ${isPreviewing ? 'border-l-4 border-l-cyan' : ''}`}>
@@ -2223,6 +2223,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 if (f.kind === 'restaurant_register' || f.kind === 'kids_register') txt = '+30 mlbg';
                                 else if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment') txt = '+0.5 mlbg';
                                 else if (f.kind === 'listing') txt = typeof f.listing_price === 'number' ? `호가 ${f.listing_price.toLocaleString()} mlbg` : '매물 등록';
+                                else if (f.kind === 'listing_comment') txt = '+0 mlbg (매물 댓글)';
                                 else if (f.kind === 'offer') txt = typeof f.listing_price === 'number' ? `매수 ${f.listing_price.toLocaleString()} mlbg` : '매수 호가';
                                 else if (f.kind === 'snatch') txt = '내놔 (무상)';
                                 else if (f.kind === 'auction') txt = typeof f.listing_price === 'number' ? `현재가 ${f.listing_price.toLocaleString()} mlbg` : '경매 진행';
