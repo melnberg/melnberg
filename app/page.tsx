@@ -394,6 +394,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const factoryIds = factoryRows.map((f) => f.factory_id);
 
     const threadAuthorIds = Array.from(new Set(threadRows.map((r) => r.author_id).filter(Boolean)));
+    const fortuneIds = fortuneCookieRows.map((r) => r.id);
 
     const [
       commentPostsResp,
@@ -406,6 +407,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       emartCommCntRows,
       factoryCommCntRows,
       threadProfsResp,
+      fortuneCommCntRows,
     ] = await Promise.all([
       commentPostIds.length > 0
         ? (async () => {
@@ -455,6 +457,11 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         ? supabase.from('thread_profiles').select('user_id, display_name').in('user_id', threadAuthorIds)
             .then((r) => r, () => ({ data: null }))
         : Promise.resolve({ data: null }),
+      // 포춘쿠키 댓글 카운트 — fortune_id 별 그룹.
+      fortuneIds.length > 0
+        ? supabase.from('fortune_comments').select('fortune_id').in('fortune_id', fortuneIds).is('deleted_at', null)
+            .then((r) => (r.data ?? []) as Array<{ fortune_id: number }>, () => [] as Array<{ fortune_id: number }>)
+        : Promise.resolve([] as Array<{ fortune_id: number }>),
     ]);
 
     const threadProfileMap = new Map<string, string | null>();
@@ -1144,6 +1151,10 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     });
 
     // 포춘쿠키 → FeedItem (kind 'fortune_cookie'). 본인 이름 + 운세 본문 + 클릭 시 /fortune/{id}.
+    const fortuneCommCntMap = new Map<number, number>();
+    for (const c of fortuneCommCntRows) {
+      fortuneCommCntMap.set(c.fortune_id, (fortuneCommCntMap.get(c.fortune_id) ?? 0) + 1);
+    }
     const fortuneCookieItems: FeedItem[] = fortuneCookieRows.map((r) => {
       const prof = profileMap.get(r.user_id);
       return {
@@ -1164,6 +1175,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         author_is_solo: !!prof?.is_solo,
         author_avatar_url: prof?.avatar_url ?? null,
         author_apt_count: prof?.apt_count ?? null,
+        comment_count: fortuneCommCntMap.get(r.id) ?? 0,
       } as FeedItem;
     });
 

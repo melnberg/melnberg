@@ -6,13 +6,15 @@ import { awardMlbg, type MlbgAwardKind } from '@/lib/mlbg-award';
 import { revalidateHome } from '@/lib/revalidate-home';
 
 // 피드 카드 안에서 댓글 미리보기 + 작성. kind 별로 테이블/컬럼 분기.
-export type InlineKind = 'discussion' | 'post' | 'emart_occupy' | 'factory_occupy';
+export type InlineKind = 'discussion' | 'post' | 'emart_occupy' | 'factory_occupy' | 'fortune_cookie';
 
-const TABLE: Record<InlineKind, { table: string; parentCol: string; awardKind: MlbgAwardKind }> = {
+// awardKind null = mlbg 적립 없음 (포춘쿠키 댓글은 보상 없음, 순수 잡담용)
+const TABLE: Record<InlineKind, { table: string; parentCol: string; awardKind: MlbgAwardKind | null }> = {
   discussion:     { table: 'apt_discussion_comments', parentCol: 'discussion_id', awardKind: 'apt_comment' },
   post:           { table: 'comments',                parentCol: 'post_id',       awardKind: 'community_comment' },
   emart_occupy:   { table: 'emart_comments',          parentCol: 'emart_id',      awardKind: 'emart_comment' },
   factory_occupy: { table: 'factory_comments',        parentCol: 'factory_id',    awardKind: 'factory_comment' },
+  fortune_cookie: { table: 'fortune_comments',        parentCol: 'fortune_id',    awardKind: null },
 };
 
 type CommentRow = {
@@ -97,7 +99,7 @@ export default function InlineCommentBox({
       return next;
     });
     setText('');
-    await awardMlbg(cfg.awardKind, row.id, row.content);
+    if (cfg.awardKind) await awardMlbg(cfg.awardKind, row.id, row.content);
     revalidateHome();
   }
 

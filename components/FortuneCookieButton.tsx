@@ -3,10 +3,12 @@
 // 포춘쿠키 버튼 — 사이드바 3번 위치, 출석룰렛 폐지 후 자리잡음.
 // 오로라 초록 그라디언트 + 쿠키 SVG. 누르면 오늘의 운세 1회 뽑음 (KST 일자 기준).
 // 결과는 모달로 표시되고, 동시에 피드(fortune_cookies 테이블)에 본인 이름 + 운세 내용으로 카드 등장.
+// 오늘치를 이미 뽑은 상태면 오로라/광택 애니메이션 끔 — 정적 회색 톤.
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { revalidateHome } from '@/lib/revalidate-home';
 
 type Fortune = { id: number; fortune_text: string; drawn_date: string; created_at: string };
@@ -26,6 +28,10 @@ function CookieIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+function kstToday(): string {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
+}
+
 export default function FortuneCookieButton() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -36,8 +42,30 @@ export default function FortuneCookieButton() {
   const [mounted, setMounted] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  // 오늘치 이미 뽑았는지 — true 면 오로라/광택 애니메이션 끔.
+  const [drawnToday, setDrawnToday] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // 마운트 시 오늘치 있는지 확인. 있으면 애니메이션 정지 상태로 시작.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled || !user) return;
+      const { data } = await supabase
+        .from('fortune_cookies')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('drawn_date', kstToday())
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (cancelled) return;
+      if (data) setDrawnToday(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const today = new Date();
   const label = `${today.getMonth() + 1}월 ${today.getDate()}일 포춘쿠키`;
@@ -59,6 +87,7 @@ export default function FortuneCookieButton() {
       }
       setFortune(j.fortune as Fortune);
       setAlready(!!j.already);
+      setDrawnToday(true);  // 뽑힘 → 즉시 애니메이션 정지
       // 짧은 두근 애니메이션 후 reveal
       setTimeout(() => { setDrawing(false); setRevealed(true); }, 1200);
       // 새로 뽑았을 때만 피드 새로고침
@@ -121,20 +150,25 @@ export default function FortuneCookieButton() {
     document.body,
   ) : null;
 
+  // 뽑은 후엔 정적 회색 톤 — 애니메이션 0
+  const buttonCls = drawnToday
+    ? 'relative w-full px-2 py-2 text-[12px] font-bold text-muted bg-[#f3f4f6] border border-[#e5e7eb] cursor-default flex items-center justify-center gap-1.5'
+    : 'fortune-aurora group relative w-full px-2 py-2 text-[12px] font-bold text-white border-none cursor-pointer overflow-hidden flex items-center justify-center gap-1.5';
+
   return (
     <>
       <button
         type="button"
         onClick={handleClick}
-        disabled={busy}
-        className="fortune-aurora group relative w-full px-2 py-2 text-[12px] font-bold text-white border-none cursor-pointer overflow-hidden flex items-center justify-center gap-1.5"
-        title="오늘의 포춘쿠키 — 1일 1회"
+        disabled={busy || drawnToday}
+        className={buttonCls}
+        title={drawnToday ? '오늘은 이미 뽑음 — 내일 다시' : '오늘의 포춘쿠키 — 1일 1회'}
       >
         <span className="relative z-10 flex items-center gap-1.5 whitespace-nowrap drop-shadow-sm">
           <CookieIcon size={14} />
-          <span>{label}</span>
+          <span>{drawnToday ? '오늘 운세 뽑음' : label}</span>
         </span>
-        <span aria-hidden className="fortune-aurora-shine" />
+        {!drawnToday && <span aria-hidden className="fortune-aurora-shine" />}
       </button>
       {modal}
     </>

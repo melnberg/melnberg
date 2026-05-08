@@ -20,6 +20,7 @@ function inlineKindFor(f: FeedItem): { kind: InlineKind; parentId: number } | nu
   if (f.kind === 'post') return f.post_id ? { kind: 'post', parentId: f.post_id } : null;
   if (f.kind === 'emart_occupy') return { kind: 'emart_occupy', parentId: f.apt_master_id };
   if (f.kind === 'factory_occupy') return { kind: 'factory_occupy', parentId: f.apt_master_id };
+  if (f.kind === 'fortune_cookie') return { kind: 'fortune_cookie', parentId: f.id };
   return null;
 }
 
@@ -86,6 +87,7 @@ function fallbackRewardText(f: FeedItem): string {
   if (f.kind === 'bridge_toll') return typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
   if (f.kind === 'notice') return '공지';
   if (f.kind === 'thread') return f.discussion_like_count ? `❤ ${f.discussion_like_count}` : '';
+  if (f.kind === 'fortune_cookie') return '🥠 1일 1회';
   if (f.kind === 'poll_settled') {
     if (f.poll_mode === 'vote') return typeof f.poll_winner_count === 'number' ? `${f.poll_winner_count}표 정답` : '투표 마감';
     const pool = f.poll_total_pool ?? 0;
