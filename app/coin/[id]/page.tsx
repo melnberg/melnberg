@@ -145,7 +145,8 @@ export default async function CoinPostDetail({ params }: { params: Promise<{ id:
               </div>
             </div>
 
-            <div className="bg-white px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            <div className="px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+                 style={{ background: '#ffffff', color: '#111111' }}>
               {pollData.poll && (
                 <PollWidget
                   postId={post.id}

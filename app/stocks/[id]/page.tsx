@@ -149,8 +149,9 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
               </div>
             </div>
 
-            {/* 폴/댓글 — 흰 카드 (가독성 위해 분리) */}
-            <div className="bg-white px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            {/* 폴/댓글 — 흰 카드 (가독성 위해 분리). 인라인 스타일도 같이 — Tailwind 어떤 이유로 안 먹어도 보장. */}
+            <div className="px-6 lg:px-8 py-6 shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+                 style={{ background: '#ffffff', color: '#111111' }}>
               {pollData.poll && (
                 <PollWidget
                   postId={post.id}
