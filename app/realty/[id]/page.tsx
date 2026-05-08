@@ -126,6 +126,7 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
               options={pollData.options}
               votes={pollData.votes}
               myVote={pollData.myVote}
+              voters={pollData.voters}
               currentUserId={user?.id ?? null}
               isAuthor={isAuthor}
             />

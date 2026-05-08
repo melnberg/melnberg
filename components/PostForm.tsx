@@ -30,6 +30,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
   // 투표 — 글 작성 시 선택적으로 추가. 수정(initial)에선 비활성.
   const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollMode, setPollMode] = useState<'bet' | 'vote'>('bet');
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,6 +134,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
             p_post_id: data.id,
             p_question: pollQuestion.trim() || null,
             p_options: cleaned,
+            p_mode: pollMode,
           });
           const pollRow = Array.isArray(pollResp) ? pollResp[0] : pollResp;
           if (pollErr) {
@@ -256,11 +258,39 @@ export default function PostForm({ initial, category = 'community', redirectBase
               onChange={(e) => setPollEnabled(e.target.checked)}
               className="w-4 h-4 accent-navy cursor-pointer"
             />
-            <span className="font-bold text-navy">🎰 mlbg 베팅 추가</span>
-            <span className="text-muted text-[12px]">— 옵션 2~6개. 사용자들이 mlbg 걸고 베팅. 정답 결정 시 배당률대로 정산.</span>
+            <span className="font-bold text-navy">🗳 투표/베팅 추가</span>
+            <span className="text-muted text-[12px]">— 옵션 2~6개. 베팅(mlbg) 또는 단순 투표 선택.</span>
           </label>
           {pollEnabled && (
             <div className="mt-4 flex flex-col gap-3">
+              {/* 모드 선택 */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold tracking-widest uppercase text-muted">모드</label>
+                <div className="flex flex-wrap gap-2">
+                  <label className={`flex items-center gap-2 px-3 py-2 border cursor-pointer text-[13px] flex-1 min-w-[180px] ${pollMode === 'bet' ? 'border-navy bg-navy/5 text-navy font-bold' : 'border-border text-text hover:border-navy/40'}`}>
+                    <input
+                      type="radio"
+                      name="poll-mode"
+                      checked={pollMode === 'bet'}
+                      onChange={() => setPollMode('bet')}
+                      className="w-4 h-4 accent-navy cursor-pointer"
+                    />
+                    <span>🎰 mlbg 베팅</span>
+                    <span className="text-[11px] text-muted font-normal">— 잔액 차감 + 배당률 정산</span>
+                  </label>
+                  <label className={`flex items-center gap-2 px-3 py-2 border cursor-pointer text-[13px] flex-1 min-w-[180px] ${pollMode === 'vote' ? 'border-navy bg-navy/5 text-navy font-bold' : 'border-border text-text hover:border-navy/40'}`}>
+                    <input
+                      type="radio"
+                      name="poll-mode"
+                      checked={pollMode === 'vote'}
+                      onChange={() => setPollMode('vote')}
+                      className="w-4 h-4 accent-navy cursor-pointer"
+                    />
+                    <span>🗳 일반 투표</span>
+                    <span className="text-[11px] text-muted font-normal">— mlbg 없이 1인 1표</span>
+                  </label>
+                </div>
+              </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold tracking-widest uppercase text-muted">
                   질문 <span className="normal-case font-normal">(선택 — 비우면 글 제목)</span>

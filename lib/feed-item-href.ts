@@ -5,6 +5,16 @@ import type { FeedItem } from '@/components/AptMap';
 
 export function feedItemHref(item: FeedItem): string {
   if (item.kind === 'thread' && item.post_id) return `/t/${item.post_id}`;
+  if (item.kind === 'poll_settled') {
+    if (!item.post_id) return '/community';
+    const cat = item.poll_post_category;
+    const base = cat === 'hotdeal' ? '/hotdeal'
+               : cat === 'stocks' ? '/stocks'
+               : cat === 'realty' ? '/realty'
+               : cat === 'worry' ? '/worry'
+               : '/community';
+    return `${base}/${item.post_id}`;
+  }
   if (item.kind === 'auction' || item.kind === 'auction_bid' || item.kind === 'auction_won') {
     return item.auction_id ? `/auctions/${item.auction_id}` : '/auctions';
   }

@@ -14,6 +14,13 @@ type PollMeta = {
   correct_option_id: number | null;
   total_pool: number;
   resolved_at: string | null;
+  mode: 'bet' | 'vote';
+};
+type Voter = {
+  user_id: string;
+  option_id: number;
+  display_name: string | null;
+  avatar_url: string | null;
 };
 
 type Props = {
@@ -22,6 +29,7 @@ type Props = {
   options: Option[];
   votes: VoteAgg[];
   myVote: MyVote | null;
+  voters?: Voter[];
   currentUserId: string | null;
   isAuthor: boolean;
   // worry 게시판 — 익명 표시 prop 보존 (지금은 사용 안 하지만 향후 분기용)
@@ -41,6 +49,7 @@ export default function PollWidget({
   options,
   votes,
   myVote,
+  voters = [],
   currentUserId,
   isAuthor,
 }: Props) {
@@ -56,9 +65,12 @@ export default function PollWidget({
   const [resolveOption, setResolveOption] = useState<number | null>(null);
   const [resolving, setResolving] = useState(false);
 
+  const isVoteMode = poll.mode === 'vote';
   const isResolved = poll.status === 'resolved';
   const hasMyVote = !!myVote;
-  const canBet = !!currentUserId && !isResolved && !hasMyVote;
+  // bet 모드: 한 번만 베팅 가능. vote 모드: 변경 가능 (재투표 허용).
+  const canBet = !isVoteMode && !!currentUserId && !isResolved && !hasMyVote;
+  const canVote = isVoteMode && !!currentUserId && !isResolved;
 
   // 옵션별 집계 맵
   const aggMap = new Map<number, VoteAgg>();
@@ -134,6 +146,31 @@ export default function PollWidget({
     router.refresh();
   }
 
+  async function handleVote(optId: number) {
+    if (submitting) return;
+    if (!currentUserId) {
+      setErr('로그인이 필요해요');
+      return;
+    }
+    setErr(null);
+    setSubmitting(true);
+    const { data, error } = await supabase.rpc('vote_post_poll', {
+      p_post_id: postId,
+      p_option_id: optId,
+    });
+    setSubmitting(false);
+    if (error) {
+      setErr(error.message);
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row && row.out_success === false) {
+      setErr(row.out_message ?? '투표 실패');
+      return;
+    }
+    router.refresh();
+  }
+
   async function handleResolve() {
     if (resolving) return;
     if (resolveOption == null) {
@@ -187,7 +224,9 @@ export default function PollWidget({
               : 'bg-navy/10 text-navy border border-navy/30')
           }
         >
-          {isResolved ? '✅ 정산 완료' : '🎰 베팅 진행중'}
+          {isResolved
+            ? (isVoteMode ? '✅ 결과 발표' : '✅ 정산 완료')
+            : (isVoteMode ? '🗳 투표 진행중' : '🎰 베팅 진행중')}
         </span>
       </div>
 
@@ -197,20 +236,31 @@ export default function PollWidget({
           const agg = aggMap.get(opt.id);
           const optAmt = agg?.amount_sum ?? 0;
           const optCount = agg?.count ?? 0;
-          const pct =
-            totalPool > 0 ? Math.round((optAmt / totalPool) * 100) : 0;
-          // 배당률 — open 상태에서만 의미. (전체 풀 / 옵션 풀). 옵션 풀 0 이면 — 표기.
+          // 막대바 % — bet 모드: 풀 비중 / vote 모드: 표 수 비중
+          const pct = isVoteMode
+            ? (totalCount > 0 ? Math.round((optCount / totalCount) * 100) : 0)
+            : (totalPool > 0 ? Math.round((optAmt / totalPool) * 100) : 0);
+          // 배당률 — bet 모드 + open 에서만 의미.
           const odds = optAmt > 0 ? totalPool / optAmt : 0;
           const isMine = myVote?.option_id === opt.id;
           const isCorrect = isResolved && correctOptionId === opt.id;
 
-          // 베팅 단계 — radio 로 선택
+          // bet 모드: radio 선택 후 베팅 버튼. vote 모드: 옵션 클릭만으로 즉시 투표.
           const radioSelectable = canBet;
           const isRadioChecked = canBet && selectedOption === opt.id;
+          const voteClickable = canVote;
+
+          // 옵션별 참가자 (vote 모드 only) — 본인 + 최대 4명 아바타
+          const optVoters = isVoteMode ? voters.filter((v) => v.option_id === opt.id) : [];
 
           return (
             <label
               key={opt.id}
+              onClick={(e) => {
+                if (!voteClickable) return;
+                e.preventDefault();
+                handleVote(opt.id);
+              }}
               className={
                 'relative block w-full border p-0 ' +
                 (isCorrect
@@ -218,7 +268,7 @@ export default function PollWidget({
                   : isMine
                   ? 'border-cyan '
                   : 'border-border ') +
-                (radioSelectable ? 'cursor-pointer hover:opacity-90' : '')
+                (radioSelectable || voteClickable ? 'cursor-pointer hover:opacity-90' : '')
               }
             >
               {/* 막대바 배경 */}
@@ -245,7 +295,7 @@ export default function PollWidget({
                 )}
                 <span
                   className={
-                    'font-semibold break-keep flex-1 flex items-center gap-1.5 ' +
+                    'font-semibold break-keep flex-1 flex items-center gap-1.5 min-w-0 ' +
                     (isMine ? 'text-cyan font-bold' : '')
                   }
                 >
@@ -253,23 +303,56 @@ export default function PollWidget({
                   {isMine && !isCorrect && (
                     <span className="text-cyan">●</span>
                   )}
-                  {opt.label}
-                </span>
-                <span className="font-bold tabular-nums shrink-0 text-right text-[12px]">
-                  <span className="text-navy">{fmtMlbg(optAmt)} mlbg</span>
-                  <span className="text-muted font-normal">
-                    {' '}
-                    · {pct}% · {optCount}명
-                  </span>
-                  {!isResolved && (
-                    <span className="block text-[11px] text-muted font-normal">
-                      배당 {optAmt > 0 ? `× ${odds.toFixed(2)}` : '—'}
+                  <span className="truncate">{opt.label}</span>
+                  {/* vote 모드 — 옵션별 작은 아바타 nav */}
+                  {isVoteMode && optVoters.length > 0 && (
+                    <span className="flex items-center -space-x-1.5 ml-1 shrink-0">
+                      {optVoters.slice(0, 5).map((v) => (
+                        <span
+                          key={v.user_id}
+                          title={v.display_name ?? '익명'}
+                          className="w-5 h-5 rounded-full border border-white bg-bg overflow-hidden inline-block"
+                        >
+                          {v.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={v.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted bg-cyan/10">
+                              {(v.display_name ?? '?').slice(0, 1)}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                      {optVoters.length > 5 && (
+                        <span className="text-[10px] text-muted font-normal pl-2">+{optVoters.length - 5}</span>
+                      )}
                     </span>
                   )}
-                  {isResolved && isCorrect && winnerPool > 0 && (
-                    <span className="block text-[11px] text-cyan font-bold">
-                      배당 × {(totalPool / winnerPool).toFixed(2)}
-                    </span>
+                </span>
+                <span className="font-bold tabular-nums shrink-0 text-right text-[12px]">
+                  {isVoteMode ? (
+                    <>
+                      <span className="text-navy">{optCount}표</span>
+                      <span className="text-muted font-normal"> · {pct}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-navy">{fmtMlbg(optAmt)} mlbg</span>
+                      <span className="text-muted font-normal">
+                        {' '}
+                        · {pct}% · {optCount}명
+                      </span>
+                      {!isResolved && (
+                        <span className="block text-[11px] text-muted font-normal">
+                          배당 {optAmt > 0 ? `× ${odds.toFixed(2)}` : '—'}
+                        </span>
+                      )}
+                      {isResolved && isCorrect && winnerPool > 0 && (
+                        <span className="block text-[11px] text-cyan font-bold">
+                          배당 × {(totalPool / winnerPool).toFixed(2)}
+                        </span>
+                      )}
+                    </>
                   )}
                 </span>
               </div>
@@ -280,11 +363,19 @@ export default function PollWidget({
 
       {/* 푸터 — 풀 요약 */}
       <div className="text-[11px] text-muted mt-3 flex items-center justify-between flex-wrap gap-2">
-        <span>
-          총 풀 <span className="text-navy font-bold">{fmtMlbg(totalPool)} mlbg</span>{' '}
-          · {totalCount}명 참여
-        </span>
-        {!currentUserId && !isResolved && <span>베팅은 로그인 후 가능</span>}
+        {isVoteMode ? (
+          <span>
+            총 <span className="text-navy font-bold">{totalCount}</span>표
+          </span>
+        ) : (
+          <span>
+            총 풀 <span className="text-navy font-bold">{fmtMlbg(totalPool)} mlbg</span>{' '}
+            · {totalCount}명 참여
+          </span>
+        )}
+        {!currentUserId && !isResolved && (
+          <span>{isVoteMode ? '투표는 로그인 후 가능' : '베팅은 로그인 후 가능'}</span>
+        )}
       </div>
 
       {/* 베팅 입력 — open + 본인 미베팅 + 로그인 */}
@@ -328,53 +419,81 @@ export default function PollWidget({
         </div>
       )}
 
-      {/* 본인 베팅 표시 — open + 이미 베팅 */}
+      {/* 본인 베팅/투표 표시 — open + 이미 표시 */}
       {!isResolved && hasMyVote && myVote && (
         <div className="mt-4 pt-3 border-t border-border text-[12px]">
-          <div className="text-cyan font-bold">
-            내 베팅:{' '}
-            {options.find((o) => o.id === myVote.option_id)?.label ?? '?'} 에{' '}
-            {fmtMlbg(myVote.amount)} mlbg
-          </div>
-          <div className="text-[11px] text-muted mt-0.5">
-            한 번 베팅하면 변경 불가. 작성자가 정답 결정 시 자동 정산됨.
-          </div>
+          {isVoteMode ? (
+            <>
+              <div className="text-cyan font-bold">
+                내 투표:{' '}
+                {options.find((o) => o.id === myVote.option_id)?.label ?? '?'}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">
+                다른 옵션을 누르면 투표를 변경할 수 있어요.
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-cyan font-bold">
+                내 베팅:{' '}
+                {options.find((o) => o.id === myVote.option_id)?.label ?? '?'} 에{' '}
+                {fmtMlbg(myVote.amount)} mlbg
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">
+                한 번 베팅하면 변경 불가. 작성자가 정답 결정 시 자동 정산됨.
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* 정산 결과 — resolved + 본인 베팅 */}
+      {/* 정산/결과 — resolved + 본인 베팅/투표 */}
       {isResolved && hasMyVote && myVote && (
         <div className="mt-4 pt-3 border-t border-border text-[12px]">
-          <div>
-            내 베팅:{' '}
-            {options.find((o) => o.id === myVote.option_id)?.label ?? '?'} 에{' '}
-            {fmtMlbg(myVote.amount)} mlbg
-          </div>
-          <div className="mt-1 font-bold tabular-nums">
-            {myVote.payout == null ? (
-              <span className="text-muted">정산 정보 없음</span>
-            ) : myVote.payout > myVote.amount ? (
-              <span className="text-cyan">
-                +{fmtMlbg(myVote.payout - myVote.amount)} mlbg (총 받음{' '}
-                {fmtMlbg(myVote.payout)})
-              </span>
-            ) : myVote.payout > 0 ? (
-              <span className="text-muted">
-                받음 {fmtMlbg(myVote.payout)} mlbg (-
-                {fmtMlbg(myVote.amount - myVote.payout)})
-              </span>
-            ) : (
-              <span className="text-muted">잃음</span>
-            )}
-          </div>
+          {isVoteMode ? (
+            <div>
+              내 투표:{' '}
+              {options.find((o) => o.id === myVote.option_id)?.label ?? '?'}
+              {correctOptionId === myVote.option_id ? (
+                <span className="ml-2 text-cyan font-bold">✓ 정답</span>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              <div>
+                내 베팅:{' '}
+                {options.find((o) => o.id === myVote.option_id)?.label ?? '?'} 에{' '}
+                {fmtMlbg(myVote.amount)} mlbg
+              </div>
+              <div className="mt-1 font-bold tabular-nums">
+                {myVote.payout == null ? (
+                  <span className="text-muted">정산 정보 없음</span>
+                ) : myVote.payout > myVote.amount ? (
+                  <span className="text-cyan">
+                    +{fmtMlbg(myVote.payout - myVote.amount)} mlbg (총 받음{' '}
+                    {fmtMlbg(myVote.payout)})
+                  </span>
+                ) : myVote.payout > 0 ? (
+                  <span className="text-muted">
+                    받음 {fmtMlbg(myVote.payout)} mlbg (-
+                    {fmtMlbg(myVote.amount - myVote.payout)})
+                  </span>
+                ) : (
+                  <span className="text-muted">잃음</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* 작성자 정산 섹션 — open + 작성자 */}
+      {/* 작성자 정산/마감 섹션 — open + 작성자 */}
       {!isResolved && isAuthor && (
         <div className="mt-4 pt-3 border-t-2 border-red-300 flex flex-col gap-2">
           <div className="text-[12px] font-bold text-red-600">
-            작성자 정산 — 정답 옵션을 골라 정산하면 되돌릴 수 없음.
+            {isVoteMode
+              ? '작성자 마감 — 정답 옵션을 골라 결과 확정. 환수/지급 없음. 되돌릴 수 없음.'
+              : '작성자 정산 — 정답 옵션을 골라 정산하면 되돌릴 수 없음.'}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <select
@@ -399,20 +518,20 @@ export default function PollWidget({
               disabled={resolving || resolveOption == null}
               className="bg-red-600 text-white border-none px-4 py-1.5 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {resolving ? '정산 중...' : '정산하기 →'}
+              {resolving ? '확정 중...' : isVoteMode ? '마감하기 →' : '정산하기 →'}
             </button>
           </div>
         </div>
       )}
 
-      {/* 정산 완료 안내 */}
+      {/* 정산/마감 완료 안내 */}
       {isResolved && (
         <div className="mt-4 pt-3 border-t border-border text-[11px] text-muted">
           정답:{' '}
           <span className="text-navy font-bold">
             {options.find((o) => o.id === correctOptionId)?.label ?? '—'}
           </span>
-          {winnerPool === 0 && (
+          {!isVoteMode && winnerPool === 0 && (
             <span className="ml-2 text-muted">
               · 정답 풀 0 으로 모두 환불됨
             </span>

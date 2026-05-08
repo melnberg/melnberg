@@ -25,6 +25,14 @@ export type PollMeta = {
   correct_option_id: number | null;
   total_pool: number;
   resolved_at: string | null;
+  mode: 'bet' | 'vote';
+};
+
+export type PollVoter = {
+  user_id: string;
+  option_id: number;
+  display_name: string | null;
+  avatar_url: string | null;
 };
 
 export type PollData = {
@@ -32,6 +40,7 @@ export type PollData = {
   options: PollOption[];
   votes: PollVoteAgg[];
   myVote: PollMyVote | null;
+  voters: PollVoter[];
 };
 
 export async function fetchPostPoll(
@@ -40,14 +49,25 @@ export async function fetchPostPoll(
 ): Promise<PollData> {
   const supabase = await createClient();
 
-  const { data: poll } = await supabase
+  // mode 컬럼은 SQL 182 미실행 시 없을 수 있음 — 실패 시 mode 없이 fallback
+  const { data: poll, error: pollErr } = await supabase
     .from('post_polls')
-    .select('post_id, question, status, correct_option_id, total_pool, resolved_at')
+    .select('post_id, question, status, correct_option_id, total_pool, resolved_at, mode')
     .eq('post_id', postId)
     .maybeSingle();
+  let pollRowSafe = poll as Record<string, unknown> | null;
+  if (pollErr || !pollRowSafe) {
+    // mode 컬럼이 없는 환경 — 기본 select 재시도
+    const retry = await supabase
+      .from('post_polls')
+      .select('post_id, question, status, correct_option_id, total_pool, resolved_at')
+      .eq('post_id', postId)
+      .maybeSingle();
+    pollRowSafe = (retry.data as Record<string, unknown> | null) ?? null;
+  }
 
-  if (!poll) {
-    return { poll: null, options: [], votes: [], myVote: null };
+  if (!pollRowSafe) {
+    return { poll: null, options: [], votes: [], myVote: null, voters: [] };
   }
 
   const { data: optsData } = await supabase
@@ -102,14 +122,44 @@ export async function fetchPostPoll(
     }
   }
 
-  const pollRow = poll as {
+  const pollRow = pollRowSafe as {
     post_id: number;
     question: string | null;
     status: string | null;
     correct_option_id: number | null;
     total_pool: number | string | null;
     resolved_at: string | null;
+    mode?: string | null;
   };
+
+  // 투표 모드 — 옵션별 참가자 fetch (작은 아바타 표시용)
+  let voters: PollVoter[] = [];
+  const isVoteMode = pollRow.mode === 'vote';
+  if (isVoteMode) {
+    const { data: voteRows } = await supabase
+      .from('post_poll_votes')
+      .select('user_id, option_id')
+      .eq('post_id', postId);
+    const voteList = (voteRows ?? []) as Array<{ user_id: string; option_id: number }>;
+    if (voteList.length > 0) {
+      const userIds = Array.from(new Set(voteList.map((v) => v.user_id)));
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', userIds);
+      const profMap = new Map<string, { display_name: string | null; avatar_url: string | null }>();
+      for (const p of (profs ?? []) as Array<{ id: string; display_name: string | null; avatar_url: string | null }>) {
+        profMap.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url });
+      }
+      voters = voteList.map((v) => ({
+        user_id: v.user_id,
+        option_id: v.option_id,
+        display_name: profMap.get(v.user_id)?.display_name ?? null,
+        avatar_url: profMap.get(v.user_id)?.avatar_url ?? null,
+      }));
+    }
+  }
+
   return {
     poll: {
       post_id: pollRow.post_id,
@@ -118,9 +168,11 @@ export async function fetchPostPoll(
       correct_option_id: pollRow.correct_option_id,
       total_pool: Number(pollRow.total_pool ?? 0),
       resolved_at: pollRow.resolved_at,
+      mode: isVoteMode ? 'vote' : 'bet',
     },
     options,
     votes,
     myVote,
+    voters,
   };
 }

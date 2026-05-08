@@ -96,7 +96,7 @@ function saveCurrentMapState(inst: KakaoMapInst | null) {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread' | 'poll_settled';
   /** emart 전용 — 매장명 (이미 apt_nm 으로도 들어가지만 의미 명확화용) */
   emart_name?: string;
   /** notice 전용 — 외부 링크 (있으면 클릭 시 그 URL 또는 라우트로) */
@@ -158,6 +158,13 @@ export type FeedItem = {
   kids_name?: string | null;
   kids_recommended_activity?: string | null;
   kids_photo_url?: string | null;
+  /** poll_settled 전용 */
+  poll_total_pool?: number;
+  poll_winner_pool?: number;
+  poll_correct_label?: string | null;
+  poll_mode?: 'bet' | 'vote';
+  poll_winner_count?: number;
+  poll_post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
 };
 
 export type AptPin = {
@@ -2089,6 +2096,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : f.kind === 'bridge_toll' ? '🌉 다리 통행료'
                     : f.kind === 'sell_complete' ? '🤝 거래성사'
                     : f.kind === 'thread' ? '@ 스레드'
+                    : f.kind === 'poll_settled' ? (f.poll_mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산')
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
                     : isCommunity ? '커뮤니티'
                     : (aptHeadLabel || '(단지 정보 없음)');
@@ -2226,6 +2234,15 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 else if (f.kind === 'bridge_toll') txt = typeof f.bridge_toll_amount === 'number' ? `통행료 ${f.bridge_toll_amount.toLocaleString()} mlbg` : '통행료';
                                 else if (f.kind === 'notice') txt = '공지';
                                 else if (f.kind === 'thread') txt = f.discussion_like_count ? `❤ ${f.discussion_like_count}` : '';
+                                else if (f.kind === 'poll_settled') {
+                                  if (f.poll_mode === 'vote') {
+                                    txt = typeof f.poll_winner_count === 'number' ? `${f.poll_winner_count}표 정답` : '투표 마감';
+                                  } else {
+                                    const pool = f.poll_total_pool ?? 0;
+                                    const win = f.poll_winner_pool ?? 0;
+                                    txt = win > 0 ? `${pool.toLocaleString()} mlbg / ${(pool / win).toFixed(2)}x` : (pool > 0 ? `${pool.toLocaleString()} mlbg 환불` : '정산 완료');
+                                  }
+                                }
                                 return txt ? <span className="tabular-nums">{txt}</span> : null;
                               })()
                             )}

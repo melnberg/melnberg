@@ -155,6 +155,7 @@ export default async function HotdealDetailPage({ params }: { params: Promise<{ 
               options={pollData.options}
               votes={pollData.votes}
               myVote={pollData.myVote}
+              voters={pollData.voters}
               currentUserId={user?.id ?? null}
               isAuthor={isAuthor}
             />

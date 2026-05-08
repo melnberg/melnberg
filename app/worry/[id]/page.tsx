@@ -119,6 +119,7 @@ export default async function WorryPostDetail({ params }: { params: Promise<{ id
               options={pollData.options}
               votes={pollData.votes}
               myVote={pollData.myVote}
+              voters={pollData.voters}
               currentUserId={user?.id ?? null}
               isAuthor={isAuthor}
               anonymous

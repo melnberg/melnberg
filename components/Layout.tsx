@@ -4,6 +4,7 @@ import { createPublicClient } from '@/lib/supabase/public';
 import { getCurrentUser, getCurrentProfile, getCurrentMlbgBalance } from '@/lib/auth';
 import Sidebar, { type SidebarUser, type BoardLatest } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
+import FloatingBettingBadge from './FloatingBettingBadge';
 import TelegramFloatingLink from './TelegramFloatingLink';
 import FloatingMapPin from './FloatingMapPin';
 import FloatingThreadPencil from './FloatingThreadPencil';
@@ -99,6 +100,7 @@ export default async function Layout({ current, children }: { current?: string; 
       </main>
       <TelegramFloatingLink />
       <FeedbackWidget />
+      <FloatingBettingBadge />
       <FloatingThreadPencil />
       <FloatingMapPin />
       <LiveActivityToaster />

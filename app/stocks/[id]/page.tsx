@@ -136,6 +136,7 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
               options={pollData.options}
               votes={pollData.votes}
               myVote={pollData.myVote}
+              voters={pollData.voters}
               currentUserId={user?.id ?? null}
               isAuthor={isAuthor}
             />

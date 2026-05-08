@@ -21,6 +21,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       activeAuctionsResp,
       emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp,
       threadsResp,
+      resolvedPollsResp,
     ] = await Promise.all([
       supabase
         .from('apt_discussions')
@@ -153,6 +154,15 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(50)
         .then((r) => r, () => ({ data: null })),
+      // 정산된 폴 — resolved_at 기준 최근. 피드 카드 노출.
+      supabase
+        .from('post_polls')
+        .select('post_id, status, correct_option_id, total_pool, resolved_at, mode')
+        .eq('status', 'resolved')
+        .not('resolved_at', 'is', null)
+        .order('resolved_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
     ]);
     const listings = (listingsResp as { data: unknown[] | null })?.data ?? null;
     const offers = (offersResp as { data: unknown[] | null })?.data ?? null;
@@ -243,6 +253,9 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     }>);
     const threadRows = (((threadsResp as { data: unknown[] | null })?.data ?? []) as Array<{
       id: number; author_id: string; content: string; like_count: number | null; reply_count: number | null; created_at: string;
+    }>);
+    const resolvedPollRows = (((resolvedPollsResp as { data: unknown[] | null })?.data ?? []) as Array<{
+      post_id: number; status: string; correct_option_id: number | null; total_pool: number | string | null; resolved_at: string; mode?: string | null;
     }>);
 
     // 최근 입찰 — 피드 일반 항목으로 노출
@@ -1061,8 +1074,78 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
+    // 정산된 폴 → FeedItem (kind 'poll_settled'). resolved_at 기준 시간순.
+    let pollSettledItems: FeedItem[] = [];
+    if (resolvedPollRows.length > 0) {
+      const pollPostIds = resolvedPollRows.map((r) => r.post_id);
+      const correctIds = resolvedPollRows.map((r) => r.correct_option_id).filter((v): v is number => v != null);
+      const [pollPostsResp, pollOptsResp, pollVotesResp] = await Promise.all([
+        supabase.from('posts').select('id, author_id, title, category').in('id', pollPostIds)
+          .then((r) => r, () => ({ data: null })),
+        correctIds.length > 0
+          ? supabase.from('post_poll_options').select('id, post_id, label').in('id', correctIds)
+              .then((r) => r, () => ({ data: null }))
+          : Promise.resolve({ data: null }),
+        supabase.from('post_poll_votes').select('post_id, option_id, amount').in('post_id', pollPostIds)
+          .then((r) => r, () => ({ data: null })),
+      ]);
+      const pollPosts = ((pollPostsResp as { data: unknown[] | null }).data ?? []) as Array<{ id: number; author_id: string; title: string | null; category: string | null }>;
+      const pollOpts = ((pollOptsResp as { data: unknown[] | null }).data ?? []) as Array<{ id: number; post_id: number; label: string | null }>;
+      const pollVotes = ((pollVotesResp as { data: unknown[] | null }).data ?? []) as Array<{ post_id: number; option_id: number; amount: number | string | null }>;
+      const postById = new Map<number, { author_id: string; title: string | null; category: string | null }>();
+      for (const p of pollPosts) postById.set(p.id, { author_id: p.author_id, title: p.title, category: p.category });
+      const labelByOpt = new Map<number, string>();
+      for (const o of pollOpts) labelByOpt.set(o.id, o.label ?? '');
+      // 정답 옵션 풀 합계 + 표 수
+      const winnerStats = new Map<number, { pool: number; count: number }>();
+      for (const r of resolvedPollRows) {
+        if (r.correct_option_id == null) continue;
+        let pool = 0, count = 0;
+        for (const v of pollVotes) {
+          if (v.post_id === r.post_id && v.option_id === r.correct_option_id) {
+            pool += Number(v.amount ?? 0);
+            count += 1;
+          }
+        }
+        winnerStats.set(r.post_id, { pool, count });
+      }
+
+      pollSettledItems = resolvedPollRows.map((r) => {
+        const post = postById.get(r.post_id);
+        const prof = post ? profileMap.get(post.author_id) : undefined;
+        const cat = (post?.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | undefined) ?? 'community';
+        const correctLabel = r.correct_option_id != null ? labelByOpt.get(r.correct_option_id) ?? null : null;
+        const total = Number(r.total_pool ?? 0);
+        const stats = winnerStats.get(r.post_id) ?? { pool: 0, count: 0 };
+        const mode: 'bet' | 'vote' = r.mode === 'vote' ? 'vote' : 'bet';
+        return {
+          kind: 'poll_settled' as const,
+          id: 1300000 + r.post_id,
+          apt_master_id: 0,
+          post_id: r.post_id,
+          title: mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산',
+          content: post?.title ?? '(글 없음)',
+          created_at: r.resolved_at,
+          apt_nm: null, dong: null, lat: null, lng: null,
+          author_id: post?.author_id ?? null,
+          author_name: prof?.display_name ?? null,
+          author_link: prof?.link_url ?? null,
+          author_is_paid: isActivePaid(prof),
+          author_is_solo: !!prof?.is_solo,
+          author_avatar_url: prof?.avatar_url ?? null,
+          author_apt_count: prof?.apt_count ?? null,
+          poll_total_pool: total,
+          poll_winner_pool: stats.pool,
+          poll_winner_count: stats.count,
+          poll_correct_label: correctLabel,
+          poll_mode: mode,
+          poll_post_category: cat,
+        } as FeedItem;
+      });
+    }
+
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems]
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems, ...pollSettledItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];
