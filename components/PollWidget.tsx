@@ -295,78 +295,74 @@ export default function PollWidget({
                 }
                 style={{ width: `${pct}%` }}
               />
-              <div className="relative z-10 flex items-center gap-3 px-3 py-2.5 text-[13px] text-navy">
-                {radioSelectable && (
-                  <input
-                    type="radio"
-                    name={`bet-${postId}`}
-                    checked={isRadioChecked}
-                    onChange={() => setSelectedOption(opt.id)}
-                    className="w-4 h-4 accent-navy cursor-pointer shrink-0"
-                  />
-                )}
-                <span
-                  className={
-                    'font-semibold break-keep flex-1 flex items-center gap-1.5 min-w-0 ' +
-                    (isMine ? 'text-cyan font-bold' : '')
-                  }
-                >
-                  {isCorrect && <span className="text-cyan">✓</span>}
-                  {isMine && !isCorrect && (
-                    <span className="text-cyan">●</span>
+              <div className="relative z-10 px-3 py-2.5 text-[13px] text-navy">
+                {/* 1행 — 라벨 + (우측) 핵심 숫자 */}
+                <div className="flex items-center gap-2 min-w-0">
+                  {radioSelectable && (
+                    <input
+                      type="radio"
+                      name={`bet-${postId}`}
+                      checked={isRadioChecked}
+                      onChange={() => setSelectedOption(opt.id)}
+                      className="w-4 h-4 accent-navy cursor-pointer shrink-0"
+                    />
                   )}
-                  <span className="truncate">{opt.label}</span>
-                  {/* 옵션별 참가자 — 작은 아바타 nav (vote/bet 둘 다) */}
-                  {optVoters.length > 0 && (
-                    <span className="flex items-center -space-x-1.5 ml-1 shrink-0">
-                      {optVoters.slice(0, 5).map((v) => (
-                        <span
-                          key={v.user_id}
-                          title={v.display_name ?? '익명'}
-                          className="w-5 h-5 rounded-full border border-white bg-bg overflow-hidden inline-block"
-                        >
-                          {v.avatar_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={v.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="w-full h-full flex items-center justify-center text-[9px] font-bold text-muted bg-cyan/10">
-                              {(v.display_name ?? '?').slice(0, 1)}
-                            </span>
-                          )}
-                        </span>
-                      ))}
-                      {optVoters.length > 5 && (
-                        <span className="text-[10px] text-muted font-normal pl-2">+{optVoters.length - 5}</span>
-                      )}
-                    </span>
-                  )}
-                </span>
-                <span className="font-bold tabular-nums shrink-0 text-right text-[12px]">
-                  {isVoteMode ? (
-                    <>
+                  <span className={`font-semibold break-keep flex-1 min-w-0 truncate ${isMine ? 'text-cyan font-bold' : ''}`}>
+                    {isCorrect && <span className="text-cyan mr-1">✓</span>}
+                    {isMine && !isCorrect && <span className="text-cyan mr-1">●</span>}
+                    {opt.label}
+                  </span>
+                  <span className="font-bold tabular-nums shrink-0 text-right text-[13px]">
+                    {isVoteMode ? (
                       <span className="text-navy">{optCount}표</span>
-                      <span className="text-muted font-normal"> · {pct}%</span>
-                    </>
-                  ) : (
-                    <>
+                    ) : (
                       <span className="text-navy">{fmtMlbg(optAmt)} mlbg</span>
-                      <span className="text-muted font-normal">
-                        {' '}
-                        · {pct}% · {optCount}명
+                    )}
+                  </span>
+                </div>
+                {/* 2행 — 보조 정보 (% / 명수 / 배당 / 아바타) */}
+                <div className="flex items-center justify-between gap-2 mt-1 min-w-0">
+                  <span className="text-[11px] text-muted flex items-center gap-1 min-w-0">
+                    <span className="tabular-nums whitespace-nowrap">{pct}% · {optCount}명</span>
+                    {optVoters.length > 0 && (
+                      <span className="flex items-center -space-x-1 ml-1 shrink-0">
+                        {optVoters.slice(0, 3).map((v) => (
+                          <span
+                            key={v.user_id}
+                            title={v.display_name ?? '익명'}
+                            className="w-4 h-4 rounded-full border border-white bg-bg overflow-hidden inline-block"
+                          >
+                            {v.avatar_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={v.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="w-full h-full flex items-center justify-center text-[8px] font-bold text-muted bg-cyan/10">
+                                {(v.display_name ?? '?').slice(0, 1)}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                        {optVoters.length > 3 && (
+                          <span className="text-[10px] text-muted font-normal pl-1.5">+{optVoters.length - 3}</span>
+                        )}
                       </span>
+                    )}
+                  </span>
+                  {!isVoteMode && (
+                    <>
                       {!isResolved && (
-                        <span className="block text-[11px] text-muted font-normal">
+                        <span className="text-[11px] text-muted font-semibold tabular-nums shrink-0">
                           배당 {optAmt > 0 ? `× ${odds.toFixed(2)}` : '—'}
                         </span>
                       )}
                       {isResolved && isCorrect && winnerPool > 0 && (
-                        <span className="block text-[11px] text-cyan font-bold">
+                        <span className="text-[11px] text-cyan font-bold tabular-nums shrink-0">
                           배당 × {(totalPool / winnerPool).toFixed(2)}
                         </span>
                       )}
                     </>
                   )}
-                </span>
+                </div>
               </div>
             </label>
           );
