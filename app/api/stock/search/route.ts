@@ -1,4 +1,4 @@
-// 종목 검색 — 여러 엔드포인트 시도 + 로컬 DB fallback.
+// 종목 검색 — Naver autoComplete 다중 target (한국주식 + 미국주식 + ETF) + 로컬 DB fallback.
 // GET /api/stock/search?q=삼성
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,31 +9,53 @@ export const maxDuration = 15;
 
 type Item = { code: string; name: string; market?: string };
 
-// 1) Naver autoComplete — ac.stock.naver.com/ac. front-api 엔드포인트는 2026-05 기준 404.
-async function searchNaverFront(q: string): Promise<Item[]> {
+// Naver autoComplete — target 별 호출. 'stock' (한국주식), 'ushare' (미국주식), 'etf' (한국ETF), 'index' (지수)
+// API 실험상 target 콤마 multi 는 일부만 받음 → 안전하게 4번 병렬 호출 후 결과 합침.
+async function searchNaverTarget(q: string, target: string): Promise<Item[]> {
   try {
-    const url = `https://ac.stock.naver.com/ac?q=${encodeURIComponent(q)}&target=stock`;
+    const url = `https://ac.stock.naver.com/ac?q=${encodeURIComponent(q)}&target=${target}`;
     const r = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'Mozilla/5.0' } });
     if (!r.ok) return [];
     const j = (await r.json()) as { items?: Array<{ code?: string; reutersCode?: string; name?: string; nationName?: string; typeName?: string; category?: string }> };
     const list = j.items ?? [];
     const items: Item[] = [];
     for (const it of list) {
-      if (it.category && it.category !== 'stock') continue;
-      const raw = it.code ?? it.reutersCode ?? '';
-      const code = raw.replace(/[^0-9]/g, '');
-      if (!/^\d{6}$/.test(code)) continue;
-      if (!it.name) continue;
-      items.push({ code, name: it.name, market: it.typeName ?? it.nationName ?? '' });
+      // category 가 stock/ushare/etf/jshare/hshare 등 다양 — 그냥 받아들임 (target 자체로 분류됨)
+      const raw = (it.code ?? it.reutersCode ?? '').trim();
+      if (!raw || !it.name) continue;
+      // 한국 주식/ETF — 6자리 숫자, 미국 주식 — 알파벳 ticker. raw 가 둘 중 하나면 OK.
+      const isKr = /^\d{6}$/.test(raw);
+      const isUs = /^[A-Z][A-Z0-9.\-]{0,9}$/i.test(raw);
+      if (!isKr && !isUs) continue;
+      const market = it.typeName ?? it.nationName ?? (isKr ? (target === 'etf' ? 'ETF' : '국내') : '미국');
+      items.push({ code: raw.toUpperCase(), name: it.name, market });
     }
     return items;
   } catch (e) {
-    console.error('naver autoComplete error:', e);
+    console.error(`naver autoComplete (${target}) error:`, e);
     return [];
   }
 }
 
-// 2) 로컬 DB stocks 테이블 검색 — anon public client (stores 패턴, 154/164 RLS 가 anon select 허용)
+async function searchNaverFront(q: string): Promise<Item[]> {
+  // 4개 target 병렬 — 빠르고 결과 풍부.
+  const [stock, ushare, etf] = await Promise.all([
+    searchNaverTarget(q, 'stock'),
+    searchNaverTarget(q, 'ushare'),
+    searchNaverTarget(q, 'etf'),
+  ]);
+  // dedupe by code (한국주식/ETF 중복 가능성 — 같은 6자리 코드)
+  const seen = new Set<string>();
+  const out: Item[] = [];
+  for (const it of [...stock, ...ushare, ...etf]) {
+    if (seen.has(it.code)) continue;
+    seen.add(it.code);
+    out.push(it);
+  }
+  return out;
+}
+
+// 로컬 DB stocks 테이블 검색 — Naver 다 실패 시
 async function searchLocalDb(q: string): Promise<Item[]> {
   try {
     const sb = createPublicClient();
@@ -54,7 +76,6 @@ export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get('q') ?? '').trim();
   if (!q) return NextResponse.json({ items: [] });
 
-  // Naver front-api 우선, 실패 시 로컬 DB
   let items = await searchNaverFront(q);
   if (items.length === 0) items = await searchLocalDb(q);
 
@@ -62,6 +83,10 @@ export async function GET(req: NextRequest) {
   if (items.length === 0 && /^\d{6}$/.test(q)) {
     items = [{ code: q, name: q, market: '' }];
   }
+  // 미국 ticker 직접 입력 — 마찬가지로 후보로
+  if (items.length === 0 && /^[A-Z]{1,5}$/i.test(q)) {
+    items = [{ code: q.toUpperCase(), name: q.toUpperCase(), market: '미국' }];
+  }
 
-  return NextResponse.json({ items: items.slice(0, 20) });
+  return NextResponse.json({ items: items.slice(0, 30) });
 }

@@ -9,13 +9,13 @@ import { KidsIcon as SharedKidsIcon, RestaurantIcon as SharedRestaurantIcon } fr
 
 export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; isAdmin?: boolean; avatarUrl?: string | null };
 // SidebarRecentPost 타입 — 사이드바 최근글 리스트 노출하던 시절 유산. 외부 import 없음 → 제거됨 (2026-05-07).
-export type BoardKey = 'community' | 'realty' | 'stocks' | 'restaurants' | 'kids';
-export type BoardLatest = { community: string | null; realty: string | null; stocks: string | null; restaurants: string | null; kids: string | null };
+export type BoardKey = 'community' | 'realty' | 'stocks' | 'coin' | 'restaurants' | 'kids';
+export type BoardLatest = { community: string | null; realty: string | null; stocks: string | null; coin: string | null; restaurants: string | null; kids: string | null };
 
 // recentPosts prop 은 더 이상 받지 않음 — 사이드바에 최근글 리스트 노출 안 함.
 type Props = { current?: string; user?: SidebarUser | null; boardLatest?: BoardLatest };
 
-const BOARD_KEYS: BoardKey[] = ['community', 'realty', 'stocks', 'restaurants', 'kids'];
+const BOARD_KEYS: BoardKey[] = ['community', 'realty', 'stocks', 'coin', 'restaurants', 'kids'];
 const LS_KEY = (b: BoardKey) => `last_read.${b}`;
 
 const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
@@ -176,6 +176,7 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
           <SItem href="/realty" label="부동산 토론" active={current === 'realty'} icon={<RealtyIcon />} onClick={() => setOpen(false)} dot={dot('realty')} />
           <SItem href="/worry" label="익명 고민상담" active={current === 'worry'} icon={<WorryIcon />} onClick={() => setOpen(false)} />
           <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} dot={dot('stocks')} />
+          <SItem href="/coin" label="코인 토론" active={current === 'coin'} icon={<CoinIcon />} onClick={() => setOpen(false)} dot={dot('coin')} />
           <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} dot={dot('restaurants')} />
           <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} dot={dot('kids')} />
 
@@ -348,6 +349,8 @@ const DiaryIcon = () => <svg {...iconProps}><path d="M3 11l9-8 9 8v10a2 2 0 0 1-
 const CommunityIcon = () => <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
 // 차트 (캔들봉 + 추세선) — 주식 토론
 const StocksIcon = () => <svg {...iconProps}><path d="M3 3v18h18" /><path d="M7 14l3-3 3 3 5-5" /><path d="M16 9h3v3" /></svg>;
+// 동전(원형 + B) — 코인 토론
+const CoinIcon = () => <svg {...iconProps}><circle cx="12" cy="12" r="9" /><path d="M9 8h4a2 2 0 0 1 0 4H9z" /><path d="M9 12h4.5a2 2 0 0 1 0 4H9z" /><line x1="11" y1="6" x2="11" y2="8" /><line x1="11" y1="16" x2="11" y2="18" /></svg>;
 const RealtyIcon = () => <svg {...iconProps}><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /></svg>;
 // 익명 고민상담 — 말풍선 모티브 (다른 메뉴 아이콘과 시각 구분)
 const WorryIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>;

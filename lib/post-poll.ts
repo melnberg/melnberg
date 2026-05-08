@@ -26,6 +26,7 @@ export type PollMeta = {
   total_pool: number;
   resolved_at: string | null;
   mode: 'bet' | 'vote';
+  ends_at: string | null;
 };
 
 export type PollVoter = {
@@ -49,21 +50,30 @@ export async function fetchPostPoll(
 ): Promise<PollData> {
   const supabase = await createClient();
 
-  // mode 컬럼은 SQL 182 미실행 시 없을 수 있음 — 실패 시 mode 없이 fallback
+  // mode/ends_at 컬럼은 SQL 182/184 미실행 시 없을 수 있음 — 실패 시 단계적 fallback
   const { data: poll, error: pollErr } = await supabase
     .from('post_polls')
-    .select('post_id, question, status, correct_option_id, total_pool, resolved_at, mode')
+    .select('post_id, question, status, correct_option_id, total_pool, resolved_at, mode, ends_at')
     .eq('post_id', postId)
     .maybeSingle();
   let pollRowSafe = poll as Record<string, unknown> | null;
   if (pollErr || !pollRowSafe) {
-    // mode 컬럼이 없는 환경 — 기본 select 재시도
-    const retry = await supabase
+    // ends_at 없는 환경 → mode 만 select
+    const retryMode = await supabase
       .from('post_polls')
-      .select('post_id, question, status, correct_option_id, total_pool, resolved_at')
+      .select('post_id, question, status, correct_option_id, total_pool, resolved_at, mode')
       .eq('post_id', postId)
       .maybeSingle();
-    pollRowSafe = (retry.data as Record<string, unknown> | null) ?? null;
+    pollRowSafe = (retryMode.data as Record<string, unknown> | null) ?? null;
+    if (!pollRowSafe) {
+      // mode 도 없는 환경 → 기본 select
+      const retry = await supabase
+        .from('post_polls')
+        .select('post_id, question, status, correct_option_id, total_pool, resolved_at')
+        .eq('post_id', postId)
+        .maybeSingle();
+      pollRowSafe = (retry.data as Record<string, unknown> | null) ?? null;
+    }
   }
 
   if (!pollRowSafe) {
@@ -130,6 +140,7 @@ export async function fetchPostPoll(
     total_pool: number | string | null;
     resolved_at: string | null;
     mode?: string | null;
+    ends_at?: string | null;
   };
 
   // 투표 모드 — 옵션별 참가자 fetch (작은 아바타 표시용)
@@ -169,6 +180,7 @@ export async function fetchPostPoll(
       total_pool: Number(pollRow.total_pool ?? 0),
       resolved_at: pollRow.resolved_at,
       mode: isVoteMode ? 'vote' : 'bet',
+      ends_at: pollRow.ends_at ?? null,
     },
     options,
     votes,

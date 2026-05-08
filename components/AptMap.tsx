@@ -131,7 +131,7 @@ export type FeedItem = {
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
-  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
+  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
   /** stocks 카테고리 글 — 종목 코드 (라우팅 /stocks/{code}/{postId}) */
   stock_code?: string | null;
   /** strike 전용 — 손실 % 와 mlbg 액수 */
@@ -164,7 +164,7 @@ export type FeedItem = {
   poll_correct_label?: string | null;
   poll_mode?: 'bet' | 'vote';
   poll_winner_count?: number;
-  poll_post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
+  poll_post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
 };
 
 export type AptPin = {
@@ -1271,6 +1271,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                  : item.post_category === 'stocks' ? '/stocks'
                  : item.post_category === 'realty' ? '/realty'
                  : item.post_category === 'worry' ? '/worry'
+                 : item.post_category === 'coin' ? '/coin'
                  : '/community';
       router.push(`${base}/${item.post_id}`);
       return;
@@ -2098,7 +2099,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                     : f.kind === 'thread' ? '@ 스레드'
                     : f.kind === 'poll_settled' ? (f.poll_mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산')
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
-                    : isCommunity ? (f.post_category === 'realty' ? '부동산 토론' : f.post_category === 'stocks' ? '주식 토론' : f.post_category === 'hotdeal' ? '핫딜' : f.post_category === 'worry' ? '익명 고민' : '커뮤니티')
+                    : isCommunity ? (f.post_category === 'realty' ? '부동산 토론' : f.post_category === 'stocks' ? '주식 토론' : f.post_category === 'coin' ? '코인 토론' : f.post_category === 'hotdeal' ? '핫딜' : f.post_category === 'worry' ? '익명 고민' : '커뮤니티')
                     : (aptHeadLabel || '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className={`border-b border-[#f0f0f0] last:border-b-0 ${isPreviewing ? 'border-l-4 border-l-cyan' : ''}`}>

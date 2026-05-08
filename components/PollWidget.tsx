@@ -15,6 +15,7 @@ type PollMeta = {
   total_pool: number;
   resolved_at: string | null;
   mode: 'bet' | 'vote';
+  ends_at: string | null;
 };
 type Voter = {
   user_id: string;
@@ -68,9 +69,12 @@ export default function PollWidget({
   const isVoteMode = poll.mode === 'vote';
   const isResolved = poll.status === 'resolved';
   const hasMyVote = !!myVote;
-  // bet 모드: 한 번만 베팅 가능. vote 모드: 변경 가능 (재투표 허용).
-  const canBet = !isVoteMode && !!currentUserId && !isResolved && !hasMyVote;
-  const canVote = isVoteMode && !!currentUserId && !isResolved;
+  // 종료일 지났는지 — 클라 시각 기준 (서버 RPC 가 최종 검증)
+  const endsAt = poll.ends_at ? new Date(poll.ends_at) : null;
+  const isEnded = !!(endsAt && endsAt.getTime() < Date.now());
+  // bet 모드: 한 번만 베팅 가능. vote 모드: 변경 가능 (재투표 허용). 둘 다 종료일 지나면 거부.
+  const canBet = !isVoteMode && !!currentUserId && !isResolved && !hasMyVote && !isEnded;
+  const canVote = isVoteMode && !!currentUserId && !isResolved && !isEnded;
 
   // 옵션별 집계 맵
   const aggMap = new Map<number, VoteAgg>();
@@ -226,9 +230,17 @@ export default function PollWidget({
         >
           {isResolved
             ? (isVoteMode ? '✅ 결과 발표' : '✅ 정산 완료')
-            : (isVoteMode ? '🗳 투표 진행중' : '🎰 베팅 진행중')}
+            : isEnded
+              ? (isVoteMode ? '⏰ 투표 마감' : '⏰ 베팅 마감')
+              : (isVoteMode ? '🗳 투표 진행중' : '🎰 베팅 진행중')}
         </span>
       </div>
+      {/* 종료일 표시 — open 상태에서만 의미 있음 */}
+      {endsAt && !isResolved && (
+        <div className="text-[11px] text-muted mb-3 -mt-1">
+          {isEnded ? '마감됨' : '마감'}: {endsAt.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })}
+        </div>
+      )}
 
       {/* 옵션 리스트 */}
       <div className="flex flex-col gap-2">

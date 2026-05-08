@@ -11,7 +11,7 @@ import StockPicker from './StockPicker';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null };
-  category?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
+  category?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
   redirectBase?: string;
 };
 
@@ -33,6 +33,8 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const [pollMode, setPollMode] = useState<'bet' | 'vote'>('bet');
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  // 종료일자 (선택). datetime-local input 의 value 형식 — 'YYYY-MM-DDTHH:mm'.
+  const [pollEndsAt, setPollEndsAt] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -130,11 +132,13 @@ export default function PostForm({ initial, category = 'community', redirectBase
       if (pollEnabled) {
         const cleaned = pollOptions.map((s) => s.trim()).filter((s) => s.length > 0);
         if (cleaned.length >= 2 && cleaned.length <= 6) {
+          const endsAtIso = pollEndsAt ? new Date(pollEndsAt).toISOString() : null;
           const { data: pollResp, error: pollErr } = await supabase.rpc('create_post_poll', {
             p_post_id: data.id,
             p_question: pollQuestion.trim() || null,
             p_options: cleaned,
             p_mode: pollMode,
+            p_ends_at: endsAtIso,
           });
           const pollRow = Array.isArray(pollResp) ? pollResp[0] : pollResp;
           if (pollErr) {
@@ -303,6 +307,18 @@ export default function PostForm({ initial, category = 'community', redirectBase
                   maxLength={200}
                   className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none"
                 />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold tracking-widest uppercase text-muted">
+                  종료일자 <span className="normal-case font-normal">(선택 — 비우면 무기한, 작성자가 정산 시점 선택)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={pollEndsAt}
+                  onChange={(e) => setPollEndsAt(e.target.value)}
+                  className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy rounded-none w-full sm:max-w-[260px]"
+                />
+                <p className="text-[11px] text-muted">설정하면 그 시각 이후엔 베팅·투표 거부됨.</p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold tracking-widest uppercase text-muted">옵션</label>

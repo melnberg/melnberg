@@ -39,7 +39,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       supabase
         .from('posts')
         .select('id, author_id, title, content, category, stock_code, created_at')
-        .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry'])
+        .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin'])
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50)
@@ -536,7 +536,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const postItems: FeedItem[] = (posts ?? []).map((r) => {
       const row = r as Record<string, unknown>;
       const prof = profileMap.get(row.author_id as string);
-      const cat = (row.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | undefined) ?? 'community';
+      const cat = (row.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin' | undefined) ?? 'community';
       return {
         kind: 'post' as const,
         id: row.id as number,
@@ -568,13 +568,13 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const postCommentItems: FeedItem[] = (postComments ?? [])
       .filter((r) => {
         const post = commentPostMap.get((r as Record<string, unknown>).post_id as number);
-        return post?.category === 'community' || post?.category === 'hotdeal' || post?.category === 'stocks' || post?.category === 'realty' || post?.category === 'worry';
+        return post?.category === 'community' || post?.category === 'hotdeal' || post?.category === 'stocks' || post?.category === 'realty' || post?.category === 'worry' || post?.category === 'coin';
       })
       .map((r) => {
         const row = r as Record<string, unknown>;
         const post = commentPostMap.get(row.post_id as number) ?? null;
         const prof = profileMap.get(row.author_id as string);
-        const cat = (post?.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | undefined) ?? 'community';
+        const cat = (post?.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin' | undefined) ?? 'community';
         return {
           kind: 'post_comment' as const,
           id: row.id as number,
@@ -1153,7 +1153,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       pollSettledItems = resolvedPollRows.map((r) => {
         const post = postById.get(r.post_id);
         const prof = post ? profileMap.get(post.author_id) : undefined;
-        const cat = (post?.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | undefined) ?? 'community';
+        const cat = (post?.category as 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin' | undefined) ?? 'community';
         const correctLabel = r.correct_option_id != null ? labelByOpt.get(r.correct_option_id) ?? null : null;
         const total = Number(r.total_pool ?? 0);
         const stats = winnerStats.get(r.post_id) ?? { pool: 0, count: 0 };

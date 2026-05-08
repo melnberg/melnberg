@@ -243,6 +243,7 @@ export default function MobileFeedList({ items }: Props) {
                 : f.post_category === 'stocks' ? '📈 주식 토론'
                 : f.post_category === 'realty' ? '🏢 부동산 토론'
                 : f.post_category === 'worry' ? '💬 익명 고민상담'
+                : f.post_category === 'coin' ? '₿ 코인 토론'
                 : '커뮤니티'
               )
             : aptHeadLabel;

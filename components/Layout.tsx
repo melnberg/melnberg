@@ -24,7 +24,7 @@ import GreetingBonusBanner from './GreetingBonusBanner';
 const fetchBoardLatest = unstable_cache(
   async (): Promise<BoardLatest> => {
     const sb = createPublicClient();
-    const empty: BoardLatest = { community: null, realty: null, stocks: null, restaurants: null, kids: null };
+    const empty: BoardLatest = { community: null, realty: null, stocks: null, coin: null, restaurants: null, kids: null };
     try {
       const { data, error } = await sb.rpc('get_board_latest_posts');
       if (error || !data) return empty;
@@ -35,6 +35,7 @@ const fetchBoardLatest = unstable_cache(
         community: row.community ?? null,
         realty: row.realty ?? null,
         stocks: row.stocks ?? null,
+        coin: row.coin ?? null,
         restaurants: row.restaurants ?? null,
         kids: row.kids ?? null,
       };
@@ -66,7 +67,7 @@ export default async function Layout({ current, children }: { current?: string; 
   }
 
   // 모두 독립적인 쿼리 — 병렬 실행. cached 헬퍼라 페이지에서 또 호출해도 dedupe됨.
-  const emptyBoardLatest: BoardLatest = { community: null, realty: null, stocks: null, restaurants: null, kids: null };
+  const emptyBoardLatest: BoardLatest = { community: null, realty: null, stocks: null, coin: null, restaurants: null, kids: null };
   const [user, profile, balance, boardLatest] = await Promise.all([
     withTimeout(getCurrentUser(), null),
     withTimeout(getCurrentProfile(), null),

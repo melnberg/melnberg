@@ -12,6 +12,7 @@ export function feedItemHref(item: FeedItem): string {
                : cat === 'stocks' ? '/stocks'
                : cat === 'realty' ? '/realty'
                : cat === 'worry' ? '/worry'
+               : cat === 'coin' ? '/coin'
                : '/community';
     return `${base}/${item.post_id}`;
   }
@@ -23,6 +24,7 @@ export function feedItemHref(item: FeedItem): string {
                : item.post_category === 'stocks' ? '/stocks'
                : item.post_category === 'realty' ? '/realty'
                : item.post_category === 'worry' ? '/worry'
+               : item.post_category === 'coin' ? '/coin'
                : '/community';
     return item.post_id ? `${base}/${item.post_id}` : base;
   }
