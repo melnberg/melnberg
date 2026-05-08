@@ -28,11 +28,13 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
   const viewer = await getCurrentUser();
   const isOwner = viewer?.id === userId;
 
-  const { data: ownerProfile } = await supabase
+  const ownerResp = await supabase
     .from('profiles')
     .select('id, display_name, avatar_url, tier, tier_expires_at, is_solo, link_url')
     .eq('id', userId)
-    .maybeSingle();
+    .maybeSingle()
+    .then((r) => r, () => ({ data: null }));
+  const ownerProfile = (ownerResp as { data: unknown }).data;
 
   if (!ownerProfile) notFound();
 
@@ -46,7 +48,7 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
     link_url: string | null;
   };
 
-  const [{ data: threadRows }, { data: replyRows }] = await Promise.all([
+  const [threadResp, replyResp] = await Promise.all([
     supabase
       .from('threads')
       .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -54,7 +56,8 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
       .is('parent_id', null)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(50)
+      .then((r) => r, () => ({ data: null })),
     supabase
       .from('threads')
       .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -62,25 +65,33 @@ export default async function UserThreadsPage({ params }: { params: Promise<{ us
       .not('parent_id', 'is', null)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(50)
+      .then((r) => r, () => ({ data: null })),
   ]);
 
-  const threadCore = (threadRows ?? []) as ThreadCoreRow[];
-  const replyCore = (replyRows ?? []) as ThreadCoreRow[];
+  const threadCore = (((threadResp as { data: unknown }).data ?? []) as ThreadCoreRow[]);
+  const replyCore = (((replyResp as { data: unknown }).data ?? []) as ThreadCoreRow[]);
 
   const allCore = [...threadCore, ...replyCore];
-  const enrichedAll = await attachAuthorsToThreads(supabase, allCore);
+  let enrichedAll: Array<ThreadCoreRow & { author: Thread['author'] | null }>;
+  try {
+    enrichedAll = await attachAuthorsToThreads(supabase, allCore) as typeof enrichedAll;
+  } catch {
+    enrichedAll = allCore.map((c) => ({ ...c, author: null }));
+  }
   const enrichedThreads = enrichedAll.slice(0, threadCore.length);
   const enrichedReplies = enrichedAll.slice(threadCore.length);
 
   let likedSet = new Set<number>();
   if (viewer && allCore.length > 0) {
-    const { data: likes } = await supabase
-      .from('thread_likes')
-      .select('thread_id')
-      .eq('user_id', viewer.id)
-      .in('thread_id', allCore.map((t) => t.id));
-    likedSet = new Set(((likes ?? []) as Array<{ thread_id: number }>).map((l) => l.thread_id));
+    try {
+      const { data: likes } = await supabase
+        .from('thread_likes')
+        .select('thread_id')
+        .eq('user_id', viewer.id)
+        .in('thread_id', allCore.map((t) => t.id));
+      likedSet = new Set(((likes ?? []) as Array<{ thread_id: number }>).map((l) => l.thread_id));
+    } catch { /* 빈 set 유지 */ }
   }
 
   const threads: Thread[] = (enrichedThreads as unknown as Thread[]).map((t) => ({ ...t, liked: likedSet.has(t.id) }));

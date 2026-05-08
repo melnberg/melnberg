@@ -41,7 +41,8 @@ export default async function ThreadsPage() {
   const supabase = await createClient();
 
   // 본인 스레드 (parent_id is null) + 본인 답글 (parent_id is not null) 동시 fetch
-  const [{ data: threadRows }, { data: replyRows }, mainProfile] = await Promise.all([
+  // 모든 fetch 는 catch 폴백 — 한 곳 실패해도 페이지 안 깨짐.
+  const [threadResp, replyResp, mainProfile] = await Promise.all([
     supabase
       .from('threads')
       .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -49,7 +50,8 @@ export default async function ThreadsPage() {
       .is('parent_id', null)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(50)
+      .then((r) => r, () => ({ data: null })),
     supabase
       .from('threads')
       .select('id, author_id, parent_id, content, like_count, reply_count, created_at')
@@ -57,28 +59,36 @@ export default async function ThreadsPage() {
       .not('parent_id', 'is', null)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(50),
-    getCurrentProfile(),
+      .limit(50)
+      .then((r) => r, () => ({ data: null })),
+    getCurrentProfile().catch(() => null),
   ]);
 
-  const threadCore = (threadRows ?? []) as ThreadCoreRow[];
-  const replyCore = (replyRows ?? []) as ThreadCoreRow[];
+  const threadCore = (((threadResp as { data: unknown }).data ?? []) as ThreadCoreRow[]);
+  const replyCore = (((replyResp as { data: unknown }).data ?? []) as ThreadCoreRow[]);
 
   const allCore = [...threadCore, ...replyCore];
-  const enrichedAll = await attachAuthorsToThreads(supabase, allCore);
+  let enrichedAll: Array<ThreadCoreRow & { author: Thread['author'] | null }>;
+  try {
+    enrichedAll = await attachAuthorsToThreads(supabase, allCore) as typeof enrichedAll;
+  } catch {
+    enrichedAll = allCore.map((c) => ({ ...c, author: null }));
+  }
   const enrichedThreads = enrichedAll.slice(0, threadCore.length);
   const enrichedReplies = enrichedAll.slice(threadCore.length);
 
-  // 좋아요 상태
+  // 좋아요 상태 — 실패 시 빈 set
   const allIds = allCore.map((t) => t.id);
   let likedSet = new Set<number>();
   if (allIds.length > 0) {
-    const { data: likes } = await supabase
-      .from('thread_likes')
-      .select('thread_id')
-      .eq('user_id', user.id)
-      .in('thread_id', allIds);
-    likedSet = new Set(((likes ?? []) as Array<{ thread_id: number }>).map((l) => l.thread_id));
+    try {
+      const { data: likes } = await supabase
+        .from('thread_likes')
+        .select('thread_id')
+        .eq('user_id', user.id)
+        .in('thread_id', allIds);
+      likedSet = new Set(((likes ?? []) as Array<{ thread_id: number }>).map((l) => l.thread_id));
+    } catch { /* 빈 set 유지 */ }
   }
 
   const threads: Thread[] = (enrichedThreads as unknown as Thread[]).map((t) => ({ ...t, liked: likedSet.has(t.id) }));
