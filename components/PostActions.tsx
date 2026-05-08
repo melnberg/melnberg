@@ -17,11 +17,12 @@ export default function PostActions({ postId, basePath = '/community' }: { postI
     if (deleting) return;
     if (!(await confirm({ title: '이 글을 삭제할까?', body: '되돌릴 수 없음.', okLabel: '삭제', danger: true }))) return;
     setDeleting(true);
-    // soft-delete: deleted_at 만 set. 피드/리스트에서 자동 숨김 + 상세는 삭제 안내
-    const { error } = await supabase.from('posts').update({ deleted_at: new Date().toISOString() }).eq('id', postId);
+    // RPC 로 우회 — security definer + author 검증. RLS silent fail 회피.
+    const { data, error } = await supabase.rpc('delete_post', { p_id: postId });
     setDeleting(false);
-    if (error) {
-      alert(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || (row && row.out_success === false)) {
+      alert('삭제 실패: ' + (error?.message ?? row?.out_message ?? '알 수 없음'));
       return;
     }
     revalidateHome();
