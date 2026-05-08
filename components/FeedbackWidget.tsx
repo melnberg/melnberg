@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export default function FeedbackWidget() {
@@ -10,6 +10,25 @@ export default function FeedbackWidget() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // 모달 열릴 때 history dummy state push → 뒤로가기 = 모달만 닫힘 (페이지 종료 X)
+  useEffect(() => {
+    if (!open) return;
+    const dummyState = { __feedback: 1 };
+    window.history.pushState(dummyState, '', window.location.href);
+    const onPop = () => setOpen(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [open]);
+
+  // X 버튼 / submit 성공 시 닫기 — history dummy 도 같이 pop
+  function closeModal() {
+    if (typeof window !== 'undefined' && window.history.state && (window.history.state as { __feedback?: number }).__feedback === 1) {
+      window.history.back(); // popstate → setOpen(false)
+    } else {
+      setOpen(false);
+    }
+  }
 
   async function submit() {
     if (busy) return;
@@ -40,7 +59,7 @@ export default function FeedbackWidget() {
       if (error) { setErr(`전송 실패: ${error.message}`); return; }
       setDone(true);
       setMessage('');
-      setTimeout(() => { setOpen(false); setDone(false); }, 1800);
+      setTimeout(() => { closeModal(); setDone(false); }, 1800);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -54,7 +73,7 @@ export default function FeedbackWidget() {
         <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.18)] w-[320px] max-w-[calc(100vw-40px)]">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-navy text-white">
             <div className="text-[13px] font-bold">오류·불편사항 신고</div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="닫기" className="text-white/80 hover:text-white text-[16px] leading-none">✕</button>
+            <button type="button" onClick={closeModal} aria-label="닫기" className="text-white/80 hover:text-white text-[16px] leading-none">✕</button>
           </div>
           <div className="px-4 py-3">
             {done ? (
