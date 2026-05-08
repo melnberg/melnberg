@@ -45,15 +45,22 @@ export default function BossMode() {
   const pathname = usePathname();
   const [mode, setMode] = useState<Mode>(null);
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [feed, setFeed] = useState<FeedPost[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // 보스모드 = 데스크탑 전용. 회사 모니터 가정. 모바일에선 무의미.
+    const mq = window.matchMedia('(min-width: 1024px)');
+    setIsDesktop(mq.matches);
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'excel' || saved === 'hwp' || saved === 'word') setMode(saved);
+      if (mq.matches && (saved === 'excel' || saved === 'hwp' || saved === 'word')) setMode(saved);
     } catch { /* noop */ }
+    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   useEffect(() => {
@@ -88,6 +95,8 @@ export default function BossMode() {
   }, [mode]);
 
   if (!mounted) return null;
+  // 모바일은 보스모드 자체를 숨김. 트리거 / 오버레이 둘 다.
+  if (!isDesktop) return null;
 
   // 트리거 — 메인 (지도) 화면에서만. /community/, /stocks/ 등 다른 페이지에선 노출 X.
   const isHome = pathname === '/';
