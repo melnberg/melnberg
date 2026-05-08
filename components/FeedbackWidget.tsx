@@ -21,6 +21,25 @@ export default function FeedbackWidget() {
     return () => window.removeEventListener('popstate', onPop);
   }, [open]);
 
+  // 모바일 키보드 올라오면 모달이 가려지지 않게 — visualViewport 로 keyboard offset 측정
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  useEffect(() => {
+    if (!open) { setKeyboardOffset(0); return; }
+    const vv = (typeof window !== 'undefined') ? window.visualViewport : null;
+    if (!vv) return;
+    const onResize = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(Math.max(0, offset));
+    };
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', onResize);
+    onResize();
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', onResize);
+    };
+  }, [open]);
+
   // X 버튼 / submit 성공 시 닫기 — history dummy 도 같이 pop
   function closeModal() {
     if (typeof window !== 'undefined' && window.history.state && (window.history.state as { __feedback?: number }).__feedback === 1) {
@@ -68,7 +87,10 @@ export default function FeedbackWidget() {
   }
 
   return (
-    <div className={`floating-widget fixed z-50 flex items-end gap-2 ${open ? 'bottom-5 right-5' : 'top-2 right-2'}`}>
+    <div
+      style={open ? { bottom: 20 + keyboardOffset } : undefined}
+      className={`floating-widget fixed z-50 flex items-end gap-2 ${open ? 'right-5' : 'top-2 right-2'}`}
+    >
       {open ? (
         <div className="bg-white border border-border shadow-[0_8px_24px_rgba(0,0,0,0.18)] w-[320px] max-w-[calc(100vw-40px)]">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-navy text-white">
