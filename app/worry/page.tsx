@@ -44,7 +44,6 @@ export default async function WorryPage() {
             <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
               <li>글 작성: <b>+2 mlbg</b> · 댓글: <b>+0.5 mlbg</b> · 게시글 농사 +0.5 mlbg</li>
               <li>작성자·댓글 닉네임은 <b>익명</b>으로 표시 (내부적으론 작성자 식별 유지)</li>
-              <li>운영자(하멜른·멜른버그) 비방·욕설은 등록 자동 차단</li>
             </ul>
           </div>
           {posts.length === 0 ? (

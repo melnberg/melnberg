@@ -11,6 +11,19 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://melnberg.vercel.app',
     cleartext: false,
+    // OAuth 인앱 처리 — 외부 브라우저(Chrome) 안 띄움. WebView 안에서 카카오·구글 등 로그인.
+    // 등록 안 된 도메인 click 시 Capacitor 가 시스템 브라우저로 던지는 기본 동작 회피.
+    allowNavigation: [
+      'kauth.kakao.com',
+      'accounts.kakao.com',
+      'logins.daum.net',
+      '*.kakao.com',
+      'accounts.google.com',
+      'oauth2.googleapis.com',
+      '*.googleusercontent.com',
+      '*.supabase.co',
+      '*.supabase.in',
+    ],
   },
   android: {
     allowMixedContent: false,
