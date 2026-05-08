@@ -66,19 +66,19 @@ export default async function BlogPage() {
                       <td className="py-2.5 px-3 min-w-0">
                         <Link
                           href={`/blog/${p.id}`}
-                          className="text-text no-underline hover:text-navy hover:underline truncate inline-block max-w-full align-middle"
+                          className="text-text no-underline hover:text-navy flex items-center gap-1 w-full overflow-hidden"
                         >
                           {p.is_paid_only && (
                             <span
-                              className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-1.5 py-0.5 mr-1.5 align-middle tracking-wide"
+                              className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-1.5 py-0.5 align-middle tracking-wide shrink-0"
                               title="조합원 전용 콘텐츠"
                             >
                               조합원
                             </span>
                           )}
-                          {p.title}
+                          <span className="truncate min-w-0 flex-1 hover:underline">{p.title}</span>
                           {p.comment_count && p.comment_count > 0 ? (
-                            <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
+                            <span className="text-cyan font-bold shrink-0">[{p.comment_count}]</span>
                           ) : null}
                         </Link>
                       </td>

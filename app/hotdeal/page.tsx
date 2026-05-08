@@ -84,11 +84,11 @@ export default async function HotdealPage() {
                       <td className="py-2.5 px-3 min-w-0">
                         <Link
                           href={`/hotdeal/${p.id}`}
-                          className="text-text no-underline hover:text-[#92400e] hover:underline truncate inline-block max-w-full align-middle"
+                          className="text-text no-underline hover:text-[#92400e] flex items-center gap-1 w-full overflow-hidden"
                         >
-                          {p.title}
+                          <span className="truncate min-w-0 flex-1 hover:underline">{p.title}</span>
                           {p.comment_count && p.comment_count > 0 ? (
-                            <span className="text-[#f59e0b] font-bold ml-1">[{p.comment_count}]</span>
+                            <span className="text-[#f59e0b] font-bold shrink-0">[{p.comment_count}]</span>
                           ) : null}
                         </Link>
                       </td>

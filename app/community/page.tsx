@@ -80,11 +80,11 @@ export default async function CommunityPage() {
                     <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
                       <Link
                         href={`/community/${p.id}`}
-                        className="text-text no-underline hover:text-navy hover:underline truncate block w-full"
+                        className="text-text no-underline hover:text-navy flex items-center gap-1 w-full overflow-hidden"
                       >
-                        {p.title}
+                        <span className="truncate min-w-0 flex-1 hover:underline">{p.title}</span>
                         {p.comment_count && p.comment_count > 0 ? (
-                          <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
+                          <span className="text-cyan font-bold shrink-0">[{p.comment_count}]</span>
                         ) : null}
                       </Link>
                       {/* 모바일 전용 — 작성일을 제목 아래 작게 노출 */}
