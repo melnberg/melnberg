@@ -215,8 +215,19 @@ export default function Nickname({
   );
 
   if (!isPaid) {
-    // 무료회원은 그냥 텍스트 (프로필 페이지 X)
-    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}{housingTag}</span>;
+    // 무료회원은 그냥 텍스트 (프로필 페이지 X). 단 스레드 아이콘은 동일 노출.
+    const freeThread = userId ? (
+      <Link
+        href={`/u/${userId}/threads`}
+        onClick={(e) => e.stopPropagation()}
+        title={`${name} 의 스레드`}
+        aria-label={`${name} 의 스레드`}
+        className="ml-1 inline-flex items-center justify-center w-[14px] h-[14px] rounded-full border border-current text-[9px] font-bold text-gray-500 hover:text-black no-underline align-middle leading-none"
+      >
+        @
+      </Link>
+    ) : null;
+    return <span className={`inline-flex items-center ${className}`}>{avatarNode}{name}{housingTag}{freeThread}</span>;
   }
 
   const linkColor = hasLink ? '#22c55e' : '#d4d4d4';
@@ -334,7 +345,20 @@ export default function Nickname({
     document.body,
   );
 
-  // 표기 순서: 사진 / 닉네임 / 주택수 / 조합원 / SNS dot
+  // 스레드 바로가기 — userId 있을 때만. @ + 원형 테두리.
+  const threadNode = userId ? (
+    <Link
+      href={`/u/${userId}/threads`}
+      onClick={(e) => e.stopPropagation()}
+      title={`${name} 의 스레드`}
+      aria-label={`${name} 의 스레드`}
+      className="ml-1 inline-flex items-center justify-center w-[14px] h-[14px] rounded-full border border-current text-[9px] font-bold text-gray-500 hover:text-black no-underline align-middle leading-none"
+    >
+      @
+    </Link>
+  ) : null;
+
+  // 표기 순서: 사진 / 닉네임 / 주택수 / 조합원 / SNS dot / 스레드(@)
   return (
     <span className={`inline-flex items-center whitespace-nowrap ${className}`}>
       {avatarNode}
@@ -342,6 +366,7 @@ export default function Nickname({
       {housingTag}
       {badgeNode}
       {dotEl}
+      {threadNode}
       {legendPopup}
       {tipPopup}
     </span>
