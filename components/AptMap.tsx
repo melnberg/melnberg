@@ -134,6 +134,8 @@ export type FeedItem = {
   post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
   /** stocks 카테고리 글 — 종목 코드 (라우팅 /stocks/{code}/{postId}) */
   stock_code?: string | null;
+  /** stocks 카테고리 글 — 종목 회사명 (태그 표시는 이걸 우선) */
+  stock_name?: string | null;
   /** strike 전용 — 손실 % 와 mlbg 액수 */
   strike_loss_pct?: number;
   strike_loss_mlbg?: number;

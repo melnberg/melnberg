@@ -75,7 +75,9 @@ export default async function StocksPage() {
               </thead>
               <tbody>
                 {posts.map((p) => {
-                  const tag = (p as { stock_code?: string | null }).stock_code;
+                  const pp = p as { stock_code?: string | null; stock_name?: string | null };
+                  // 태그 — 회사명(stock_name) 우선, 없으면 코드 fallback
+                  const tag = pp.stock_name || pp.stock_code;
                   return (
                     <tr key={p.id} className="border-b border-border hover:bg-cyan/5 transition-colors">
                       <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.id}</td>

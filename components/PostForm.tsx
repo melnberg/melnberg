@@ -10,7 +10,7 @@ import { fileToWebp } from '@/lib/image-to-webp';
 import StockPicker from './StockPicker';
 
 type Props = {
-  initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null };
+  initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null; stock_name?: string | null };
   category?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
   redirectBase?: string;
 };
@@ -21,8 +21,9 @@ export default function PostForm({ initial, category = 'community', redirectBase
   const [title, setTitle] = useState(initial?.title ?? '');
   const [content, setContent] = useState(initial?.content ?? '');
   const [isPaidOnly, setIsPaidOnly] = useState(initial?.is_paid_only ?? (category === 'blog'));
-  // stocks 카테고리 — 종목 태그 (자유 입력, 선택)
+  // stocks 카테고리 — 종목 태그 (자유 입력, 선택). code + name 같이 저장 — 태그를 회사명으로 표시.
   const [stockTag, setStockTag] = useState(initial?.stock_code ?? '');
+  const [stockName, setStockName] = useState(initial?.stock_name ?? '');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -95,6 +96,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
           content: finalContent,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
           stock_code: category === 'stocks' ? (stockTag.trim() || null) : null,
+          stock_name: category === 'stocks' ? (stockName.trim() || null) : null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', initial.id);
@@ -116,6 +118,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
           category,
           is_paid_only: category === 'blog' ? isPaidOnly : false,
           stock_code: category === 'stocks' ? (stockTag.trim() || null) : null,
+          stock_name: category === 'stocks' ? (stockName.trim() || null) : null,
         })
         .select('id')
         .single();
@@ -164,7 +167,11 @@ export default function PostForm({ initial, category = 'community', redirectBase
           <label className="text-[11px] font-bold tracking-widest uppercase text-muted">
             종목 <span className="text-muted normal-case font-normal">(선택 — 검색해서 첨부하면 가격·차트가 글에 표시됨)</span>
           </label>
-          <StockPicker initial={stockTag || undefined} onChange={(c) => setStockTag(c ?? '')} />
+          <StockPicker
+            initial={stockTag || undefined}
+            initialName={stockName || undefined}
+            onChange={(c, n) => { setStockTag(c ?? ''); setStockName(n ?? ''); }}
+          />
         </div>
       )}
       <div className="flex flex-col gap-1.5">

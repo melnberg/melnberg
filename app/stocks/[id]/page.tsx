@@ -100,8 +100,8 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
             <div className="flex items-start justify-between gap-3 mb-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-block bg-cyan/10 text-navy text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">📈 STOCKS</span>
-                {post.stock_code && (
-                  <span className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-2 py-0.5">{post.stock_code}</span>
+                {(post.stock_name || post.stock_code) && (
+                  <span className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-2 py-0.5">{post.stock_name || post.stock_code}</span>
                 )}
               </div>
               <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
@@ -119,7 +119,7 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
             </div>
           </header>
 
-          {post.stock_code && /^\d{6}$/.test(post.stock_code) && (
+          {post.stock_code && (/^\d{6}$/.test(post.stock_code) || /^[A-Z][A-Z0-9.\-]{0,9}$/i.test(post.stock_code)) && (
             <div className="mb-6">
               <StockInfoCard code={post.stock_code} />
             </div>

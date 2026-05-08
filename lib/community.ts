@@ -10,6 +10,7 @@ export type CommunityPost = {
   content: string;
   category: PostCategory;
   stock_code?: string | null;     // stocks 카테고리 글의 자유 태그 (선택)
+  stock_name?: string | null;     // 회사명 (검색 시 함께 저장. 표시는 코드 대신 이걸 우선)
   is_paid_only: boolean;
   created_at: string;
   updated_at: string;
@@ -37,23 +38,35 @@ export async function listPosts(category: PostCategory = 'community', limit = 50
   // select 에 deleted_at 추가해서 fallback 시에도 클라 필터 가능하도록.
   let { data, error } = await supabase
     .from('posts')
-    .select('id, author_id, title, content, category, stock_code, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
+    .select('id, author_id, title, content, category, stock_code, stock_name, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
     .eq('category', category)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) {
     console.error('listPosts primary query error, falling back:', error);
-    // deleted_at 컬럼 없을 가능성 → fallback (deleted_at 없이 select)
-    const fallback = await supabase
+    // SQL 189 미적용 → stock_name 빼고 재시도
+    const noName = await supabase
       .from('posts')
-      .select('id, author_id, title, content, category, is_paid_only, view_count, like_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
+      .select('id, author_id, title, content, category, stock_code, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
       .eq('category', category)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(limit);
-    // 타입 불일치 (deleted_at 누락) — 클라 필터 단계에서 어차피 deleted_at 검사하므로 cast 안전.
-    data = fallback.data as unknown as typeof data;
-    error = fallback.error;
+    if (!noName.error) {
+      data = noName.data as unknown as typeof data;
+      error = null;
+    } else {
+      // deleted_at 컬럼 없을 가능성 → fallback (deleted_at 없이 select)
+      const fallback = await supabase
+        .from('posts')
+        .select('id, author_id, title, content, category, is_paid_only, view_count, like_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url), comments(count)')
+        .eq('category', category)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      data = fallback.data as unknown as typeof data;
+      error = fallback.error;
+    }
   }
   if (error) {
     console.error('listPosts error', error);
@@ -96,17 +109,25 @@ export async function getPost(id: number, category?: PostCategory): Promise<Comm
   // apt_count 까지 메인 join 에 포함 — 별도 round-trip 제거.
   let q = supabase
     .from('posts')
-    .select('id, author_id, title, content, category, stock_code, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
+    .select('id, author_id, title, content, category, stock_code, stock_name, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
     .eq('id', id);
   if (category) q = q.eq('category', category);
   const { data, error } = await q.maybeSingle();
   if (!error && data) return data as unknown as CommunityPost;
-  // fallback — apt_count / deleted_at 컬럼 미적용 환경
-  const { data: data2 } = await supabase
+  // SQL 189 미적용 → stock_name 빼고 재시도
+  let q2 = supabase
+    .from('posts')
+    .select('id, author_id, title, content, category, stock_code, is_paid_only, view_count, like_count, created_at, updated_at, deleted_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url, apt_count)')
+    .eq('id', id);
+  if (category) q2 = q2.eq('category', category);
+  const r2 = await q2.maybeSingle();
+  if (!r2.error && r2.data) return r2.data as unknown as CommunityPost;
+  // 최종 fallback — apt_count / deleted_at 컬럼 미적용 환경
+  const { data: data3 } = await supabase
     .from('posts')
     .select('id, author_id, title, content, category, is_paid_only, view_count, created_at, updated_at, author:profiles!author_id(display_name, link_url, tier, tier_expires_at, is_solo, avatar_url)')
     .eq('id', id).maybeSingle();
-  return data2 ? (data2 as unknown as CommunityPost) : null;
+  return data3 ? (data3 as unknown as CommunityPost) : null;
 }
 
 export async function isCurrentUserAdmin(): Promise<boolean> {

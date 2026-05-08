@@ -6,12 +6,12 @@ import StockInfoCard from './StockInfoCard';
 type StockResult = { code: string; name: string; market?: string };
 
 // 종목 검색 + 선택 + 정보 카드 미리보기.
-// onPick 으로 선택 시 부모에 code 전달.
-export default function StockPicker({ initial, onChange }: { initial?: string; onChange: (code: string | null) => void }) {
+// onPick 으로 선택 시 부모에 code + name 전달 (국장/미장 동일하게 태그를 회사명으로).
+export default function StockPicker({ initial, initialName, onChange }: { initial?: string; initialName?: string; onChange: (code: string | null, name: string | null) => void }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<StockResult[]>([]);
   const [picked, setPicked] = useState<{ code: string; name: string } | null>(
-    initial ? { code: initial, name: initial } : null,
+    initial ? { code: initial, name: initialName ?? initial } : null,
   );
   const [open, setOpen] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -32,7 +32,7 @@ export default function StockPicker({ initial, onChange }: { initial?: string; o
 
   function pick(s: StockResult) {
     setPicked({ code: s.code, name: s.name });
-    onChange(s.code);
+    onChange(s.code, s.name);
     setQ('');
     setResults([]);
     setOpen(false);
@@ -40,7 +40,7 @@ export default function StockPicker({ initial, onChange }: { initial?: string; o
 
   function clearPick() {
     setPicked(null);
-    onChange(null);
+    onChange(null, null);
   }
 
   return (
