@@ -219,7 +219,7 @@ export default function Nickname({
     // 무료회원: 사진 / 닉네임 / 주택수 (조합원 배지 없음) / 일깃장(집) — userId 있을 때만
     const freeDiary = userId ? (
       <Link
-        href={`/u/${userId}#threads`}
+        href={`/u/${userId}/threads`}
         onClick={(e) => e.stopPropagation()}
         title={`${name} 의 일깃장`}
         aria-label={`${name} 의 일깃장`}
@@ -351,7 +351,7 @@ export default function Nickname({
   // 일깃장 (집) 아이콘 — userId 있을 때만. 클릭 시 /u/{userId}#threads 로 anchor scroll.
   const diaryNode = userId ? (
     <Link
-      href={`/u/${userId}#threads`}
+      href={`/u/${userId}/threads`}
       onClick={(e) => e.stopPropagation()}
       title={`${name} 의 일깃장`}
       aria-label={`${name} 의 일깃장`}

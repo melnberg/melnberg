@@ -6,6 +6,7 @@ import Sidebar, { type SidebarUser, type BoardLatest } from './Sidebar';
 import FeedbackWidget from './FeedbackWidget';
 import TelegramFloatingLink from './TelegramFloatingLink';
 import FloatingMapPin from './FloatingMapPin';
+import FloatingThreadPencil from './FloatingThreadPencil';
 import LiveActivityToaster from './LiveActivityToaster';
 import MobileTopBar from './MobileTopBar';
 import GreetingBonusBanner from './GreetingBonusBanner';
@@ -98,6 +99,7 @@ export default async function Layout({ current, children }: { current?: string; 
       </main>
       <TelegramFloatingLink />
       <FeedbackWidget />
+      <FloatingThreadPencil />
       <FloatingMapPin />
       <LiveActivityToaster />
     </div>
