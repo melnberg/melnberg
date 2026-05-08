@@ -502,37 +502,65 @@ export default function PollWidget({
       {/* 작성자 정산/마감 섹션 — open + 작성자 */}
       {!isResolved && isAuthor && (
         <div className="mt-4 pt-3 border-t-2 border-red-300 flex flex-col gap-2">
-          <div className="text-[12px] font-bold text-red-600">
-            {isVoteMode
-              ? '작성자 마감 — 정답 옵션을 골라 결과 확정. 환수/지급 없음. 되돌릴 수 없음.'
-              : '작성자 정산 — 정답 옵션을 골라 정산하면 되돌릴 수 없음.'}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <select
-              value={resolveOption ?? ''}
-              onChange={(e) =>
-                setResolveOption(
-                  e.target.value === '' ? null : Number(e.target.value),
-                )
-              }
-              className="border border-border px-2.5 py-1.5 text-[13px] outline-none focus:border-navy rounded-none flex-1 min-w-0"
-            >
-              <option value="">정답 옵션 선택…</option>
-              {options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleResolve}
-              disabled={resolving || resolveOption == null}
-              className="bg-red-600 text-white border-none px-4 py-1.5 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {resolving ? '확정 중...' : isVoteMode ? '마감하기 →' : '정산하기 →'}
-            </button>
-          </div>
+          {isVoteMode ? (
+            // vote 모드 — 정답 select 없음. 마감 시 1위 옵션 자동 결과 발표.
+            <>
+              <div className="text-[12px] font-bold text-red-600">
+                투표 마감 — 결과 확정. 1위 옵션이 자동 발표됨. 되돌릴 수 없음.
+              </div>
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // 1위 옵션 (vote_count 가장 많은) 자동 선택. 동표 시 첫 옵션.
+                    let topId = options[0]?.id ?? null;
+                    let topCount = -1;
+                    for (const o of options) {
+                      const c = votes.find((v) => v.option_id === o.id)?.count ?? 0;
+                      if (c > topCount) { topCount = c; topId = o.id; }
+                    }
+                    if (topId != null) {
+                      setResolveOption(topId);
+                      // 다음 tick 에 handleResolve 가 resolveOption 읽음
+                      setTimeout(() => { void handleResolve(); }, 0);
+                    }
+                  }}
+                  disabled={resolving}
+                  className="bg-red-600 text-white border-none px-4 py-1.5 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resolving ? '마감 중...' : '투표 마감하기 →'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-[12px] font-bold text-red-600">
+                작성자 정산 — 정답 옵션을 골라 정산하면 되돌릴 수 없음.
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={resolveOption ?? ''}
+                  onChange={(e) =>
+                    setResolveOption(e.target.value === '' ? null : Number(e.target.value))
+                  }
+                  className="border border-border px-2.5 py-1.5 text-[13px] outline-none focus:border-navy rounded-none flex-1 min-w-0"
+                >
+                  <option value="">정답 옵션 선택…</option>
+                  {options.map((o) => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleResolve}
+                  disabled={resolving || resolveOption == null}
+                  className="bg-red-600 text-white border-none px-4 py-1.5 text-[12px] font-bold tracking-wider uppercase cursor-pointer hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resolving ? '확정 중...' : '정산하기 →'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
