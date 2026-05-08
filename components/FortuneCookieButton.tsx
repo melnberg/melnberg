@@ -26,7 +26,9 @@ declare global {
 
 async function ensureKakaoLoaded(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  const key = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+  // 카카오톡 공유는 JavaScript 키 (Maps 키와 같은 키일 수도 있음).
+  // NEXT_PUBLIC_KAKAO_JS_KEY 우선, 없으면 NEXT_PUBLIC_KAKAO_MAP_KEY fallback.
+  const key = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
   if (!key) return false;
   if (window.Kakao?.Share) {
     if (!window.Kakao.isInitialized()) window.Kakao.init(key);

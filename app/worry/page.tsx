@@ -25,14 +25,13 @@ export default async function WorryPage() {
               <h1 className="text-[24px] lg:text-[32px] font-bold text-navy tracking-tight">💬 익명 고민상담</h1>
               <p className="text-[12px] text-muted mt-1">작성자·댓글 모두 익명 표시. 보상은 일반 커뮤글과 동일.</p>
             </div>
-            {user && (
-              <Link
-                href="/worry/new"
-                className="bg-cyan text-navy px-4 lg:px-5 py-2 lg:py-2.5 text-[12px] lg:text-[13px] font-bold tracking-wider no-underline hover:bg-cyan/80 flex-shrink-0"
-              >
-                글쓰기 →
-              </Link>
-            )}
+            <Link
+              href={user ? '/worry/new' : '/login?next=/worry/new'}
+              title={user ? undefined : '로그인하면 글 쓸 수 있어요'}
+              className="bg-cyan text-navy px-4 lg:px-5 py-2 lg:py-2.5 text-[12px] lg:text-[13px] font-bold tracking-wider no-underline hover:bg-cyan/80 flex-shrink-0"
+            >
+              {user ? '글쓰기 →' : '로그인하고 글쓰기 →'}
+            </Link>
           </div>
         </div>
       </section>

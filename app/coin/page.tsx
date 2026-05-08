@@ -60,15 +60,14 @@ export default async function CoinPage({ searchParams }: { searchParams: Promise
                 </h1>
                 <p className="text-[12px] text-muted mt-2">메이저 4종·떡상 코인·24시간 토론. 보상 동일.</p>
               </div>
-              {user && (
-                <Link
-                  href="/coin/new"
-                  className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-white flex-shrink-0"
-                  style={{ background: 'linear-gradient(90deg, #f7931a, #ffc857)', boxShadow: '0 4px 18px rgba(247,147,26,0.32)' }}
-                >
-                  글쓰기 →
-                </Link>
-              )}
+              <Link
+                href={user ? '/coin/new' : '/login?next=/coin/new'}
+                title={user ? undefined : '로그인하면 글 쓸 수 있어요'}
+                className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-white flex-shrink-0"
+                style={{ background: 'linear-gradient(90deg, #f7931a, #ffc857)', boxShadow: '0 4px 18px rgba(247,147,26,0.32)' }}
+              >
+                {user ? '글쓰기 →' : '로그인하고 글쓰기 →'}
+              </Link>
             </div>
           </div>
         </section>

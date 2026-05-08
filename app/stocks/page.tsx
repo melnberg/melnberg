@@ -61,15 +61,14 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
                 </h1>
                 <p className="text-[12px] text-muted mt-2">실시간 마켓·인기 종목·전문 토론. 보상 동일.</p>
               </div>
-              {user && (
-                <Link
-                  href="/stocks/new"
-                  className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-white flex-shrink-0"
-                  style={{ background: 'linear-gradient(90deg, #00d4ff, #22e0a1)', boxShadow: '0 4px 18px rgba(34,224,161,0.3)' }}
-                >
-                  글쓰기 →
-                </Link>
-              )}
+              <Link
+                href={user ? '/stocks/new' : '/login?next=/stocks/new'}
+                title={user ? undefined : '로그인하면 글 쓸 수 있어요'}
+                className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-white flex-shrink-0"
+                style={{ background: 'linear-gradient(90deg, #00d4ff, #22e0a1)', boxShadow: '0 4px 18px rgba(34,224,161,0.3)' }}
+              >
+                {user ? '글쓰기 →' : '로그인하고 글쓰기 →'}
+              </Link>
             </div>
           </div>
         </section>

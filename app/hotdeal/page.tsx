@@ -27,14 +27,13 @@ export default async function HotdealPage() {
               <h1 className="text-[32px] font-bold text-[#92400e] tracking-tight">핫딜</h1>
               <p className="text-[12px] text-[#92400e]/80 mt-1 font-medium">만두·쇼핑·먹거리·생활용품 등 핫한 거래 정보 공유 — 일반 커뮤글의 <b>2.5배 (글 5 / 댓글 1 mlbg)</b> 적립.</p>
             </div>
-            {user && (
-              <Link
-                href="/hotdeal/new"
-                className="bg-[#f59e0b] text-white px-5 py-2.5 text-[13px] font-bold tracking-wider no-underline hover:bg-[#d97706] flex-shrink-0"
-              >
-                핫딜 올리기 →
-              </Link>
-            )}
+            <Link
+              href={user ? '/hotdeal/new' : '/login?next=/hotdeal/new'}
+              title={user ? undefined : '로그인하면 글 쓸 수 있어요'}
+              className="bg-[#f59e0b] text-white px-5 py-2.5 text-[13px] font-bold tracking-wider no-underline hover:bg-[#d97706] flex-shrink-0"
+            >
+              {user ? '핫딜 올리기 →' : '로그인하고 핫딜 올리기 →'}
+            </Link>
           </div>
         </div>
       </section>

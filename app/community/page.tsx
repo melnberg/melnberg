@@ -24,14 +24,13 @@ export default async function CommunityPage() {
         <div className="max-w-content mx-auto px-4 lg:px-10">
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-[24px] lg:text-[32px] font-bold text-navy tracking-tight">커뮤니티</h1>
-            {user && (
-              <Link
-                href="/community/new"
-                className="bg-navy text-white px-4 lg:px-5 py-2 lg:py-2.5 text-[12px] lg:text-[13px] font-bold tracking-wider no-underline hover:bg-navy-dark"
-              >
-                글쓰기 →
-              </Link>
-            )}
+            <Link
+              href={user ? '/community/new' : '/login?next=/community/new'}
+              title={user ? undefined : '로그인하면 글 쓸 수 있어요'}
+              className="bg-navy text-white px-4 lg:px-5 py-2 lg:py-2.5 text-[12px] lg:text-[13px] font-bold tracking-wider no-underline hover:bg-navy-dark"
+            >
+              {user ? '글쓰기 →' : '로그인하고 글쓰기 →'}
+            </Link>
           </div>
         </div>
       </section>

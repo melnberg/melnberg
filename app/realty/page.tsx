@@ -43,22 +43,21 @@ export default async function RealtyPage() {
         <section className="relative pt-10 lg:pt-16 pb-6">
           <div className="max-w-content mx-auto px-4 lg:px-10">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
+              <div className="min-w-0">
                 <div className="text-[11px] font-bold tracking-[0.3em] uppercase mb-2" style={{ color: '#a07f1b' }}>MELNBERG · PROPERTY</div>
                 <h1 className="text-[28px] lg:text-[42px] font-black text-navy tracking-tight leading-none">
                   🏢 REALTY <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(90deg, #c9a227, #d6336c)' }}>SQUARE</span>
                 </h1>
-                <p className="text-[12px] text-muted mt-2">실거래·매물·경매·정책 통합 보드. 단지 토론은 메인 지도에서.</p>
+                <p className="text-[12px] text-muted mt-2">실거래·매물·경매·정책. 보상 동일.</p>
               </div>
-              {user && (
-                <Link
-                  href="/realty/new"
-                  className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-white flex-shrink-0"
-                  style={{ background: 'linear-gradient(90deg, #c9a227, #d6336c)', boxShadow: '0 4px 18px rgba(201,162,39,0.32)' }}
-                >
-                  글쓰기 →
-                </Link>
-              )}
+              <Link
+                href={user ? '/realty/new' : '/login?next=/realty/new'}
+                title={user ? undefined : '로그인하면 글 쓸 수 있어요'}
+                className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-white flex-shrink-0"
+                style={{ background: 'linear-gradient(90deg, #c9a227, #d6336c)', boxShadow: '0 4px 18px rgba(201,162,39,0.32)' }}
+              >
+                {user ? '글쓰기 →' : '로그인하고 글쓰기 →'}
+              </Link>
             </div>
           </div>
         </section>
