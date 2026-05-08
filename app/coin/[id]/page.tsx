@@ -94,71 +94,85 @@ export default async function CoinPostDetail({ params }: { params: Promise<{ id:
         { label: post.title, bold: true },
       ]} meta="Coin" />
 
-      <article className="py-12">
-        <div className="max-w-[760px] mx-auto px-6">
-          <header className="pb-6 mb-6 border-b border-cyan/30">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-block bg-cyan/10 text-navy text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">₿ COIN</span>
-                {(post.stock_name || post.stock_code) && (
-                  <span className="inline-block bg-cyan/15 text-navy text-[11px] font-bold px-2 py-0.5">
-                    {post.stock_name || (post.stock_code ? post.stock_code.replace('KRW-', '') : '')}
-                  </span>
-                )}
-              </div>
-              <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
-            </div>
-            <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
-            <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
-              <span className="font-bold text-navy">
-                <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
-              </span>
-              <span>·</span>
-              <span>{formatRelativeKo(post.created_at)}</span>
-              {post.updated_at !== post.created_at && (<><span>·</span><span>수정됨</span></>)}
-              {postEarned > 0 && (<><span>·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
-              {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath="/coin" /></>)}
-            </div>
-          </header>
-
-          {post.stock_code && /^KRW-[A-Z0-9]{2,10}$/.test(post.stock_code) && (
-            <div className="mb-6">
-              <StockInfoCard code={post.stock_code} kind="coin" />
-            </div>
-          )}
-
-          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
-            {linkify(post.content)}
-          </div>
-
-          {pollData.poll && (
-            <PollWidget
-              postId={post.id}
-              poll={pollData.poll}
-              options={pollData.options}
-              votes={pollData.votes}
-              myVote={pollData.myVote}
-              voters={pollData.voters}
-              currentUserId={user?.id ?? null}
-              isAuthor={isAuthor}
-            />
-          )}
-
-          <CommentSection
-            postId={post.id}
-            comments={comments}
-            currentUserId={user?.id ?? null}
-            currentUserName={currentUserName}
-            postCategory="community"
-          />
-
-          <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
-            <Link href="/coin" className="text-[13px] font-bold text-navy no-underline hover:underline">
-              ← 목록으로
-            </Link>
-          </div>
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #0a0612 0%, #18102b 60%, #1f1438 100%)' }}>
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -left-20 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
+               style={{ background: 'radial-gradient(circle, #f7931a55, transparent 70%)' }} />
+          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-30 blur-3xl"
+               style={{ background: 'radial-gradient(circle, #b85cff55, transparent 70%)' }} />
         </div>
-      </article>
+
+        <article className="relative pt-10 pb-16">
+          <div className="max-w-[760px] mx-auto px-6">
+            <header className="pb-6 mb-6 border-b border-white/15">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5"
+                        style={{ background: 'rgba(247,147,26,0.15)', border: '1px solid rgba(247,147,26,0.4)', color: '#ffb866' }}>₿ COIN</span>
+                  {(post.stock_name || post.stock_code) && (
+                    <span className="inline-block text-[11px] font-bold px-2 py-0.5"
+                          style={{ background: 'rgba(247,147,26,0.12)', border: '1px solid rgba(247,147,26,0.3)', color: '#ffd6a3' }}>
+                      {post.stock_name || (post.stock_code ? post.stock_code.replace('KRW-', '') : '')}
+                    </span>
+                  )}
+                </div>
+                <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+              </div>
+              <h1 className="text-[28px] lg:text-[34px] font-black text-white tracking-tight leading-tight mb-3 break-keep"
+                  style={{ textShadow: '0 0 30px rgba(247,147,26,0.3)' }}>{post.title}</h1>
+              <div className="flex items-center gap-3 text-[12px] flex-wrap" style={{ color: '#fde68a' }}>
+                <span className="font-bold">
+                  <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
+                </span>
+                <span className="text-white/40">·</span>
+                <span className="text-white/60">{formatRelativeKo(post.created_at)}</span>
+                {post.updated_at !== post.created_at && (<><span className="text-white/40">·</span><span className="text-white/60">수정됨</span></>)}
+                {postEarned > 0 && (<><span className="text-white/40">·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
+                {isAuthor && (<><span className="text-white/40">·</span><PostActions postId={post.id} basePath="/coin" /></>)}
+              </div>
+            </header>
+
+            {post.stock_code && /^KRW-[A-Z0-9]{2,10}$/.test(post.stock_code) && (
+              <div className="mb-6">
+                <StockInfoCard code={post.stock_code} kind="coin" />
+              </div>
+            )}
+
+            <div className="bg-white px-6 lg:px-8 py-8 shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12 text-text">
+                {linkify(post.content)}
+              </div>
+
+              {pollData.poll && (
+                <PollWidget
+                  postId={post.id}
+                  poll={pollData.poll}
+                  options={pollData.options}
+                  votes={pollData.votes}
+                  myVote={pollData.myVote}
+                  voters={pollData.voters}
+                  currentUserId={user?.id ?? null}
+                  isAuthor={isAuthor}
+                />
+              )}
+
+              <CommentSection
+                postId={post.id}
+                comments={comments}
+                currentUserId={user?.id ?? null}
+                currentUserName={currentUserName}
+                postCategory="community"
+              />
+            </div>
+
+            <div className="mt-8 flex justify-between items-center">
+              <Link href="/coin" className="text-[13px] font-bold text-amber-200 no-underline hover:text-amber-100">
+                ← 목록으로
+              </Link>
+            </div>
+          </div>
+        </article>
+      </div>
     </Layout>
   );
 }
