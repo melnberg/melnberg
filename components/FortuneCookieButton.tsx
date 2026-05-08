@@ -81,28 +81,59 @@ export default function FortuneCookieButton() {
   // 오늘치 이미 뽑았는지 — true 면 오로라/광택 애니메이션 끔.
   const [drawnToday, setDrawnToday] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // 관리자만 보이는 "오늘 운세 리셋" 버튼용.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // 마운트 시 오늘치 있는지 확인. 있으면 애니메이션 정지 상태로 시작.
+  // 마운트 시 오늘치 + 관리자 여부 확인. 오늘치 있으면 애니메이션 정지 상태로 시작.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (cancelled || !user) return;
-      const { data } = await supabase
-        .from('fortune_cookies')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('drawn_date', kstToday())
-        .is('deleted_at', null)
-        .maybeSingle();
+      const [{ data: today }, { data: prof }] = await Promise.all([
+        supabase
+          .from('fortune_cookies')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('drawn_date', kstToday())
+          .is('deleted_at', null)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle(),
+      ]);
       if (cancelled) return;
-      if (data) setDrawnToday(true);
+      if (today) setDrawnToday(true);
+      if ((prof as { is_admin?: boolean } | null)?.is_admin) setIsAdmin(true);
     })();
     return () => { cancelled = true; };
   }, []);
+
+  async function resetToday() {
+    if (resetting) return;
+    if (!confirm('오늘 운세를 삭제하고 다시 뽑을 수 있게 할까요? (관리자 테스트용)')) return;
+    setResetting(true);
+    try {
+      const res = await fetch('/api/fortune/reset', { method: 'POST' });
+      const j = await res.json();
+      if (!res.ok) {
+        alert(j?.error ?? '리셋 실패');
+        return;
+      }
+      setDrawnToday(false);
+      router.refresh();
+    } catch {
+      alert('네트워크 오류');
+    } finally {
+      setResetting(false);
+    }
+  }
 
   const today = new Date();
   const label = `${today.getMonth() + 1}월 ${today.getDate()}일 포춘쿠키`;
@@ -125,8 +156,8 @@ export default function FortuneCookieButton() {
       setFortune(j.fortune as Fortune);
       setAlready(!!j.already);
       setDrawnToday(true);  // 뽑힘 → 즉시 애니메이션 정지
-      // 짧은 두근 애니메이션 후 reveal
-      setTimeout(() => { setDrawing(false); setRevealed(true); }, 1200);
+      // 짧은 두근 애니메이션 후 reveal (전체 체감 시간 줄임)
+      setTimeout(() => { setDrawing(false); setRevealed(true); }, 400);
       // 새로 뽑았을 때만 피드 새로고침
       if (!j.already) revalidateHome();
     } catch {
@@ -151,9 +182,14 @@ export default function FortuneCookieButton() {
     try {
       const ok = await ensureKakaoLoaded();
       if (!ok || !window.Kakao?.Share) {
-        alert('카카오톡 공유를 사용할 수 없어요. 카카오 키 확인 필요');
+        const k = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+        const masked = k ? `${k.slice(0, 6)}...(len ${k.length})` : '(env 미설정)';
+        alert(`카카오 SDK 로드 실패. 사용된 키: ${masked}`);
         return;
       }
+      // 사용된 키 1회 디버그용 console 출력 (4011 디버깅).
+      const debugKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+      console.log('[KakaoShare] using key:', debugKey ? `${debugKey.slice(0, 6)}...` : '(none)', 'from:', process.env.NEXT_PUBLIC_KAKAO_JS_KEY ? 'JS_KEY' : 'MAP_KEY');
       const origin = window.location.origin;
       const link = `${origin}/fortune/${f.id}`;
       const imageUrl = `${origin}/api/og/fortune/${f.id}`;
@@ -260,6 +296,18 @@ export default function FortuneCookieButton() {
         </span>
         {!drawnToday && <span aria-hidden className="fortune-aurora-shine" />}
       </button>
+      {/* 관리자 전용 리셋 — 오늘 뽑힌 상태일 때만 노출 */}
+      {isAdmin && drawnToday && (
+        <button
+          type="button"
+          onClick={resetToday}
+          disabled={resetting}
+          className="text-[10px] text-muted hover:text-red-600 cursor-pointer bg-transparent border-none mt-1 underline disabled:opacity-50"
+          title="오늘 운세 삭제 후 다시 뽑기 (관리자만)"
+        >
+          {resetting ? '리셋 중...' : '🔧 오늘 운세 리셋'}
+        </button>
+      )}
       {modal}
     </>
   );

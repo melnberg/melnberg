@@ -92,7 +92,7 @@ async function generateFortuneWithAI(forbidden: string[]): Promise<string | null
 - "오후 4시쯤 맞은 햇살 5분이 오늘 비타민. 안 받으면 저녁부터 처짐."${forbiddenBlock}`;
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), 4000);
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       signal: ctrl.signal,
@@ -106,7 +106,7 @@ async function generateFortuneWithAI(forbidden: string[]): Promise<string | null
           { role: 'system', content: SYSTEM },
           { role: 'user', content: '오늘의 운세 한 문장. 위 forbidden 목록과 절대 겹치지 않게.' },
         ],
-        max_completion_tokens: 200,
+        max_completion_tokens: 100,
       }),
     });
     clearTimeout(timer);
@@ -163,9 +163,9 @@ export async function POST() {
   ];
   const forbiddenSet = new Set(forbidden.map(normText));
 
-  // AI 시도 — 최대 3회. 응답이 forbidden 과 같거나 정규화 동일하면 재시도.
+  // AI 시도 — 최대 2회. 응답이 forbidden 과 같거나 정규화 동일하면 재시도.
   let fortune: string | null = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     const candidate = await generateFortuneWithAI(forbidden);
     if (!candidate) break;  // 키/네트워크 문제 — 더 시도해도 의미 없음
     if (!forbiddenSet.has(normText(candidate))) { fortune = candidate; break; }
