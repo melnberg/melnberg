@@ -4,8 +4,11 @@
 // FloatingMapPin (bottom-5) 바로 위에 위치. Threads 톤 흑백.
 
 import Link from 'next/link';
+import { useHideOnInputFocus } from '@/lib/hide-on-input-focus';
 
 export default function FloatingThreadPencil() {
+  const visible = useHideOnInputFocus();
+  if (!visible) return null;
   return (
     <Link
       href="/threads"

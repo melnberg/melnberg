@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useHideOnInputFocus } from '@/lib/hide-on-input-focus';
 
 // 우측 하단 토글 — 컨텍스트별로 지도/피드 전환.
 // - 홈(/) 안에서: pushState 로 URL 만 갱신 + popstate 디스패치 → HomeMobileSwitcher 가 받아 클라이언트 전환 (서버 RTT 0)
@@ -18,6 +19,7 @@ export default function FloatingMapPin() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const visibleOnInput = useHideOnInputFocus();
   const initialIsMap = pathname === '/' && (
     sp.get('view') === 'map' || !!sp.get('apt') || !!sp.get('emart') || !!sp.get('factory')
   );
@@ -72,6 +74,8 @@ export default function FloatingMapPin() {
   const baseCls = isMap
     ? 'bg-white/70 backdrop-blur-sm border border-border text-navy hover:bg-white hover:border-navy'
     : 'animate-aurora';
+
+  if (!visibleOnInput) return null;
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2">
