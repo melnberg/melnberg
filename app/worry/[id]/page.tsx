@@ -91,11 +91,8 @@ export default async function WorryPostDetail({ params }: { params: Promise<{ id
       <article className="py-12">
         <div className="max-w-[760px] mx-auto px-6">
           <header className="pb-6 mb-6 border-b border-cyan/30">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-block bg-cyan/10 text-navy text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">💬 WORRY</span>
-              </div>
-              <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className="inline-block bg-cyan/10 text-navy text-[10px] font-bold tracking-widest uppercase px-2 py-0.5">💬 WORRY</span>
             </div>
             <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight mb-3 break-keep">{post.title}</h1>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
@@ -108,8 +105,11 @@ export default async function WorryPostDetail({ params }: { params: Promise<{ id
             </div>
           </header>
 
-          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
+          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-6">
             {linkify(post.content)}
+          </div>
+          <div className="mb-12">
+            <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
           </div>
 
           {pollData.poll && (

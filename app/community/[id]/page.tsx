@@ -127,7 +127,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               <h1 className="text-[28px] font-bold text-navy tracking-tight leading-tight break-keep flex-1">{post.title}</h1>
               <div className="flex items-center gap-2 shrink-0">
                 <HyojaButton />
-                <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
               </div>
             </div>
             <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
@@ -157,9 +156,12 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </div>
           </header>
 
-          {/* 본문 — 글 안의 URL 은 자동 링크 변환 */}
-          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-12">
+          {/* 본문 — 글 안의 URL 은 자동 링크 변환. 좋아요는 본문 좌측 하단. */}
+          <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-6">
             {linkify(post.content)}
+          </div>
+          <div className="mb-12">
+            <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
           </div>
 
           {/* 투표 (있을 때만) */}

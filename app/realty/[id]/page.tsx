@@ -104,12 +104,9 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
         <article className="relative pt-10 pb-16">
           <div className="max-w-[760px] mx-auto px-6">
             <header className="pb-6 mb-6 border-b border-white/15">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5"
-                        style={{ background: 'rgba(255,209,102,0.12)', border: '1px solid rgba(255,209,102,0.3)', color: '#ffd166' }}>🏢 REALTY</span>
-                </div>
-                <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5"
+                      style={{ background: 'rgba(255,209,102,0.12)', border: '1px solid rgba(255,209,102,0.3)', color: '#ffd166' }}>🏢 REALTY</span>
               </div>
               <h1 className="text-[28px] lg:text-[34px] font-black text-white tracking-tight leading-tight mb-3 break-keep"
                   style={{ textShadow: '0 0 30px rgba(255,209,102,0.3)' }}>{post.title}</h1>
@@ -127,9 +124,10 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
 
             <div className="px-6 lg:px-8 py-8 border border-white/10 mb-3"
                  style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap text-white/90">
+              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap text-white/90 mb-6">
                 {linkify(post.content)}
               </div>
+              <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
             </div>
 
             <div className="dark-section px-6 lg:px-8 py-6 border border-white/10"
