@@ -127,19 +127,19 @@ export default async function CoinPage({ searchParams }: { searchParams: Promise
                           <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
                             <Link
                               href={`/coin/${p.id}`}
-                              className="text-white/90 no-underline hover:text-white truncate block w-full"
+                              className="text-white/90 no-underline hover:text-white flex items-center gap-1 w-full overflow-hidden"
                             >
                               {tag && (
                                 <span
-                                  className="text-[10px] font-bold px-1.5 py-0.5 mr-1.5 align-middle"
+                                  className="text-[10px] font-bold px-1.5 py-0.5 align-middle shrink-0"
                                   style={{ background: 'rgba(247,147,26,0.15)', border: '1px solid rgba(247,147,26,0.4)', color: '#ffb866' }}
                                 >
                                   ₿ {tag}
                                 </span>
                               )}
-                              {p.title}
+                              <span className="truncate min-w-0 flex-1">{p.title}</span>
                               {p.comment_count && p.comment_count > 0 ? (
-                                <span className="text-amber-300 font-bold ml-1">[{p.comment_count}]</span>
+                                <span className="text-amber-300 font-bold shrink-0">[{p.comment_count}]</span>
                               ) : null}
                             </Link>
                             <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>

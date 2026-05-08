@@ -133,19 +133,19 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
                           <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
                             <Link
                               href={`/stocks/${p.id}`}
-                              className="text-white/90 no-underline hover:text-white truncate block w-full"
+                              className="text-white/90 no-underline hover:text-white flex items-center gap-1 w-full overflow-hidden"
                             >
                               {tag && (
                                 <span
-                                  className="text-[10px] font-bold px-1.5 py-0.5 mr-1.5 align-middle text-emerald-300"
+                                  className="text-[10px] font-bold px-1.5 py-0.5 align-middle text-emerald-300 shrink-0"
                                   style={{ background: 'rgba(34,224,161,0.12)', border: '1px solid rgba(34,224,161,0.3)' }}
                                 >
                                   📈 {tag}
                                 </span>
                               )}
-                              {p.title}
+                              <span className="truncate min-w-0 flex-1">{p.title}</span>
                               {p.comment_count && p.comment_count > 0 ? (
-                                <span className="text-cyan-400 font-bold ml-1">[{p.comment_count}]</span>
+                                <span className="text-cyan-400 font-bold shrink-0">[{p.comment_count}]</span>
                               ) : null}
                             </Link>
                             <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>

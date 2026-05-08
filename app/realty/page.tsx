@@ -107,11 +107,11 @@ export default async function RealtyPage() {
                         <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
                           <Link
                             href={`/realty/${p.id}`}
-                            className="text-white/90 no-underline hover:text-white truncate block w-full"
+                            className="text-white/90 no-underline hover:text-white flex items-center gap-1 w-full overflow-hidden"
                           >
-                            {p.title}
+                            <span className="truncate min-w-0 flex-1">{p.title}</span>
                             {p.comment_count && p.comment_count > 0 ? (
-                              <span className="text-amber-300 font-bold ml-1">[{p.comment_count}]</span>
+                              <span className="text-amber-300 font-bold shrink-0">[{p.comment_count}]</span>
                             ) : null}
                           </Link>
                           <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
