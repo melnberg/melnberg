@@ -252,7 +252,30 @@ export default function PostForm({ initial, category = 'community', redirectBase
         </label>
       )}
 
-      {/* 투표 — 새 글 작성 시에만 (수정에선 비활성) */}
+      {err && (
+        <div className="text-sm px-4 py-3 break-keep leading-relaxed bg-red-50 text-red-700 border border-red-200">
+          {err}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3 mt-2">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="bg-white border border-border text-text px-5 py-3 text-[13px] font-semibold tracking-wide cursor-pointer hover:border-navy hover:text-navy"
+        >
+          취소
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-navy text-white border-none px-6 py-3 text-[13px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? '저장 중...' : initial ? '수정하기 →' : '게시하기 →'}
+        </button>
+      </div>
+
+      {/* 투표 — 새 글 작성 시에만 (수정에선 비활성). 제일 아래로 배치. */}
       {!initial && (
         <div className="border border-border p-4 bg-bg/30">
           <label className="flex items-center gap-2.5 text-[13px] text-text cursor-pointer select-none">
@@ -366,29 +389,6 @@ export default function PostForm({ initial, category = 'community', redirectBase
           )}
         </div>
       )}
-
-      {err && (
-        <div className="text-sm px-4 py-3 break-keep leading-relaxed bg-red-50 text-red-700 border border-red-200">
-          {err}
-        </div>
-      )}
-
-      <div className="flex justify-end gap-3 mt-2">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="bg-white border border-border text-text px-5 py-3 text-[13px] font-semibold tracking-wide cursor-pointer hover:border-navy hover:text-navy"
-        >
-          취소
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-navy text-white border-none px-6 py-3 text-[13px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? '저장 중...' : initial ? '수정하기 →' : '게시하기 →'}
-        </button>
-      </div>
     </form>
   );
 }
