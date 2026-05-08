@@ -15,8 +15,23 @@ type NaverInfo = {
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
-  if (!code || !/^\d{6}$/.test(code)) {
-    return NextResponse.json({ error: '6자리 종목 코드 필요' }, { status: 400 });
+  if (!code) return NextResponse.json({ error: '종목 코드 필요' }, { status: 400 });
+  // 미국 ticker (알파벳) — Naver 미국 endpoint 응답 구조가 달라 단순 응답.
+  // 가격·차트·PER 등 미지원. ticker + (검색에서 받은) 이름만 카드에 표시.
+  if (/^[A-Z][A-Z0-9.\-]{0,9}$/i.test(code)) {
+    return NextResponse.json({
+      ok: true,
+      code: code.toUpperCase(),
+      name: null,
+      price: null, lastClose: null, open: null, high: null, low: null,
+      volume: null, marketCap: null, foreignRate: null,
+      per: null, eps: null, pbr: null, dividendYield: null,
+      high52: null, low52: null, history: [],
+      foreign: true,
+    });
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return NextResponse.json({ error: '6자리 종목 코드 또는 알파벳 ticker 필요' }, { status: 400 });
   }
   try {
     const r = await fetch(`https://m.stock.naver.com/api/stock/${code}/integration`, {
