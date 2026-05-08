@@ -1,4 +1,4 @@
-// 코인 메이저 4종 — 다크 + 골드/오렌지/퍼플 그라디언트 (코인 게시판 톤).
+// 코인 메이저 4종 — 라이트 프리미엄. 화이트 카드 + 코인별 시그니처 컬러 라인.
 import type { CoinIndex } from '@/lib/coin-snapshot';
 
 function fmtKrw(n: number): string {
@@ -25,21 +25,22 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full h-full">
       <defs>
         <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.24" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       <polygon points={areaPts} fill={`url(#${gid})`} />
-      <polyline points={points} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 5px ${color}90)` }} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
 
-const SYMBOL_GRAD: Record<string, string> = {
-  'KRW-BTC': 'linear-gradient(135deg, rgba(247,147,26,0.12), rgba(255,200,80,0.04))',
-  'KRW-ETH': 'linear-gradient(135deg, rgba(140,160,255,0.12), rgba(110,90,255,0.04))',
-  'KRW-XRP': 'linear-gradient(135deg, rgba(0,200,200,0.12), rgba(80,180,255,0.04))',
-  'KRW-DOGE': 'linear-gradient(135deg, rgba(255,210,80,0.12), rgba(220,160,40,0.04))',
+// 코인별 시그니처 — 상단 라인 색
+const SYMBOL_COLOR: Record<string, string> = {
+  'KRW-BTC': '#f7931a',  // 비트 오렌지
+  'KRW-ETH': '#627eea',  // 이더 블루퍼플
+  'KRW-XRP': '#23292f',  // 리플 그라파이트
+  'KRW-DOGE': '#c2a633', // 도지 골드
 };
 
 export default function CoinTickerBar({ indices }: { indices: CoinIndex[] }) {
@@ -48,35 +49,34 @@ export default function CoinTickerBar({ indices }: { indices: CoinIndex[] }) {
       {indices.map((c) => {
         const up = c.changePct != null && c.changePct > 0;
         const down = c.changePct != null && c.changePct < 0;
-        const color = up ? '#22e0a1' : down ? '#ff4f6d' : '#7d8aa0';
+        const change = up ? '#dc2626' : down ? '#2563eb' : '#9ca3af';
         const arrow = up ? '▲' : down ? '▼' : '–';
         const sym = c.code.replace('KRW-', '');
+        const sigColor = SYMBOL_COLOR[c.code] ?? '#999';
         return (
           <div
             key={c.code}
-            className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all"
-            style={{
-              background: SYMBOL_GRAD[c.code] ?? 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
-              backdropFilter: 'blur(6px)',
-            }}
+            className="relative px-4 py-3 overflow-hidden bg-white border border-border hover:border-navy hover:shadow-[0_4px_20px_rgba(0,32,96,0.08)] transition-all duration-200"
           >
-            <div className="flex items-baseline justify-between gap-2 mb-1.5">
+            {/* 시그니처 컬러 라인 */}
+            <div aria-hidden className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: sigColor }} />
+            <div className="flex items-baseline justify-between gap-2 mb-1.5 mt-1">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-[11px] font-bold tracking-widest uppercase text-white/80">{c.name}</span>
-                <span className="text-[10px] text-white/40">{sym}</span>
+                <span className="text-[11px] font-bold tracking-widest uppercase text-navy/80">{c.name}</span>
+                <span className="text-[10px] text-muted">{sym}</span>
               </div>
               {c.changePct != null && (
-                <span className="text-[12px] font-bold tabular-nums" style={{ color, textShadow: `0 0 8px ${color}80` }}>
+                <span className="text-[12px] font-bold tabular-nums" style={{ color: change }}>
                   {arrow} {Math.abs(c.changePct).toFixed(2)}%
                 </span>
               )}
             </div>
             <div className="flex items-end justify-between gap-2">
-              <span className="text-[18px] lg:text-[20px] font-bold tabular-nums text-white leading-none">
+              <span className="text-[18px] lg:text-[20px] font-bold tabular-nums text-text leading-none">
                 {c.price != null ? `₩${fmtKrw(c.price)}` : '—'}
               </span>
               <div className="w-[110px] h-[34px] flex-shrink-0 -mb-1">
-                <Sparkline data={c.history} color={color} />
+                <Sparkline data={c.history} color={change} />
               </div>
             </div>
           </div>

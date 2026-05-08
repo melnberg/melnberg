@@ -93,69 +93,66 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
         { label: post.title, bold: true },
       ]} meta="Realty" />
 
-      <div className="relative" style={{ background: 'linear-gradient(180deg, #0f0a07 0%, #1a120e 60%, #1f1812 100%)', colorScheme: 'dark' }}>
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #fbf7ee 100%)' }}>
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
-               style={{ background: 'radial-gradient(circle, #ffd16655, transparent 70%)' }} />
-          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-25 blur-3xl"
-               style={{ background: 'radial-gradient(circle, #c9444455, transparent 70%)' }} />
+          <div className="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full opacity-50 blur-3xl"
+               style={{ background: 'radial-gradient(circle, rgba(201,162,39,0.16), transparent 70%)' }} />
+          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-40 blur-3xl"
+               style={{ background: 'radial-gradient(circle, rgba(214,51,108,0.12), transparent 70%)' }} />
         </div>
 
         <article className="relative pt-10 pb-16">
           <div className="max-w-[760px] mx-auto px-6">
-            <header className="pb-6 mb-6 border-b border-white/15">
+            <header className="pb-6 mb-6 border-b border-border">
               <div className="flex items-center gap-2 flex-wrap mb-3">
                 <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5"
-                      style={{ background: 'rgba(255,209,102,0.12)', border: '1px solid rgba(255,209,102,0.3)', color: '#ffd166' }}>🏢 REALTY</span>
+                      style={{ background: 'rgba(201,162,39,0.12)', border: '1px solid rgba(201,162,39,0.4)', color: '#a07f1b' }}>🏢 REALTY</span>
               </div>
-              <h1 className="text-[28px] lg:text-[34px] font-black text-white tracking-tight leading-tight mb-3 break-keep"
-                  style={{ textShadow: '0 0 30px rgba(255,209,102,0.3)' }}>{post.title}</h1>
-              <div className="flex items-center gap-3 text-[12px] flex-wrap" style={{ color: '#fde68a' }}>
-                <span className="font-bold">
+              <h1 className="text-[28px] lg:text-[34px] font-black text-navy tracking-tight leading-tight mb-3 break-keep">
+                {post.title}
+              </h1>
+              <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
+                <span className="font-bold text-navy">
                   <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
                 </span>
-                <span className="text-white/40">·</span>
-                <span className="text-white/60">{formatRelativeKo(post.created_at)}</span>
-                {post.updated_at !== post.created_at && (<><span className="text-white/40">·</span><span className="text-white/60">수정됨</span></>)}
-                {postEarned > 0 && (<><span className="text-white/40">·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
-                {isAuthor && (<><span className="text-white/40">·</span><PostActions postId={post.id} basePath="/realty" /></>)}
+                <span>·</span>
+                <span>{formatRelativeKo(post.created_at)}</span>
+                {post.updated_at !== post.created_at && (<><span>·</span><span>수정됨</span></>)}
+                {postEarned > 0 && (<><span>·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
+                {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath="/realty" /></>)}
               </div>
             </header>
 
-            <div className="px-6 lg:px-8 py-8 border border-white/10 mb-3"
-                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap text-white/90 mb-6">
-                {linkify(post.content)}
-              </div>
+            <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-6 text-text">
+              {linkify(post.content)}
+            </div>
+            <div className="mb-12">
               <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
             </div>
 
-            <div className="dark-section px-6 lg:px-8 py-6 border border-white/10"
-                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              {pollData.poll && (
-                <PollWidget
-                  postId={post.id}
-                  poll={pollData.poll}
-                  options={pollData.options}
-                  votes={pollData.votes}
-                  myVote={pollData.myVote}
-                  voters={pollData.voters}
-                  currentUserId={user?.id ?? null}
-                  isAuthor={isAuthor}
-                />
-              )}
-
-              <CommentSection
+            {pollData.poll && (
+              <PollWidget
                 postId={post.id}
-                comments={comments}
+                poll={pollData.poll}
+                options={pollData.options}
+                votes={pollData.votes}
+                myVote={pollData.myVote}
+                voters={pollData.voters}
                 currentUserId={user?.id ?? null}
-                currentUserName={currentUserName}
-                postCategory="community"
+                isAuthor={isAuthor}
               />
-            </div>
+            )}
 
-            <div className="mt-8 flex justify-between items-center">
-              <Link href="/realty" className="text-[13px] font-bold text-amber-200 no-underline hover:text-amber-100">
+            <CommentSection
+              postId={post.id}
+              comments={comments}
+              currentUserId={user?.id ?? null}
+              currentUserName={currentUserName}
+              postCategory="community"
+            />
+
+            <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
+              <Link href="/realty" className="text-[13px] font-bold text-navy no-underline hover:underline">
                 ← 목록으로
               </Link>
             </div>

@@ -1,4 +1,4 @@
-// 인기 코인 — 최근 14일 coin 글에서 가장 많이 언급된 KRW 마켓 top N.
+// 인기 코인 — 라이트 프리미엄.
 import Link from 'next/link';
 import type { HotCoin } from '@/lib/coin-snapshot';
 
@@ -26,12 +26,12 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full h-full">
       <defs>
         <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.24" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       <polygon points={areaPts} fill={`url(#${gid})`} />
-      <polyline points={points} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" style={{ filter: `drop-shadow(0 0 5px ${color}90)` }} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
@@ -41,14 +41,14 @@ export default function HotCoinsSection({ coins }: { coins: HotCoin[] }) {
   return (
     <div className="mb-6">
       <div className="flex items-baseline gap-2 mb-3">
-        <h2 className="text-[15px] font-bold text-white tracking-tight">🚀 떡상 코인</h2>
-        <span className="text-[11px] text-white/50">최근 14일 토론 많은 순</span>
+        <h2 className="text-[15px] font-bold text-navy tracking-tight">🚀 떡상 코인</h2>
+        <span className="text-[11px] text-muted">최근 14일 토론 많은 순</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
         {coins.map((s, i) => {
           const up = s.changePct != null && s.changePct > 0;
           const down = s.changePct != null && s.changePct < 0;
-          const color = up ? '#22e0a1' : down ? '#ff4f6d' : '#7d8aa0';
+          const color = up ? '#dc2626' : down ? '#2563eb' : '#9ca3af';
           const arrow = up ? '▲' : down ? '▼' : '–';
           const sym = s.code.replace('KRW-', '');
           return (
@@ -56,29 +56,27 @@ export default function HotCoinsSection({ coins }: { coins: HotCoin[] }) {
               key={s.code}
               href={`/coin?tag=${encodeURIComponent(s.code)}`}
               scroll={false}
-              className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all no-underline block"
-              style={{
-                background: 'linear-gradient(135deg, rgba(247,147,26,0.06), rgba(255,255,255,0.012))',
-                backdropFilter: 'blur(6px)',
-              }}
+              className="relative px-4 py-3 overflow-hidden bg-white border border-border hover:border-navy hover:shadow-[0_6px_24px_rgba(0,32,96,0.1)] transition-all duration-200 no-underline block"
             >
+              <div aria-hidden className="absolute top-0 left-0 right-0 h-px"
+                   style={{ background: 'linear-gradient(90deg, transparent, rgba(247,147,26,0.5), transparent)' }} />
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] font-bold tabular-nums text-white/40 w-4 shrink-0">#{i + 1}</span>
-                  <span className="text-[14px] font-bold text-white truncate">{s.name}</span>
-                  <span className="text-[10px] text-white/40 tabular-nums shrink-0">{sym}</span>
+                  <span className="text-[10px] font-bold tabular-nums text-[#f7931a] w-4 shrink-0">#{i + 1}</span>
+                  <span className="text-[14px] font-bold text-navy truncate">{s.name}</span>
+                  <span className="text-[10px] text-muted tabular-nums shrink-0">{sym}</span>
                 </div>
-                <span className="text-[10px] font-bold bg-white/10 text-white px-1.5 py-0.5 shrink-0 rounded-sm">
+                <span className="text-[10px] font-bold bg-[#f7931a]/10 text-[#b56700] px-1.5 py-0.5 shrink-0">
                   💬 {s.postCount}
                 </span>
               </div>
               <div className="flex items-end justify-between gap-2">
                 <div className="flex flex-col">
-                  <span className="text-[16px] font-bold tabular-nums text-white leading-tight">
+                  <span className="text-[16px] font-bold tabular-nums text-text leading-tight">
                     {s.price != null ? `₩${fmtKrw(s.price)}` : '—'}
                   </span>
                   {s.changePct != null && (
-                    <span className="text-[12px] font-bold tabular-nums leading-tight" style={{ color, textShadow: `0 0 6px ${color}80` }}>
+                    <span className="text-[12px] font-bold tabular-nums leading-tight" style={{ color }}>
                       {arrow} {Math.abs(s.changePct).toFixed(2)}%
                     </span>
                   )}

@@ -94,86 +94,83 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
         { label: post.title, bold: true },
       ]} meta="Stocks" />
 
-      <div className="relative" style={{ background: 'linear-gradient(180deg, #050913 0%, #0a1226 60%, #0d1933 100%)', colorScheme: 'dark' }}>
-        {/* 후광 */}
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%)' }}>
+        {/* 후광 — 미세 시안/에메랄드 */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
-               style={{ background: 'radial-gradient(circle, #2563eb55, transparent 70%)' }} />
-          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-25 blur-3xl"
-               style={{ background: 'radial-gradient(circle, #00d4ff55, transparent 70%)' }} />
+          <div className="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full opacity-40 blur-3xl"
+               style={{ background: 'radial-gradient(circle, rgba(0,212,255,0.16), transparent 70%)' }} />
+          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-30 blur-3xl"
+               style={{ background: 'radial-gradient(circle, rgba(34,224,161,0.12), transparent 70%)' }} />
         </div>
 
         <article className="relative pt-10 pb-16">
           <div className="max-w-[760px] mx-auto px-6">
-            {/* HERO — 다크 */}
-            <header className="pb-6 mb-6 border-b border-white/15">
+            {/* HERO — 라이트 프리미엄 */}
+            <header className="pb-6 mb-6 border-b border-border">
               <div className="flex items-center gap-2 flex-wrap mb-3">
-                <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 text-emerald-300"
-                      style={{ background: 'rgba(34,224,161,0.12)', border: '1px solid rgba(34,224,161,0.3)' }}>📈 STOCKS</span>
+                <span className="inline-block text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 text-navy"
+                      style={{ background: 'rgba(34,224,161,0.12)', border: '1px solid rgba(34,224,161,0.4)' }}>📈 STOCKS</span>
                 {(post.stock_name || post.stock_code) && (
-                  <span className="inline-block text-[11px] font-bold px-2 py-0.5 text-cyan-200"
-                        style={{ background: 'rgba(0,212,255,0.12)', border: '1px solid rgba(0,212,255,0.3)' }}>
+                  <span className="inline-block text-[11px] font-bold px-2 py-0.5 text-navy"
+                        style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.35)' }}>
                     {post.stock_name || post.stock_code}
                   </span>
                 )}
               </div>
-              <h1 className="text-[28px] lg:text-[34px] font-black text-white tracking-tight leading-tight mb-3 break-keep"
-                  style={{ textShadow: '0 0 30px rgba(34,224,161,0.2)' }}>{post.title}</h1>
-              <div className="flex items-center gap-3 text-[12px] flex-wrap" style={{ color: '#67e8f9' }}>
-                <span className="font-bold">
+              <h1 className="text-[28px] lg:text-[34px] font-black text-navy tracking-tight leading-tight mb-3 break-keep">
+                {post.title}
+              </h1>
+              <div className="flex items-center gap-3 text-[12px] text-muted flex-wrap">
+                <span className="font-bold text-navy">
                   <Nickname info={profileToNicknameInfo(post.author, post.author_id)} />
                 </span>
-                <span className="text-white/40">·</span>
-                <span className="text-white/60">{formatRelativeKo(post.created_at)}</span>
-                {post.updated_at !== post.created_at && (<><span className="text-white/40">·</span><span className="text-white/60">수정됨</span></>)}
-                {postEarned > 0 && (<><span className="text-white/40">·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
-                {isAuthor && (<><span className="text-white/40">·</span><PostActions postId={post.id} basePath="/stocks" /></>)}
+                <span>·</span>
+                <span>{formatRelativeKo(post.created_at)}</span>
+                {post.updated_at !== post.created_at && (<><span>·</span><span>수정됨</span></>)}
+                {postEarned > 0 && (<><span>·</span><RewardTooltip earned={postEarned} kind="community_post" /></>)}
+                {isAuthor && (<><span>·</span><PostActions postId={post.id} basePath="/stocks" /></>)}
               </div>
             </header>
 
             {/* 차트 카드 */}
             {post.stock_code && (/^\d{6}$/.test(post.stock_code) || /^[A-Z][A-Z0-9.\-]{0,9}$/i.test(post.stock_code)) && (
               <div className="mb-6">
-                <StockInfoCard code={post.stock_code} theme="dark" />
+                <StockInfoCard code={post.stock_code} />
               </div>
             )}
 
-            {/* 본문 — 다크 글래스. 좋아요는 본문 좌측 하단. */}
-            <div className="px-6 lg:px-8 py-8 border border-white/10 mb-3"
-                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap text-white/90 mb-6">
-                {linkify(post.content)}
-              </div>
+            {/* 본문 + 좋아요 */}
+            <div className="text-[15px] leading-loose break-keep whitespace-pre-wrap mb-6 text-text">
+              {linkify(post.content)}
+            </div>
+            <div className="mb-12">
               <PostLikeButton postId={post.id} initialCount={post.like_count ?? 0} />
             </div>
 
-            {/* 폴/댓글 — 다크 그대로, dark-section 클래스로 내부 텍스트 색상 일괄 오버라이드 */}
-            <div className="dark-section px-6 lg:px-8 py-6 border border-white/10"
-                 style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))', backdropFilter: 'blur(6px)' }}>
-              {pollData.poll && (
-                <PollWidget
-                  postId={post.id}
-                  poll={pollData.poll}
-                  options={pollData.options}
-                  votes={pollData.votes}
-                  myVote={pollData.myVote}
-                  voters={pollData.voters}
-                  currentUserId={user?.id ?? null}
-                  isAuthor={isAuthor}
-                />
-              )}
-
-              <CommentSection
+            {/* 폴/댓글 */}
+            {pollData.poll && (
+              <PollWidget
                 postId={post.id}
-                comments={comments}
+                poll={pollData.poll}
+                options={pollData.options}
+                votes={pollData.votes}
+                myVote={pollData.myVote}
+                voters={pollData.voters}
                 currentUserId={user?.id ?? null}
-                currentUserName={currentUserName}
-                postCategory="community"
+                isAuthor={isAuthor}
               />
-            </div>
+            )}
 
-            <div className="mt-8 flex justify-between items-center">
-              <Link href="/stocks" className="text-[13px] font-bold text-emerald-300 no-underline hover:text-emerald-200">
+            <CommentSection
+              postId={post.id}
+              comments={comments}
+              currentUserId={user?.id ?? null}
+              currentUserName={currentUserName}
+              postCategory="community"
+            />
+
+            <div className="mt-10 pt-6 border-t border-border flex justify-between items-center">
+              <Link href="/stocks" className="text-[13px] font-bold text-navy no-underline hover:underline">
                 ← 목록으로
               </Link>
             </div>

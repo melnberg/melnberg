@@ -1,11 +1,11 @@
-// 부동산 게시판 헤더 — 4개 스탯 카드 (다크 + 골드/장미/하늘/에메랄드 액센트).
+// 부동산 게시판 헤더 — 4개 스탯 카드. 라이트 프리미엄, 액센트별 상단 라인.
 import type { RealtyStat } from '@/lib/realty-snapshot';
 
-const ACCENTS: Record<RealtyStat['accent'], { color: string; bg: string }> = {
-  gold:    { color: '#ffd166', bg: 'linear-gradient(135deg, rgba(255,209,102,0.12), rgba(255,255,255,0.012))' },
-  rose:    { color: '#ff6b9b', bg: 'linear-gradient(135deg, rgba(255,107,155,0.12), rgba(255,255,255,0.012))' },
-  azure:   { color: '#79bdff', bg: 'linear-gradient(135deg, rgba(121,189,255,0.12), rgba(255,255,255,0.012))' },
-  emerald: { color: '#22e0a1', bg: 'linear-gradient(135deg, rgba(34,224,161,0.12), rgba(255,255,255,0.012))' },
+const ACCENTS: Record<RealtyStat['accent'], { color: string; tint: string }> = {
+  gold:    { color: '#c9a227', tint: '#fff8e1' },
+  rose:    { color: '#d6336c', tint: '#fff0f3' },
+  azure:   { color: '#1971c2', tint: '#e7f5ff' },
+  emerald: { color: '#0a8a3f', tint: '#ecfdf5' },
 };
 
 export default function RealtyStatsBar({ stats }: { stats: RealtyStat[] }) {
@@ -16,17 +16,17 @@ export default function RealtyStatsBar({ stats }: { stats: RealtyStat[] }) {
         return (
           <div
             key={s.label}
-            className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all"
-            style={{ background: a.bg, backdropFilter: 'blur(6px)' }}
+            className="relative px-4 py-3 overflow-hidden bg-white border border-border hover:border-navy hover:shadow-[0_4px_20px_rgba(0,32,96,0.08)] transition-all duration-200"
           >
-            <div className="flex items-baseline justify-between gap-2 mb-1.5">
-              <span className="text-[11px] font-bold tracking-widest uppercase text-white/70">{s.label}</span>
-              <span className="text-[10px] font-bold tracking-widest" style={{ color: a.color, textShadow: `0 0 6px ${a.color}80` }}>
+            {/* 액센트 상단 라인 */}
+            <div aria-hidden className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: a.color }} />
+            <div className="flex items-baseline justify-between gap-2 mb-1.5 mt-1">
+              <span className="text-[11px] font-bold tracking-widest uppercase text-navy/70">{s.label}</span>
+              <span className="text-[10px] font-bold tracking-widest px-1.5 py-px" style={{ color: a.color, background: a.tint }}>
                 {s.sub}
               </span>
             </div>
-            <div className="text-[24px] lg:text-[28px] font-black tabular-nums text-white leading-none"
-                 style={{ textShadow: `0 0 20px ${a.color}40` }}>
+            <div className="text-[24px] lg:text-[28px] font-black tabular-nums text-text leading-none">
               {s.value}
             </div>
           </div>
