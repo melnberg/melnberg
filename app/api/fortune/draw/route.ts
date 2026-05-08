@@ -1,12 +1,13 @@
 // 포춘쿠키 — 오늘의 운세 뽑기. 1일 1회 (KST 기준) 한정.
 // POST /api/fortune/draw — 사용자 인증 필수. 오늘치 있으면 그거 반환, 없으면 새로 뽑음.
+// 생성 전략: OpenAI gpt-5-mini 로 매번 새 문장 생성 → 실패 시 하드코딩 50개에서 결정적 선택.
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
-// 50개 운세 — 재미있고 구체적. 자산·관계·사소한 일상 사건 mix.
+// AI 호출 실패 시 fallback 50개. 같은 사용자+같은 날 = 항상 같은 문장.
 const FORTUNES: string[] = [
   '오늘 점심에 평소 안 가던 식당이 인생 식당으로 등극함. 메뉴는 직원 추천 따라가야 함.',
   '오후 3시쯤 친한 사람한테 의외의 메시지 옴. 답장은 5분 안에 해야 운 살아남.',
@@ -60,6 +61,57 @@ const FORTUNES: string[] = [
   '오늘은 답장 안 온 사람한테 두 번 보내지 말 것. 내일 알아서 옴.',
 ];
 
+// OpenAI gpt-5-mini 로 매번 새 운세 1건 생성. 사용자 간·일자 간 중복 0.
+// 실패 (키 없음·네트워크·rate limit) 시 null → 호출자가 fallback 사용.
+async function generateFortuneWithAI(): Promise<string | null> {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const SYSTEM = `너는 한국어 포춘쿠키 작가야. 한 문장으로 오늘의 운세를 뽑아줘.
+
+요구사항:
+- 한 문장, 50~120자.
+- 음슴체 종결 ("~함", "~됨", "~할 것").
+- 구체적인 시간·사물·행동을 하나 이상 포함 (예: "오후 3시", "엘리베이터", "점심 메뉴", "카톡 답장", "영수증").
+- 재미있고 약간 위트 있게. 너무 추상적·뻔한 운세 금지.
+- 자산·관계·일상·먹거리·우연 중 하나 골라서.
+- "오늘"·"오후"·"저녁" 등 시간대 다양하게.
+- 출력은 운세 한 문장만. 따옴표·번호·해설 없이.
+
+좋은 예:
+- "오늘 점심에 평소 안 가던 식당이 인생 식당으로 등극함. 메뉴는 직원 추천 따라가야 함."
+- "엘리베이터에서 우연히 만난 사람과의 대화에서 좋은 정보 하나 줍는 날."
+- "오후 4시쯤 맞은 햇살 5분이 오늘 비타민. 안 받으면 저녁부터 처짐."`;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: SYSTEM },
+          { role: 'user', content: '오늘의 운세 한 문장.' },
+        ],
+        max_completion_tokens: 200,
+      }),
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const j = await res.json();
+    const raw = j?.choices?.[0]?.message?.content;
+    if (typeof raw !== 'string') return null;
+    const text = raw.trim().replace(/^["「『]/, '').replace(/["」』]$/, '').trim();
+    if (text.length < 20 || text.length > 300) return null;
+    return text;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -80,13 +132,17 @@ export async function POST() {
     return NextResponse.json({ ok: true, already: true, fortune: existing });
   }
 
-  // 새로 뽑기 — 인덱스는 (user_id + 날짜) 해시 기반 결정적, 같은 날 같은 사용자는 항상 같은 결과
-  // (테이블 unique 가 막아주지만 충돌 시 같은 운세로 자연 폴백)
-  let hash = 0;
-  const seed = `${user.id}-${today}`;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
-  const idx = ((hash % FORTUNES.length) + FORTUNES.length) % FORTUNES.length;
-  const fortune = FORTUNES[idx];
+  // AI 생성 우선 — 매 호출마다 새 문장. 사용자 간 중복 0.
+  let fortune = await generateFortuneWithAI();
+
+  // AI 실패 시 fallback — (user_id + 날짜) 해시 기반 결정적 선택.
+  if (!fortune) {
+    let hash = 0;
+    const seed = `${user.id}-${today}`;
+    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+    const idx = ((hash % FORTUNES.length) + FORTUNES.length) % FORTUNES.length;
+    fortune = FORTUNES[idx];
+  }
 
   const { data: row, error } = await supabase
     .from('fortune_cookies')
