@@ -5,6 +5,9 @@ import { listPosts, formatBoardTime } from '@/lib/community';
 import { getCurrentUser } from '@/lib/auth';
 import Nickname from '@/components/Nickname';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
+import RealtyStatsBar from '@/components/RealtyStatsBar';
+import HotAptsSection from '@/components/HotAptsSection';
+import { fetchRealtyStats, fetchHotApts } from '@/lib/realty-snapshot';
 
 export const metadata = {
   title: '부동산 토론 — 멜른버그',
@@ -13,97 +16,133 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
+// 다크 럭셔리 — 짙은 갈색/와인 + 골드 액센트 (부동산/감정평가소 톤)
+const REALTY_BG = 'linear-gradient(180deg, #0f0a07 0%, #1a120e 60%, #1f1812 100%)';
+
 export default async function RealtyPage() {
-  const [posts, user] = await Promise.all([listPosts('realty'), getCurrentUser()]);
+  const [posts, user, stats, hotApts] = await Promise.all([
+    listPosts('realty'),
+    getCurrentUser(),
+    fetchRealtyStats(),
+    fetchHotApts(6),
+  ]);
 
   return (
     <Layout current="realty">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/realty', label: '부동산 토론', bold: true }]} meta="Realty" />
 
-      <section className="pt-8 lg:pt-14 pb-2">
-        <div className="max-w-content mx-auto px-4 lg:px-10">
-          <div className="flex items-center justify-between gap-4 pb-3 border-b-2 border-cyan">
-            <div>
-              <h1 className="text-[24px] lg:text-[32px] font-bold text-navy tracking-tight">🏢 부동산 토론</h1>
-              <p className="text-[12px] text-muted mt-1">부동산 시장·정책·매매 자유 토론. 보상은 일반 커뮤글과 동일.</p>
-            </div>
-            {user && (
-              <Link
-                href="/realty/new"
-                className="bg-cyan text-navy px-4 lg:px-5 py-2 lg:py-2.5 text-[12px] lg:text-[13px] font-bold tracking-wider no-underline hover:bg-cyan/80 flex-shrink-0"
-              >
-                글쓰기 →
-              </Link>
-            )}
-          </div>
+      <div style={{ background: REALTY_BG }} className="relative">
+        {/* 후광 — 골드/와인 */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
+               style={{ background: 'radial-gradient(circle, #ffd16655, transparent 70%)' }} />
+          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-25 blur-3xl"
+               style={{ background: 'radial-gradient(circle, #c9444455, transparent 70%)' }} />
         </div>
-      </section>
 
-      <section className="py-6">
-        <div className="max-w-content mx-auto px-4 lg:px-10">
-          <div className="mb-4 px-4 py-3 bg-cyan/5 border border-cyan/30 text-[12px] leading-relaxed text-text">
-            <b className="text-navy">부동산 토론 부여 규칙</b>
-            <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
-              <li>글 작성: <b>+2 mlbg</b> · 댓글: <b>+0.5 mlbg</b> · 게시글 농사 +0.5 mlbg</li>
-              <li>주제 자유 — 시장·정책·청약·재건축·임대 등</li>
-            </ul>
-          </div>
-          {posts.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-muted text-[15px] mb-6">아직 게시된 글이 없습니다.</p>
-              {user ? (
-                <Link href="/realty/new" className="inline-block bg-cyan text-navy px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-cyan/80">
-                  첫 글 쓰기 →
-                </Link>
-              ) : (
-                <Link href="/login?next=/realty/new" className="inline-block border-2 border-cyan text-navy px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-cyan hover:text-navy">
-                  로그인하고 글쓰기
+        {/* HERO */}
+        <section className="relative pt-10 lg:pt-16 pb-6">
+          <div className="max-w-content mx-auto px-4 lg:px-10">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <div className="text-[11px] font-bold tracking-[0.3em] uppercase text-amber-200/80 mb-2">MELNBERG · PROPERTY</div>
+                <h1 className="text-[28px] lg:text-[42px] font-black text-white tracking-tight leading-none"
+                    style={{ textShadow: '0 0 30px rgba(255,209,102,0.3)' }}>
+                  🏢 REALTY <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(90deg, #ffd166, #c94444)' }}>SQUARE</span>
+                </h1>
+                <p className="text-[12px] text-white/60 mt-2">실거래·매물·경매·정책 통합 보드. 단지 토론은 메인 지도에서.</p>
+              </div>
+              {user && (
+                <Link
+                  href="/realty/new"
+                  className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-black flex-shrink-0"
+                  style={{ background: 'linear-gradient(90deg, #ffd166, #c94444)', boxShadow: '0 4px 24px rgba(255,209,102,0.35)' }}
+                >
+                  글쓰기 →
                 </Link>
               )}
             </div>
-          ) : (
-            <table className="w-full text-[13px] border-collapse table-fixed">
-              <thead>
-                <tr className="bg-cyan/10 border-y border-cyan text-navy">
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-16">번호</th>
-                  <th className="py-2.5 px-2 lg:px-3 font-semibold text-left">제목</th>
-                  <th className="py-2.5 px-2 font-semibold text-left w-[150px] lg:w-40">작성자</th>
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-24">작성일</th>
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14">추천</th>
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14">조회</th>
-                </tr>
-              </thead>
-              <tbody>
-                {posts.map((p) => (
-                  <tr key={p.id} className="border-b border-border hover:bg-cyan/5 transition-colors">
-                    <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.id}</td>
-                    <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
-                      <Link
-                        href={`/realty/${p.id}`}
-                        className="text-text no-underline hover:text-navy hover:underline truncate block w-full"
-                      >
-                        {p.title}
-                        {p.comment_count && p.comment_count > 0 ? (
-                          <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
-                        ) : null}
-                      </Link>
-                      <div className="lg:hidden text-[10px] text-muted tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
-                    </td>
-                    <td className="py-2.5 px-2 text-left text-navy font-semibold relative overflow-visible">
-                      <span className="inline-flex max-w-full truncate">
-                        <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
-                      </span>
-                    </td>
-                    <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{formatBoardTime(p.created_at)}</td>
-                    <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.like_count ?? 0}</td>
-                    <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.view_count ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+
+        <section className="relative pb-10">
+          <div className="max-w-content mx-auto px-4 lg:px-10">
+            <RealtyStatsBar stats={stats} />
+            <HotAptsSection apts={hotApts} />
+
+            {posts.length === 0 ? (
+              <div className="text-center py-20 border border-white/10 bg-white/[0.02]">
+                <p className="text-white/60 text-[15px] mb-6">아직 게시된 글이 없습니다.</p>
+                {user ? (
+                  <Link href="/realty/new" className="inline-block bg-white text-black px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-white/80">
+                    첫 글 쓰기 →
+                  </Link>
+                ) : (
+                  <Link href="/login?next=/realty/new" className="inline-block border border-white text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-white hover:text-black">
+                    로그인하고 글쓰기
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="px-4 py-2.5 border-b border-white/10 flex items-baseline gap-2">
+                  <h2 className="text-[13px] font-bold text-white tracking-tight">💬 토론</h2>
+                  <span className="text-[11px] text-white/40">{posts.length}건</span>
+                </div>
+                <table className="w-full text-[13px] border-collapse table-fixed">
+                  <thead>
+                    <tr className="border-b border-white/10 text-white/60">
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-16 text-[10px] tracking-widest uppercase">#</th>
+                      <th className="py-2.5 px-2 lg:px-3 font-semibold text-left text-[10px] tracking-widest uppercase">제목</th>
+                      <th className="py-2.5 px-2 font-semibold text-left w-[150px] lg:w-40 text-[10px] tracking-widest uppercase">작성자</th>
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-24 text-[10px] tracking-widest uppercase">작성일</th>
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14 text-[10px] tracking-widest uppercase">♥</th>
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14 text-[10px] tracking-widest uppercase">👁</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {posts.map((p) => (
+                      <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.04] transition-colors">
+                        <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/40 tabular-nums">{p.id}</td>
+                        <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
+                          <Link
+                            href={`/realty/${p.id}`}
+                            className="text-white/90 no-underline hover:text-white truncate block w-full"
+                          >
+                            {p.title}
+                            {p.comment_count && p.comment_count > 0 ? (
+                              <span className="text-amber-300 font-bold ml-1">[{p.comment_count}]</span>
+                            ) : null}
+                          </Link>
+                          <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
+                        </td>
+                        <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible">
+                          <span className="inline-flex max-w-full truncate text-amber-200">
+                            <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
+                          </span>
+                        </td>
+                        <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/40 tabular-nums">{formatBoardTime(p.created_at)}</td>
+                        <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/50 tabular-nums">{p.like_count ?? 0}</td>
+                        <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/40 tabular-nums">{p.view_count ?? 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-4 px-4 py-3 border border-white/10 text-[12px] leading-relaxed text-white/70" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <b className="text-amber-300">REWARDS</b>
+              <span className="text-white/40 mx-2">·</span>
+              글 작성 <b className="text-white">+2 mlbg</b>
+              <span className="text-white/40 mx-2">/</span>
+              댓글 <b className="text-white">+0.5</b>
+              <span className="text-white/40 mx-2">/</span>
+              게시글 농사 <b className="text-white">+0.5</b>
+            </div>
+          </div>
+        </section>
+      </div>
     </Layout>
   );
 }

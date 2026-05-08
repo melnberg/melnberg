@@ -16,6 +16,9 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
+// 다크 프리미엄 테마 — 톤앤매너 무시 (사용자 명시 허락)
+const STOCKS_BG = 'linear-gradient(180deg, #050913 0%, #0a1226 60%, #0d1933 100%)';
+
 export default async function StocksPage() {
   const [posts, user, indices] = await Promise.all([
     listPosts('stocks'),
@@ -32,102 +35,135 @@ export default async function StocksPage() {
     <Layout current="stocks">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/stocks', label: '주식 토론', bold: true }]} meta="Stocks" />
 
-      <section className="pt-8 lg:pt-14 pb-2">
-        <div className="max-w-content mx-auto px-4 lg:px-10">
-          <div className="flex items-center justify-between gap-4 pb-3 border-b-2 border-cyan">
-            <div>
-              <h1 className="text-[24px] lg:text-[32px] font-bold text-navy tracking-tight">📈 주식 토론</h1>
-              <p className="text-[12px] text-muted mt-1">종목·시황 자유 토론. 종목 태그는 선택사항. 보상은 일반 커뮤글과 동일.</p>
-            </div>
-            {user && (
-              <Link
-                href="/stocks/new"
-                className="bg-cyan text-navy px-4 lg:px-5 py-2 lg:py-2.5 text-[12px] lg:text-[13px] font-bold tracking-wider no-underline hover:bg-cyan/80 flex-shrink-0"
-              >
-                글쓰기 →
-              </Link>
-            )}
-          </div>
+      <div style={{ background: STOCKS_BG }} className="relative">
+        {/* 후광 효과 — 보라/시안 */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
+               style={{ background: 'radial-gradient(circle, #2563eb55, transparent 70%)' }} />
+          <div className="absolute top-20 right-0 w-[420px] h-[420px] rounded-full opacity-25 blur-3xl"
+               style={{ background: 'radial-gradient(circle, #00d4ff55, transparent 70%)' }} />
         </div>
-      </section>
 
-      <section className="py-6">
-        <div className="max-w-content mx-auto px-4 lg:px-10">
-          {/* 마켓 인덱스 — 코스피·코스닥·SP500·BTC */}
-          <MarketTickerBar indices={indices} />
-
-          {/* 인기 종목 — 최근 14일 토론 많은 순 */}
-          <HotStocksSection stocks={hot} />
-
-          <div className="mb-4 px-4 py-3 bg-cyan/5 border border-cyan/30 text-[12px] leading-relaxed text-text">
-            <b className="text-navy">주식 토론 부여 규칙</b>
-            <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
-              <li>글 작성: <b>+2 mlbg</b> · 댓글: <b>+0.5 mlbg</b> · 게시글 농사 +0.5 mlbg</li>
-              <li>종목 태그는 선택사항 — 자유 입력 (예: 삼성전자, 005930, 반도체 등)</li>
-            </ul>
-          </div>
-          {posts.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-muted text-[15px] mb-6">아직 게시된 글이 없습니다.</p>
-              {user ? (
-                <Link href="/stocks/new" className="inline-block bg-cyan text-navy px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-cyan/80">
-                  첫 글 쓰기 →
-                </Link>
-              ) : (
-                <Link href="/login?next=/stocks/new" className="inline-block border-2 border-cyan text-navy px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-cyan hover:text-navy">
-                  로그인하고 글쓰기
+        {/* HERO */}
+        <section className="relative pt-10 lg:pt-16 pb-6">
+          <div className="max-w-content mx-auto px-4 lg:px-10">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <div className="text-[11px] font-bold tracking-[0.3em] uppercase text-cyan-400/80 mb-2">MELNBERG · MARKETS</div>
+                <h1 className="text-[28px] lg:text-[42px] font-black text-white tracking-tight leading-none"
+                    style={{ textShadow: '0 0 30px rgba(34,224,161,0.25)' }}>
+                  📈 STOCK <span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(90deg, #22e0a1, #00d4ff)' }}>FLOOR</span>
+                </h1>
+                <p className="text-[12px] text-white/60 mt-2">실시간 마켓·인기 종목·전문 토론. 보상 동일.</p>
+              </div>
+              {user && (
+                <Link
+                  href="/stocks/new"
+                  className="px-5 py-3 text-[13px] font-bold tracking-wider no-underline text-black flex-shrink-0"
+                  style={{ background: 'linear-gradient(90deg, #22e0a1, #00d4ff)', boxShadow: '0 4px 24px rgba(34,224,161,0.35)' }}
+                >
+                  글쓰기 →
                 </Link>
               )}
             </div>
-          ) : (
-            <table className="w-full text-[13px] border-collapse table-fixed">
-              <thead>
-                <tr className="bg-cyan/10 border-y border-cyan text-navy">
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-16">번호</th>
-                  <th className="py-2.5 px-2 lg:px-3 font-semibold text-left">제목</th>
-                  <th className="py-2.5 px-2 font-semibold text-left w-[150px] lg:w-40">작성자</th>
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-24">작성일</th>
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14">추천</th>
-                  <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14">조회</th>
-                </tr>
-              </thead>
-              <tbody>
-                {posts.map((p) => {
-                  const pp = p as { stock_code?: string | null; stock_name?: string | null };
-                  // 태그 — 회사명(stock_name) 우선, 없으면 코드 fallback
-                  const tag = pp.stock_name || pp.stock_code;
-                  return (
-                    <tr key={p.id} className="border-b border-border hover:bg-cyan/5 transition-colors">
-                      <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.id}</td>
-                      <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
-                        <Link
-                          href={`/stocks/${p.id}`}
-                          className="text-text no-underline hover:text-navy hover:underline truncate block w-full"
-                        >
-                          {tag && <span className="text-[10px] font-bold bg-cyan/15 text-navy px-1.5 py-0.5 mr-1.5 align-middle">📈 {tag}</span>}
-                          {p.title}
-                          {p.comment_count && p.comment_count > 0 ? (
-                            <span className="text-cyan font-bold ml-1">[{p.comment_count}]</span>
-                          ) : null}
-                        </Link>
-                        <div className="lg:hidden text-[10px] text-muted tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
-                      </td>
-                      <td className="py-2.5 px-2 text-left text-navy font-semibold relative overflow-visible">
-                        <span className="inline-flex max-w-full truncate">
-                          <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
-                        </span>
-                      </td>
-                      <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{formatBoardTime(p.created_at)}</td>
-                      <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.like_count ?? 0}</td>
-                      <td className="hidden lg:table-cell py-2.5 px-2 text-center text-muted tabular-nums">{p.view_count ?? 0}</td>
+          </div>
+        </section>
+
+        <section className="relative pb-10">
+          <div className="max-w-content mx-auto px-4 lg:px-10">
+            {/* 마켓 인덱스 */}
+            <MarketTickerBar indices={indices} />
+
+            {/* 인기 종목 */}
+            <HotStocksSection stocks={hot} />
+
+            {/* 글 목록 — 다크 글래스 테이블 */}
+            {posts.length === 0 ? (
+              <div className="text-center py-20 border border-white/10 bg-white/[0.02]">
+                <p className="text-white/60 text-[15px] mb-6">아직 게시된 글이 없습니다.</p>
+                {user ? (
+                  <Link href="/stocks/new" className="inline-block bg-white text-black px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-white/80">
+                    첫 글 쓰기 →
+                  </Link>
+                ) : (
+                  <Link href="/login?next=/stocks/new" className="inline-block border border-white text-white px-6 py-3 text-[13px] font-bold tracking-wide no-underline hover:bg-white hover:text-black">
+                    로그인하고 글쓰기
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="border border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="px-4 py-2.5 border-b border-white/10 flex items-baseline gap-2">
+                  <h2 className="text-[13px] font-bold text-white tracking-tight">💬 토론</h2>
+                  <span className="text-[11px] text-white/40">{posts.length}건</span>
+                </div>
+                <table className="w-full text-[13px] border-collapse table-fixed">
+                  <thead>
+                    <tr className="border-b border-white/10 text-white/60">
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-16 text-[10px] tracking-widest uppercase">#</th>
+                      <th className="py-2.5 px-2 lg:px-3 font-semibold text-left text-[10px] tracking-widest uppercase">제목</th>
+                      <th className="py-2.5 px-2 font-semibold text-left w-[150px] lg:w-40 text-[10px] tracking-widest uppercase">작성자</th>
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-24 text-[10px] tracking-widest uppercase">작성일</th>
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14 text-[10px] tracking-widest uppercase">♥</th>
+                      <th className="hidden lg:table-cell py-2.5 px-2 font-semibold text-center w-14 text-[10px] tracking-widest uppercase">👁</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </section>
+                  </thead>
+                  <tbody>
+                    {posts.map((p) => {
+                      const pp = p as { stock_code?: string | null; stock_name?: string | null };
+                      const tag = pp.stock_name || pp.stock_code;
+                      return (
+                        <tr key={p.id} className="border-b border-white/5 hover:bg-white/[0.04] transition-colors">
+                          <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/40 tabular-nums">{p.id}</td>
+                          <td className="py-2.5 px-2 lg:px-3 min-w-0 max-w-0">
+                            <Link
+                              href={`/stocks/${p.id}`}
+                              className="text-white/90 no-underline hover:text-white truncate block w-full"
+                            >
+                              {tag && (
+                                <span
+                                  className="text-[10px] font-bold px-1.5 py-0.5 mr-1.5 align-middle text-emerald-300"
+                                  style={{ background: 'rgba(34,224,161,0.12)', border: '1px solid rgba(34,224,161,0.3)' }}
+                                >
+                                  📈 {tag}
+                                </span>
+                              )}
+                              {p.title}
+                              {p.comment_count && p.comment_count > 0 ? (
+                                <span className="text-cyan-400 font-bold ml-1">[{p.comment_count}]</span>
+                              ) : null}
+                            </Link>
+                            <div className="lg:hidden text-[10px] text-white/40 tabular-nums mt-0.5">{formatBoardTime(p.created_at)}</div>
+                          </td>
+                          <td className="py-2.5 px-2 text-left font-semibold relative overflow-visible">
+                            <span className="inline-flex max-w-full truncate text-cyan-300">
+                              <Nickname info={profileToNicknameInfo(p.author, p.author_id)} />
+                            </span>
+                          </td>
+                          <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/40 tabular-nums">{formatBoardTime(p.created_at)}</td>
+                          <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/50 tabular-nums">{p.like_count ?? 0}</td>
+                          <td className="hidden lg:table-cell py-2.5 px-2 text-center text-white/40 tabular-nums">{p.view_count ?? 0}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* 보상 안내 — 다크 톤 */}
+            <div className="mt-4 px-4 py-3 border border-white/10 text-[12px] leading-relaxed text-white/70" style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <b className="text-emerald-300">REWARDS</b>
+              <span className="text-white/40 mx-2">·</span>
+              글 작성 <b className="text-white">+2 mlbg</b>
+              <span className="text-white/40 mx-2">/</span>
+              댓글 <b className="text-white">+0.5</b>
+              <span className="text-white/40 mx-2">/</span>
+              게시글 농사 <b className="text-white">+0.5</b>
+            </div>
+          </div>
+        </section>
+      </div>
     </Layout>
   );
 }

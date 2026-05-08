@@ -1,9 +1,10 @@
-// 인기 종목 — 다크 프리미엄. 글래스 카드 + 네온 가격 + 영역 차트.
+// 인기 코인 — 최근 14일 coin 글에서 가장 많이 언급된 KRW 마켓 top N.
 import Link from 'next/link';
-import type { HotStock } from '@/lib/market-snapshot';
+import type { HotCoin } from '@/lib/coin-snapshot';
 
-function fmtPrice(n: number, currency: 'KRW' | 'USD'): string {
-  if (currency === 'USD') return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function fmtKrw(n: number): string {
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}억`;
+  if (n >= 1e4) return `${(n / 1e4).toFixed(1)}만`;
   return n.toLocaleString();
 }
 
@@ -20,7 +21,7 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(' ');
   const areaPts = `${pad},${h} ${points} ${(pad + (data.length - 1) * step).toFixed(1)},${h}`;
-  const gid = `gh-${color.replace('#', '')}`;
+  const gid = `gc-${color.replace('#', '')}`;
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="w-full h-full">
       <defs>
@@ -35,27 +36,28 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-export default function HotStocksSection({ stocks, label = '🔥 인기 종목', sub = '최근 14일 토론 많은 순' }: { stocks: HotStock[]; label?: string; sub?: string }) {
-  if (stocks.length === 0) return null;
+export default function HotCoinsSection({ coins }: { coins: HotCoin[] }) {
+  if (coins.length === 0) return null;
   return (
     <div className="mb-6">
       <div className="flex items-baseline gap-2 mb-3">
-        <h2 className="text-[15px] font-bold text-white tracking-tight">{label}</h2>
-        <span className="text-[11px] text-white/50">{sub}</span>
+        <h2 className="text-[15px] font-bold text-white tracking-tight">🚀 떡상 코인</h2>
+        <span className="text-[11px] text-white/50">최근 14일 토론 많은 순</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-        {stocks.map((s, i) => {
+        {coins.map((s, i) => {
           const up = s.changePct != null && s.changePct > 0;
           const down = s.changePct != null && s.changePct < 0;
           const color = up ? '#22e0a1' : down ? '#ff4f6d' : '#7d8aa0';
           const arrow = up ? '▲' : down ? '▼' : '–';
+          const sym = s.code.replace('KRW-', '');
           return (
             <Link
               key={s.code}
-              href={`/stocks?tag=${encodeURIComponent(s.code)}`}
+              href={`/coin?tag=${encodeURIComponent(s.code)}`}
               className="relative px-4 py-3 overflow-hidden border border-white/10 hover:border-white/30 transition-all no-underline block"
               style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))',
+                background: 'linear-gradient(135deg, rgba(247,147,26,0.06), rgba(255,255,255,0.012))',
                 backdropFilter: 'blur(6px)',
               }}
             >
@@ -63,7 +65,7 @@ export default function HotStocksSection({ stocks, label = '🔥 인기 종목',
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-[10px] font-bold tabular-nums text-white/40 w-4 shrink-0">#{i + 1}</span>
                   <span className="text-[14px] font-bold text-white truncate">{s.name}</span>
-                  <span className="text-[10px] text-white/40 tabular-nums shrink-0">{s.code}</span>
+                  <span className="text-[10px] text-white/40 tabular-nums shrink-0">{sym}</span>
                 </div>
                 <span className="text-[10px] font-bold bg-white/10 text-white px-1.5 py-0.5 shrink-0 rounded-sm">
                   💬 {s.postCount}
@@ -72,7 +74,7 @@ export default function HotStocksSection({ stocks, label = '🔥 인기 종목',
               <div className="flex items-end justify-between gap-2">
                 <div className="flex flex-col">
                   <span className="text-[16px] font-bold tabular-nums text-white leading-tight">
-                    {s.price != null ? fmtPrice(s.price, s.currency) : '—'}
+                    {s.price != null ? `₩${fmtKrw(s.price)}` : '—'}
                   </span>
                   {s.changePct != null && (
                     <span className="text-[12px] font-bold tabular-nums leading-tight" style={{ color, textShadow: `0 0 6px ${color}80` }}>
