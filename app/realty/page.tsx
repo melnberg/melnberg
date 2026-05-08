@@ -31,7 +31,7 @@ export default async function RealtyPage() {
     <Layout current="realty">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/realty', label: '부동산 토론', bold: true }]} meta="Realty" />
 
-      <div style={{ background: REALTY_BG }} className="relative">
+      <div style={{ background: REALTY_BG, colorScheme: 'dark' }} className="relative">
         {/* 후광 — 골드/와인 */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"

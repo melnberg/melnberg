@@ -76,8 +76,10 @@
 
 /* 다크 톤 게시판 (주식·코인·부동산) 글 상세 — CommentSection·PollWidget 텍스트를
    다크 배경에서 보이게 강제. 컴포넌트 내부 text-navy/text-text/text-muted 등
-   라이트 전제 클래스를 일괄 오버라이드. */
-.dark-section { color: #e5e7eb; }
+   라이트 전제 클래스를 일괄 오버라이드.
+   color-scheme: dark — 브라우저(삼성 인터넷·일부 크롬) 의 OS 다크모드 자동 invert
+   기능을 끔. 안 그러면 이미 다크인 화면을 또 invert 해서 검은 배경+검은 글자 됨. */
+.dark-section { color: #e5e7eb; color-scheme: dark; }
 .dark-section h1, .dark-section h2, .dark-section h3, .dark-section h4 { color: #ffffff !important; }
 .dark-section .text-navy { color: #ffffff !important; }
 .dark-section .text-navy-dark { color: #67e8f9 !important; }

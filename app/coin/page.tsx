@@ -41,7 +41,7 @@ export default async function CoinPage({ searchParams }: { searchParams: Promise
     <Layout current="coin">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/coin', label: '코인 토론', bold: true }]} meta="Coin" />
 
-      <div style={{ background: COIN_BG }} className="relative">
+      <div style={{ background: COIN_BG, colorScheme: 'dark' }} className="relative">
         {/* 후광 — 오렌지/마젠타 */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -left-20 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"

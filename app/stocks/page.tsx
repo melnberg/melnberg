@@ -43,7 +43,7 @@ export default async function StocksPage({ searchParams }: { searchParams: Promi
     <Layout current="stocks">
       <MainTop crumbs={[{ href: '/', label: '멜른버그' }, { href: '/stocks', label: '주식 토론', bold: true }]} meta="Stocks" />
 
-      <div style={{ background: STOCKS_BG }} className="relative">
+      <div style={{ background: STOCKS_BG, colorScheme: 'dark' }} className="relative">
         {/* 후광 효과 — 보라/시안 */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"

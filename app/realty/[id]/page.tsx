@@ -93,7 +93,7 @@ export default async function RealtyPostDetail({ params }: { params: Promise<{ i
         { label: post.title, bold: true },
       ]} meta="Realty" />
 
-      <div className="relative" style={{ background: 'linear-gradient(180deg, #0f0a07 0%, #1a120e 60%, #1f1812 100%)' }}>
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #0f0a07 0%, #1a120e 60%, #1f1812 100%)', colorScheme: 'dark' }}>
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
                style={{ background: 'radial-gradient(circle, #ffd16655, transparent 70%)' }} />

@@ -94,7 +94,7 @@ export default async function StockPostDetail({ params }: { params: Promise<{ id
         { label: post.title, bold: true },
       ]} meta="Stocks" />
 
-      <div className="relative" style={{ background: 'linear-gradient(180deg, #050913 0%, #0a1226 60%, #0d1933 100%)' }}>
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #050913 0%, #0a1226 60%, #0d1933 100%)', colorScheme: 'dark' }}>
         {/* 후광 */}
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -left-32 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"

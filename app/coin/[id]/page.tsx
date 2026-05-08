@@ -94,7 +94,7 @@ export default async function CoinPostDetail({ params }: { params: Promise<{ id:
         { label: post.title, bold: true },
       ]} meta="Coin" />
 
-      <div className="relative" style={{ background: 'linear-gradient(180deg, #0a0612 0%, #18102b 60%, #1f1438 100%)' }}>
+      <div className="relative" style={{ background: 'linear-gradient(180deg, #0a0612 0%, #18102b 60%, #1f1438 100%)', colorScheme: 'dark' }}>
         <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -left-20 w-[480px] h-[480px] rounded-full opacity-30 blur-3xl"
                style={{ background: 'radial-gradient(circle, #f7931a55, transparent 70%)' }} />
