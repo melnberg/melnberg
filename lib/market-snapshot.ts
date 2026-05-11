@@ -128,22 +128,24 @@ export async function fetchHotStocks(
       const isUs = /^[A-Z][A-Z0-9.\-]{0,9}$/i.test(code);
       if (!isKr6 && !isUs) return null;
       try {
-        // 자체 API 라우터 통해 통합 — 절대 URL 필요 (서버 컴포넌트 fetch).
-        // 여기선 직접 Naver 호출이 더 단순 + 빠름.
         if (isKr6) {
-          const r = await fetch(`https://m.stock.naver.com/api/stock/${code}/integration`, { cache: 'no-store', headers: UA });
-          if (!r.ok) return null;
-          const j = await r.json();
-          const totalInfos: Array<{ code: string; value: string }> = j.totalInfos ?? [];
-          const map = new Map(totalInfos.map((t) => [t.code, t.value]));
-          const deal: Array<{ closePrice: string }> = j.dealTrendInfos ?? [];
+          // basic 엔드포인트가 fluctuationsRatio (실시간 변동률) 제공. integration 은 chart 만 사용.
+          const [basicR, intR] = await Promise.all([
+            fetch(`https://api.stock.naver.com/stock/${code}/basic`, { cache: 'no-store', headers: UA }),
+            fetch(`https://m.stock.naver.com/api/stock/${code}/integration`, { cache: 'no-store', headers: UA }),
+          ]);
+          if (!basicR.ok) return null;
+          const basic = await basicR.json();
+          const intJ = intR.ok ? await intR.json() : {};
+          const deal: Array<{ closePrice: string }> = intJ.dealTrendInfos ?? [];
           const history = deal.slice(0, 30).reverse().map((d) => Number(d.closePrice.replace(/,/g, '')));
-          const price = history.length > 0 ? history[history.length - 1] : null;
-          const lastClose = Number((map.get('lastClosePrice') ?? '0').replace(/,/g, '')) || null;
-          const pct = price != null && lastClose ? ((price - lastClose) / lastClose * 100) : null;
+          const price = basic.closePrice ? Number(String(basic.closePrice).replace(/,/g, '')) : null;
+          const pct = basic.fluctuationsRatio != null
+            ? Number(basic.fluctuationsRatio) * (basic.compareToPreviousPrice?.name === 'FALLING' ? -1 : 1)
+            : null;
           return {
             code,
-            name: meta.name ?? j.stockName ?? code,
+            name: meta.name ?? basic.stockName ?? intJ.stockName ?? code,
             postCount: meta.count,
             price,
             changePct: pct,
