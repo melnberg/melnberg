@@ -45,9 +45,9 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
     if (!user) { setErr('로그인이 필요합니다.'); setUploading(false); return; }
     const converted = await fileToWebp(file).catch(() => null);
     const blob = converted?.blob ?? file;
-    const isWebp = blob !== file;
-    const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
-    const contentType = isWebp ? 'image/webp' : file.type;
+    const isConverted = !!converted && blob !== file;
+    const ext = isConverted ? (converted!.type === 'image/webp' ? 'webp' : 'jpg') : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+    const contentType = isConverted ? converted!.type : file.type;
     const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
     setUploading(false);

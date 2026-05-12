@@ -50,9 +50,9 @@ export default function RestaurantEditForm({ pin, currentUserId }: { pin: Pin; c
       try {
         const converted = await fileToWebp(photoFile).catch(() => null);
         const blob = converted?.blob ?? photoFile;
-        const isWebp = blob !== photoFile;
-        const ext = isWebp ? 'webp' : (photoFile.name.split('.').pop()?.toLowerCase() ?? 'jpg');
-        const contentType = isWebp ? 'image/webp' : photoFile.type;
+        const isConverted = !!converted && blob !== photoFile;
+        const ext = isConverted ? (converted!.type === 'image/webp' ? 'webp' : 'jpg') : (photoFile.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+        const contentType = isConverted ? converted!.type : photoFile.type;
         const path = `${currentUserId}/restaurant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
         if (upErr) throw new Error(upErr.message);

@@ -76,9 +76,9 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
       // 용량관리 — webp 변환 + 가로 max 512px 로 압축
       const converted = await fileToWebp(file, { maxWidth: 512, quality: 0.85 }).catch(() => null);
       const blob = converted?.blob ?? file;
-      const isWebp = blob !== file;
-      const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
-      const contentType = isWebp ? 'image/webp' : file.type;
+      const isConverted = !!converted && blob !== file;
+      const ext = isConverted ? (converted!.type === 'image/webp' ? 'webp' : 'jpg') : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+      const contentType = isConverted ? converted!.type : file.type;
       const path = `${user.id}/avatar.${ext}`;
       const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType });
       if (upErr) { setMsg({ type: 'error', text: `업로드 실패: ${upErr.message}` }); return; }

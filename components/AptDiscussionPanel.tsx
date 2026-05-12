@@ -423,9 +423,9 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     setUploadingImg(true);
     const converted = await fileToWebp(file).catch(() => null);
     const blob = converted?.blob ?? file;
-    const isWebp = blob !== file;
-    const ext = isWebp ? 'webp' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
-    const contentType = isWebp ? 'image/webp' : file.type;
+    const isConverted = !!converted && blob !== file;
+    const ext = isConverted ? (converted!.type === 'image/webp' ? 'webp' : 'jpg') : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+    const contentType = isConverted ? converted!.type : file.type;
     const path = `${userId}/apt/${apt.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
     if (upErr) { setSubmitErr(`업로드 실패: ${upErr.message}`); setUploadingImg(false); return; }
