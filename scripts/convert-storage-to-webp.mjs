@@ -102,7 +102,7 @@ function publicUrl(bucket, path) {
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
 
-// 본문에 URL 박혀있는 테이블들 — content/body 컬럼 치환
+// 본문에 URL 박혀있는 테이블들 — content/body 컬럼 치환 + 별도 photo_url/url 컬럼들
 const TEXT_TABLES = [
   { table: 'posts', col: 'content' },
   { table: 'comments', col: 'content' },
@@ -111,6 +111,12 @@ const TEXT_TABLES = [
   { table: 'emart_comments', col: 'content' },
   { table: 'factory_comments', col: 'content' },
   { table: 'site_announcements', col: 'body' },
+  // 별도 photo URL 컬럼 — single-URL exact match (linkify 본문이 아닌 단일 URL 칼럼)
+  { table: 'apt_photos', col: 'url' },
+  { table: 'restaurant_pins', col: 'photo_url' },
+  { table: 'kids_pins', col: 'photo_url' },
+  { table: 'my_stores', col: 'photo_url' },
+  { table: 'my_stores', col: 'url' },
 ];
 
 async function replaceUrlsInTextTables(oldUrl, newUrl) {
