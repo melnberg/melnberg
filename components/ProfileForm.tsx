@@ -67,7 +67,7 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
   async function uploadAvatar(file: File) {
     if (uploadingAvatar) return;
     if (!file.type.startsWith('image/')) { setMsg({ type: 'error', text: '이미지 파일만 업로드 가능합니다.' }); return; }
-    if (file.size > 2 * 1024 * 1024) { setMsg({ type: 'error', text: '파일 크기는 2MB 이하만 가능합니다.' }); return; }
+    if (file.size > 30 * 1024 * 1024) { setMsg({ type: 'error', text: '파일 크기는 30MB 이하만 가능합니다.' }); return; }
     setUploadingAvatar(true);
     setMsg(null);
     try {
@@ -228,7 +228,7 @@ export default function ProfileForm({ initial, email, isPaid }: Props) {
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border">
           <div className="flex flex-col gap-0.5 flex-shrink-0">
             <span className="text-[12px] font-bold tracking-widest uppercase text-muted">프로필 사진</span>
-            <span className="text-[10px] normal-case font-medium text-muted">2MB 이하 · jpg/png/webp/gif</span>
+            <span className="text-[10px] normal-case font-medium text-muted">30MB 이하 · jpg/png/webp/gif</span>
           </div>
           <div className="flex items-center gap-3">
             {avatarUrl ? (

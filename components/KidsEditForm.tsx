@@ -22,7 +22,7 @@ export default function KidsEditForm({ pin, currentUserId }: { pin: Pin; current
   const [err, setErr] = useState<string | null>(null);
 
   function handlePhoto(file: File) {
-    if (file.size > 5 * 1024 * 1024) { setErr('5MB 이하 이미지만 가능합니다.'); return; }
+    if (file.size > 30 * 1024 * 1024) { setErr('30MB 이하 이미지만 가능합니다.'); return; }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
     setErr(null);

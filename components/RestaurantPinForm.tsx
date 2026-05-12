@@ -203,7 +203,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
   }
 
   async function handlePhoto(file: File) {
-    if (file.size > 5 * 1024 * 1024) { setErr('5MB 이하 이미지만 가능합니다.'); return; }
+    if (file.size > 30 * 1024 * 1024) { setErr('30MB 이하 이미지만 가능합니다.'); return; }
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
   }
@@ -351,7 +351,7 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
 
       {/* 사진 */}
       <div className="flex flex-col gap-1">
-        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 * (5MB 이하)</label>
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 * (30MB 이하)</label>
         <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
           className="text-[12px]" />

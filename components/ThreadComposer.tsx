@@ -38,7 +38,7 @@ export default function ThreadComposer({ parentId = null, refreshOnSubmit = true
 
   async function handleImageUpload(file: File) {
     if (uploading) return;
-    if (file.size > 5 * 1024 * 1024) { setErr('5MB 이하 이미지만 가능합니다.'); return; }
+    if (file.size > 30 * 1024 * 1024) { setErr('30MB 이하 이미지만 가능합니다.'); return; }
     setErr(null);
     setUploading(true);
     const { data: { user } } = await supabase.auth.getUser();

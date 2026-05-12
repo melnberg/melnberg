@@ -418,7 +418,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   async function handleAttachImage(file: File) {
     if (uploadingImg) return;
     if (!userId) { setSubmitErr('로그인이 필요해요.'); return; }
-    if (file.size > 8 * 1024 * 1024) { setSubmitErr('8MB 이하 이미지만 가능해요.'); return; }
+    if (file.size > 30 * 1024 * 1024) { setSubmitErr('30MB 이하 이미지만 가능해요.'); return; }
     setSubmitErr(null);
     setUploadingImg(true);
     const converted = await fileToWebp(file).catch(() => null);
@@ -1142,7 +1142,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
               >
                 {uploadingImg ? '업로드 중...' : '＋ 사진 첨부'}
               </button>
-              <span className="text-[10px] text-muted">최대 8MB · jpg/png/webp/heic</span>
+              <span className="text-[10px] text-muted">최대 30MB · jpg/png/webp/heic</span>
             </div>
             {submitErr && <p className="mt-2 text-xs text-red-600">{submitErr}</p>}
             <div className="mt-3 flex gap-2">

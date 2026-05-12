@@ -77,7 +77,7 @@ export default function AptPhotosSection({ aptId }: { aptId: number }) {
   async function handleUpload(file: File) {
     if (uploading) return;
     if (!me) { setErr('로그인이 필요합니다.'); return; }
-    if (file.size > 8 * 1024 * 1024) { setErr('8MB 이하 이미지만 가능합니다.'); return; }
+    if (file.size > 30 * 1024 * 1024) { setErr('30MB 이하 이미지만 가능합니다.'); return; }
     setErr(null);
     setUploading(true);
     const converted = await fileToWebp(file).catch(() => null);
