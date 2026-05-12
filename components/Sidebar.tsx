@@ -241,18 +241,17 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
           </div>
         )}
 
-        {/* 사이드바 맨 아래 — 사업자 정보 (심사 대비 진한 검정) */}
-        <div className="mt-auto border-t border-border px-3 py-3 text-[11px] leading-relaxed text-black font-medium">
-          <div className="flex gap-2 mb-2 text-[12px]">
+        {/* 사이드바 맨 아래 — 사업자 정보 (심사 대비 검정, 컴팩트) */}
+        <div className="mt-auto border-t border-border px-3 py-2 text-[11px] leading-tight text-black font-medium">
+          <p>안세 · 대표 임은종</p>
+          <p>사업자 763-20-02086</p>
+          <p>통판 2023-용인기흥-4231</p>
+          <p className="mt-0.5">📞 0507-1437-9196</p>
+          <div className="flex gap-2 mt-1 text-[11px]">
             <Link href="/terms" onClick={() => setOpen(false)} className="text-black font-bold hover:text-navy no-underline">이용약관</Link>
             <span className="text-muted">·</span>
             <Link href="/privacy" onClick={() => setOpen(false)} className="text-black font-bold hover:text-navy no-underline">개인정보</Link>
           </div>
-          <p>안세 · 대표 임은종</p>
-          <p>사업자 763-20-02086</p>
-          <p>통판 2023-용인기흥-4231</p>
-          <p className="mt-1.5">고객센터 0507-1437-9196</p>
-          <p className="text-[10px] text-muted mt-2">© 2026 melnberg</p>
         </div>
 
         {/* 사이드바 하단 상담문의(오픈채팅) 섹션 — 임시 숨김. 추후 부활 시 false → true */}
