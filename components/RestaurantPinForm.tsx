@@ -364,14 +364,14 @@ export default function RestaurantPinForm({ currentUserId }: { currentUserId: st
         <div className="text-sm px-4 py-3 break-keep leading-relaxed bg-red-50 text-red-700 border border-red-200">{err}</div>
       )}
 
-      <div className="flex justify-end gap-3 mt-2">
+      <div className="flex gap-2 mt-2 pb-20 sm:pb-2">
         <button type="button" onClick={() => router.back()}
-          className="bg-white border border-border text-text px-5 py-3 text-[13px] font-semibold cursor-pointer hover:border-navy hover:text-navy">
+          className="flex-1 sm:flex-none bg-white border border-border text-text px-5 py-3 text-[13px] font-semibold cursor-pointer hover:border-navy hover:text-navy">
           취소
         </button>
         <button type="submit" disabled={busy}
-          className="bg-navy text-white border-none px-6 py-3 text-[13px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50">
-          {busy ? '등록 중...' : '등록하고 +30 mlbg 받기'}
+          className="flex-1 sm:flex-none bg-navy text-white border-none px-4 sm:px-6 py-3 text-[13px] font-bold tracking-wide cursor-pointer hover:bg-navy-dark disabled:opacity-50 whitespace-nowrap">
+          {busy ? '등록 중...' : '등록 (+30 mlbg)'}
         </button>
       </div>
     </form>
