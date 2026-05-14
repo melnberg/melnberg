@@ -18,10 +18,29 @@ import { fetchPostPoll } from '@/lib/post-poll';
 
 export const dynamic = 'force-dynamic';
 
+// 카테고리 → 전용 게시판 경로. community 가 아닌 글이 /community/[id] 로 열리는 걸 차단.
+const CATEGORY_BASE: Record<string, string> = {
+  hotdeal: '/hotdeal', stocks: '/stocks', realty: '/realty',
+  worry: '/worry', coin: '/coin', love: '/love', blog: '/blog',
+};
+
+// 카테고리 불일치 시 해당 게시판 상세로 redirect.
+// 익명 게시판(worry/love) 글이 커뮤니티 상세로 열려 작성자·댓글 실명이 노출되던 사고 방지.
+// ⚠ generateMetadata 에서 호출해야 함 — 페이지 컴포넌트 렌더(스트리밍) 시작 전이라
+//   정상 HTTP 307 이 나감. 페이지 컴포넌트에서 redirect 하면 streaming 폴백으로
+//   <meta http-equiv="refresh"> (200 HTML) 가 되어 1초 지연·부분 렌더 사고가 남.
+function redirectIfWrongBoard(category: string | null | undefined, numId: number) {
+  if (category && category !== 'community' && CATEGORY_BASE[category]) {
+    redirect(`${CATEGORY_BASE[category]}/${numId}`);
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const post = await getPost(Number(id));
+  const numId = Number(id);
+  const post = await getPost(numId);
   if (!post) return {};
+  redirectIfWrongBoard(post.category, numId);
   return {
     title: `${post.title} — 멜른버그`,
     description: post.content.slice(0, 140),
@@ -36,15 +55,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const [post, comments] = await Promise.all([getPost(numId), listComments(numId)]);
   if (!post) notFound();
 
-  // 카테고리 불일치 시 해당 게시판 상세로 redirect.
-  // 익명 게시판(worry/love) 글이 커뮤니티 상세로 열려 작성자·댓글 실명이 노출되던 사고 방지.
-  if (post.category && post.category !== 'community') {
-    const base: Record<string, string> = {
-      hotdeal: '/hotdeal', stocks: '/stocks', realty: '/realty',
-      worry: '/worry', coin: '/coin', love: '/love', blog: '/blog',
-    };
-    if (base[post.category]) redirect(`${base[post.category]}/${numId}`);
-  }
+  // 방어 — generateMetadata 에서 이미 처리되지만 직접 진입 등 대비.
+  redirectIfWrongBoard(post.category, numId);
 
   // mlbg 적립 — 본글 + 댓글 + 게시글 농사 보너스 한 번에 fetch (병렬)
   const sbPub = await createClient();
