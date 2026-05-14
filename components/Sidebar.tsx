@@ -246,6 +246,7 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
           <p>안세 · 대표 임은종</p>
           <p>사업자 763-20-02086</p>
           <p>통판 2023-용인기흥-4231</p>
+          <p>[04790] 서울 성동구 상원12길 30, 307호</p>
           <p className="mt-0.5">📞 0507-1437-9196</p>
           <div className="flex gap-2 mt-1 text-[11px]">
             <Link href="/terms" onClick={() => setOpen(false)} className="text-black font-bold hover:text-navy no-underline">이용약관</Link>
