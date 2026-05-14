@@ -147,13 +147,15 @@ export default function KidsDetailClient({ pin }: { pin: KidsItem }) {
         {occupier ? (
           <div>분양: <b className="text-navy">{occupier.name}</b> · 일 수익 {pin.daily_income} mlbg</div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <div>분양가 <b className="text-navy">{Number(pin.occupy_price).toLocaleString()} mlbg</b> · 일 수익 {pin.daily_income} mlbg</div>
-            <div className="flex gap-2 items-center flex-wrap">
-              <button onClick={occupy} disabled={busy || isAuthor} className="bg-navy text-white px-4 py-2 text-[12px] font-bold border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40">
-                🚩 분양받기
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={occupy} disabled={busy || isAuthor} className="bg-navy text-white px-4 py-2.5 text-[12px] font-bold border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <span>🚩</span><span>분양받기</span>
               </button>
-              <a href={`/?kids=${pin.id}&lat=${pin.lat}&lng=${pin.lng}`} target="_top" className="text-[11px] text-cyan underline whitespace-nowrap">지도에서 위치 보기</a>
+              <a href={`/?kids=${pin.id}&lat=${pin.lat}&lng=${pin.lng}`} target="_top" className="bg-white text-navy border border-navy px-4 py-2.5 text-[12px] font-bold no-underline cursor-pointer hover:bg-navy-soft inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <span>📍</span><span>지도에서 보기</span>
+              </a>
             </div>
           </div>
         )}
