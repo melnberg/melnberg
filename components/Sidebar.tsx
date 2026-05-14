@@ -314,7 +314,7 @@ function SItem({ href, label, price, active, icon, onClick, sub, dot }: { href: 
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-2.5 ${padX} py-2 text-[13px] no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors whitespace-nowrap ${activeBg}`}
+      className={`flex items-center gap-2.5 ${padX} py-1.5 text-[13px] no-underline relative border-l-[3px] border-b border-b-[#f0f0f0] transition-colors whitespace-nowrap ${activeBg}`}
     >
       {icon}
       <span className="truncate">{label}</span>
@@ -331,7 +331,7 @@ function SectionToggle({ label, icon, open, onClick }: { label: string; icon: Re
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2.5 w-full px-4 py-2 text-[13px] font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors whitespace-nowrap"
+      className="flex items-center gap-2.5 w-full px-4 py-1.5 text-[13px] font-medium text-text no-underline relative border-l-[3px] border-transparent border-b border-b-[#f0f0f0] hover:bg-navy-soft transition-colors whitespace-nowrap"
       aria-expanded={open}
     >
       {icon}
