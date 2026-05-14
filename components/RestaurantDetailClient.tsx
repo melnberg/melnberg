@@ -26,6 +26,9 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
   const [comments, setComments] = useState<Comment[] | null>(null);
   const [commentText, setCommentText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [occupier, setOccupier] = useState<{ id: string; name: string } | null>(
+    pin.occupier_id ? { id: pin.occupier_id, name: pin.occupier_name ?? '익명' } : null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +76,21 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
     const row = (Array.isArray(data) ? data[0] : data) as { out_liked: boolean; out_count: number; out_message: string | null } | undefined;
     if (row?.out_message) { alert(row.out_message); return; }
     if (row) { setLiked(row.out_liked); setLikeCount(row.out_count); }
+  }
+
+  async function occupy() {
+    if (!me) { alert('로그인 필요'); return; }
+    if (isAuthor) { alert('본인 핀은 분양 불가'); return; }
+    if (occupier) { alert('이미 분양된 핀'); return; }
+    if (busy) return;
+    if (!confirm(`${Number(pin.occupy_price).toLocaleString()} mlbg 로 분양받습니다.`)) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('occupy_restaurant_pin', { p_pin_id: pin.id });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null; out_paid: number } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '분양 실패'); return; }
+    setOccupier({ id: me.id, name: me.name });
   }
 
   async function submitComment(e: React.FormEvent) {
@@ -132,10 +150,18 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
 
       {/* 분양 상태 */}
       <div className="border border-border bg-bg/30 px-4 py-3 mb-8 text-[13px]">
-        {pin.occupier_id ? (
-          <div>분양: <b className="text-navy">{pin.occupier_name ?? '익명'}</b> · 일 수익 {pin.daily_income} mlbg</div>
+        {occupier ? (
+          <div>분양: <b className="text-navy">{occupier.name}</b> · 일 수익 {pin.daily_income} mlbg</div>
         ) : (
-          <div>분양가 <b className="text-navy">{Number(pin.occupy_price).toLocaleString()} mlbg</b> · 일 수익 {pin.daily_income} mlbg · <a href={`/?restaurant=${pin.id}&lat=${pin.lat}&lng=${pin.lng}`} target="_top" className="text-cyan underline whitespace-nowrap">지도에서 분양받기</a></div>
+          <div className="flex flex-col gap-2">
+            <div>분양가 <b className="text-navy">{Number(pin.occupy_price).toLocaleString()} mlbg</b> · 일 수익 {pin.daily_income} mlbg</div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <button onClick={occupy} disabled={busy || isAuthor} className="bg-navy text-white px-4 py-2 text-[12px] font-bold border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40">
+                🚩 분양받기
+              </button>
+              <a href={`/?restaurant=${pin.id}&lat=${pin.lat}&lng=${pin.lng}`} target="_top" className="text-[11px] text-cyan underline whitespace-nowrap">지도에서 위치 보기</a>
+            </div>
+          </div>
         )}
       </div>
 

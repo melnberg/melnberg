@@ -10,7 +10,7 @@ import MapMinimalEffects from './MapMinimalEffects';
 // URL 변경 (FloatingMapPin / MobileTopBar) 시 popstate → 뷰만 전환, 서버 RTT 0.
 // 데스크톱 (lg+) 은 항상 지도 (AptMap) 만 풀크기로 노출.
 function readViewFromUrl(sp: URLSearchParams): 'map' | 'feed' {
-  if (sp.get('view') === 'map' || sp.has('apt') || sp.has('emart') || sp.has('factory')) return 'map';
+  if (sp.get('view') === 'map' || sp.has('apt') || sp.has('emart') || sp.has('factory') || sp.has('restaurant') || sp.has('kids') || sp.has('lat')) return 'map';
   return 'feed';
 }
 
