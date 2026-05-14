@@ -70,29 +70,21 @@ declare global {
   }
 }
 
-// 모바일 핀 → 상세 → 뒤로가기 시 지도 위치·줌 복원.
+// 모바일 핀 → 상세 → 다시 지도로 돌아올 때 위치·줌 복원.
 //
-// 핵심 — popstate 이벤트 기반:
-//   router.push (forward) 는 pushState → popstate 안 발화.
-//   사용자의 진짜 back 동작 (시스템 back, 브라우저 back 버튼) 만 popstate 발화.
-//   ⇒ "사용자가 직전에 back 했고 sessionStorage 에 저장된 데이터 있음" 일 때만 복원.
+// 이전엔 popstate 발화 여부로 가렸으나, MobileTopBar 의 멜른버그 로고와
+// FloatingMapPin "지도" 버튼은 router.push 로 동작 → popstate 안 발화 →
+// 강남역으로 떨어짐. 따라서 popstate 의존성 제거하고 timestamp 기반으로 전환.
 //
-// 어플 첫 실행 / 모바일웹 fresh entry 에선 popstate 가 발화한 적 없으므로
-// 무조건 default 강남. sessionStorage 가 어떻게 살아있든 상관없이.
-let mlbgPopstateFired = false;
-let mlbgPopstateAt = 0;
-if (typeof window !== 'undefined') {
-  window.addEventListener('popstate', () => {
-    mlbgPopstateFired = true;
-    mlbgPopstateAt = Date.now();
-  });
-}
+// 규칙: sessionStorage 에 saved_at 같이 저장. 5분(300초) 이내 데이터면 복원, 그 외 무시.
+// 새 탭/cold start 에선 sessionStorage 비어있어 default 강남.
+const MAP_STATE_TTL_MS = 5 * 60 * 1000;
 function saveCurrentMapState(inst: KakaoMapInst | null) {
   try {
     if (!inst) return;
     const c = inst.getCenter();
     sessionStorage.setItem('mlbg.mapState', JSON.stringify({
-      lat: c.getLat(), lng: c.getLng(), level: inst.getLevel(),
+      lat: c.getLat(), lng: c.getLng(), level: inst.getLevel(), saved_at: Date.now(),
     }));
   } catch { /* sessionStorage 쓰기 실패 무시 */ }
 }
@@ -1530,34 +1522,26 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         if (cancelled || !mapRef.current || mapInstRef.current) return;
         // 초기 중심 — 우선순위:
         //   1) URL ?lat=&lng= (디테일 페이지 → 지도 핀 흐름)
-        //   2) sessionStorage mlbg.mapState (모바일 핀 → 상세 → 뒤로가기 복원)
-        //   3) 강남 일대 default
-        // 이로써 apt 핀 클릭 시 '강남 1초 flash' 차단 + 뒤로가기 시 보던 핀 위치 유지.
-        // 초기 중심 — 우선순위:
-        //   1) URL ?lat=&lng= (디테일 페이지 → 지도 핀 흐름)
-        //   2) popstate 직후 + sessionStorage 데이터 (사용자가 진짜 back 함 → 보던 위치 복원)
+        //   2) sessionStorage mlbg.mapState (5분 이내) — 핀 → 상세 → 다시 지도 복원
         //   3) 강남역 default
-        // popstate 가 안 났으면 sessionStorage 에 뭐가 있든 무시 → 첫/fresh entry = 강남 보장.
+        // 새 탭/cold start 에선 sessionStorage 비어있어 default 강남 보장.
         const urlLat = Number(searchParams.get('lat'));
         const urlLng = Number(searchParams.get('lng'));
         const hasUrlCoords = Number.isFinite(urlLat) && Number.isFinite(urlLng) && urlLat !== 0 && urlLng !== 0;
         let savedState: { lat: number; lng: number; level: number } | null = null;
-        // popstate 5초 안에 mount 됐을 때만 복원 시도 (back → / 이동은 즉시)
-        const isBackNav = mlbgPopstateFired && Date.now() - mlbgPopstateAt < 5000;
-        if (!hasUrlCoords && isBackNav) {
+        if (!hasUrlCoords) {
           try {
             const raw = sessionStorage.getItem('mlbg.mapState');
             if (raw) {
               const parsed = JSON.parse(raw);
-              if (Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+              const savedAt = Number(parsed?.saved_at);
+              const fresh = Number.isFinite(savedAt) && Date.now() - savedAt < MAP_STATE_TTL_MS;
+              if (fresh && Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
                 savedState = { lat: parsed.lat, lng: parsed.lng, level: Number(parsed.level) || 4 };
               }
             }
           } catch {}
         }
-        // 1회용 — 사용했든 만료됐든 항상 정리. popstate flag 도 reset.
-        try { sessionStorage.removeItem('mlbg.mapState'); } catch {}
-        mlbgPopstateFired = false;
         const center = hasUrlCoords
           ? new window.kakao.maps.LatLng(urlLat, urlLng)
           : savedState
