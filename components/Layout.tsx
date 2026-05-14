@@ -25,7 +25,7 @@ import GreetingBonusBanner from './GreetingBonusBanner';
 const fetchBoardLatest = unstable_cache(
   async (): Promise<BoardLatest> => {
     const sb = createPublicClient();
-    const empty: BoardLatest = { community: null, realty: null, stocks: null, coin: null, restaurants: null, kids: null };
+    const empty: BoardLatest = { community: null, realty: null, stocks: null, coin: null, love: null, restaurants: null, kids: null };
     try {
       const { data, error } = await sb.rpc('get_board_latest_posts');
       if (error || !data) return empty;
@@ -37,6 +37,7 @@ const fetchBoardLatest = unstable_cache(
         realty: row.realty ?? null,
         stocks: row.stocks ?? null,
         coin: row.coin ?? null,
+        love: row.love ?? null,
         restaurants: row.restaurants ?? null,
         kids: row.kids ?? null,
       };

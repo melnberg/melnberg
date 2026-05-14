@@ -11,13 +11,13 @@ import { KidsIcon as SharedKidsIcon, RestaurantIcon as SharedRestaurantIcon } fr
 
 export type SidebarUser = { name: string; email: string; balance?: number; isPaid?: boolean; isAdmin?: boolean; avatarUrl?: string | null };
 // SidebarRecentPost 타입 — 사이드바 최근글 리스트 노출하던 시절 유산. 외부 import 없음 → 제거됨 (2026-05-07).
-export type BoardKey = 'community' | 'realty' | 'stocks' | 'coin' | 'restaurants' | 'kids';
-export type BoardLatest = { community: string | null; realty: string | null; stocks: string | null; coin: string | null; restaurants: string | null; kids: string | null };
+export type BoardKey = 'community' | 'realty' | 'stocks' | 'coin' | 'love' | 'restaurants' | 'kids';
+export type BoardLatest = { community: string | null; realty: string | null; stocks: string | null; coin: string | null; love: string | null; restaurants: string | null; kids: string | null };
 
 // recentPosts prop 은 더 이상 받지 않음 — 사이드바에 최근글 리스트 노출 안 함.
 type Props = { current?: string; user?: SidebarUser | null; boardLatest?: BoardLatest };
 
-const BOARD_KEYS: BoardKey[] = ['community', 'realty', 'stocks', 'coin', 'restaurants', 'kids'];
+const BOARD_KEYS: BoardKey[] = ['community', 'realty', 'stocks', 'coin', 'love', 'restaurants', 'kids'];
 const LS_KEY = (b: BoardKey) => `last_read.${b}`;
 
 const consults = products.filter((p) => p.id === 'short-consult' || p.id === 'mid-consult');
@@ -176,6 +176,7 @@ export default function Sidebar({ current, user, boardLatest }: Props) {
           {/* <SItem href="/worry" label="익명 고민상담" active={current === 'worry'} icon={<WorryIcon />} onClick={() => setOpen(false)} /> */}
           <SItem href="/stocks" label="주식 토론" active={current === 'stocks'} icon={<StocksIcon />} onClick={() => setOpen(false)} dot={dot('stocks')} />
           <SItem href="/coin" label="코인 토론" active={current === 'coin'} icon={<CoinIcon />} onClick={() => setOpen(false)} dot={dot('coin')} />
+          <SItem href="/love" label="연애상담 (익명)" active={current === 'love'} icon={<LoveIcon />} onClick={() => setOpen(false)} dot={dot('love')} />
           <SItem href="/restaurants" label="맛집 추천" active={current === 'restaurants'} icon={<RestaurantIcon />} onClick={() => setOpen(false)} dot={dot('restaurants')} />
           <SItem href="/kids" label="육아 장소" active={current === 'kids'} icon={<KidsIcon />} onClick={() => setOpen(false)} dot={dot('kids')} />
 
@@ -367,6 +368,8 @@ const CoinIcon = () => <svg {...iconProps}><circle cx="12" cy="12" r="9" /><path
 const RealtyIcon = () => <svg {...iconProps}><rect x="3" y="3" width="18" height="18" rx="1" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /></svg>;
 // 익명 고민상담 — 말풍선 모티브 (다른 메뉴 아이콘과 시각 구분)
 const WorryIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>;
+// 연애상담 — 하트 아이콘
+const LoveIcon = () => <svg {...iconProps}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" /></svg>;
 const ChatShortIcon = () => <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 const ChatLongIcon = () => <svg {...iconProps}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>;
 const StarIcon = () => <svg {...iconProps}><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z" /></svg>;

@@ -19,7 +19,7 @@ type Props = {
   currentUserId: string | null;
   currentUserName?: string | null;
   /** 댓글 적립 kind 결정 — 'hotdeal' 이면 hotdeal_comment (1 mlbg base), 그 외는 community_comment (0.3) */
-  postCategory?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry';
+  postCategory?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'love';
   /** 댓글 id → 적립 mlbg 매핑 (서버에서 전달) */
   earnedMap?: Record<number, number>;
 };
@@ -56,7 +56,7 @@ function formatRelativeKo(iso: string): string {
 
 export default function CommentSection({ postId, comments, currentUserId, currentUserName, postCategory = 'community', earnedMap = {} }: Props) {
   const commentAwardKind = postCategory === 'hotdeal' ? 'hotdeal_comment' : 'community_comment';
-  const isAnonymous = postCategory === 'worry';
+  const isAnonymous = postCategory === 'worry' || postCategory === 'love';
   const router = useRouter();
   const supabase = createClient();
   const confirm = useConfirm();

@@ -12,7 +12,7 @@ import CoinPicker from './CoinPicker';
 
 type Props = {
   initial?: { id: number; title: string; content: string; is_paid_only?: boolean; stock_code?: string | null; stock_name?: string | null };
-  category?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
+  category?: 'community' | 'blog' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin' | 'love';
   redirectBase?: string;
 };
 
@@ -203,7 +203,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <label htmlFor="content" className="text-[11px] font-bold tracking-widest uppercase text-muted">내용</label>
-          {category !== 'worry' && (
+          {category !== 'worry' && category !== 'love' && (
             <div className="flex items-center gap-2">
               <input
                 ref={fileInputRef}
@@ -232,7 +232,7 @@ export default function PostForm({ initial, category = 'community', redirectBase
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={category === 'worry' ? '고민 내용을 입력하세요. 익명으로 등록됨.' : '내용을 입력하세요. 사진은 우측 상단 [📷 사진 추가] 버튼으로 업로드 (썸네일로 미리보기).'}
+          placeholder={category === 'worry' ? '고민 내용을 입력하세요. 익명으로 등록됨.' : category === 'love' ? '연애 고민·사연을 적어주세요. 익명으로 등록됨.' : '내용을 입력하세요. 사진은 우측 상단 [📷 사진 추가] 버튼으로 업로드 (썸네일로 미리보기).'}
           rows={14}
           className="border border-border border-b-2 border-b-navy px-3.5 py-3 text-[15px] outline-none focus:border-b-cyan rounded-none resize-y leading-relaxed"
         />
