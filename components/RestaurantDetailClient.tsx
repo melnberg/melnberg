@@ -80,7 +80,6 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
 
   async function occupy() {
     if (!me) { alert('로그인 필요'); return; }
-    if (isAuthor) { alert('본인 핀은 분양 불가'); return; }
     if (occupier) { alert('이미 분양된 핀'); return; }
     if (busy) return;
     if (!confirm(`${Number(pin.occupy_price).toLocaleString()} mlbg 로 분양받습니다.`)) return;
@@ -156,7 +155,7 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
           <div className="flex flex-col gap-3">
             <div>분양가 <b className="text-navy">{Number(pin.occupy_price).toLocaleString()} mlbg</b> · 일 수익 {pin.daily_income} mlbg</div>
             <div className="grid grid-cols-2 gap-2">
-              <button onClick={occupy} disabled={busy || isAuthor} className="bg-navy text-white px-4 py-2.5 text-[12px] font-bold border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+              <button onClick={occupy} disabled={busy} className="bg-navy text-white px-4 py-2.5 text-[12px] font-bold border-none cursor-pointer hover:bg-navy-dark disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <span>🚩</span><span>분양받기</span>
               </button>
               <a href={`/?restaurant=${pin.id}&lat=${pin.lat}&lng=${pin.lng}`} target="_top" className="bg-white text-navy border border-navy px-4 py-2.5 text-[12px] font-bold no-underline cursor-pointer hover:bg-navy-soft inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
