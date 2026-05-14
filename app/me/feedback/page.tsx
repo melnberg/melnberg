@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
+import MyFeedbackComposer from '@/components/MyFeedbackComposer';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -15,6 +16,7 @@ type Row = {
   created_at: string;
   admin_reply: string | null;
   replied_at: string | null;
+  image_urls: string[] | null;
 };
 
 function fmtDate(iso: string): string {
@@ -29,7 +31,7 @@ export default async function MyFeedbackPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('feedback')
-    .select('id, message, page_url, created_at, admin_reply, replied_at')
+    .select('id, message, page_url, created_at, admin_reply, replied_at, image_urls')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -49,12 +51,14 @@ export default async function MyFeedbackPage() {
             <h1 className="text-[28px] font-bold text-navy tracking-tight">내 건의사항</h1>
             <Link href="/me" className="text-[12px] font-bold text-navy hover:text-cyan no-underline tracking-wider uppercase">← 마이페이지</Link>
           </div>
-          <p className="text-sm text-muted mb-8">위젯으로 보낸 내 건의사항 + 관리자 답글.</p>
+          <p className="text-sm text-muted mb-6">내가 보낸 건의사항 + 관리자 답글. 이미지 첨부 가능 (30MB 이하).</p>
+
+          <MyFeedbackComposer />
 
           {items.length === 0 ? (
             <div className="text-center py-20 text-muted text-[14px]">
               아직 보낸 건의사항이 없습니다.<br />
-              <span className="text-[12px]">우측 하단 말풍선으로 의견 남겨주세요.</span>
+              <span className="text-[12px]">위 [+ 건의하기] 또는 우측 상단 말풍선으로 의견 남겨주세요.</span>
             </div>
           ) : (
             <ul className="space-y-3">
@@ -69,6 +73,16 @@ export default async function MyFeedbackPage() {
                     )}
                   </div>
                   <p className="text-[14px] text-text whitespace-pre-wrap leading-relaxed break-words">{r.message}</p>
+                  {r.image_urls && r.image_urls.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {r.image_urls.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 border border-border bg-bg/30 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="첨부" className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {r.page_url && (
                     <div className="text-[11px] text-muted truncate mt-1">📍 {r.page_url}</div>
                   )}

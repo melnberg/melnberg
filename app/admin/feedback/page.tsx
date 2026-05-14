@@ -21,6 +21,7 @@ type FeedbackRow = {
   resolved_at: string | null;
   admin_reply: string | null;
   replied_at: string | null;
+  image_urls: string[] | null;
 };
 
 function fmtDate(iso: string): string {
@@ -37,7 +38,7 @@ export default async function AdminFeedbackPage() {
 
   const { data, error } = await supabase
     .from('feedback')
-    .select('id, user_id, display_name, email, message, user_agent, page_url, created_at, resolved_at, admin_reply, replied_at')
+    .select('id, user_id, display_name, email, message, user_agent, page_url, created_at, resolved_at, admin_reply, replied_at, image_urls')
     .order('created_at', { ascending: false })
     .limit(200);
 
@@ -81,6 +82,16 @@ export default async function AdminFeedbackPage() {
                     <span className="text-[10px] text-muted tabular-nums">#{r.id}</span>
                   </div>
                   <p className="text-[14px] text-text whitespace-pre-wrap leading-relaxed mb-2 break-words">{r.message}</p>
+                  {r.image_urls && r.image_urls.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {r.image_urls.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block w-28 h-28 border border-border bg-bg/30 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="첨부" className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {r.page_url && (
                     <div className="text-[11px] text-muted truncate">📍 {r.page_url}</div>
                   )}
