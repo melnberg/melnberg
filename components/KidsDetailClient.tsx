@@ -129,7 +129,7 @@ export default function KidsDetailClient({ pin }: { pin: KidsItem }) {
         {pin.occupier_id ? (
           <div>분양: <b className="text-navy">{pin.occupier_name ?? '익명'}</b> · 일 수익 {pin.daily_income} mlbg</div>
         ) : (
-          <div>분양가 <b className="text-navy">{Number(pin.occupy_price).toLocaleString()} mlbg</b> · 일 수익 {pin.daily_income} mlbg · <a href={`/?kids=${pin.id}`} target="_top" className="text-cyan underline whitespace-nowrap">지도에서 분양받기</a></div>
+          <div>분양가 <b className="text-navy">{Number(pin.occupy_price).toLocaleString()} mlbg</b> · 일 수익 {pin.daily_income} mlbg · <a href={`/?kids=${pin.id}&lat=${pin.lat}&lng=${pin.lng}`} target="_top" className="text-cyan underline whitespace-nowrap">지도에서 분양받기</a></div>
         )}
       </div>
 
