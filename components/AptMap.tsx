@@ -8,6 +8,7 @@ import EmartPanel from './EmartPanel';
 import FactoryPanel, { type FactoryItem } from './FactoryPanel';
 import RestaurantPanel from './RestaurantPanel';
 import KidsPanel from './KidsPanel';
+import StadiumPanel, { type StadiumItem } from './StadiumPanel';
 import Countdown from './Countdown';
 import RewardTooltip from './RewardTooltip';
 import { notifyTelegram } from '@/lib/telegram-notify';
@@ -90,7 +91,7 @@ function saveCurrentMapState(inst: KakaoMapInst | null) {
 }
 
 export type FeedItem = {
-  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'listing_comment' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'thread' | 'poll_settled' | 'fortune_cookie';
+  kind: 'discussion' | 'comment' | 'post' | 'post_comment' | 'listing' | 'listing_comment' | 'offer' | 'snatch' | 'auction' | 'auction_bid' | 'auction_won' | 'notice' | 'emart_occupy' | 'factory_occupy' | 'emart_comment' | 'factory_comment' | 'strike' | 'bridge_toll' | 'sell_complete' | 'restaurant_register' | 'restaurant_comment' | 'kids_register' | 'kids_comment' | 'stadium_register' | 'stadium_comment' | 'thread' | 'poll_settled' | 'fortune_cookie';
   /** fortune_cookie 전용 — 뽑은 운세 본문 (content 와 동일 채움). drawn_date 별도 보관. */
   fortune_text?: string | null;
   fortune_drawn_date?: string | null;
@@ -157,6 +158,11 @@ export type FeedItem = {
   kids_name?: string | null;
   kids_recommended_activity?: string | null;
   kids_photo_url?: string | null;
+  /** stadium_register / stadium_comment 전용 */
+  stadium_id?: number;
+  stadium_name?: string | null;
+  stadium_recommended_activity?: string | null;
+  stadium_photo_url?: string | null;
   /** poll_settled 전용 */
   poll_total_pool?: number;
   poll_winner_pool?: number;
@@ -447,8 +453,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   const [mapReady, setMapReady] = useState(false);
 
   // 핀 카테고리 필터 — 5개 토글 (아파트/시설/이마트/맛집/육아). localStorage 에 저장.
-  type PinFilters = { apt: boolean; facility: boolean; emart: boolean; restaurant: boolean; kids: boolean };
-  const DEFAULT_FILTERS: PinFilters = { apt: true, facility: true, emart: true, restaurant: true, kids: true };
+  type PinFilters = { apt: boolean; facility: boolean; emart: boolean; restaurant: boolean; kids: boolean; stadium: boolean };
+  const DEFAULT_FILTERS: PinFilters = { apt: true, facility: true, emart: true, restaurant: true, kids: true, stadium: true };
   const [pinFilters, setPinFilters] = useState<PinFilters>(() => {
     if (typeof window === 'undefined') return DEFAULT_FILTERS;
     try {
@@ -753,6 +759,94 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       }
     }
   }, [searchParams, kidsList]);
+
+  // 사용자 등록 경기장·운동장 핀
+  const [stadiumList, setStadiumList] = useState<StadiumItem[]>([]);
+  const [selectedStadium, setSelectedStadium] = useState<StadiumItem | null>(null);
+  const stadiumMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  async function refetchStadium() {
+    try {
+      const sbCli = createClient();
+      const { data } = await sbCli.rpc('list_recent_stadium_pins', { p_limit: 500 });
+      const items = ((data ?? []) as StadiumItem[]);
+      setStadiumList(items);
+      setSelectedStadium((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
+    } catch { /* silent */ }
+  }
+  useEffect(() => {
+    const idle = (cb: () => void) => {
+      if (typeof window !== 'undefined' && (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback) {
+        (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(cb, { timeout: 1500 });
+      } else {
+        setTimeout(cb, 300);
+      }
+    };
+    idle(() => { refetchStadium(); });
+  }, []);
+
+  // 경기장 마커 — 파란 핀 + 트랙 SVG
+  useEffect(() => {
+    if (!mapReady || !mapInstRef.current) return;
+    const map = mapInstRef.current;
+    for (const m of stadiumMarkersRef.current) m.setMap(null);
+    stadiumMarkersRef.current = [];
+    if (stadiumList.length === 0) return;
+    const PIN_W = 26, PIN_H = 36;
+    const stadiumPin = (occupied: boolean) => {
+      const flagSvg = occupied
+        ? '<line x1="11" y1="7.5" x2="11" y2="24.5" stroke="#1a1d22" stroke-width="3.6" stroke-linecap="round"/><line x1="11" y1="8" x2="11" y2="24" stroke="white" stroke-width="2.2" stroke-linecap="round"/><polygon points="11,8 23,13 11,18" fill="white" stroke="#1a1d22" stroke-width="0.9" stroke-linejoin="round"/>'
+        : '';
+      // 트랙(육상) — 길쭉한 oval 두 개
+      const track = '<g fill="none" stroke="#1a1d22" stroke-width="1.6" stroke-linecap="round">'
+        + '<ellipse cx="16" cy="16" rx="8" ry="4.5"/>'
+        + '<ellipse cx="16" cy="16" rx="5" ry="2.5"/>'
+        + '<line x1="11" y1="16" x2="21" y2="16" stroke-width="1.0" stroke-dasharray="1.5 1.2"/>'
+        + '</g>';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="45" viewBox="0 0 32 45"><defs><radialGradient id="g" cx="35%" cy="30%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.55"/><stop offset="60%" stop-color="white" stop-opacity="0"/></radialGradient></defs><ellipse cx="16" cy="42" rx="6.5" ry="2" fill="rgba(0,0,0,0.22)"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="#3b82f6" stroke="#1a1d22" stroke-width="2"/><path d="M16 1.5 C 7 1.5, 2 8, 2 17 C 2 28, 16 41.5, 16 41.5 C 16 41.5, 30 28, 30 17 C 30 8, 25 1.5, 16 1.5 Z" fill="url(#g)" stroke="none"/>${track}${flagSvg}</svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    };
+    const imgEmpty = new window.kakao.maps.MarkerImage(stadiumPin(false), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    const imgOcc = new window.kakao.maps.MarkerImage(stadiumPin(true), new window.kakao.maps.Size(PIN_W, PIN_H), { offset: new window.kakao.maps.Point(PIN_W / 2, PIN_H) });
+    for (const s of stadiumList) {
+      const pos = new window.kakao.maps.LatLng(s.lat, s.lng);
+      const fullName = s.dong ? `${s.dong} ${s.name}` : s.name;
+      const marker = new window.kakao.maps.Marker({
+        position: pos,
+        title: fullName + (s.occupier_id ? ` — ${s.occupier_name ?? '점거됨'} 보유` : ` (${s.occupy_price.toLocaleString()} mlbg 분양)`),
+        clickable: true,
+        image: s.occupier_id ? imgOcc : imgEmpty,
+        map,
+      }) as KakaoMarkerInst;
+      window.kakao.maps.event.addListener(marker, 'click', () => {
+        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+          saveCurrentMapState(mapInstRef.current);
+          router.push(`/stadiums/${s.id}`);
+        } else {
+          setSelectedStadium(s);
+        }
+      });
+      stadiumMarkersRef.current.push(marker);
+    }
+    return () => {
+      for (const m of stadiumMarkersRef.current) m.setMap(null);
+      stadiumMarkersRef.current = [];
+    };
+  }, [stadiumList, mapReady]);
+
+  // URL ?stadium=ID — 외부 링크에서 핀 패널 자동 오픈
+  useEffect(() => {
+    const sStr = searchParams.get('stadium');
+    if (!sStr) return;
+    const sid = Number(sStr);
+    if (!Number.isFinite(sid)) return;
+    const s = stadiumList.find((x) => x.id === sid);
+    if (s) {
+      setSelectedStadium(s);
+      if (mapInstRef.current) {
+        (mapInstRef.current as { panTo: (p: unknown) => void }).panTo(new window.kakao.maps.LatLng(s.lat, s.lng));
+      }
+    }
+  }, [searchParams, stadiumList]);
 
   // 내 가게 (my_stores) — 가족회원이 등록한 실제 사업장. 별표 강조 + verified 배지.
   type MyStoreItem = {
@@ -1236,7 +1330,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   }, [previewItem]);
   // 우측 사이드 패널(아파트/이마트/공장/맛집/키즈) 외부 클릭 시 닫기 — X 안 눌러도 지도 클릭으로 닫힘
   useEffect(() => {
-    if (!selected && !selectedEmart && !selectedFactory && !selectedRestaurant && !selectedKids) return;
+    if (!selected && !selectedEmart && !selectedFactory && !selectedRestaurant && !selectedKids && !selectedStadium) return;
     const onClick = (e: MouseEvent) => {
       const t = e.target as Element | null;
       if (!t) return;
@@ -1247,6 +1341,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       setSelectedFactory(null);
       setSelectedRestaurant(null);
       setSelectedKids(null);
+      setSelectedStadium(null);
     };
     // 다음 tick 에 등록 — 핀 클릭으로 패널 열린 그 mousedown 이 곧바로 닫지 못하게.
     const timer = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
@@ -1254,7 +1349,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       clearTimeout(timer);
       document.removeEventListener('mousedown', onClick);
     };
-  }, [selected, selectedEmart, selectedFactory, selectedRestaurant, selectedKids]);
+  }, [selected, selectedEmart, selectedFactory, selectedRestaurant, selectedKids, selectedStadium]);
   // 글 상세 URL — lib/feed-item-href.ts 의 feedItemHref 사용 (MobileFeedList 와 공용).
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}
@@ -1304,6 +1399,17 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
         inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
       }
       if (k) setSelectedKids(k);
+      return;
+    }
+    // 경기장 등록/댓글 → 지도 이동 + StadiumPanel 열기
+    if (item.kind === 'stadium_register' || item.kind === 'stadium_comment') {
+      const s = stadiumList.find((x) => x.id === item.stadium_id);
+      if (item.lat != null && item.lng != null && mapInstRef.current) {
+        const inst = mapInstRef.current;
+        inst.setLevel(3);
+        inst.panTo(new window.kakao.maps.LatLng(item.lat, item.lng));
+      }
+      if (s) setSelectedStadium(s);
       return;
     }
     // 커뮤니티/핫딜/주식 글·댓글 → 카테고리별 라우트
@@ -1904,7 +2010,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
     for (const m of factoryMarkersRef.current)    m.setMap(pinFilters.facility ? map : null);
     for (const m of restaurantMarkersRef.current) m.setMap(pinFilters.restaurant ? map : null);
     for (const m of kidsMarkersRef.current)       m.setMap(pinFilters.kids ? map : null);
-  }, [pinFilters, mapReady, pins, emartList, factoryList, restaurantList, kidsList]);
+    for (const m of stadiumMarkersRef.current)    m.setMap(pinFilters.stadium ? map : null);
+  }, [pinFilters, mapReady, pins, emartList, factoryList, restaurantList, kidsList, stadiumList]);
 
   if (error) {
     return (
@@ -1948,6 +2055,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
           { k: 'emart' as const, label: '마트' },
           { k: 'restaurant' as const, label: '맛집' },
           { k: 'kids' as const, label: '육아' },
+          { k: 'stadium' as const, label: '운동' },
         ]).map((it) => {
           const on = pinFilters[it.k];
           return (
@@ -2253,6 +2361,12 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                               <img src={f.kids_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                             </div>
                           )}
+                          {f.kind === 'stadium_register' && f.stadium_photo_url && (
+                            <div className="mt-2 max-w-[280px] aspect-square bg-[#f0f0f0] overflow-hidden border border-border">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={f.stadium_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                            </div>
+                          )}
                           <div className="text-[10px] text-muted mt-1 flex items-center gap-2">
                             <span>{feedRelTime(f.created_at)} 전</span>
                             {typeof f.earned_mlbg === 'number' ? (
@@ -2262,8 +2376,8 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                                 // 절대규칙 — 모든 피드 게시글에 mlbg 보상 표시
                                 // earned_mlbg 없는 종류 (listing, offer, snatch, auction, restaurant_register, kids_register, etc.) 의 fallback
                                 let txt = '';
-                                if (f.kind === 'restaurant_register' || f.kind === 'kids_register') txt = '+30 mlbg';
-                                else if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment') txt = '+0.5 mlbg';
+                                if (f.kind === 'restaurant_register' || f.kind === 'kids_register' || f.kind === 'stadium_register') txt = '+30 mlbg';
+                                else if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment' || f.kind === 'stadium_comment') txt = '+0.5 mlbg';
                                 else if (f.kind === 'listing') txt = typeof f.listing_price === 'number' ? `호가 ${f.listing_price.toLocaleString()} mlbg` : '매물 등록';
                                 else if (f.kind === 'listing_comment') txt = '+0 mlbg (매물 댓글)';
                                 else if (f.kind === 'offer') txt = typeof f.listing_price === 'number' ? `매수 ${f.listing_price.toLocaleString()} mlbg` : '매수 호가';
@@ -2446,6 +2560,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       {selectedFactory && <FactoryPanel factory={selectedFactory} onClose={() => setSelectedFactory(null)} onChanged={refetchFactory} />}
       {selectedRestaurant && <RestaurantPanel restaurant={selectedRestaurant} onClose={() => setSelectedRestaurant(null)} onChanged={refetchRestaurants} />}
       {selectedKids && <KidsPanel kids={selectedKids} onClose={() => setSelectedKids(null)} onChanged={refetchKids} />}
+      {selectedStadium && <StadiumPanel stadium={selectedStadium} onClose={() => setSelectedStadium(null)} onChanged={refetchStadium} />}
     </div>
   );
 }

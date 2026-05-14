@@ -4,12 +4,12 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 
 // GET /api/facility-income-log?type=factory&id=123 → 본인의 해당 시설 최근 7일 지급 내역.
-// type ∈ {'emart','factory','restaurant','kids'}, id 는 facility_id (emart 는 무시)
+// type ∈ {'emart','factory','restaurant','kids','stadium'}, id 는 facility_id (emart 는 무시)
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const type = sp.get('type');
   const idStr = sp.get('id');
-  if (!type || !['emart', 'factory', 'restaurant', 'kids'].includes(type)) {
+  if (!type || !['emart', 'factory', 'restaurant', 'kids', 'stadium'].includes(type)) {
     return NextResponse.json({ error: 'invalid type' }, { status: 400 });
   }
 

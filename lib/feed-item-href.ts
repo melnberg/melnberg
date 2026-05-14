@@ -42,6 +42,9 @@ export function feedItemHref(item: FeedItem): string {
   if (item.kind === 'kids_register' || item.kind === 'kids_comment') {
     return item.kids_id ? `/kids/${item.kids_id}` : '/kids';
   }
+  if (item.kind === 'stadium_register' || item.kind === 'stadium_comment') {
+    return item.stadium_id ? `/stadiums/${item.stadium_id}` : '/stadiums';
+  }
   if (item.kind === 'emart_occupy' || item.kind === 'emart_comment') {
     return item.apt_master_id ? `/e/${item.apt_master_id}` : '/';
   }

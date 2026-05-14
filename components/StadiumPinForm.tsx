@@ -1,0 +1,331 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { fileToWebp } from '@/lib/image-to-webp';
+import { revalidateHome } from '@/lib/revalidate-home';
+
+declare global { interface Window { kakao: typeof window.kakao } }
+const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+const SDK_URL = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_KEY}&autoload=false&libraries=services`;
+
+function loadKakao(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') return reject(new Error('SSR'));
+    if (window.kakao && window.kakao.maps && window.kakao.maps.services) return resolve();
+    const existing = document.querySelector(`script[src^="https://dapi.kakao.com/v2/maps/sdk.js"]`);
+    if (existing) { existing.addEventListener('load', () => window.kakao.maps.load(() => resolve())); return; }
+    const s = document.createElement('script');
+    s.src = SDK_URL; s.async = true;
+    s.onload = () => window.kakao.maps.load(() => resolve());
+    s.onerror = () => reject(new Error('kakao sdk load failed'));
+    document.head.appendChild(s);
+  });
+}
+
+type Place = { id: string; place_name: string; road_address_name: string; address_name: string; x: string; y: string; category_name?: string };
+
+type KakaoMarkerInst = {
+  setMap: (m: unknown) => void;
+  setImage: (img: unknown) => void;
+  getPosition: () => unknown;
+};
+
+function previewMarkerSvg(num: number, hovered: boolean): string {
+  const fill = hovered ? '#002060' : '#00B0F0';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="30" viewBox="0 0 24 30"><circle cx="12" cy="12" r="11" fill="${fill}" stroke="#002060" stroke-width="1.5"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="white" font-family="sans-serif">${num}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function makePreviewMarkerImage(num: number, hovered: boolean): unknown {
+  const maps = window.kakao.maps as unknown as {
+    Size: new (w: number, h: number) => unknown;
+    Point: new (x: number, y: number) => unknown;
+    MarkerImage: new (src: string, size: unknown, opts?: { offset?: unknown }) => unknown;
+  };
+  const size = hovered ? new maps.Size(30, 38) : new maps.Size(24, 30);
+  const offset = hovered ? new maps.Point(15, 38) : new maps.Point(12, 30);
+  return new maps.MarkerImage(previewMarkerSvg(num, hovered), size, { offset });
+}
+
+export default function StadiumPinForm({ currentUserId }: { currentUserId: string }) {
+  const supabase = createClient();
+  const router = useRouter();
+  const mapDivRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<unknown>(null);
+  const markerRef = useRef<unknown>(null);
+  const searchMarkersRef = useRef<KakaoMarkerInst[]>([]);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [recommendedActivity, setRecommendedActivity] = useState('');
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
+  const [address, setAddress] = useState('');
+  const [dong, setDong] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Place[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadKakao().then(() => {
+      if (cancelled || !mapDivRef.current) return;
+      const center = new window.kakao.maps.LatLng(37.498, 127.027);
+      const map = new window.kakao.maps.Map(mapDivRef.current, { center, level: 4 });
+      mapRef.current = map;
+      window.kakao.maps.event.addListener(map, 'click', (...args: unknown[]) => {
+        const e = args[0] as { latLng: { getLat: () => number; getLng: () => number } };
+        const newLat = e.latLng.getLat();
+        const newLng = e.latLng.getLng();
+        setMarker(newLat, newLng);
+        const services = window.kakao.maps.services as { Geocoder?: new () => { coord2Address: (lng: number, lat: number, cb: (result: Array<{ road_address?: { address_name: string } | null; address?: { address_name: string; region_3depth_name?: string } | null }>, status: string) => void) => void } };
+        const geocoderClass = services.Geocoder;
+        if (geocoderClass) {
+          const geocoder = new geocoderClass();
+          geocoder.coord2Address(newLng, newLat, (result, status) => {
+            if (status === window.kakao.maps.services.Status.OK && result[0]) {
+              const r0 = result[0];
+              setAddress(r0.road_address?.address_name ?? r0.address?.address_name ?? '');
+              const dongName = r0.address?.region_3depth_name ?? '';
+              if (dongName) setDong(dongName);
+            }
+          });
+        }
+      });
+    }).catch((e) => setErr(`지도 로드 실패: ${String(e)}`));
+    return () => { cancelled = true; };
+  }, []);
+
+  function setMarker(la: number, ln: number) {
+    setLat(la); setLng(ln);
+    if (!mapRef.current) return;
+    const pos = new window.kakao.maps.LatLng(la, ln);
+    if (markerRef.current) (markerRef.current as { setMap: (m: unknown) => void }).setMap(null);
+    const marker = new window.kakao.maps.Marker({ position: pos }) as unknown as { setMap: (m: unknown) => void };
+    marker.setMap(mapRef.current);
+    markerRef.current = marker;
+    (mapRef.current as { panTo: (p: unknown) => void }).panTo(pos);
+  }
+
+  function clearSearchMarkers() {
+    for (const m of searchMarkersRef.current) {
+      try { m.setMap(null); } catch { /* ignore */ }
+    }
+    searchMarkersRef.current = [];
+  }
+
+  function search() {
+    if (!searchQuery.trim()) return;
+    clearSearchMarkers();
+    setHoveredIdx(null);
+    const ps = new window.kakao.maps.services.Places();
+    ps.keywordSearch(searchQuery.trim(), (data, status) => {
+      if (status !== window.kakao.maps.services.Status.OK) {
+        setSearchResults([]);
+        return;
+      }
+      const results = (data as unknown as Place[]).slice(0, 8);
+      setSearchResults(results);
+      const map = mapRef.current;
+      if (!map) return;
+      const mapsAny = window.kakao.maps as unknown as {
+        LatLngBounds: new () => { extend: (p: unknown) => void };
+        LatLng: new (lat: number, lng: number) => unknown;
+        Marker: new (opts: { position: unknown; image?: unknown }) => unknown;
+        event: { addListener: (target: unknown, type: string, handler: (...args: unknown[]) => void) => void };
+      };
+      const bounds = new mapsAny.LatLngBounds();
+      results.forEach((p, idx) => {
+        const lat0 = Number(p.y);
+        const lng0 = Number(p.x);
+        if (!Number.isFinite(lat0) || !Number.isFinite(lng0)) return;
+        const pos = new mapsAny.LatLng(lat0, lng0);
+        const image = makePreviewMarkerImage(idx + 1, false);
+        const marker = new mapsAny.Marker({ position: pos, image }) as unknown as KakaoMarkerInst;
+        marker.setMap(map);
+        mapsAny.event.addListener(marker, 'click', () => pickPlace(p));
+        mapsAny.event.addListener(marker, 'mouseover', () => setHoveredIdx(idx));
+        mapsAny.event.addListener(marker, 'mouseout', () => setHoveredIdx(null));
+        searchMarkersRef.current.push(marker);
+        bounds.extend(pos);
+      });
+      if (results.length > 0) {
+        (map as { setBounds: (b: unknown, p?: number) => void }).setBounds(bounds, 60);
+        const mapAny = map as { getLevel: () => number; setLevel: (l: number) => void };
+        if (mapAny.getLevel() < 3) mapAny.setLevel(3);
+      }
+    });
+  }
+
+  // hover 변경 시 마커 이미지 교체 + panTo
+  useEffect(() => {
+    const markers = searchMarkersRef.current;
+    if (markers.length === 0) return;
+    markers.forEach((m, idx) => {
+      const isHover = hoveredIdx === idx;
+      try { m.setImage(makePreviewMarkerImage(idx + 1, isHover)); } catch { /* ignore */ }
+    });
+    if (hoveredIdx != null && markers[hoveredIdx] && mapRef.current) {
+      try {
+        const pos = markers[hoveredIdx].getPosition();
+        (mapRef.current as { panTo: (p: unknown) => void }).panTo(pos);
+      } catch { /* ignore */ }
+    }
+  }, [hoveredIdx]);
+
+  function pickPlace(p: Place) {
+    clearSearchMarkers();
+    setHoveredIdx(null);
+    setName(p.place_name);
+    setAddress(p.road_address_name || p.address_name);
+    setMarker(Number(p.y), Number(p.x));
+    setSearchResults([]); setSearchQuery('');
+    const tokens = (p.address_name || '').split(/\s+/);
+    const dongToken = tokens.reverse().find((t) => /[가-힣]+동$/.test(t));
+    if (dongToken) setDong(dongToken);
+  }
+
+  async function handlePhoto(file: File) {
+    if (file.size > 30 * 1024 * 1024) { setErr('30MB 이하 이미지만 가능합니다.'); return; }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setErr(null);
+    if (!name.trim()) { setErr('경기장명 필수'); return; }
+    if (!description.trim()) { setErr('설명 필수'); return; }
+    if (!recommendedActivity.trim()) { setErr('대표 종목 필수'); return; }
+    if (!photoFile) { setErr('사진 필수'); return; }
+    if (lat == null || lng == null) { setErr('지도에서 위치를 선택하세요'); return; }
+    setBusy(true);
+    let photoUrl: string | null = null;
+    try {
+      const converted = await fileToWebp(photoFile).catch(() => null);
+      const blob = converted?.blob ?? photoFile;
+      const isConverted = !!converted && blob !== photoFile;
+      const ext = isConverted ? (converted!.type === 'image/webp' ? 'webp' : 'jpg') : (photoFile.name.split('.').pop()?.toLowerCase() ?? 'jpg');
+      const contentType = isConverted ? converted!.type : photoFile.type;
+      const path = `${currentUserId}/stadium-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('post-images').upload(path, blob, { contentType });
+      if (upErr) throw new Error(upErr.message);
+      const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+      photoUrl = publicUrl;
+    } catch (e) {
+      setErr(`사진 업로드 실패: ${e instanceof Error ? e.message : String(e)}`);
+      setBusy(false); return;
+    }
+    // AI 사진 검증 — 지도 캡처/스크린샷이면 등록 차단
+    try {
+      const r = await fetch('/api/check-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoUrl }),
+      });
+      const j = await r.json() as { verdict?: 'screenshot' | 'real'; reason?: string };
+      if (j.verdict === 'screenshot') {
+        setErr(`AI 검증 실패 — 지도/스크린샷 사진은 등록 불가${j.reason ? ` (${j.reason})` : ''}. 실제 장소 사진으로 다시 올려주세요.`);
+        setBusy(false); return;
+      }
+    } catch { /* AI 호출 실패 시 fail-open — 등록 진행 */ }
+    const { data, error } = await supabase.rpc('register_stadium_pin', {
+      p_name: name.trim(),
+      p_description: description.trim(),
+      p_recommended_activity: recommendedActivity.trim(),
+      p_lat: lat, p_lng: lng,
+      p_photo_url: photoUrl,
+      p_address: address || null,
+      p_dong: dong || null,
+    });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_id: number | null; out_message: string | null } | undefined;
+    if (!row?.out_success) { setErr(row?.out_message ?? '등록 실패'); return; }
+    alert('등록 완료. +30 mlbg 지급됨.');
+    revalidateHome();
+    router.push('/stadiums');
+    router.refresh();
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">위치 *</label>
+        <div className="flex gap-2">
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } }}
+            placeholder="경기장명/주소 검색"
+            className="flex-1 min-w-0 border border-border px-3 py-2 text-[13px] outline-none focus:border-navy" />
+          <button type="button" onClick={search} className="flex-shrink-0 bg-navy text-white px-4 py-2 text-[12px] font-bold border-none cursor-pointer hover:bg-navy-dark">검색</button>
+        </div>
+        {searchResults.length > 0 && (
+          <ul className="border border-border max-h-[200px] overflow-y-auto">
+            {searchResults.map((p, idx) => (
+              <li key={p.id}>
+                <button type="button" onClick={() => pickPlace(p)}
+                  onMouseEnter={() => setHoveredIdx(idx)}
+                  onMouseLeave={() => setHoveredIdx(null)}
+                  className={`w-full text-left px-3 py-2 border-b border-[#f0f0f0] last:border-b-0 cursor-pointer flex items-start gap-2 ${hoveredIdx === idx ? 'bg-cyan/10' : 'bg-white hover:bg-bg/40'}`}>
+                  <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-black tabular-nums" style={{ background: hoveredIdx === idx ? '#002060' : '#00B0F0' }}>{idx + 1}</span>
+                  <span className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-navy">{p.place_name}</div>
+                    <div className="text-[11px] text-muted">{p.road_address_name || p.address_name}</div>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div ref={mapDivRef} className="w-full h-[300px] border border-border bg-[#f0f0f0]" />
+        <div className="text-[11px] text-muted">
+          {lat != null && lng != null ? <>선택됨: {lat.toFixed(5)}, {lng.toFixed(5)} {address && `· ${address}`}</> : '검색 또는 지도 클릭으로 위치 선택'}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">경기장명 *</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy" />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">설명 * (200자)</label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} rows={2}
+          placeholder="경기장 특징 (예: 잔디 상태 좋음, 야간조명 있음, 주차 편함)"
+          className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy resize-y leading-relaxed" />
+        <div className="text-[10px] text-muted text-right">{description.length}/200</div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">대표 종목 * (200자)</label>
+        <textarea value={recommendedActivity} onChange={(e) => setRecommendedActivity(e.target.value)} maxLength={200} rows={2}
+          placeholder="여기서 할 수 있는 운동 (예: 야구, 축구, 농구, 풋살, 테니스)"
+          className="border border-border px-3 py-2 text-[14px] outline-none focus:border-navy resize-y leading-relaxed" />
+        <div className="text-[10px] text-muted text-right">{recommendedActivity.length}/200</div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-[11px] font-bold tracking-widest uppercase text-muted">사진 * (30MB 이하)</label>
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhoto(f); }}
+          className="text-[12px]" />
+        {photoPreview && <img src={photoPreview} alt="" className="max-w-[300px] max-h-[200px] object-contain border border-border mt-2 rounded-xl" />}
+      </div>
+
+      {err && <div className="text-sm px-4 py-3 bg-red-50 text-red-700 border border-red-200">{err}</div>}
+
+      <div className="flex justify-end gap-3 mt-2">
+        <button type="button" onClick={() => router.back()} className="bg-white border border-border text-text px-5 py-3 text-[13px] font-semibold cursor-pointer hover:border-navy hover:text-navy">취소</button>
+        <button type="submit" disabled={busy} className="bg-navy text-white border-none px-6 py-3 text-[13px] font-bold tracking-wider uppercase cursor-pointer hover:bg-navy-dark disabled:opacity-50">
+          {busy ? '등록 중...' : '등록하고 +30 mlbg 받기'}
+        </button>
+      </div>
+    </form>
+  );
+}

@@ -19,7 +19,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     const [
       { data: discs }, { data: cmts }, { data: posts }, { data: postComments }, listingsResp, offersResp,
       activeAuctionsResp,
-      emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp,
+      emartOccsResp, strikeResp, tollResp, sellResp, factoryOccsResp, emartCommResp, factoryCommResp, annResp, restaurantPinsResp, restaurantCommResp, kidsPinsResp, kidsCommResp, stadiumPinsResp, stadiumCommResp,
       threadsResp,
       resolvedPollsResp,
       listingCommentsResp,
@@ -158,6 +158,16 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
         .order('created_at', { ascending: false })
         .limit(20)
         .then((r) => r, () => ({ data: null })),
+      // 신규 등록 경기장
+      supabase.rpc('list_recent_stadium_pins', { p_limit: 20 })
+        .then((r) => r, () => ({ data: null })),
+      // 경기장 댓글
+      supabase.from('stadium_pin_comments')
+        .select('id, pin_id, author_id, content, created_at, pin:stadium_pins!pin_id(name, dong, recommended_activity, lat, lng)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then((r) => r, () => ({ data: null })),
       // threads — 본인이 작성한 스레드 글 (답글 제외) 을 홈 피드에 시간순 합류
       supabase
         .from('threads')
@@ -280,6 +290,17 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       id: number; pin_id: number; author_id: string; content: string; created_at: string;
       pin: { name: string | null; dong: string | null; recommended_activity: string | null; lat: number | null; lng: number | null } | null;
     }>);
+    const stadiumPinRows = (((stadiumPinsResp as { data: unknown[] | null })?.data ?? []) as Array<{
+      id: number; name: string; description: string; recommended_activity: string;
+      lat: number; lng: number; photo_url: string | null;
+      dong: string | null;
+      author_id: string; author_name: string | null;
+      created_at: string;
+    }>);
+    const stadiumCommRows = (((stadiumCommResp as { data: unknown[] | null })?.data ?? []) as unknown as Array<{
+      id: number; pin_id: number; author_id: string; content: string; created_at: string;
+      pin: { name: string | null; dong: string | null; recommended_activity: string | null; lat: number | null; lng: number | null } | null;
+    }>);
     const threadRows = (((threadsResp as { data: unknown[] | null })?.data ?? []) as Array<{
       id: number; author_id: string; content: string; like_count: number | null; reply_count: number | null; created_at: string;
     }>);
@@ -376,6 +397,8 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       ...restaurantCommRows.map((c) => c.author_id),
       ...kidsPinRows.map((r) => r.author_id),
       ...kidsCommRows.map((c) => c.author_id),
+      ...stadiumPinRows.map((r) => r.author_id),
+      ...stadiumCommRows.map((c) => c.author_id),
       ...threadRows.map((r) => r.author_id),
       ...listingCommRows.map((c) => c.author_id),
       ...fortuneCookieRows.map((r) => r.user_id),
@@ -1125,6 +1148,59 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
       } as FeedItem;
     });
 
+    // 신규 등록 경기장 → FeedItem (kind 'stadium_register')
+    const stadiumRegisterItems: FeedItem[] = stadiumPinRows.map((r) => {
+      const prof = profileMap.get(r.author_id);
+      const fullName = r.dong ? `${r.dong} ${r.name}` : r.name;
+      return {
+        kind: 'stadium_register' as const,
+        id: 1200000 + r.id,
+        apt_master_id: 0, post_id: null,
+        title: fullName,
+        content: `${r.description}\n[종목] ${r.recommended_activity}`,
+        created_at: r.created_at,
+        apt_nm: fullName, dong: r.dong ?? null,
+        lat: r.lat, lng: r.lng,
+        author_id: r.author_id,
+        author_name: r.author_name ?? prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        stadium_id: r.id,
+        stadium_name: r.name,
+        stadium_recommended_activity: r.recommended_activity,
+        stadium_photo_url: r.photo_url ?? null,
+      } as FeedItem;
+    });
+
+    // 경기장 댓글 → FeedItem (kind 'stadium_comment')
+    const stadiumCommentItems: FeedItem[] = stadiumCommRows.map((c) => {
+      const prof = profileMap.get(c.author_id);
+      const pin = c.pin;
+      const fullName = pin ? (pin.dong ? `${pin.dong} ${pin.name ?? ''}` : (pin.name ?? '')) : '경기장';
+      return {
+        kind: 'stadium_comment' as const,
+        id: 1300000 + c.id,
+        apt_master_id: 0, post_id: null,
+        title: fullName,
+        content: c.content,
+        created_at: c.created_at,
+        apt_nm: fullName, dong: pin?.dong ?? null,
+        lat: pin?.lat ?? null, lng: pin?.lng ?? null,
+        author_id: c.author_id,
+        author_name: prof?.display_name ?? null,
+        author_link: prof?.link_url ?? null,
+        author_is_paid: isActivePaid(prof),
+        author_is_solo: !!prof?.is_solo,
+        author_avatar_url: prof?.avatar_url ?? null,
+        author_apt_count: prof?.apt_count ?? null,
+        stadium_id: c.pin_id,
+        stadium_name: fullName,
+      } as FeedItem;
+    });
+
     // 스레드 글 → FeedItem (kind 'thread'). post_id 에 thread.id 박아서 /t/{id} 라우팅.
     const threadItems: FeedItem[] = threadRows.map((r) => {
       const prof = profileMap.get(r.author_id);
@@ -1250,7 +1326,7 @@ async function fetchFeedRaw(): Promise<FeedItem[]> {
     }
 
     // 경매는 강제 최상단 유지. 그 외 모두 시간순.
-    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...listingCommentItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...threadItems, ...pollSettledItems, ...fortuneCookieItems]
+    const others = [...NOTICE_ITEMS, ...announcementItems, ...discussionItems, ...commentItems, ...postItems, ...postCommentItems, ...listingItems, ...listingCommentItems, ...offerItems, ...bidItems, ...emartItems, ...factoryItems, ...facilityCommentItems, ...strikeItems, ...tollItems, ...sellItems, ...restaurantRegisterItems, ...restaurantCommentItems, ...kidsRegisterItems, ...kidsCommentItems, ...stadiumRegisterItems, ...stadiumCommentItems, ...threadItems, ...pollSettledItems, ...fortuneCookieItems]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 300 - auctionItems.length);
     return [...auctionItems, ...others];

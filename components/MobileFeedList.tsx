@@ -10,7 +10,7 @@ import { feedItemToNicknameInfo } from '@/lib/nickname-info';
 import { feedItemHref } from '@/lib/feed-item-href';
 import { inlineKindFor } from '@/lib/feed-inline-kind';
 import { createClient } from '@/lib/supabase/client';
-import { KidsIcon, RestaurantIcon } from './CategoryIcons';
+import { KidsIcon, RestaurantIcon, StadiumIcon } from './CategoryIcons';
 
 const SCROLL_KEY = 'mlbg.feed.scroll';
 const LAST_CLICK_KEY = 'mlbg.feed.lastClick';
@@ -66,8 +66,8 @@ function rewardKind(f: FeedItem): React.ComponentProps<typeof RewardTooltip>['ki
 // earned_mlbg 가 없는 종류 (listing, offer, snatch, auction, restaurant_register, kids_register 등)
 // 의 fallback. PC 피드 (AptMap.tsx) 와 동일 로직 — 새 종류 추가 시 양쪽 모두 갱신.
 function fallbackRewardText(f: FeedItem): string {
-  if (f.kind === 'restaurant_register' || f.kind === 'kids_register') return '+30 mlbg';
-  if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment') return '+0.5 mlbg';
+  if (f.kind === 'restaurant_register' || f.kind === 'kids_register' || f.kind === 'stadium_register') return '+30 mlbg';
+  if (f.kind === 'restaurant_comment' || f.kind === 'kids_comment' || f.kind === 'stadium_comment') return '+0.5 mlbg';
   if (f.kind === 'listing') return typeof f.listing_price === 'number' ? `호가 ${f.listing_price.toLocaleString()} mlbg` : '매물 등록';
   if (f.kind === 'offer') return typeof f.listing_price === 'number' ? `매수 ${f.listing_price.toLocaleString()} mlbg` : '매수 호가';
   if (f.kind === 'snatch') return '내놔 (무상)';
@@ -112,6 +112,8 @@ function badgeFor(f: FeedItem): { label: string; cls: string } | null {
     case 'restaurant_comment':  return { label: '맛집댓글', cls: 'bg-[#fef3c7] text-[#78350f]' };
     case 'kids_register': return { label: '육아장소', cls: 'bg-[#fbcfe8] text-[#831843]' };
     case 'kids_comment':  return { label: '육아댓글', cls: 'bg-[#fdf2f8] text-[#831843]' };
+    case 'stadium_register': return { label: '운동장', cls: 'bg-[#bfdbfe] text-[#1e3a8a]' };
+    case 'stadium_comment':  return { label: '운동장댓글', cls: 'bg-[#dbeafe] text-[#1e3a8a]' };
     case 'thread':        return { label: '스레드', cls: 'bg-[#fafafa] text-navy border border-border' };
     case 'poll_settled':  return { label: f.poll_mode === 'vote' ? '투표결과' : '정산', cls: 'bg-gradient-to-r from-yellow-400 to-pink-500 text-white' };
     case 'fortune_cookie': return { label: '운세', cls: 'bg-gradient-to-r from-emerald-400 via-teal-400 to-lime-400 text-white' };
@@ -237,6 +239,8 @@ export default function MobileFeedList({ items }: Props) {
             : f.kind === 'restaurant_comment' ? <span className="inline-flex items-center gap-1"><RestaurantIcon className="w-[12px] h-[12px]" /> {f.restaurant_name ?? '맛집'}</span>
             : f.kind === 'kids_register' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>
             : f.kind === 'kids_comment' ? <span className="inline-flex items-center gap-1"><KidsIcon className="w-[12px] h-[12px]" /> {f.kids_name ?? '육아 장소'}</span>
+            : f.kind === 'stadium_register' ? <span className="inline-flex items-center gap-1"><StadiumIcon className="w-[12px] h-[12px]" /> {f.stadium_name ?? '경기장'}</span>
+            : f.kind === 'stadium_comment' ? <span className="inline-flex items-center gap-1"><StadiumIcon className="w-[12px] h-[12px]" /> {f.stadium_name ?? '경기장'}</span>
             : (f.kind === 'emart_occupy' || f.kind === 'factory_occupy' || f.kind === 'emart_comment' || f.kind === 'factory_comment') ? (f.apt_nm ?? '시설')
             : (f.kind === 'post' || f.kind === 'post_comment') ? (
                 f.post_category === 'hotdeal' ? '🔥 핫딜'
@@ -302,6 +306,12 @@ export default function MobileFeedList({ items }: Props) {
                     <div className="mt-2 max-w-[400px] mx-auto aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={f.kids_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  {f.kind === 'stadium_register' && f.stadium_photo_url && (
+                    <div className="mt-2 max-w-[400px] mx-auto aspect-square bg-[#f0f0f0] rounded-xl overflow-hidden border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={f.stadium_photo_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </div>
                   )}
                   {/* 메타 — 시각 + 보상 + 댓글 카운트 (우측) */}

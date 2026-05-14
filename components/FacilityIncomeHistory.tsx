@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 type Row = { paid_for_date: string; amount: number };
-type Props = { type: 'emart' | 'factory' | 'restaurant' | 'kids'; id?: number | bigint | null };
+type Props = { type: 'emart' | 'factory' | 'restaurant' | 'kids' | 'stadium'; id?: number | bigint | null };
 
 // 최근 7일 일별 지급 내역 — 본인이 보유한 시설 패널 안에 노출.
 export default function FacilityIncomeHistory({ type, id }: Props) {
