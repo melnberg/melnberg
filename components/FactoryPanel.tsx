@@ -253,7 +253,7 @@ export default function FactoryPanel({ factory, onClose, onChanged, inline = fal
   return (
     <>
       {!inline && <div className="fixed inset-0 z-[170] bg-black/40" onClick={onClose} />}
-      <aside className={inline
+      <aside data-side-panel className={inline
         ? 'block w-full bg-white flex flex-col'
         : 'fixed top-0 right-0 z-[180] w-[420px] max-w-[100vw] h-screen bg-white border-l border-border shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col'}>
         <div className="px-5 py-4 flex items-center gap-3 flex-shrink-0" style={{ background: meta.bg }}>

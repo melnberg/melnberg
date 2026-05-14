@@ -247,7 +247,7 @@ export default function EmartPanel({ emart, onClose, onChanged, inline = false }
   return (
     <>
       {!inline && <div className="fixed inset-0 z-[170] bg-black/40" onClick={onClose} />}
-      <aside className={inline
+      <aside data-side-panel className={inline
         ? 'block w-full bg-white flex flex-col'
         : 'fixed top-0 right-0 z-[180] w-[420px] max-w-[100vw] h-screen bg-white border-l border-border shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col'}>
         {/* 헤더 — 노란 바 */}

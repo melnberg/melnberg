@@ -172,7 +172,7 @@ export default function RestaurantPanel({
   }
 
   return (
-    <div className="absolute top-4 right-4 z-[60] bg-white border-2 border-navy shadow-2xl w-[400px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] overflow-y-auto">
+    <div data-side-panel className="absolute top-4 right-4 z-[60] bg-white border-2 border-navy shadow-2xl w-[400px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] overflow-y-auto">
       <div className="bg-[#fbbf24] text-[#1a1d22] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0">
           <RestaurantIcon className="w-[20px] h-[20px]" />

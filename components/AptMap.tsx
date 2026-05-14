@@ -1242,6 +1242,27 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
       document.removeEventListener('mousedown', onClick);
     };
   }, [previewItem]);
+  // 우측 사이드 패널(아파트/이마트/공장/맛집/키즈) 외부 클릭 시 닫기 — X 안 눌러도 지도 클릭으로 닫힘
+  useEffect(() => {
+    if (!selected && !selectedEmart && !selectedFactory && !selectedRestaurant && !selectedKids) return;
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      if (!t) return;
+      // 패널 내부·피드 패널·drawer 클릭은 무시. 그 외(지도 등) 클릭 시 모두 닫음.
+      if (t.closest('[data-side-panel]') || t.closest('[data-feed-panel]') || t.closest('[data-preview-drawer]')) return;
+      setSelected(null);
+      setSelectedEmart(null);
+      setSelectedFactory(null);
+      setSelectedRestaurant(null);
+      setSelectedKids(null);
+    };
+    // 다음 tick 에 등록 — 핀 클릭으로 패널 열린 그 mousedown 이 곧바로 닫지 못하게.
+    const timer = setTimeout(() => document.addEventListener('mousedown', onClick), 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', onClick);
+    };
+  }, [selected, selectedEmart, selectedFactory, selectedRestaurant, selectedKids]);
   // 글 상세 URL — lib/feed-item-href.ts 의 feedItemHref 사용 (MobileFeedList 와 공용).
   function jumpToFeedItem(item: FeedItem) {
     // 경매 / 입찰 → /auctions/{id}

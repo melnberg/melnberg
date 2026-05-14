@@ -579,7 +579,7 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
   }
 
   return (
-    <aside className={inline
+    <aside data-side-panel className={inline
       ? 'block w-full bg-white flex flex-col'
       : `absolute top-0 left-0 h-full w-[380px] max-w-full bg-white border-r border-border shadow-[8px_0_24px_rgba(0,0,0,0.06)] flex flex-col z-30 transition-transform duration-200 ease-out ${shown ? 'translate-x-0' : '-translate-x-full'}`}>
       {/* 우측 가장자리 닫기 탭 — overlay 모드만 */}
