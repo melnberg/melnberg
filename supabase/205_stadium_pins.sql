@@ -419,7 +419,7 @@ from (
     ('SK올림픽핸드볼경기장', '올림픽공원 핸드볼·배구·E스포츠.', '핸드볼·E스포츠·콘서트', 37.5193::numeric, 127.1224::numeric, '서울 송파구 올림픽로 424', '방이동'),
     ('마들스타디움', '노원구 종합 운동장. 육상트랙 + 축구장.', '육상·축구·생활체육', 37.6587::numeric, 127.0696::numeric, '서울 노원구 동일로 1748', '상계동')
 ) as v(name, description, recommended_activity, lat, lng, address, dong)
-join auth.users u on u.email = 'imeunjong@gmail.com'
+join auth.users u on u.email = 'melnberg_rsch@naver.com'
 where not exists (
   select 1 from public.stadium_pins p where p.name = v.name and p.deleted_at is null
 );
