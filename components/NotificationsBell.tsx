@@ -10,6 +10,7 @@ type Notification = {
   id: number;
   type: 'community_comment' | 'apt_comment' | 'apt_evicted' | 'feedback_reply' | 'admin_notice' | 'bio_comment' | 'offer_made' | 'offer_accepted' | 'snatch_made' | 'election_winner' | 'election_loser' | 'restaurant_comment' | 'restaurant_like' | 'kids_comment' | 'kids_like' | 'facility_income_auto' | 'stadium_comment' | 'stadium_like';
   post_id: number | null;
+  post_category: string | null;
   apt_discussion_id: number | null;
   apt_master_id: number | null;
   apt_name: string | null;
@@ -125,8 +126,20 @@ export default function NotificationsBell() {
     setUnread(0);
   }
 
+  // 카테고리(posts.category) → 게시판 경로. 익명 카테고리(worry/love) 포함 — 댓글 알림 라우팅.
+  function postBase(cat: string | null): string {
+    return cat === 'hotdeal' ? '/hotdeal'
+      : cat === 'stocks' ? '/stocks'
+      : cat === 'realty' ? '/realty'
+      : cat === 'worry' ? '/worry'
+      : cat === 'coin' ? '/coin'
+      : cat === 'love' ? '/love'
+      : cat === 'blog' ? '/blog'
+      : '/community';
+  }
+
   function hrefFor(n: Notification, currentUserId: string | null = null): string {
-    if (n.type === 'community_comment' && n.post_id) return `/community/${n.post_id}`;
+    if (n.type === 'community_comment' && n.post_id) return `${postBase(n.post_category)}/${n.post_id}`;
     if (n.type === 'feedback_reply') return '/me/feedback';
     if (n.type === 'admin_notice') return '/me';
     if (n.type === 'bio_comment' && currentUserId) return `/u/${currentUserId}?tab=bio`;
@@ -168,7 +181,16 @@ export default function NotificationsBell() {
           <ul>
             {items.map((n) => {
               const cat =
-                n.type === 'community_comment' ? '커뮤니티' :
+                n.type === 'community_comment' ? (
+                  n.post_category === 'worry' ? '고민상담' :
+                  n.post_category === 'love' ? '연애상담' :
+                  n.post_category === 'hotdeal' ? '핫딜' :
+                  n.post_category === 'stocks' ? '주식' :
+                  n.post_category === 'realty' ? '부동산' :
+                  n.post_category === 'coin' ? '코인' :
+                  n.post_category === 'blog' ? '블로그' :
+                  '커뮤니티'
+                ) :
                 n.type === 'apt_comment' ? '아파트' :
                 n.type === 'apt_evicted' ? '강제집행' :
                 n.type === 'admin_notice' ? '관리자 알림' :
@@ -194,7 +216,9 @@ export default function NotificationsBell() {
                     className="block px-5 py-3 hover:bg-[#eef4fb] no-underline"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[12px] font-bold text-navy">{n.actor_name ?? '익명'}</span>
+                      <span className="text-[12px] font-bold text-navy">
+                        {n.post_category === 'worry' || n.post_category === 'love' ? '익명' : (n.actor_name ?? '익명')}
+                      </span>
                       <span className="text-[10px] text-muted">·</span>
                       <span className="text-[10px] text-muted">{cat}</span>
                       <span className="text-[10px] text-muted">·</span>

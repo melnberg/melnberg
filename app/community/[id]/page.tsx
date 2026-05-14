@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import MainTop from '@/components/MainTop';
 import CommentSection from '@/components/CommentSection';
@@ -35,6 +35,16 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
   const [post, comments] = await Promise.all([getPost(numId), listComments(numId)]);
   if (!post) notFound();
+
+  // 카테고리 불일치 시 해당 게시판 상세로 redirect.
+  // 익명 게시판(worry/love) 글이 커뮤니티 상세로 열려 작성자·댓글 실명이 노출되던 사고 방지.
+  if (post.category && post.category !== 'community') {
+    const base: Record<string, string> = {
+      hotdeal: '/hotdeal', stocks: '/stocks', realty: '/realty',
+      worry: '/worry', coin: '/coin', love: '/love', blog: '/blog',
+    };
+    if (base[post.category]) redirect(`${base[post.category]}/${numId}`);
+  }
 
   // mlbg 적립 — 본글 + 댓글 + 게시글 농사 보너스 한 번에 fetch (병렬)
   const sbPub = await createClient();
