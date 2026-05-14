@@ -5,7 +5,8 @@ import { sendTelegramMessage, escapeHtml, preview } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
-type Kind = 'apt_post' | 'apt_comment' | 'community_post' | 'community_comment' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'auction_completed' | 'emart_occupy' | 'factory_occupy' | 'strike';
+// 댓글(community_comment·apt_comment)은 텔레그램 푸시 대상 아님 — 게시글만 알림.
+type Kind = 'apt_post' | 'community_post' | 'listing' | 'offer' | 'snatch' | 'auction_start' | 'auction_bid' | 'auction_completed' | 'emart_occupy' | 'factory_occupy' | 'strike';
 
 export async function POST(req: NextRequest) {
   let body: { kind?: string; refId?: number | string };
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   const kind = body.kind as Kind;
   const refId = Number(body.refId);
-  if (!kind || !['apt_post', 'apt_comment', 'community_post', 'community_comment', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'auction_completed', 'emart_occupy', 'factory_occupy', 'strike'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
+  if (!kind || !['apt_post', 'community_post', 'listing', 'offer', 'snatch', 'auction_start', 'auction_bid', 'auction_completed', 'emart_occupy', 'factory_occupy', 'strike'].includes(kind) || !Number.isFinite(refId) || refId <= 0) {
     return NextResponse.json({ error: 'kind/refId invalid' }, { status: 400 });
   }
 
@@ -51,20 +52,6 @@ export async function POST(req: NextRequest) {
     }
     tag = r.category === 'blog' ? '블로그' : '커뮤니티';
     main = preview(r.title, 100);
-  } else if (kind === 'community_comment') {
-    const { data } = await admin
-      .from('comments')
-      .select('id, post_id, content, author_id, post:posts!post_id(title, category)')
-      .eq('id', refId).maybeSingle();
-    const r = data as { id: number; post_id: number; content: string; author_id: string; post: { title: string | null; category: string | null } | null } | null;
-    if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
-    const cat = r.post?.category ?? null;
-    // 익명 카테고리(worry·love)는 댓글 알림도 보내지 않음 — 작성자 노출 방지.
-    if (cat === 'worry' || cat === 'love') {
-      return NextResponse.json({ ok: true, skipped: 'anonymous category' });
-    }
-    tag = cat === 'blog' ? '블로그 댓글' : '커뮤니티 댓글';
-    main = preview(r.content, 80);
   } else if (kind === 'apt_post') {
     const { data } = await admin
       .from('apt_discussions')
@@ -74,15 +61,6 @@ export async function POST(req: NextRequest) {
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
     tag = r.apt_master?.apt_nm ?? '단지';
     main = preview(r.title, 80);
-  } else if (kind === 'apt_comment') {
-    const { data } = await admin
-      .from('apt_discussion_comments')
-      .select('id, discussion_id, content, author_id, discussion:apt_discussions!discussion_id(apt_master_id, apt_master(apt_nm))')
-      .eq('id', refId).maybeSingle();
-    const r = data as { id: number; discussion_id: number; content: string; author_id: string; discussion: { apt_master_id: number | null; apt_master: { apt_nm: string | null } | null } | null } | null;
-    if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
-    tag = r.discussion?.apt_master?.apt_nm ?? '단지';
-    main = preview(r.content, 80);
   } else if (kind === 'listing') {
     const { data } = await admin
       .from('apt_listings')

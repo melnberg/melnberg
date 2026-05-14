@@ -5,7 +5,6 @@ import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { type CommunityComment } from '@/lib/community';
 import { awardMlbg } from '@/lib/mlbg-award';
-import { notifyTelegram } from '@/lib/telegram-notify';
 import { revalidateHome } from '@/lib/revalidate-home';
 import { linkify } from '@/lib/linkify';
 import { profileToNicknameInfo } from '@/lib/nickname-info';
@@ -88,7 +87,6 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setContent('');
     const insertedId = (data as { id: number }).id;
     await awardMlbg(commentAwardKind, insertedId, content.trim());
-    notifyTelegram(commentAwardKind, insertedId);
     revalidateHome();
     router.refresh();
   }
@@ -108,7 +106,6 @@ export default function CommentSection({ postId, comments, currentUserId, curren
     setReplyingTo(null);
     const insertedId = (data as { id: number }).id;
     await awardMlbg(commentAwardKind, insertedId, replyContent.trim());
-    notifyTelegram(commentAwardKind, insertedId);
     revalidateHome();
     router.refresh();
   }

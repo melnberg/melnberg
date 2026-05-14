@@ -545,7 +545,6 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     const cid = (data as { id: number } | null)?.id;
     if (cid) {
       void awardMlbg('apt_comment', cid, text);
-      notifyTelegram('apt_comment', cid);
     }
     revalidateHome();
     await reload();
@@ -564,7 +563,6 @@ export default function AptDiscussionPanel({ apt, onClose, inline = false }: { a
     const cid = (data as { id: number } | null)?.id;
     if (cid) {
       void awardMlbg('apt_comment', cid, text);
-      notifyTelegram('apt_comment', cid);
     }
     revalidateHome();
     await reload();
