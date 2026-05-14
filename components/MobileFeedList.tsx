@@ -247,6 +247,7 @@ export default function MobileFeedList({ items }: Props) {
                 : f.post_category === 'stocks' ? '📈 주식 토론'
                 : f.post_category === 'realty' ? '🏢 부동산 토론'
                 : f.post_category === 'worry' ? '💬 익명 고민상담'
+                : f.post_category === 'love' ? '❤ 연애상담 (익명)'
                 : f.post_category === 'coin' ? '₿ 코인 토론'
                 : '커뮤니티'
               )
@@ -275,7 +276,7 @@ export default function MobileFeedList({ items }: Props) {
                     )}
                     {f.author_id && (
                       <span className="text-[11px] flex-shrink-0">
-                        {f.post_category === 'worry' ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
+                        {(f.post_category === 'worry' || f.post_category === 'love') ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
                       </span>
                     )}
                   </div>

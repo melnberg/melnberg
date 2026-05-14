@@ -23,7 +23,7 @@ export async function GET() {
       .from('posts')
       .select('id, author_id, title, content, category, like_count, view_count, created_at')
       .is('deleted_at', null)
-      .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin'])
+      .in('category', ['community', 'hotdeal', 'stocks', 'realty', 'worry', 'coin', 'love'])
       .order('created_at', { ascending: false })
       .limit(100);
     const list = (posts ?? []) as Array<{

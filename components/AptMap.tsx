@@ -129,7 +129,7 @@ export type FeedItem = {
   /** 작성으로 받은 mlbg (AI 평가 결과). null = 아직 적립 전이거나 적립 안 됨. */
   earned_mlbg?: number | null;
   /** post / post_comment 의 카테고리 — 'community' | 'hotdeal'. 라우팅·뱃지 분기용. */
-  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
+  post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin' | 'love';
   /** stocks 카테고리 글 — 종목 코드 (라우팅 /stocks/{code}/{postId}) */
   stock_code?: string | null;
   /** stocks 카테고리 글 — 종목 회사명 (태그 표시는 이걸 우선) */
@@ -169,7 +169,7 @@ export type FeedItem = {
   poll_correct_label?: string | null;
   poll_mode?: 'bet' | 'vote';
   poll_winner_count?: number;
-  poll_post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin';
+  poll_post_category?: 'community' | 'hotdeal' | 'stocks' | 'realty' | 'worry' | 'coin' | 'love';
 };
 
 export type AptPin = {
@@ -1419,6 +1419,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                  : item.post_category === 'realty' ? '/realty'
                  : item.post_category === 'worry' ? '/worry'
                  : item.post_category === 'coin' ? '/coin'
+                 : item.post_category === 'love' ? '/love'
                  : '/community';
       router.push(`${base}/${item.post_id}`);
       return;
@@ -2248,7 +2249,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                       })()
                     : f.kind === 'poll_settled' ? (f.poll_mode === 'vote' ? '🗳 투표 마감' : '🎰 베팅 정산')
                     : (isEmartOccupy || isFactoryOccupy || isFacilityComment) ? (f.apt_nm ?? '시설')
-                    : isCommunity ? (f.post_category === 'realty' ? '부동산 토론' : f.post_category === 'stocks' ? '주식 토론' : f.post_category === 'coin' ? '코인 토론' : f.post_category === 'hotdeal' ? '핫딜' : f.post_category === 'worry' ? '익명 고민' : '커뮤니티')
+                    : isCommunity ? (f.post_category === 'realty' ? '부동산 토론' : f.post_category === 'stocks' ? '주식 토론' : f.post_category === 'coin' ? '코인 토론' : f.post_category === 'hotdeal' ? '핫딜' : f.post_category === 'worry' ? '익명 고민' : f.post_category === 'love' ? '❤ 연애상담' : '커뮤니티')
                     : (aptHeadLabel || '(단지 정보 없음)');
                   return (
                     <li key={feedKey} className={`border-b border-[#f0f0f0] last:border-b-0 ${isPreviewing ? 'border-l-4 border-l-cyan' : ''}`}>
@@ -2266,7 +2267,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
                             {headLabel}
                           </button>
                           <span className="text-[10px] text-cyan font-bold flex-shrink-0">
-                            {f.post_category === 'worry' ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
+                            {(f.post_category === 'worry' || f.post_category === 'love') ? <span className="text-muted">익명</span> : <Nickname info={feedItemToNicknameInfo(f)} />}
                           </span>
                         </div>
                         {/* 본문 영역 — 클릭 시 그 자리에서 펼침/접기 토글 (라우팅 X). 페이지 이동은 우상단 ↗ 페이지 버튼. */}
