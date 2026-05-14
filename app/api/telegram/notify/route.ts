@@ -40,18 +40,16 @@ export async function POST(req: NextRequest) {
 
   let tag = '';   // 대괄호 안 짧은 라벨
   let main = '';  // 본문 한 줄
-  // 익명 카테고리 — worry(고민상담)·love(연애상담) 는 텔레그램에서도 작성자명 익명 처리.
-  // 피드·댓글창 isAnonymous 와 동일 규칙. 새 익명 카테고리 추가 시 여기도 갱신.
-  let forceAnonymous = false;
 
   if (kind === 'community_post') {
     const { data } = await admin.from('posts').select('id, title, author_id, category').eq('id', refId).maybeSingle();
     const r = data as { id: number; title: string; author_id: string; category: string } | null;
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
-    if (r.category === 'worry') tag = '익명 고민상담';
-    else if (r.category === 'love') tag = '익명 연애상담';
-    else tag = r.category === 'blog' ? '블로그' : '커뮤니티';
-    if (r.category === 'worry' || r.category === 'love') forceAnonymous = true;
+    // 익명 카테고리(worry 고민상담·love 연애상담)는 텔레그램 알림 자체를 보내지 않음 — 작성자 노출 방지.
+    if (r.category === 'worry' || r.category === 'love') {
+      return NextResponse.json({ ok: true, skipped: 'anonymous category' });
+    }
+    tag = r.category === 'blog' ? '블로그' : '커뮤니티';
     main = preview(r.title, 100);
   } else if (kind === 'community_comment') {
     const { data } = await admin
@@ -61,10 +59,11 @@ export async function POST(req: NextRequest) {
     const r = data as { id: number; post_id: number; content: string; author_id: string; post: { title: string | null; category: string | null } | null } | null;
     if (!r || r.author_id !== user.id) return NextResponse.json({ error: 'not author' }, { status: 403 });
     const cat = r.post?.category ?? null;
-    if (cat === 'worry') tag = '익명 고민상담 댓글';
-    else if (cat === 'love') tag = '익명 연애상담 댓글';
-    else tag = cat === 'blog' ? '블로그 댓글' : '커뮤니티 댓글';
-    if (cat === 'worry' || cat === 'love') forceAnonymous = true;
+    // 익명 카테고리(worry·love)는 댓글 알림도 보내지 않음 — 작성자 노출 방지.
+    if (cat === 'worry' || cat === 'love') {
+      return NextResponse.json({ ok: true, skipped: 'anonymous category' });
+    }
+    tag = cat === 'blog' ? '블로그 댓글' : '커뮤니티 댓글';
     main = preview(r.content, 80);
   } else if (kind === 'apt_post') {
     const { data } = await admin
@@ -279,14 +278,9 @@ export async function POST(req: NextRequest) {
     if (r.message) main += ` — ${r.message.slice(0, 60)}`;
   }
 
-  // 작성자 닉네임 — 익명 카테고리(worry/love) 는 '익명' 으로 강제 치환
-  let author: string;
-  if (forceAnonymous) {
-    author = '익명';
-  } else {
-    const { data: prof } = await admin.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
-    author = (prof as { display_name: string | null } | null)?.display_name ?? '회원';
-  }
+  // 작성자 닉네임 (익명 카테고리는 위에서 이미 early-return 처리됨)
+  const { data: prof } = await admin.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+  const author = (prof as { display_name: string | null } | null)?.display_name ?? '회원';
 
   // 포맷: [tag] author : main
   const text = `[${escapeHtml(tag)}] ${escapeHtml(author)} : ${escapeHtml(main)}`;
