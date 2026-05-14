@@ -277,3 +277,7 @@
   60%  { transform: translateX(120%); }
   100% { transform: translateX(120%); }
 }
+
+/* 업로드 사진 클릭 확대 어포던스 — ImageZoom 전역 핸들러와 짝. 링크 안 썸네일은 제외. */
+img[src*="/storage/v1/object/public/"] { cursor: zoom-in; }
+a img[src*="/storage/v1/object/public/"] { cursor: inherit; }

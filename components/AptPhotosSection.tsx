@@ -166,7 +166,7 @@ export default function AptPhotosSection({ aptId }: { aptId: number }) {
             <span className="text-[10px] text-muted/80">처음 등록하는 사람이 되어보세요.</span>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5" data-no-zoom>
             {photos.map((p) => (
               <button
                 key={p.id}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import PWAInstall from '@/components/PWAInstall';
+import ImageZoom from '@/components/ImageZoom';
 import { ConfirmProvider } from '@/lib/use-confirm';
 
 export const metadata: Metadata = {
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </ConfirmProvider>
         <PWAInstall />
+        <ImageZoom />
       </body>
     </html>
   );
