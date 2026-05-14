@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { awardMlbg } from '@/lib/mlbg-award';
 import { RestaurantIcon } from './CategoryIcons';
@@ -20,6 +21,7 @@ function relTime(iso: string): string {
 
 export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem }) {
   const supabase = createClient();
+  const router = useRouter();
   const [me, setMe] = useState<{ id: string; name: string } | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(pin.like_count);
@@ -78,6 +80,19 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
     if (row) { setLiked(row.out_liked); setLikeCount(row.out_count); }
   }
 
+  async function handleDelete() {
+    if (!confirm('정말 삭제할까? 되돌릴 수 없음.')) return;
+    if (busy) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('delete_restaurant_pin', { p_pin_id: pin.id });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '삭제 실패'); return; }
+    router.push('/restaurants');
+    router.refresh();
+  }
+
   async function occupy() {
     if (!me) { alert('로그인 필요'); return; }
     if (occupier) { alert('이미 분양된 핀'); return; }
@@ -130,6 +145,9 @@ export default function RestaurantDetailClient({ pin }: { pin: RestaurantItem })
           <span className="tabular-nums">+30 mlbg</span>
           {isAuthor && (
             <Link href={`/restaurants/${pin.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</Link>
+          )}
+          {isAuthor && (
+            <button type="button" onClick={handleDelete} disabled={busy} className="bg-transparent border-none p-0 text-red-600 underline hover:text-red-700 cursor-pointer disabled:opacity-40 text-[11px]">🗑 삭제</button>
           )}
         </div>
       </header>

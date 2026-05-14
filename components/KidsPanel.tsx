@@ -104,6 +104,19 @@ export default function KidsPanel({
     onChanged();
   }
 
+  async function handleDelete() {
+    if (!confirm('정말 삭제할까? 되돌릴 수 없음.')) return;
+    if (busy) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc('delete_kids_pin', { p_pin_id: kids.id });
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    const row = (Array.isArray(data) ? data[0] : data) as { out_success: boolean; out_message: string | null } | undefined;
+    if (!row?.out_success) { alert(row?.out_message ?? '삭제 실패'); return; }
+    onChanged();
+    onClose();
+  }
+
   async function release() {
     if (!confirm(`보유 해제 시 ${kids.occupy_price} mlbg 환불됨.`)) return;
     if (busy) return;
@@ -194,6 +207,7 @@ export default function KidsPanel({
             <span>등록 by <b className="text-navy">{kids.author_name ?? '익명'}</b></span>
             <span className="tabular-nums">+30 mlbg</span>
             {isAuthor && (<a href={`/kids/${kids.id}/edit`} className="text-cyan underline hover:text-navy no-underline">✏ 수정</a>)}
+            {isAuthor && (<button type="button" onClick={handleDelete} disabled={busy} className="bg-transparent border-none p-0 text-red-600 underline hover:text-red-700 cursor-pointer disabled:opacity-40 text-[11px]">🗑 삭제</button>)}
           </span>
           <button onClick={toggleLike} disabled={isAuthor || busy}
             className={`flex items-center gap-1 px-2 py-1 border ${liked ? 'border-[#dc2626] bg-[#fef2f2] text-[#dc2626]' : 'border-border bg-white text-muted hover:border-[#dc2626] hover:text-[#dc2626]'} ${isAuthor ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}>
