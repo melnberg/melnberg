@@ -133,9 +133,12 @@ export default function NotificationsBell() {
     if ((n.type === 'apt_comment' || n.type === 'apt_evicted' || n.type === 'offer_made' || n.type === 'offer_accepted' || n.type === 'snatch_made') && n.apt_master_id) {
       return `/apt/${n.apt_master_id}`;
     }
-    // 맛집 댓글 — comment_id 가 있으면 핀 페이지로 (홈 ?restaurant=ID 링크는 pin_id 가 필요한데 알림에 직접 없음 → 홈으로)
-    if (n.type === 'restaurant_comment' || n.type === 'restaurant_like') return '/restaurants';
-    if (n.type === 'kids_comment' || n.type === 'kids_like') return '/kids';
+    if (n.type === 'restaurant_comment' || n.type === 'restaurant_like') {
+      return n.post_id ? `/restaurants/${n.post_id}` : '/restaurants';
+    }
+    if (n.type === 'kids_comment' || n.type === 'kids_like') {
+      return n.post_id ? `/kids/${n.post_id}` : '/kids';
+    }
     return '/';
   }
 

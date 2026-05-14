@@ -24,7 +24,7 @@ export default async function RestaurantDetailPage({ params }: { params: Promise
   if (!Number.isFinite(numId)) notFound();
 
   const supabase = createPublicClient();
-  const { data } = await supabase.rpc('list_recent_restaurant_pins', { p_limit: 100 });
+  const { data } = await supabase.rpc('list_recent_restaurant_pins', { p_limit: 1000 });
   const pins = (data ?? []) as Pin[];
   const pin = pins.find((p) => p.id === numId);
   if (!pin) notFound();

@@ -507,7 +507,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   async function refetchRestaurants() {
     try {
       const sbCli = createClient();
-      const { data } = await sbCli.rpc('list_recent_restaurant_pins', { p_limit: 100 });
+      const { data } = await sbCli.rpc('list_recent_restaurant_pins', { p_limit: 500 });
       const items = ((data ?? []) as RestaurantItem[]);
       setRestaurantList(items);
       setSelectedRestaurant((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);
@@ -542,7 +542,7 @@ export default function AptMap({ pins: pinsFromProps, feed = [] }: { pins?: AptP
   async function refetchKids() {
     try {
       const sbCli = createClient();
-      const { data } = await sbCli.rpc('list_recent_kids_pins', { p_limit: 100 });
+      const { data } = await sbCli.rpc('list_recent_kids_pins', { p_limit: 500 });
       const items = ((data ?? []) as KidsItem[]);
       setKidsList(items);
       setSelectedKids((cur) => cur ? (items.find((x) => x.id === cur.id) ?? cur) : null);

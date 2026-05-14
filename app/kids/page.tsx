@@ -19,7 +19,7 @@ type Pin = {
 
 export default async function KidsPage() {
   const supabase = createPublicClient();
-  const { data } = await supabase.rpc('list_recent_kids_pins', { p_limit: 50 }).then((r) => r, () => ({ data: null }));
+  const { data } = await supabase.rpc('list_recent_kids_pins', { p_limit: 500 }).then((r) => r, () => ({ data: null }));
   const pins = (data ?? []) as Pin[];
 
   return (
