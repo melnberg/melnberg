@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
+import { withCron } from '@/lib/cron';
 
 // 경매 라이프사이클 cron — 5분마다.
 // 1) 만료 경매 완료 처리 (complete_expired_auctions)
@@ -19,7 +20,7 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -59,3 +60,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ ok: true, completed: completedCount, notified: list.length });
 }
+
+export const GET = withCron('complete-auctions', handler);

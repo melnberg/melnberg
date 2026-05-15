@@ -4,11 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withCron } from '@/lib/cron';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -29,3 +30,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ ok: true, results });
 }
+
+export const GET = withCron('refresh-mv', handler);

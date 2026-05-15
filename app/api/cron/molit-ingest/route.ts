@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withCron } from '@/lib/cron';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 최대 5분 (서울+수도권 67개 시군구 × 2개월 ≈ 2~3분 예상)
@@ -142,7 +143,7 @@ function lastTwoYyyymm(): string[] {
   return [prev, cur];
 }
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   // 인증 — Vercel Cron만 허용
   const auth = req.headers.get('authorization');
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -206,3 +207,5 @@ export async function GET(req: NextRequest) {
     error_details: results.filter((r) => r.error).slice(0, 10),
   });
 }
+
+export const GET = withCron('molit-ingest', handler);

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withCron } from '@/lib/cron';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -39,7 +40,7 @@ function ymd(d: Date): string {
 }
 function addDays(d: Date, n: number): Date { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   const auth = req.headers.get('authorization');
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -94,3 +95,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ ok: true, total: list.length, updated, skipped, failed });
 }
+
+export const GET = withCron('sync-stock-prices', handler);
